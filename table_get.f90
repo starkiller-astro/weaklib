@@ -70,25 +70,25 @@ REAL(double), DIMENSION(nezbuff)     :: E_quad              ! neutrino energy bu
 REAL(double), DIMENSION(nez)         :: delta_E             ! neutrino energy zone width [MeV]
 REAL(double), DIMENSION(nez+1)       :: E_edge              ! neutrino energy zone edge [MeV]
 REAL(double), DIMENSION(nez)         :: E_cent              ! neutrino energy zone center [MeV]
-CHARACTER(LEN=19), PARAMETER  :: filename   = "opacitytablenusp.h5"
+CHARACTER(LEN=15), PARAMETER  :: filename   = "opacitytable.h5"
 CHARACTER(LEN=12), PARAMETER  :: dataset0   = "rhogrid_dset"
 CHARACTER(LEN=10), PARAMETER  :: dataset00  = "Tgrid_dset"
 CHARACTER(LEN=11), PARAMETER  :: dataset000 = "Yegrid_dset"
-CHARACTER(LEN=13), PARAMETER  :: dataset1   = "pressure_dset"
-CHARACTER(LEN=19), PARAMETER  :: dataset2   = "internalenergy_dset"
-CHARACTER(LEN=12), PARAMETER  :: dataset3   = "entropy_dset"
-CHARACTER(LEN=16), PARAMETER  :: dataset4   = "neutchempot_dset"
-CHARACTER(LEN=16), PARAMETER  :: dataset5   = "protchempot_dset"
-CHARACTER(LEN=14), PARAMETER  :: dataset6   = "elchempot_dset"
-CHARACTER(LEN=17), PARAMETER  :: dataset7   = "neutmassfrac_dset"
-CHARACTER(LEN=17), PARAMETER  :: dataset8   = "protmassfrac_dset"
-CHARACTER(LEN=16), PARAMETER  :: dataset9   = "helmassfrac_dset"
-CHARACTER(LEN=18), PARAMETER  :: dataset10  = "heavymassfrac_dset"
-CHARACTER(LEN=17), PARAMETER  :: dataset11  = "heavymassnum_dset"
-CHARACTER(LEN=14), PARAMETER  :: dataset12  = "heavyqnum_dset"
-CHARACTER(LEN=10), PARAMETER  :: dataset13  = "absor_dset"
-CHARACTER(LEN=10), PARAMETER  :: dataset14  = "emiss_dset"
-CHARACTER(LEN=13), PARAMETER  :: dataset99  = "metadata_dset"
+CHARACTER(LEN=32), PARAMETER  :: dataset1   = "Pressure                        "
+CHARACTER(LEN=32), PARAMETER  :: dataset2   = "InternalEnergyDensity           "
+CHARACTER(LEN=32), PARAMETER  :: dataset3   = "EntropyPerBaryon                "
+CHARACTER(LEN=32), PARAMETER  :: dataset4   = "NeutronChemicalPotential        "
+CHARACTER(LEN=32), PARAMETER  :: dataset5   = "ProtonChemicalPotential         "
+CHARACTER(LEN=32), PARAMETER  :: dataset6   = "ElectronChemicalPotential       "
+CHARACTER(LEN=32), PARAMETER  :: dataset7   = "NeutronMassFraction             "
+CHARACTER(LEN=32), PARAMETER  :: dataset8   = "ProtonMassFraction              "
+CHARACTER(LEN=32), PARAMETER  :: dataset9   = "HeliumMassFraction              "
+CHARACTER(LEN=32), PARAMETER  :: dataset10  = "HeavyMassFraction               "
+CHARACTER(LEN=32), PARAMETER  :: dataset11  = "HeavyMassNumber                 "
+CHARACTER(LEN=32), PARAMETER  :: dataset12  = "HeavyChargeNumber               "
+CHARACTER(LEN=32), PARAMETER  :: dataset13  = "Absorption                      "
+CHARACTER(LEN=32), PARAMETER  :: dataset14  = "Emission                        "
+CHARACTER(LEN=8), PARAMETER   :: dataset99  = "metadata"
 CHARACTER(LEN=1), PARAMETER   :: L          = "L"              ! EoS flag
 
 INTEGER, PARAMETER    :: dim00    = 12         ! dataspace dimension
@@ -101,18 +101,16 @@ INTEGER, PARAMETER    :: dim5     = 15         ! # of metadata values
 
 !Integer          , Parameter    :: adim0    = 12        ! array dimension
 
-INTEGER        :: hdferr                       ! Error flag
+INTEGER        :: hdferr                                 ! Error flag
 INTEGER(HID_T) :: file, space0, space00, space000, space1, space2, space3 
 INTEGER(HID_T) :: space4, space5, space6, space7, space8, space9, space10 
 INTEGER(HID_T) :: space11, space12, space13, space14, space15, space99
 INTEGER(HID_T) :: dset0, dset00, dset000 
 INTEGER(HID_T) :: dset1, dset2, dset3, dset4, dset5, dset6, dset7, dset8, dset9
 INTEGER(HID_T) :: dset10, dset11, dset12,  dset13, dset14, dset15, dset99
-INTEGER(HSIZE_T), DIMENSION(1:3)   :: dims = (/dim0, dim1, dim2/) ! size individual return write buffers
-!INTEGER(HSIZE_T), DIMENSION(1:1)   :: adims = (/adim0/) ! size array write buffer
+INTEGER(HSIZE_T), DIMENSION(1:3)   :: dims = (/dim0, dim1, dim2/) ! size individual write buffers
 INTEGER(HSIZE_T), DIMENSION(1:4)   :: bdims = (/dim3, dim0, dim1, dim2/) ! size main read/write buffer
-!INTEGER         , DIMENSION(1:dim0,1:dim1,1:dim2,1:adim0) :: RhoTYeset ! Main dataset write buffer 
-INTEGER(HSIZE_T), DIMENSION(1:2)   :: mddims = (/dim4, dim5/) ! size individual return write buffers
+INTEGER(HSIZE_T), DIMENSION(1:2)   :: mddims = (/dim4, dim5/) ! size metadata write buffer
 
 REAL, DIMENSION(1:dim0,1:dim1,1:dim2) :: rhogrid         ! Rho grid write buffer
 REAL, DIMENSION(1:dim0,1:dim1,1:dim2) :: Tgrid           ! T grid write buffer
@@ -129,9 +127,9 @@ REAL, DIMENSION(1:dim0,1:dim1,1:dim2) :: helmassfrac     ! Helium mass fraction 
 REAL, DIMENSION(1:dim0,1:dim1,1:dim2) :: heavymassfrac   ! Heavy mass fraction write buffer
 REAL, DIMENSION(1:dim0,1:dim1,1:dim2) :: heavymassnum    ! Heavy mass number write buffer
 REAL, DIMENSION(1:dim0,1:dim1,1:dim2) :: heavyqnum       ! Heavy charge # write buffer
-REAL, DIMENSION(1:dim3,1:dim0,1:dim1,1:dim2) :: absorption      ! Absorption inverse mean free path write buffer for full range of neutrino energy groups
-REAL, DIMENSION(1:dim3,1:dim0,1:dim1,1:dim2) :: emission        ! Emission inverse mean free path write buffer for full range of neutrino energy groups
-REAL, DIMENSION(1:dim4,1:dim5) :: metadata        ! Metadata write buffer
+REAL, DIMENSION(1:dim3,1:dim0,1:dim1,1:dim2) :: absorption ! Absorption inverse mean free path write buffer, all energy groups
+REAL, DIMENSION(1:dim3,1:dim0,1:dim1,1:dim2) :: emission   ! Emission inverse mean free path write buffer, all energy groups
+REAL, DIMENSION(1:dim4,1:dim5) :: metadata                ! Metadata write buffer
 
 REAL(KIND=double), DIMENSION(Nrho*Nt*Nye)     :: rho      ! density [g/cm**3]
 REAL(KIND=double), DIMENSION(Nrho*Nt*Nye)     :: ye       ! electron fraction
@@ -250,7 +248,7 @@ END DO
 !  Write fine energy grid for quadrature
 !----------------------------------------------------------------------
 
-call gquad(nq,x,wt,nq)
+  CALL gquad(nq,x,wt,nq)
 
 !----------------------------------------------------------------------
 ! Input Energy Values
@@ -302,18 +300,10 @@ DO m=1,nez
   END DO
 END DO
 
-
-!DO mbuff=0,nezbuff-1
-!   e_in(mbuff+1) = (Emin)*10.d0**(((DBLE(ebuff(mbuff+1)))/DBLE(nez))*LOG10(Emax/Emin))
-!END DO
-
 !-----------------------------------------------------------------------
 !  Do Loops to Populate Opacities
 !  -Absorption/Emission
-!
 !-----------------------------------------------------------------------
-
-
 
 DO k=0,Nye-1 
   DO j=0,Nt-1 
@@ -323,11 +313,6 @@ DO k=0,Nye-1
  & heavymassnum(i+1, j+1, k+1), heavyqnum(i+1, j+1, k+1), neutchempot(i+1, j+1, k+1), &
  & protchempot(i+1, j+1, k+1), elecchempot(i+1, j+1, k+1), absornp, emitnp, Tgrid(i+1, j+1, k+1), &
  & nezbuff, nse, L )
-
-!     absorption(i+1, j+1, k+1)=absornp
-!     absorption(:,i+1, j+1, k+1)=absornp
-!     emission(i+1, j+1, k+1)=emitnp
-!     emission(:,i+1, j+1, k+1)=emitnp
 
       DO m=0,nezbuff-1  
       absorption(m+1,i+1, j+1, k+1)=absornp(m+1)
@@ -378,12 +363,11 @@ OPEN(nout6, FILE="QuadGrid.txt")
 DO m=1,nezbuff
   WRITE(nout3,*) m, E_quad(m), absornp(m) 
   WRITE(nout4,*) m, E_quad(m), emitnp(m)
-!  WRITE(nout5,*) m+1, E_cent(m+1), (emitnp(m+1))/(emitnp(m+1) + absornp(m+1)), rhomin, Tmin, Yemin
   WRITE(nout6,*) m, E_quad(m)
 END DO
 
 DO m=0,nez
-  WRITE(nout5,*) m+1, E_edge(m+1), E_cent(m+1) !, delta_E(m+1)
+  WRITE(nout5,*) m+1, E_edge(m+1), E_cent(m+1) 
 
 END DO
 
@@ -392,23 +376,14 @@ CLOSE(nout4)
 CLOSE(nout5)
 CLOSE(nout6)
 
-!Write OutputFile 
 CLOSE(nout)
 CLOSE(nout2)
-!CLOSE(nlog)
 
 !-------------------------------------------------
 ! Create a new HDF5 file.
 !-------------------------------------------------
 
    CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file, hdferr)
-
-!-------------------------------------------------
-! Create array datatypes for file and memory.
-!------------------------------------------------------------------
-
-! CALL H5Tarray_create_f(INT(H5T_STD_I64LE, HID_T), 1, adims, filetype, hdferr)
-! CALL H5Tarray_create_f(H5T_NATIVE_DOUBLE, 1, adims, memtype, hdferr)
 
 !---------------------------------------------------------
 ! Create dataspace.  Setting size to be the current size.
@@ -430,8 +405,6 @@ CLOSE(nout2)
    CALL h5screate_simple_f(3, dims, space11, hdferr)
    CALL h5screate_simple_f(3, dims, space12, hdferr)
    CALL h5screate_simple_f(3, dims, space99, hdferr)
-!   CALL h5screate_simple_f(3, dims, space13, hdferr)
-!   CALL h5screate_simple_f(3, dims, space14, hdferr)
    CALL h5screate_simple_f(4, bdims, space13, hdferr)
    CALL h5screate_simple_f(4, bdims, space14, hdferr)
    CALL h5screate_simple_f(2, mddims, space99, hdferr)
@@ -458,7 +431,7 @@ CLOSE(nout2)
    CALL h5dcreate_f(file, dataset13, H5T_NATIVE_DOUBLE, space13, dset13, hdferr)
    CALL h5dcreate_f(file, dataset14, H5T_NATIVE_DOUBLE, space14, dset14, hdferr)
    CALL h5dcreate_f(file, dataset99, H5T_NATIVE_DOUBLE, space99, dset99, hdferr)
-!
+!---------------------------------------------------------------
 ! Write the data to the dataset.
 !---------------------------------------------------------------
 
@@ -477,12 +450,10 @@ CLOSE(nout2)
    CALL h5dwrite_f(dset10, H5T_NATIVE_DOUBLE, heavymassfrac, dims, hdferr)
    CALL h5dwrite_f(dset11, H5T_NATIVE_DOUBLE, heavymassnum, dims, hdferr)
    CALL h5dwrite_f(dset12, H5T_NATIVE_DOUBLE, heavyqnum, dims, hdferr)
-!  CALL h5dwrite_f(dset13, H5T_NATIVE_DOUBLE, absorption, dims, hdferr)
-!  CALL h5dwrite_f(dset14, H5T_NATIVE_DOUBLE, emission, dims, hdferr)
    CALL h5dwrite_f(dset13, H5T_NATIVE_DOUBLE, absorption, bdims, hdferr)
    CALL h5dwrite_f(dset14, H5T_NATIVE_DOUBLE, emission, bdims, hdferr)
    CALL h5dwrite_f(dset99, H5T_NATIVE_DOUBLE, metadata, mddims, hdferr)
-!
+!---------------------------------------------------------------
 ! Close and release resources.
 !----------------------------------------------------------------
 
