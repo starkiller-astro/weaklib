@@ -19,7 +19,7 @@ PRIVATE
 !Char List
 INTEGER, PUBLIC, PARAMETER :: N_EOS_FIELDS = 12
 CHARACTER(32), PUBLIC, DIMENSION(N_EOS_FIELDS) ::&
-                 EosFieldsNames = (/'Pressure                        ', & 
+                  EosFieldNames = (/'Pressure                        ', & 
                                     'InternalEnergyDensity           ', &
                                     'EntropyPerBaryon                ', &
                                     'NeutronChemicalPotential        ', &
