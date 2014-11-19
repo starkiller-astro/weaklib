@@ -91,15 +91,13 @@ CHARACTER(LEN=32), PARAMETER  :: dataset14  = "Emission                        "
 CHARACTER(LEN=8), PARAMETER   :: dataset99  = "metadata"
 CHARACTER(LEN=1), PARAMETER   :: L          = "L"              ! EoS flag
 
-INTEGER, PARAMETER    :: dim00    = 12         ! dataspace dimension
+INTEGER, PARAMETER    :: dim00    = 12         ! EOS Fields dimension
 INTEGER, PARAMETER    :: dim0     = 2          ! placeholder for Nrho
 INTEGER, PARAMETER    :: dim1     = 2          ! placeholder for Nt
 INTEGER, PARAMETER    :: dim2     = 2          ! placeholder for Nye 
 INTEGER, PARAMETER    :: dim3     = nezbuff    ! placeholder for E-Nu bins , nezbuff when doing quad grid
 INTEGER, PARAMETER    :: dim4     = 1          ! 
 INTEGER, PARAMETER    :: dim5     = 15         ! # of metadata values 
-
-!Integer          , Parameter    :: adim0    = 12        ! array dimension
 
 INTEGER        :: hdferr                                 ! Error flag
 INTEGER(HID_T) :: file, space0, space00, space000, space1, space2, space3 
@@ -245,42 +243,32 @@ END DO
 !END DO
 
 !----------------------------------------------------------------------
-!  Write fine energy grid for quadrature
+!  Write fine energy grid for Gaussian quadrature
 !----------------------------------------------------------------------
 
   CALL gquad(nq,x,wt,nq)
 
 !----------------------------------------------------------------------
-! Input Energy Values
+! Set up neutrino energy bins and add quadrature points
 !----------------------------------------------------------------------
-!e_in(1) = 2.5d00
-!e_in(2) = 2.5d01
-!e_in(3) = 2.5d02
-
-!   delta_E_max = (delta_E_min)*10.d0**(((DBLE(m-1))/DBLE(nez))*LOG10(delta_E_max/delta_e_min))
-
-!DO m=2,nez
-!   delta_E(m) = (delta_E_min)*10.d0**(((DBLE(m-1))/DBLE(nez))*LOG10(delta_E_max/delta_e_min))
-!END DO
 
 !-----------------------------------------------------------------------
 ! Delta-E loop
 !-----------------------------------------------------------------------
    delta_E(1) = delta_E_min
 
-DO m=2,nez
-   delta_E(m) = (delta_E(m-1))*DBLE(alpha) ! Add Newton-Raphson solve of (alpha - 1)/(alpha^nez -1) = delta_E_min/Emax
-END DO
-
+   DO m=2,nez
+     delta_E(m) = (delta_E(m-1))*DBLE(alpha) ! Add Newton-Raphson solve of (alpha - 1)/(alpha^nez -1) = delta_E_min/Emax
+   END DO
 
 !-----------------------------------------------------------------------
 ! Energy Group Edge Loop
 !-----------------------------------------------------------------------
-E_edge(1)=Emin
+   E_edge(1)=Emin
 
-DO m=2,nez+1
-   E_edge(m) = E_edge(m-1) + delta_E(m-1)
-END DO
+   DO m=2,nez+1
+     E_edge(m) = E_edge(m-1) + delta_E(m-1)
+   END DO
 
 !-----------------------------------------------------------------------
 ! Energy Group Center Loop
@@ -333,21 +321,21 @@ END DO
 ! Max/Min of each rho, t, ye, E)
 ! Species, EOS type, etc.? 
 ! Metadata guide
- metadata(1,1) = Nrho
- metadata(1,2) = Nt  
- metadata(1,3) = Nye  
- metadata(1,4) = rhomin ! Min rho
- metadata(1,5) = rhomax !Max rho
- metadata(1,6) = Tmin   !Min T  
- metadata(1,7) = Tmax   !Max T  
- metadata(1,8) = Yemin  !Min Ye  
- metadata(1,9) = Yemax  !Max Ye
- metadata(1,10) = 12.d0    ! Number of EOS fields
- metadata(1,11) = 2.d0     !Number of Opacity fields
- metadata(1,12) = 1.d0     !Number of Neutrino Species
- metadata(1,13) = nez   !Number of Energy groups
- metadata(1,14) = Emin                 
- metadata(1,15) = Emax
+  metadata(1,1) = Nrho
+  metadata(1,2) = Nt  
+  metadata(1,3) = Nye  
+  metadata(1,4) = rhomin ! Min rho
+  metadata(1,5) = rhomax !Max rho
+  metadata(1,6) = Tmin   !Min T  
+  metadata(1,7) = Tmax   !Max T  
+  metadata(1,8) = Yemin  !Min Ye  
+  metadata(1,9) = Yemax  !Max Ye
+  metadata(1,10) = 12.d0    ! Number of EOS fields
+  metadata(1,11) = 2.d0     !Number of Opacity fields
+  metadata(1,12) = 1.d0     !Number of Neutrino Species
+  metadata(1,13) = nez   !Number of Energy groups
+  metadata(1,14) = Emin                 
+  metadata(1,15) = Emax
 
 
  
