@@ -324,16 +324,16 @@ END DO
   metadata(1,1) = Nrho
   metadata(1,2) = Nt  
   metadata(1,3) = Nye  
-  metadata(1,4) = rhomin ! Min rho
-  metadata(1,5) = rhomax !Max rho
-  metadata(1,6) = Tmin   !Min T  
-  metadata(1,7) = Tmax   !Max T  
-  metadata(1,8) = Yemin  !Min Ye  
-  metadata(1,9) = Yemax  !Max Ye
+  metadata(1,4) = rhomin    ! Min rho
+  metadata(1,5) = rhomax    !Max rho
+  metadata(1,6) = Tmin      !Min T  
+  metadata(1,7) = Tmax      !Max T  
+  metadata(1,8) = Yemin     !Min Ye  
+  metadata(1,9) = Yemax     !Max Ye
   metadata(1,10) = 12.d0    ! Number of EOS fields
   metadata(1,11) = 2.d0     !Number of Opacity fields
   metadata(1,12) = 1.d0     !Number of Neutrino Species
-  metadata(1,13) = nez   !Number of Energy groups
+  metadata(1,13) = nezbuff  !Number of Energy groups
   metadata(1,14) = Emin                 
   metadata(1,15) = Emax
 
