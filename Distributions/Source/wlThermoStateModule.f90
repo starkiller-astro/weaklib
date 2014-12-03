@@ -18,6 +18,7 @@ MODULE wlThermoStateModule
   END TYPE  
 
   PUBLIC AllocateThermoState 
+  PUBLIC DeAllocateThermoState 
   
 CONTAINS 
 
@@ -35,12 +36,16 @@ CONTAINS
   END SUBROUTINE AllocateThermoState
 
 
-!  SUBROUTINE DeAllocateState( State, nValues )
+  SUBROUTINE DeAllocateThermoState( ThermoState )
 
-!    DO i = 1, 3
-!      DEALLOCATE( State % States(i) % Values(1:nValues(i)) ) 
-!    END DO 
+    TYPE(ThermoStateType) :: ThermoState
 
-!  END SUBROUTINE DeAllocateState
+    INTEGER :: i
+    
+    DO i = 1, 3
+      DEALLOCATE( ThermoState % States(i) % Values )
+    END DO 
+
+  END SUBROUTINE DeAllocateThermoState
 
 END MODULE wlThermoStateModule 

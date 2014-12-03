@@ -41,9 +41,6 @@ PROGRAM wlThermoStateTest
   WRITE(*,*) State1%States(3)%Values(3)
 
 
-!  Call DeAllocateState( State1, npts )
-
-  !TYPE(State) :: EOS
-  !EOS = State( (/2,2,2/) )
+  Call DeAllocateThermoState( State1 )
 
 END PROGRAM wlThermoStateTest
