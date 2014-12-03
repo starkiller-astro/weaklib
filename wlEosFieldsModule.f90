@@ -1,6 +1,6 @@
-MODULE EosFieldsModule
+MODULE wlEosFieldsModule
 !-------------------------------------------------------------
-!   Module: EosFieldsModule
+!   Module: wlEosFieldsModule
 !   Author: R. Landfield
 !   Date:   11/6/14
 !-------------------------------------------------------------
@@ -76,7 +76,8 @@ CONTAINS
     CALL h5dopen_f(file_id, "metadata", dataset_id, hdferr)
     CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, Metadata(:,:), mddims, hdferr)
     CALL h5dclose_f(dataset_id, hdferr)
-
+    CALL h5fclose_f(filename, H5F_ACC_RDONLY, file_id, hdferr);
+    CALL h5close_f(hdferr)
       ALLOCATE(dims(Metadata(1,1,),Metadata(1,2),Metadata(1,3))
 !   Metadata(1,1) = Nrho
 !   Metadata(1,2) = Nt
@@ -115,60 +116,24 @@ CONTAINS
   !-------------------------------------------------------------
   !   Open the file and the dataset.
   !-------------------------------------------------------------
+    CALL h5open_f(hdferr)
+    CALL h5fopen_f(filename, H5F_ACC_RDONLY, file_id, hdferr);
+      DO i=1,N_EOS_FIELDS
+        CALL h5dopen_f(file_id, EosFieldNames(i), dataset_id, hdferr)
+        CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,i), dims, hdferr)
+        CALL h5dclose_f(dataset_id, hdferr) 
+      END DO
+    CALL h5fclose_f(filename, H5F_ACC_RDONLY, file_id, hdferr);
 
-    CALL h5dopen_f(file_id, EosFieldNames(1), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,1), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr) 
-
-    CALL h5dopen_f(file_id, EosFieldNames(2), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,2), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(3), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,3), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(4), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,4), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(5), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,5), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(6), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,6), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(7), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,7), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(8), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,8), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(9), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,9), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(10), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,10), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(11), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,11), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-    CALL h5dopen_f(file_id, EosFieldNames(12), dataset_id, hdferr)
-    CALL h5dread_f(dataset_id, H5T_NATIVE_DOUBLE, EosData(:,:,:,12), dims, hdferr)
-    CALL h5dclose_f(dataset_id, hdferr)
-
-
+    CALL h5close_f(hdferr)
 
   End Subroutine ReadEosFields
 
   Subroutine DeAllocateEosFields
+  !-------------------------------------------------------------
+  !-------------------------------------------------------------
+  !-------------------------------------------------------------
+  
   !-------------------------------------------------------------
   !   Close/release resources.
   !-------------------------------------------------------------
@@ -178,5 +143,5 @@ CONTAINS
     H5Fclose(file);
   End Subroutine DeAllocateEosFields
 
-End Module EosFieldsModule
+End Module wlEosFieldsModule
 

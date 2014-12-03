@@ -1,7 +1,7 @@
-PROGRAM table_get
+PROGRAM wltable_get
 !       
-!    File:         table_get
-!    Module:       table_get
+!    File:         wltable_get
+!    Module:       wltable_get
 !    Type:         Program
 !
 !    Date:         7/30/13
@@ -66,7 +66,6 @@ REAL(KIND=double), Parameter     :: delta_E_min = 1.0d00    ! Minimum Neutrino E
 
 
 REAL(double), DIMENSION(nezbuff)     :: E_quad              ! neutrino energy buffer from E_edge to E_quad; ebuff is gonna become E_quad [MeV]
-!REAL(double), DIMENSION(nezbuff)     :: e_in                ! quadrature grid neutrino energy [MeV]
 REAL(double), DIMENSION(nez)         :: delta_E             ! neutrino energy zone width [MeV]
 REAL(double), DIMENSION(nez+1)       :: E_edge              ! neutrino energy zone edge [MeV]
 REAL(double), DIMENSION(nez)         :: E_cent              ! neutrino energy zone center [MeV]
@@ -178,15 +177,8 @@ WRITE(*,*) "Sample rho t ye"
 !
 !-----------------------------------------------------------------------
 
-!DO k=0,50
-!  DO j=0,50
-!    DO i=0,80
-        Call eos_get(Nrho, Nt, Nye, rho, t, ye, Output) ! Output to memory
+  Call eos_get(Nrho, Nt, Nye, rho, t, ye, Output) ! Output to memory
         
-!      END DO
-!   END DO
-!END DO
-
 !-----------------------------------------------------------------------
 !  Do Loops to Create table
 !
