@@ -1,41 +1,38 @@
-MODULE wlStateModule
+MODULE wlThermoStateModule
   
-!  USE wlKindModule, ONLY: dp
+  USE wlKindModule, ONLY: dp
 
   implicit none
   PRIVATE
 
   TYPE :: ValueType
-    REAL(8), ALLOCATABLE, DIMENSION(:) :: Values
+    REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
   END TYPE
   
-  TYPE, PUBLIC :: StateType
+  TYPE, PUBLIC :: ThermoStateType
     CHARACTER(LEN=32), DIMENSION(3) :: Names
     INTEGER, DIMENSION(3) :: nValues
-    REAL(8), DIMENSION(3) :: minValues
-    REAL(8), DIMENSION(3) :: maxValues
+    REAL(dp), DIMENSION(3) :: minValues
+    REAL(dp), DIMENSION(3) :: maxValues
     TYPE(ValueType), DIMENSION(3) :: States
   END TYPE  
-!  TYPE :: ValueType
-!    REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
-!  END TYPE
 
-  PUBLIC AllocateState 
+  PUBLIC AllocateThermoState 
   
 CONTAINS 
 
-  SUBROUTINE AllocateState( State, nValues )
+  SUBROUTINE AllocateThermoState( ThermoState, nValues )
      
-    TYPE(StateType) :: State
+    TYPE(ThermoStateType) :: ThermoState
     INTEGER, DIMENSION(3), INTENT(in) :: nValues
 
     INTEGER :: i
     
     DO i = 1, 3
-      ALLOCATE( State % States(i) % Values(1:nValues(i)) ) 
+      ALLOCATE( ThermoState % States(i) % Values(1:nValues(i)) ) 
     END DO 
  
-  END SUBROUTINE AllocateState
+  END SUBROUTINE AllocateThermoState
 
 
 !  SUBROUTINE DeAllocateState( State, nValues )
@@ -46,4 +43,4 @@ CONTAINS
 
 !  END SUBROUTINE DeAllocateState
 
-END MODULE wlStateModule 
+END MODULE wlThermoStateModule 

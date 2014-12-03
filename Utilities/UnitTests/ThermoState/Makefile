@@ -1,4 +1,4 @@
-
+vpath =../../../Distributions/Source:.
 # Build configurations using variables defined in System Makefile
 CMODE = OPTIMIZE
 #CMODE = DEBUG
