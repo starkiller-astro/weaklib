@@ -3,6 +3,10 @@ PROGRAM wlThermoStateTest
   USE wlThermoStateModule
   USE wlKindModule, ONLY: dp
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
+  USE HDF5
+  USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
+                           WriteThermoStateHDF, ReadThermoStateHDF,          & 
+                           CloseGroupHDF, CloseFileHDF, FinalizeHDF
 
   implicit none
 
@@ -11,6 +15,8 @@ PROGRAM wlThermoStateTest
   INTEGER :: nvar
   INTEGER :: j   
   TYPE(ThermoStateType) :: ThermoState
+  INTEGER(HID_T) :: file_id
+  INTEGER(HID_T) :: group_id
 
   npts = (/10,31,61/)
 
@@ -32,15 +38,33 @@ PROGRAM wlThermoStateTest
   CALL MakeLinearGrid( ThermoState % minValues(3), ThermoState % maxValues(3),&
          ThermoState % nValues(3), ThermoState % States(3) % Values)
 
+
+
+  CALL InitializeHDF( )
+  CALL OpenFileHDF( "ThermoStateFile.h5", .true., file_id )
+  CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+  CALL WriteThermoStateHDF( ThermoState, group_id )
+  CALL CloseGroupHDF( group_id )
+  CALL CloseFileHDF( file_id )
+  CALL FinalizeHDF( )
+ 
+  CALL DeAllocateThermoState( ThermoState )
+
+  CALL AllocateThermoState( ThermoState, npts )
+  ! READ STATE HERE
+  CALL InitializeHDF( )
+  CALL OpenFileHDF( "ThermoStateFile.h5", .false., file_id )
+  CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+  CALL ReadThermoStateHDF( ThermoState, npts, group_id )
+  CALL CloseGroupHDF( group_id )
+  CALL CloseFileHDF( file_id )
+  CALL FinalizeHDF( )
+
   DO j = 1,3
     WRITE(*,*) TRIM( ThermoState % Names(j) )
-    WRITE(*,*) ThermoState % nValues(j)
-    WRITE(*,*) ThermoState % minValues(j), ThermoState % maxValues(j)
+    !WRITE(*,*) ThermoState % nValues(j)
+    !WRITE(*,*) ThermoState % minValues(j), ThermoState % maxValues(j)
     WRITE(*,*) ThermoState % States(j) % Values(:)
   END DO
-
-  !CALL WriteGrid( 3, npts, ThermoState )
-  
-  CALL DeAllocateThermoState( ThermoState )
 
 END PROGRAM wlThermoStateTest

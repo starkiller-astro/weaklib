@@ -43,7 +43,7 @@ else ifeq ($(CMODE),PROFILE)
 endif
 
 # Configure Libraries and files to link Matrix solver
-LIBS = $(EXTRA_LINK)
+LIBS = $(EXTRA_LINK) $(HDF5_FLIB)
 
 
 # Configure flags for OpenMP
@@ -100,8 +100,8 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlThermoStateTest.o
-	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlThermoStateTest.o
+test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlIOModuleHDF.o wlThermoStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlIOModuleHDF.o wlThermoStateTest.o 
 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
