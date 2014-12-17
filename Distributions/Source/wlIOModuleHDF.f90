@@ -174,26 +174,29 @@ CONTAINS
 
   END SUBROUTINE WriteThermoStateHDF
 
-  SUBROUTINE ReadThermoStateHDF( ThermoState, npts, group_id )
+  SUBROUTINE ReadThermoStateHDF( TS, group_id )
 
-    TYPE(ThermoStateType), INTENT(inout)        :: ThermoState
+    TYPE(ThermoStateType), INTENT(inout)        :: TS
     INTEGER(HID_T), INTENT(in)                  :: group_id
-    INTEGER, DIMENSION(3), INTENT(in)           :: npts
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER                                     :: i
    
-    npts(1:3) = ThermoState % nValues(1:3)
- 
     DO i = 1, 3
-       datasize1d(1) = ThermoState % nValues(i)
-       CALL Read1dHDF_double( ThermoState % Names(i),              &
-                              ThermoState % States(i) % Values(:), &
+       datasize1d(1) = TS % nValues(i)
+       CALL Read1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
                               group_id, datasize1d )
+       TS % minValues(i) = MINVAL( TS % States(i) % Values(:) )                     
+       TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
     END DO
 
   END SUBROUTINE ReadThermoStateHDF
+  
+  SUBROUTINE ReadDimensionsHDF ( ) 
 
+  INTEGER, DIMENSION(3) :: Dimensions
+ 
+  END SUBROUTINE ReadDimensionsHDF ( ) 
 
   SUBROUTINE WriteDependentVariablesHDF 
 

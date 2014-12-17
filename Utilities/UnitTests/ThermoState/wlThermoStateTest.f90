@@ -12,9 +12,11 @@ PROGRAM wlThermoStateTest
 
 
   INTEGER, DIMENSION(3) :: npts
+  INTEGER, DIMENSION(3) :: npts2
   INTEGER :: nvar
   INTEGER :: j   
   TYPE(ThermoStateType) :: ThermoState
+  TYPE(ThermoStateType) :: ThermoState2
   INTEGER(HID_T) :: file_id
   INTEGER(HID_T) :: group_id
 
@@ -38,33 +40,37 @@ PROGRAM wlThermoStateTest
   CALL MakeLinearGrid( ThermoState % minValues(3), ThermoState % maxValues(3),&
          ThermoState % nValues(3), ThermoState % States(3) % Values)
 
-
-
   CALL InitializeHDF( )
   CALL OpenFileHDF( "ThermoStateFile.h5", .true., file_id )
   CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
   CALL WriteThermoStateHDF( ThermoState, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
-  CALL FinalizeHDF( )
  
   CALL DeAllocateThermoState( ThermoState )
 
-  CALL AllocateThermoState( ThermoState, npts )
-  ! READ STATE HERE
-  CALL InitializeHDF( )
+  CALL AllocateThermoState( ThermoState2, npts )
+
+  ThermoState2 % nValues(1:3) = npts(1:3)
+  ThermoState2 % Names(1:3) = (/'Density                         ',&
+                                'Temperature                     ',&
+                                'Electron Fraction               '/)
+
   CALL OpenFileHDF( "ThermoStateFile.h5", .false., file_id )
   CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
-  CALL ReadThermoStateHDF( ThermoState, npts, group_id )
+  CALL ReadThermoStateHDF( ThermoState2, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
-  CALL FinalizeHDF( )
 
   DO j = 1,3
-    WRITE(*,*) TRIM( ThermoState % Names(j) )
-    !WRITE(*,*) ThermoState % nValues(j)
-    !WRITE(*,*) ThermoState % minValues(j), ThermoState % maxValues(j)
-    WRITE(*,*) ThermoState % States(j) % Values(:)
+    WRITE(*,*) TRIM( ThermoState2 % Names(j) )
+    WRITE(*,*) ThermoState2 % nValues(j)
+    WRITE(*,*) ThermoState2 % minValues(j), ThermoState2 % maxValues(j)
+    WRITE(*,*) ThermoState2 % States(j) % Values(:)
   END DO
+
+  CALL DeAllocateThermoState( ThermoState2 )
+
+  CALL FinalizeHDF( )
 
 END PROGRAM wlThermoStateTest
