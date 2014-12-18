@@ -113,12 +113,12 @@ CONTAINS
   SUBROUTINE Write1dHDF_double( name, values, group_id, datasize, &
                desc_option, unit_option)
 
-    CHARACTER(*), INTENT(IN)                    :: name
-    CHARACTER(*), INTENT(IN), OPTIONAL          :: unit_option
-    CHARACTER(*), INTENT(IN), OPTIONAL          :: desc_option
+    CHARACTER(*), INTENT(in)                    :: name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
     INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), dimension(1), INTENT(IN)  :: datasize
-    REAL(dp), DIMENSION(:), INTENT(IN)          :: values
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
+    REAL(dp), DIMENSION(:), INTENT(in)          :: values
    
     INTEGER(HID_T)                              :: dataset_id
     INTEGER(HID_T)                              :: dataspace_id
@@ -146,8 +146,8 @@ CONTAINS
 
     CHARACTER(*), INTENT(out)                    :: name
     INTEGER(HID_T)                               :: group_id
-    INTEGER(HSIZE_T), DIMENSION(1), INTENT(IN)   :: datasize
-    REAL(dp), DIMENSION(:), INTENT(OUT)          :: values
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+    REAL(dp), DIMENSION(:), INTENT(out)          :: values
     
     INTEGER(HID_T)                               :: dataset_id
   
@@ -157,6 +157,156 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Read1dHDF_double
+  
+  SUBROUTINE Write3dHDF_double( name, values, group_id, datasize, &
+               desc_option, unit_option)
+
+    CHARACTER(*), INTENT(in)                    :: name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(3), INTENT(in)  :: datasize
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)      :: values
+   
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+  
+    
+    CALL h5screate_simple_f( 3, datasize, dataspace_id, hdferr )
+
+    CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
+           dataspace_id, dataset_id, hdferr )
+
+    CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
+           values, datasize, hdferr )
+
+    CALL h5sclose_f( dataspace_id, hdferr ) 
+
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Write3dHDF_double
+
+  SUBROUTINE Read3dHDF_double( name, values, group_id, datasize )
+
+    CHARACTER(*), INTENT(out)                    :: name
+    INTEGER(HID_T)                               :: group_id
+    INTEGER(HSIZE_T), DIMENSION(3), INTENT(in)   :: datasize
+    REAL(dp), DIMENSION(:,:,:), INTENT(out)      :: values
+    
+    INTEGER(HID_T)                               :: dataset_id
+  
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, &
+                   values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Read3dHDF_double
+  
+  SUBROUTINE Write1dHDF_integer( name, values, group_id, datasize, &
+               desc_option, unit_option)
+
+    CHARACTER(*), INTENT(in)                    :: name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
+    INTEGER, DIMENSION(:), INTENT(in)           :: values
+   
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+  
+    
+    CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
+
+    CALL h5dcreate_f( group_id, name, H5T_NATIVE_INTEGER, &
+           dataspace_id, dataset_id, hdferr )
+
+    CALL h5dwrite_f( dataset_id, H5T_NATIVE_INTEGER, &
+           values, datasize, hdferr )
+
+    CALL h5sclose_f( dataspace_id, hdferr ) 
+
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Write1dHDF_integer
+
+  SUBROUTINE Read1dHDF_integer( name, values, group_id, datasize )
+
+    CHARACTER(*), INTENT(out)                    :: name
+    INTEGER(HID_T)                               :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+    INTEGER, DIMENSION(:), INTENT(out)           :: values
+    
+    INTEGER(HID_T)                               :: dataset_id
+  
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
+                   values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Read1dHDF_integer
+
+  SUBROUTINE Write1dHDF_string( name, values, group_id, datasize, &
+               desc_option, unit_option)
+
+    CHARACTER(*), INTENT(in)                    :: name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
+    CHARACTER(len=*), DIMENSION(:), INTENT(in)  :: values
+   
+    INTEGER(HSIZE_T)                            :: sizechar
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+  
+    
+    CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
+    sizechar = LEN( values(1) )
+
+    CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
+    CALL h5dcreate_f( group_id, name, H5T_NATIVE_CHARACTER, &
+           dataspace_id, dataset_id, hdferr )
+
+    CALL h5dwrite_f( dataset_id, H5T_NATIVE_CHARACTER, &
+           values, datasize, hdferr )
+
+    CALL h5sclose_f( dataspace_id, hdferr ) 
+
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Write1dHDF_string
+
+  SUBROUTINE Read1dHDF_string( name, values, group_id, datasize )
+
+    CHARACTER(*), INTENT(out)                    :: name
+    INTEGER(HID_T)                               :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+    CHARACTER(len=*), DIMENSION(:), INTENT(inout) :: values
+
+    INTEGER(HSIZE_T)                             :: sizechar
+    INTEGER(HID_T)                               :: dataset_id
+  
+    sizechar = LEN( values(1) )
+    CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_CHARACTER, &
+                   values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Read1dHDF_string
   
   SUBROUTINE WriteThermoStateHDF( TS, group_id )
 
@@ -196,7 +346,7 @@ CONTAINS
 
   INTEGER, DIMENSION(3) :: Dimensions
  
-  END SUBROUTINE ReadDimensionsHDF ( ) 
+  END SUBROUTINE ReadDimensionsHDF
 
   SUBROUTINE WriteDependentVariablesHDF 
 
