@@ -18,6 +18,8 @@ MODULE wlIOModuleHDF
   PUBLIC WriteEOSTableHDF
   PUBLIC WriteThermoStateHDF
   PUBLIC ReadThermoStateHDF
+  PUBLIC ReadDimensionsHDF
+  PUBLIC LoadThermoStateHDF
 
 CONTAINS
 
@@ -144,7 +146,7 @@ CONTAINS
 
   SUBROUTINE Read1dHDF_double( name, values, group_id, datasize )
 
-    CHARACTER(*), INTENT(out)                    :: name
+    CHARACTER(*), INTENT(in)                    :: name
     INTEGER(HID_T)                               :: group_id
     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
     REAL(dp), DIMENSION(:), INTENT(out)          :: values
@@ -192,7 +194,7 @@ CONTAINS
 
   SUBROUTINE Read3dHDF_double( name, values, group_id, datasize )
 
-    CHARACTER(*), INTENT(out)                    :: name
+    CHARACTER(*), INTENT(in)                     :: name
     INTEGER(HID_T)                               :: group_id
     INTEGER(HSIZE_T), DIMENSION(3), INTENT(in)   :: datasize
     REAL(dp), DIMENSION(:,:,:), INTENT(out)      :: values
@@ -240,7 +242,7 @@ CONTAINS
 
   SUBROUTINE Read1dHDF_integer( name, values, group_id, datasize )
 
-    CHARACTER(*), INTENT(out)                    :: name
+    CHARACTER(*), INTENT(in)                    :: name
     INTEGER(HID_T)                               :: group_id
     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
     INTEGER, DIMENSION(:), INTENT(out)           :: values
@@ -291,13 +293,13 @@ CONTAINS
 
   SUBROUTINE Read1dHDF_string( name, values, group_id, datasize )
 
-    CHARACTER(*), INTENT(out)                    :: name
-    INTEGER(HID_T)                               :: group_id
-    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+    CHARACTER(*), INTENT(in)                      :: name
+    INTEGER(HID_T)                                :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)    :: datasize
     CHARACTER(len=*), DIMENSION(:), INTENT(inout) :: values
 
-    INTEGER(HSIZE_T)                             :: sizechar
-    INTEGER(HID_T)                               :: dataset_id
+    INTEGER(HSIZE_T)                              :: sizechar
+    INTEGER(HID_T)                                :: dataset_id
   
     sizechar = LEN( values(1) )
     CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
@@ -315,11 +317,17 @@ CONTAINS
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER                                     :: i
+
+    datasize1d(1) = 3
+    CALL Write1dHDF_integer( "Dimensions", TS % nValues(:), &
+                             group_id, datasize1d )
     
+    CALL Write1dHDF_string( "Names", TS % Names(:), &
+                             group_id, datasize1d )
     DO i = 1, 3
-       datasize1d(1) = TS % nValues(i)
-       CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
-                               group_id, datasize1d )
+      datasize1d(1) = TS % nValues(i)
+      CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
+                              group_id, datasize1d )
     END DO
 
   END SUBROUTINE WriteThermoStateHDF
@@ -331,22 +339,48 @@ CONTAINS
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER                                     :: i
-   
-    DO i = 1, 3
-       datasize1d(1) = TS % nValues(i)
-       CALL Read1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
+    
+    CALL Read1dHDF_string( "Names", TS % Names(:), &
                               group_id, datasize1d )
-       TS % minValues(i) = MINVAL( TS % States(i) % Values(:) )                     
-       TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
+    DO i = 1, 3
+      datasize1d(1) = TS % nValues(i)
+      CALL Read1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
+                              group_id, datasize1d )
+      TS % minValues(i) = MINVAL( TS % States(i) % Values(:) )                     
+      TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
     END DO
 
   END SUBROUTINE ReadThermoStateHDF
   
-  SUBROUTINE ReadDimensionsHDF ( ) 
+  SUBROUTINE ReadDimensionsHDF ( Dimensions, group_id ) 
 
-  INTEGER, DIMENSION(3) :: Dimensions
- 
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+    INTEGER, DIMENSION(:), INTENT(inout)        :: Dimensions
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+
+    datasize1d(1) = SIZE( Dimensions )
+    CALL Read1dHDF_integer( "Dimensions", Dimensions(:), group_id, datasize1d ) 
+
   END SUBROUTINE ReadDimensionsHDF
+  
+  SUBROUTINE LoadThermoStateHDF( TS, file_id )
+
+    TYPE(ThermoStateType), INTENT(inout)        :: TS
+    INTEGER, DIMENSION(3)                       :: npts
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HID_T)                              :: file_id
+
+  CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+
+  CALL ReadDimensionsHDF( npts, group_id )
+  CALL AllocateThermoState( TS, npts )
+
+  TS % nValues(1:3) = npts(1:3)
+
+  CALL ReadThermoStateHDF( TS, group_id )
+  CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE LoadThermoStateHDF
 
   SUBROUTINE WriteDependentVariablesHDF 
 

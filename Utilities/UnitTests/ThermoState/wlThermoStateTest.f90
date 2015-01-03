@@ -6,7 +6,8 @@ PROGRAM wlThermoStateTest
   USE HDF5
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
                            WriteThermoStateHDF, ReadThermoStateHDF,          & 
-                           CloseGroupHDF, CloseFileHDF, FinalizeHDF
+                           CloseGroupHDF, CloseFileHDF, FinalizeHDF,         &
+                           ReadDimensionsHDF, LoadThermoStateHDF
 
   implicit none
 
@@ -49,17 +50,16 @@ PROGRAM wlThermoStateTest
  
   CALL DeAllocateThermoState( ThermoState )
 
-  CALL AllocateThermoState( ThermoState2, npts )
-
-  ThermoState2 % nValues(1:3) = npts(1:3)
-  ThermoState2 % Names(1:3) = (/'Density                         ',&
-                                'Temperature                     ',&
-                                'Electron Fraction               '/)
-
   CALL OpenFileHDF( "ThermoStateFile.h5", .false., file_id )
-  CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
-  CALL ReadThermoStateHDF( ThermoState2, group_id )
-  CALL CloseGroupHDF( group_id )
+  CALL LoadThermoStateHDF( ThermoState2, file_id )
+  !CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+  !CALL ReadDimensionsHDF( npts, group_id )
+  !CALL AllocateThermoState( ThermoState2, npts )
+
+  !ThermoState2 % nValues(1:3) = npts(1:3)
+
+  !CALL ReadThermoStateHDF( ThermoState2, group_id )
+  !CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
 
   DO j = 1,3

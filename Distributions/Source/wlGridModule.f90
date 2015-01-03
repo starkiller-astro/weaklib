@@ -8,7 +8,6 @@ MODULE wlGridModule
 
   PUBLIC MakeLinearGrid
   PUBLIC MakeLogGrid
-  PUBLIC WriteGrid 
 
 CONTAINS 
 
