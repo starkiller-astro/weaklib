@@ -100,8 +100,8 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-test: wlDependentVariablesModule.o wlDependentVariablesTest.o 
-	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlDependentVariablesModule.o wlDependentVariablesTest.o 
+test: wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlIOModuleHDF.o wlDependentVariablesTest.o 
+	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlIOModuleHDF.o  wlDependentVariablesTest.o 
 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 

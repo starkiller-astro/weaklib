@@ -3,6 +3,7 @@ MODULE wlIOModuleHDF
   USE wlKindModule, ONLY: dp
   USE HDF5 
   USE wlThermoStateModule
+  USE wlDependentVariablesModule
 
   implicit none
   PRIVATE
@@ -17,6 +18,7 @@ MODULE wlIOModuleHDF
   PUBLIC WriteHeaderHDF
   PUBLIC WriteEOSTableHDF
   PUBLIC WriteThermoStateHDF
+  PUBLIC WriteDependentVariablesHDF
   PUBLIC ReadThermoStateHDF
   PUBLIC ReadDimensionsHDF
   PUBLIC LoadThermoStateHDF
@@ -332,6 +334,28 @@ CONTAINS
 
   END SUBROUTINE WriteThermoStateHDF
 
+  SUBROUTINE WriteDependentVariablesHDF( DV, group_id )
+
+    TYPE(DependentVariablesType), INTENT(in)    :: DV
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER                                     :: i
+
+    datasize1d(1) = 3
+!    CALL Write1dHDF_integer( "Dimensions", DV % nValues(:), &
+!                             group_id, datasize1d )
+
+    CALL Write1dHDF_string( "Names", DV % Names(:), &
+                             group_id, datasize1d )
+!    DO i = 1, 3
+!      datasize1d(1) = DV % nValues(i)
+!      CALL Write1dHDF_double( DV % Names(i), DV % Variables(i) % Values(:), &
+!                              group_id, datasize1d )
+!    END DO
+
+  END SUBROUTINE WriteDependentVariablesHDF
+
   SUBROUTINE ReadThermoStateHDF( TS, group_id )
 
     TYPE(ThermoStateType), INTENT(inout)        :: TS
@@ -382,9 +406,7 @@ CONTAINS
 
   END SUBROUTINE LoadThermoStateHDF
 
-  SUBROUTINE WriteDependentVariablesHDF 
 
-  END SUBROUTINE WriteDependentVariablesHDF 
 
 END MODULE wlIOModuleHDF
 

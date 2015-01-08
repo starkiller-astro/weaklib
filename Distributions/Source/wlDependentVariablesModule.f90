@@ -28,6 +28,7 @@ CONTAINS
 
     INTEGER :: i
 
+    ALLOCATE( DV % Names( nVariables ) )
     ALLOCATE( DV % Variables( nVariables ) ) 
 
     DO i = 1, nVariables
@@ -48,6 +49,7 @@ CONTAINS
     END DO
    
     DEALLOCATE( DV % Variables )
+    DEALLOCATE( DV % Names )
 
   END SUBROUTINE DeAllocateDependentVariables
 

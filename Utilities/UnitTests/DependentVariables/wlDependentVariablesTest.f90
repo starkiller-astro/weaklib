@@ -1,17 +1,45 @@
 PROGRAM wlDependentVariablesTest
  
   USE wlDependentVariablesModule
- 
+  USE HDF5
+  USE wlThermoStateModule
+  USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
+                           WriteDependentVariablesHDF,   &
+                           CloseGroupHDF, CloseFileHDF, FinalizeHDF,         &
+                           ReadDimensionsHDF
   implicit none
 
   INTEGER :: i
   TYPE(DependentVariablesType) :: DV
- 
-  CALL AllocateDependentVariables( DV, nVariables = 5, nValues = (/10,10,10/) )
+  INTEGER(HID_T) :: file_id
+  INTEGER(HID_T) :: group_id
+
+print*,"1"
+
+  CALL AllocateDependentVariables( DV, nValues = (/10,10,10/), nVariables = 3 )
+
+print*,"2"
+
+  DV % Names(1:3) = (/'Pressure                        ', &
+                      'Entropy Per Baryon              ', &
+                      'Internal Energy Density         '/)
+
+print*,"3"
 
   DO i = 1, SIZE( DV % Variables )
     WRITE (*,*) SHAPE( DV % Variables(i) % Values )
   END DO
+
+print*,"4"
+
+!  CALL InitializeHDF( )
+!  CALL OpenFileHDF( "DependentVariablesFile.h5", .true., file_id )
+!  CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
+!  CALL WriteDependentVariablesHDF( DV, group_id )
+!  CALL CloseGroupHDF( group_id )
+!  CALL CloseFileHDF( file_id )
+
+
 
   CALL DeAllocateDependentVariables( DV )
  
