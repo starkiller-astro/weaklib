@@ -12,6 +12,7 @@ MODULE wlDependentVariablesModule
   TYPE, PUBLIC :: DependentVariablesType
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     INTEGER :: nVariables
+    !INTEGER, DIMENSION(:), ALLOCATABLE :: nValues
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
   END TYPE
 
@@ -20,6 +21,7 @@ MODULE wlDependentVariablesModule
 
 CONTAINS
 
+  !SUBROUTINE AllocateDependentVariables( DV, nVariables )
   SUBROUTINE AllocateDependentVariables( DV, nValues, nVariables )
    
     TYPE(DependentVariablesType) :: DV 
@@ -30,6 +32,7 @@ CONTAINS
 
     ALLOCATE( DV % Names( nVariables ) )
     ALLOCATE( DV % Variables( nVariables ) ) 
+    !ALLOCATE( DV % nValues( nVariables ) ) 
 
     DO i = 1, nVariables
       ALLOCATE( DV % Variables(i) &

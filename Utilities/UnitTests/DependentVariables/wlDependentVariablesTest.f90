@@ -17,12 +17,16 @@ PROGRAM wlDependentVariablesTest
 print*,"1"
 
   CALL AllocateDependentVariables( DV, nValues = (/10,10,10/), nVariables = 3 )
+  !CALL AllocateDependentVariables( DV, nVariables = 3 )
 
 print*,"2"
 
   DV % Names(1:3) = (/'Pressure                        ', &
                       'Entropy Per Baryon              ', &
                       'Internal Energy Density         '/)
+
+  !DV % nValues(1:3) = (/10,10,10/)
+
 
 print*,"3"
 
@@ -32,12 +36,12 @@ print*,"3"
 
 print*,"4"
 
-!  CALL InitializeHDF( )
-!  CALL OpenFileHDF( "DependentVariablesFile.h5", .true., file_id )
-!  CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-!  CALL WriteDependentVariablesHDF( DV, group_id )
-!  CALL CloseGroupHDF( group_id )
-!  CALL CloseFileHDF( file_id )
+  CALL InitializeHDF( )
+  CALL OpenFileHDF( "DependentVariablesFile.h5", .true., file_id )
+  CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
+  CALL WriteDependentVariablesHDF( DV, group_id )
+  CALL CloseGroupHDF( group_id )
+  CALL CloseFileHDF( file_id )
 
 
 

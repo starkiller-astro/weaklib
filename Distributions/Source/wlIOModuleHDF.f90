@@ -340,19 +340,19 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
     INTEGER                                     :: i
 
-    datasize1d(1) = 3
 !    CALL Write1dHDF_integer( "Dimensions", DV % nValues(:), &
 !                             group_id, datasize1d )
-
+    datasize1d = SIZE( DV % Names )
     CALL Write1dHDF_string( "Names", DV % Names(:), &
                              group_id, datasize1d )
-!    DO i = 1, 3
-!      datasize1d(1) = DV % nValues(i)
-!      CALL Write1dHDF_double( DV % Names(i), DV % Variables(i) % Values(:), &
-!                              group_id, datasize1d )
-!    END DO
+    DO i = 1, 3
+      datasize3d = SHAPE( DV % Variables(i) % Values ) 
+      CALL Write3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &
+                              group_id, datasize3d )
+    END DO
 
   END SUBROUTINE WriteDependentVariablesHDF
 
