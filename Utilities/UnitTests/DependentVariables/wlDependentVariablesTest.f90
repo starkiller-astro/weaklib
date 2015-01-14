@@ -10,7 +10,7 @@ PROGRAM wlDependentVariablesTest
   implicit none
 
   INTEGER :: i
-  INTEGER, DIMENSION(3) :: npts
+  INTEGER, DIMENSION(12) :: npts
   INTEGER :: j
   TYPE(DependentVariablesType) :: DV
   TYPE(DependentVariablesType) :: DV2
@@ -19,14 +19,24 @@ PROGRAM wlDependentVariablesTest
 
 print*,"1"
 
-  CALL AllocateDependentVariables( DV, nValues = (/10,10,10/), nVariables = 3 )
+  CALL AllocateDependentVariables( DV, nValues = (/10,10,10,10,10,10,10,10,10,10,10,10/), nVariables = 12 )
+  !CALL AllocateDependentVariables( DV, nValues = (/10,10,10/), nVariables = 3 )
   !CALL AllocateDependentVariables( DV, nVariables = 3 )
 
 print*,"2"
 
-  DV % Names(1:3) = (/'Pressure                        ', &
-                      'Entropy Per Baryon              ', &
-                      'Internal Energy Density         '/)
+  DV % Names(1:12) = (/'Pressure                        ', &
+                       'Entropy Per Baryon              ', &
+                       'Internal Energy Density         ', &
+                       'Neutron Chemical Potential      ', &
+                       'Electron Chemical Potential     ', &
+                       'Proton Chemical Potential       ', &
+                       'Neutron Mass Fraction           ', &
+                       'Proton Mass Fraction            ', &
+                       'Helium Mass Fraction            ', &
+                       'Heavy Mass Fraction             ', &
+                       'Heavy Mass Number               ', &
+                       'Heavy Charge Number             '/)
 
   !DV % nValues(1:3) = (/10,10,10/)
 
@@ -36,6 +46,12 @@ print*,"3"
   DO i = 1, SIZE( DV % Variables )
     WRITE (*,*) SHAPE( DV % Variables(i) % Values )
   END DO
+
+  DO i = 1, SIZE( DV % Variables )
+    DV % Variables(i) % Values = i 
+  END DO
+
+
 
 print*,"4"
 
@@ -53,7 +69,7 @@ print*,"5"
   !CALL LoadDependentVariablesHDF( DV2, file_id )
   CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
   CALL ReadDimensionsHDF( npts, group_id )
-  CALL AllocateDependentVariables( DV2, npts, nVariables = 3 )
+  CALL AllocateDependentVariables( DV2, npts, nVariables = 12 )
 
   !DV2 % nValues(1:3) = npts(1:3)
 
@@ -61,7 +77,7 @@ print*,"5"
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
 
-  DO j = 1,3
+  DO j = 1,12
     WRITE(*,*) TRIM( DV2 % Names(j) )
     !WRITE(*,*) DV2 % nValues(j)
     WRITE(*,*) DV2 % Variables(j) % Values(:,:,:)

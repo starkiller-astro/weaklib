@@ -339,17 +339,20 @@ CONTAINS
 
     TYPE(DependentVariablesType), INTENT(in)    :: DV
     INTEGER(HID_T), INTENT(in)                  :: group_id
-
+    
+    INTEGER, DIMENSION(12)                      :: nValues
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
     INTEGER                                     :: i
 
-!    CALL Write1dHDF_integer( "Dimensions", nValues(:), &
-!                             group_id, datasize1d )
     datasize1d = SIZE( DV % Names )
     CALL Write1dHDF_string( "Names", DV % Names(:), &
                              group_id, datasize1d )
-    DO i = 1, 3
+    nValues = (/10,10,10,10,10,10,10,10,10,10,10,10/)
+     
+    CALL Write1dHDF_integer( "Dimensions", nValues(:), &
+                             group_id, datasize1d )
+    DO i = 1, SIZE( DV % Names ) 
       datasize3d = SHAPE( DV % Variables(i) % Values ) 
       CALL Write3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &
                               group_id, datasize3d )
