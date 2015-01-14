@@ -4,13 +4,16 @@ PROGRAM wlDependentVariablesTest
   USE HDF5
   USE wlThermoStateModule
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
-                           WriteDependentVariablesHDF,   &
-                           CloseGroupHDF, CloseFileHDF, FinalizeHDF,         &
-                           ReadDimensionsHDF
+                           WriteDependentVariablesHDF, CloseGroupHDF,        & 
+                           ReadDependentVariablesHDF, CloseFileHDF,          &
+                           FinalizeHDF, ReadDimensionsHDF
   implicit none
 
   INTEGER :: i
+  INTEGER, DIMENSION(3) :: npts
+  INTEGER :: j
   TYPE(DependentVariablesType) :: DV
+  TYPE(DependentVariablesType) :: DV2
   INTEGER(HID_T) :: file_id
   INTEGER(HID_T) :: group_id
 
@@ -42,9 +45,30 @@ print*,"4"
   CALL WriteDependentVariablesHDF( DV, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
-
-
-
   CALL DeAllocateDependentVariables( DV )
+
+print*,"5"
+
+  CALL OpenFileHDF( "DependentVariablesFile.h5", .false., file_id )
+  !CALL LoadDependentVariablesHDF( DV2, file_id )
+  CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+  CALL ReadDimensionsHDF( npts, group_id )
+  CALL AllocateDependentVariables( DV2, npts, nVariables = 3 )
+
+  !DV2 % nValues(1:3) = npts(1:3)
+
+  CALL ReadDependentVariablesHDF( DV2, group_id )
+  CALL CloseGroupHDF( group_id )
+  CALL CloseFileHDF( file_id )
+
+  DO j = 1,3
+    WRITE(*,*) TRIM( DV2 % Names(j) )
+    !WRITE(*,*) DV2 % nValues(j)
+    WRITE(*,*) DV2 % Variables(j) % Values(:,:,:)
+  END DO
+
+  CALL DeAllocateDependentVariables( DV2 )
+
+  CALL FinalizeHDF( )
  
 END PROGRAM wlDependentVariablesTest

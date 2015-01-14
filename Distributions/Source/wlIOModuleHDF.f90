@@ -20,6 +20,7 @@ MODULE wlIOModuleHDF
   PUBLIC WriteThermoStateHDF
   PUBLIC WriteDependentVariablesHDF
   PUBLIC ReadThermoStateHDF
+  PUBLIC ReadDependentVariablesHDF
   PUBLIC ReadDimensionsHDF
   PUBLIC LoadThermoStateHDF
 
@@ -343,7 +344,7 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
     INTEGER                                     :: i
 
-!    CALL Write1dHDF_integer( "Dimensions", DV % nValues(:), &
+!    CALL Write1dHDF_integer( "Dimensions", nValues(:), &
 !                             group_id, datasize1d )
     datasize1d = SIZE( DV % Names )
     CALL Write1dHDF_string( "Names", DV % Names(:), &
@@ -375,6 +376,35 @@ CONTAINS
     END DO
 
   END SUBROUTINE ReadThermoStateHDF
+
+  SUBROUTINE ReadDependentVariablesHDF( DV, group_id )
+
+    TYPE(DependentVariablesType), INTENT(inout) :: DV
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
+    INTEGER                                     :: i
+
+
+    datasize1d = SIZE( DV % Names )
+    CALL Read1dHDF_string( "Names", DV % Names(:), &
+                              group_id, datasize1d )
+    !DO i = 1, 3
+    !  datasize1d(1) = DV % nValues(i)
+    !  CALL Read1dHDF_double( DV % Names(i), DV % States(i) % Values(:), &
+    !                          group_id, datasize1d )
+      !DV % minValues(i) = MINVAL( DV % States(i) % Values(:) )
+      !DV % maxValues(i) = MAXVAL( DV % States(i) % Values(:) )
+    !END DO
+
+    DO i = 1, 3
+      datasize3d = SHAPE( DV % Variables(i) % Values ) 
+      CALL Read3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &
+                              group_id, datasize3d )
+    END DO
+
+  END SUBROUTINE ReadDependentVariablesHDF
   
   SUBROUTINE ReadDimensionsHDF ( Dimensions, group_id ) 
 
