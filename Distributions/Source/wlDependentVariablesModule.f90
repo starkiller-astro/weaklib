@@ -12,7 +12,7 @@ MODULE wlDependentVariablesModule
   TYPE, PUBLIC :: DependentVariablesType
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     INTEGER :: nVariables
-    !INTEGER, DIMENSION(:), ALLOCATABLE :: nValues
+    INTEGER, DIMENSION(3) :: nPoints
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
   END TYPE
 
@@ -21,22 +21,20 @@ MODULE wlDependentVariablesModule
 
 CONTAINS
 
-  !SUBROUTINE AllocateDependentVariables( DV, nVariables )
-  SUBROUTINE AllocateDependentVariables( DV, nValues, nVariables )
+  SUBROUTINE AllocateDependentVariables( DV, nPoints, nVariables )
    
     TYPE(DependentVariablesType) :: DV 
     INTEGER, INTENT(in) :: nVariables
-    INTEGER, DIMENSION(3), INTENT(in) :: nValues
+    INTEGER, DIMENSION(3), INTENT(in) :: nPoints
 
     INTEGER :: i
 
     ALLOCATE( DV % Names( nVariables ) )
     ALLOCATE( DV % Variables( nVariables ) ) 
-    !ALLOCATE( DV % nValues( nVariables ) ) 
 
     DO i = 1, nVariables
       ALLOCATE( DV % Variables(i) &
-                   % Values( 1:nValues(1), 1:nValues(2), 1:nValues(3) ) ) 
+                   % Values( 1:nPoints(1), 1:nPoints(2), 1:nPoints(3) ) ) 
     END DO
 
   END SUBROUTINE AllocateDependentVariables

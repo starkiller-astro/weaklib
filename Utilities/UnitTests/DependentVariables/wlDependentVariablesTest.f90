@@ -10,7 +10,8 @@ PROGRAM wlDependentVariablesTest
   implicit none
 
   INTEGER :: i
-  INTEGER, DIMENSION(12) :: npts
+  INTEGER, PARAMETER, DIMENSION(3) :: nPoints = (/10,10,10/)  
+  INTEGER, PARAMETER :: nVariables = 12
   INTEGER :: j
   TYPE(DependentVariablesType) :: DV
   TYPE(DependentVariablesType) :: DV2
@@ -19,7 +20,7 @@ PROGRAM wlDependentVariablesTest
 
 print*,"1"
 
-  CALL AllocateDependentVariables( DV, nValues = (/10,10,10,10,10,10,10,10,10,10,10,10/), nVariables = 12 )
+  CALL AllocateDependentVariables( DV, nPoints , nVariables )
   !CALL AllocateDependentVariables( DV, nValues = (/10,10,10/), nVariables = 3 )
   !CALL AllocateDependentVariables( DV, nVariables = 3 )
 
@@ -52,13 +53,20 @@ print*,"3"
   END DO
 
 
+  !DO j = 1,12
+  !  WRITE(*,*)
+  !  WRITE(*,*) TRIM( DV % Names(j) ) , j
+  !  WRITE(*,*)
+    !WRITE(*,*) DV2 % nValues(j)
+  !  WRITE(*,*) DV % Variables(j) % Values(:,:,:)
+  !END DO
 
 print*,"4"
 
   CALL InitializeHDF( )
   CALL OpenFileHDF( "DependentVariablesFile.h5", .true., file_id )
   CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-  CALL WriteDependentVariablesHDF( DV, group_id )
+  CALL WriteDependentVariablesHDF( DV, nPoints, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
   CALL DeAllocateDependentVariables( DV )
@@ -68,19 +76,21 @@ print*,"5"
   CALL OpenFileHDF( "DependentVariablesFile.h5", .false., file_id )
   !CALL LoadDependentVariablesHDF( DV2, file_id )
   CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
-  CALL ReadDimensionsHDF( npts, group_id )
-  CALL AllocateDependentVariables( DV2, npts, nVariables = 12 )
+  CALL ReadDimensionsHDF( nPoints, group_id )
+  CALL AllocateDependentVariables( DV2, nPoints, nVariables )
 
-  !DV2 % nValues(1:3) = npts(1:3)
 
   CALL ReadDependentVariablesHDF( DV2, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
 
   DO j = 1,12
-    WRITE(*,*) TRIM( DV2 % Names(j) )
+    WRITE(*,*)
+    WRITE(*,*) TRIM( DV2 % Names(j) ) , j
+    WRITE(*,*)
     !WRITE(*,*) DV2 % nValues(j)
     WRITE(*,*) DV2 % Variables(j) % Values(:,:,:)
+    WRITE(*,*)
   END DO
 
   CALL DeAllocateDependentVariables( DV2 )
