@@ -11,6 +11,7 @@ MODULE wlDependentVariablesModule
 
   TYPE, PUBLIC :: DependentVariablesType
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
+    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
     INTEGER :: nVariables
     INTEGER, DIMENSION(3) :: nPoints
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
@@ -30,6 +31,7 @@ CONTAINS
     INTEGER :: i
 
     ALLOCATE( DV % Names( nVariables ) )
+    ALLOCATE( DV % Units( nVariables ) )
     ALLOCATE( DV % Variables( nVariables ) ) 
 
     DO i = 1, nVariables

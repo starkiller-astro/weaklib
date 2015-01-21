@@ -23,6 +23,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadDependentVariablesHDF
   PUBLIC ReadDimensionsHDF
   PUBLIC LoadThermoStateHDF
+  PUBLIC LoadDependentVariablesHDF
 
 CONTAINS
 
@@ -335,7 +336,8 @@ CONTAINS
 
   END SUBROUTINE WriteThermoStateHDF
 
-  SUBROUTINE WriteDependentVariablesHDF( DV, nValues, group_id )
+  SUBROUTINE WriteDependentVariablesHDF( DV, group_id )
+  !SUBROUTINE WriteDependentVariablesHDF( DV, nValues, group_id )
 
     TYPE(DependentVariablesType), INTENT(in)    :: DV
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -348,6 +350,10 @@ CONTAINS
     datasize1d = SIZE( DV % Names )
     CALL Write1dHDF_string( "Names", DV % Names(:), &
                              group_id, datasize1d )
+    DO i = 1, 3 !SIZE (DV % nPoints)
+      nValues(i) = DV % nPoints(i)
+    END DO
+
     datasize1d = 3
     CALL Write1dHDF_integer( "Dimensions", nValues(:), &
                              group_id, datasize1d )
@@ -392,13 +398,9 @@ CONTAINS
     datasize1d = SIZE( DV % Names )
     CALL Read1dHDF_string( "Names", DV % Names(:), &
                               group_id, datasize1d )
-    !DO i = 1, 3
-    !  datasize1d(1) = DV % nValues(i)
-    !  CALL Read1dHDF_double( DV % Names(i), DV % States(i) % Values(:), &
+
+    !CALL Read1dHDF_string( "Units", DV % Units(:), &
     !                          group_id, datasize1d )
-      !DV % minValues(i) = MINVAL( DV % States(i) % Values(:) )
-      !DV % maxValues(i) = MAXVAL( DV % States(i) % Values(:) )
-    !END DO
 
     DO i = 1, SIZE( DV % Names ) 
       datasize3d = SHAPE( DV % Variables(i) % Values ) 
@@ -438,6 +440,26 @@ CONTAINS
 
   END SUBROUTINE LoadThermoStateHDF
 
+  SUBROUTINE LoadDependentVariablesHDF( DV, file_id )
+
+    TYPE(DependentVariablesType), INTENT(inout) :: DV
+    INTEGER, DIMENSION(3)                       :: npts
+    INTEGER                                     :: nvar
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HID_T)                              :: file_id
+
+  CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+
+  CALL ReadDimensionsHDF( npts, group_id )
+  CALL AllocateDependentVariables( DV, npts, nvar )
+
+  DV % nPoints(1:3) = npts(1:3)
+  DV % nVariables = nvar
+
+  CALL ReadDependentVariablesHDF( DV, group_id )
+  CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE LoadDependentVariablesHDF
 
 
 END MODULE wlIOModuleHDF
