@@ -24,6 +24,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadDimensionsHDF
   PUBLIC LoadThermoStateHDF
   PUBLIC LoadDependentVariablesHDF
+  PUBLIC ReadNumberVariablesHDF
 
 CONTAINS
 
@@ -337,12 +338,10 @@ CONTAINS
   END SUBROUTINE WriteThermoStateHDF
 
   SUBROUTINE WriteDependentVariablesHDF( DV, group_id )
-  !SUBROUTINE WriteDependentVariablesHDF( DV, nValues, group_id )
 
     TYPE(DependentVariablesType), INTENT(in)    :: DV
     INTEGER(HID_T), INTENT(in)                  :: group_id
     
-    INTEGER, DIMENSION(3)                       :: nValues
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
     INTEGER                                     :: i
@@ -350,12 +349,12 @@ CONTAINS
     datasize1d = SIZE( DV % Names )
     CALL Write1dHDF_string( "Names", DV % Names(:), &
                              group_id, datasize1d )
-    DO i = 1, 3 !SIZE (DV % nPoints)
-      nValues(i) = DV % nPoints(i)
-    END DO
 
     datasize1d = 3
-    CALL Write1dHDF_integer( "Dimensions", nValues(:), &
+    CALL Write1dHDF_integer( "Dimensions", DV % nPoints(:), &
+                             group_id, datasize1d )
+    datasize1d = 1 
+    CALL Write1dHDF_integer( "nVariables", (/DV % nVariables/), &
                              group_id, datasize1d )
     DO i = 1, SIZE( DV % Names ) 
       datasize3d = SHAPE( DV % Variables(i) % Values ) 
@@ -420,6 +419,19 @@ CONTAINS
     CALL Read1dHDF_integer( "Dimensions", Dimensions(:), group_id, datasize1d ) 
 
   END SUBROUTINE ReadDimensionsHDF
+
+  SUBROUTINE ReadNumberVariablesHDF ( nVariables, group_id )
+
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+    INTEGER, INTENT(inout)                      :: nVariables
+    INTEGER, DIMENSION(1)                       :: nVarTemp  
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+
+    datasize1d(1) = 1
+    CALL Read1dHDF_integer( "nVariables", nVarTemp(:), group_id, datasize1d )
+    nVariables = nVarTemp(1)
+
+  END SUBROUTINE ReadNumberVariablesHDF
   
   SUBROUTINE LoadThermoStateHDF( TS, file_id )
 
@@ -451,6 +463,7 @@ CONTAINS
   CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
 
   CALL ReadDimensionsHDF( npts, group_id )
+  CALL ReadNumberVariablesHDF( nvar, group_id )
   CALL AllocateDependentVariables( DV, npts, nvar )
 
   DV % nPoints(1:3) = npts(1:3)

@@ -28,9 +28,11 @@ CONTAINS
     INTEGER, DIMENSION(3), INTENT(in) :: nValues
 
     INTEGER :: i
-    
+   
+    ThermoState % nValues = nValues    
+ 
     DO i = 1, 3
-      ALLOCATE( ThermoState % States(i) % Values(1:nValues(i)) ) 
+      ALLOCATE( ThermoState % States(i) % Values(1:ThermoState % nValues(i)) ) 
     END DO 
  
   END SUBROUTINE AllocateThermoState

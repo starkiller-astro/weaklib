@@ -33,10 +33,13 @@ CONTAINS
     ALLOCATE( DV % Names( nVariables ) )
     ALLOCATE( DV % Units( nVariables ) )
     ALLOCATE( DV % Variables( nVariables ) ) 
+    
+    DV % nPoints = nPoints
+    DV % nVariables = nVariables
 
     DO i = 1, nVariables
       ALLOCATE( DV % Variables(i) &
-                   % Values( 1:nPoints(1), 1:nPoints(2), 1:nPoints(3) ) ) 
+                   % Values( 1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3) ) ) 
     END DO
 
   END SUBROUTINE AllocateDependentVariables
