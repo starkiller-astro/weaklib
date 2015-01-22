@@ -9,7 +9,7 @@ PROGRAM wlWriteEquationOfStateTest
                            WriteDependentVariablesHDF, CloseGroupHDF,         & 
                            ReadDependentVariablesHDF, CloseFileHDF,           &
                            FinalizeHDF, ReadDimensionsHDF,                    &
-                           LoadDependentVariablesHDF, ReadNumberVariablesHDF, &
+                           ReadDependentVariablesHDF, ReadNumberVariablesHDF, &
                            WriteThermoStateHDF
 
   implicit none
@@ -19,18 +19,14 @@ PROGRAM wlWriteEquationOfStateTest
   INTEGER                        :: nVariables
   INTEGER                        :: j
   TYPE(EquationOfStateTableType) :: EOSTable
-  !TYPE(DependentVariablesType)   :: DV, DV2 
   INTEGER(HID_T)                 :: file_id
   INTEGER(HID_T)                 :: group_id
 
 
   nPoints = (/10,10,10/)
   nVariables = 12
+
   CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
-
-!STOP
-
-print*,"2"
 
   EOSTable % TS % Names(1:3) = (/'Density                         ',&
                                  'Temperature                     ',&
@@ -72,8 +68,8 @@ print*,"2"
                                   'Heavy Mass Number               ', &
                                   'Heavy Charge Number             '/)
 
-print*,"3"
-
+  WRITE (*,*) "Dimensions of rho, T, Ye"
+  
   DO i = 1, SIZE( EOSTable % DV % Variables )
     WRITE (*,*) SHAPE( EOSTable % DV % Variables(i) % Values )
   END DO
@@ -96,10 +92,10 @@ print*,"3"
     WRITE(*,*) EOSTable % DV % Variables(j) % Values(:,:,:)
   END DO
 
-print*,"4"
 
   CALL InitializeHDF( )
 
+! Write WriteEquationOfStateTableHDF, OpenFileHDF to CloseFileHDF
   CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
 
   CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
@@ -111,9 +107,10 @@ print*,"4"
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
-!  CALL DeAllocateThermoState( EOSTable % TS )
-!  CALL DeAllocateDependentVariables( EOSTable % DV )
+
   CALL DeAllocateEquationOfStateTable( EOSTable )
   CALL FinalizeHDF( )
+  
+  WRITE (*,*) "HDF write successful"
 
 END PROGRAM wlWriteEquationOfStateTest

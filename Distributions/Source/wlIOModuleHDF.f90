@@ -4,6 +4,7 @@ MODULE wlIOModuleHDF
   USE HDF5 
   USE wlThermoStateModule
   USE wlDependentVariablesModule
+  USE wlEquationOfStateTableModule
 
   implicit none
   PRIVATE
@@ -22,9 +23,8 @@ MODULE wlIOModuleHDF
   PUBLIC ReadThermoStateHDF
   PUBLIC ReadDependentVariablesHDF
   PUBLIC ReadDimensionsHDF
-  PUBLIC LoadThermoStateHDF
-  PUBLIC LoadDependentVariablesHDF
   PUBLIC ReadNumberVariablesHDF
+  PUBLIC ReadEquationOfStateTableHDF
 
 CONTAINS
 
@@ -364,14 +364,17 @@ CONTAINS
 
   END SUBROUTINE WriteDependentVariablesHDF
 
-  SUBROUTINE ReadThermoStateHDF( TS, group_id )
+  SUBROUTINE ReadThermoStateHDF( TS, file_id )
 
     TYPE(ThermoStateType), INTENT(inout)        :: TS
-    INTEGER(HID_T), INTENT(in)                  :: group_id
+    INTEGER(HID_T), INTENT(in)                  :: file_id
 
+    INTEGER(HID_T)                              :: group_id
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER                                     :: i
     
+    CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+
     CALL Read1dHDF_string( "Names", TS % Names(:), &
                               group_id, datasize1d )
     DO i = 1, 3
@@ -382,30 +385,33 @@ CONTAINS
       TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
     END DO
 
+    CALL CloseGroupHDF( group_id )
+
   END SUBROUTINE ReadThermoStateHDF
 
-  SUBROUTINE ReadDependentVariablesHDF( DV, group_id )
+  SUBROUTINE ReadDependentVariablesHDF( DV, file_id )
 
     TYPE(DependentVariablesType), INTENT(inout) :: DV
-    INTEGER(HID_T), INTENT(in)                  :: group_id
+    INTEGER(HID_T), INTENT(in)                  :: file_id
 
+    INTEGER(HID_T)                              :: group_id
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
     INTEGER                                     :: i
 
+    CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
 
     datasize1d = SIZE( DV % Names )
     CALL Read1dHDF_string( "Names", DV % Names(:), &
                               group_id, datasize1d )
-
-    !CALL Read1dHDF_string( "Units", DV % Units(:), &
-    !                          group_id, datasize1d )
 
     DO i = 1, SIZE( DV % Names ) 
       datasize3d = SHAPE( DV % Variables(i) % Values ) 
       CALL Read3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &
                               group_id, datasize3d )
     END DO
+
+    CALL CloseGroupHDF( group_id )
 
   END SUBROUTINE ReadDependentVariablesHDF
   
@@ -433,47 +439,32 @@ CONTAINS
 
   END SUBROUTINE ReadNumberVariablesHDF
   
-  SUBROUTINE LoadThermoStateHDF( TS, file_id )
+  SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
 
-    TYPE(ThermoStateType), INTENT(inout)        :: TS
-    INTEGER, DIMENSION(3)                       :: npts
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HID_T)                              :: file_id
+    CHARACTER(len=*), INTENT(in)                  :: FileName
+    INTEGER, DIMENSION(3)                         :: nPoints
+    INTEGER                                       :: nVariables
+    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
 
-  CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+    CALL OpenFileHDF( FileName, .false., file_id )
 
-  CALL ReadDimensionsHDF( npts, group_id )
-  CALL AllocateThermoState( TS, npts )
+    CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
 
-  TS % nPoints(1:3) = npts(1:3)
+    CALL ReadDimensionsHDF( nPoints, group_id )
+    CALL ReadNumberVariablesHDF( nVariables, group_id )
+    CALL CloseGroupHDF( group_id )
 
-  CALL ReadThermoStateHDF( TS, group_id )
-  CALL CloseGroupHDF( group_id )
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
-  END SUBROUTINE LoadThermoStateHDF
+    CALL ReadThermoStateHDF( EOSTable % TS, file_id )
 
-  SUBROUTINE LoadDependentVariablesHDF( DV, file_id )
+    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
 
-    TYPE(DependentVariablesType), INTENT(inout) :: DV
-    INTEGER, DIMENSION(3)                       :: npts
-    INTEGER                                     :: nvar
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HID_T)                              :: file_id
+    CALL CloseFileHDF( file_id )
 
-  CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
-
-  CALL ReadDimensionsHDF( npts, group_id )
-  CALL ReadNumberVariablesHDF( nvar, group_id )
-  CALL AllocateDependentVariables( DV, npts, nvar )
-
-  DV % nPoints(1:3) = npts(1:3)
-  DV % nVariables = nvar
-
-  CALL ReadDependentVariablesHDF( DV, group_id )
-  CALL CloseGroupHDF( group_id )
-
-  END SUBROUTINE LoadDependentVariablesHDF
-
+  END SUBROUTINE ReadEquationOfStateTableHDF
 
 END MODULE wlIOModuleHDF
 

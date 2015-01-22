@@ -7,7 +7,7 @@ PROGRAM wlThermoStateTest
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
                            WriteThermoStateHDF, ReadThermoStateHDF,          & 
                            CloseGroupHDF, CloseFileHDF, FinalizeHDF,         &
-                           ReadDimensionsHDF, LoadThermoStateHDF
+                           ReadDimensionsHDF, ReadThermoStateHDF
 
   implicit none
 
@@ -26,7 +26,7 @@ PROGRAM wlThermoStateTest
 
   CALL AllocateThermoState( ThermoState, npts )
 
-  ThermoState % nValues(1:3) = npts(1:3)
+  ThermoState % nPoints(1:3) = npts(1:3)
   ThermoState % Names(1:3) = (/'Density                         ',&
                                'Temperature                     ',&
                                'Electron Fraction               '/)
@@ -35,11 +35,11 @@ PROGRAM wlThermoStateTest
   ThermoState % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
 
   CALL MakeLogGrid( ThermoState % minValues(1), ThermoState % maxValues(1),&
-         ThermoState % nValues(1), ThermoState % States(1) % Values)
+         ThermoState % nPoints(1), ThermoState % States(1) % Values)
   CALL MakeLogGrid( ThermoState % minValues(2), ThermoState % maxValues(2),&
-         ThermoState % nValues(2), ThermoState % States(2) % Values)
+         ThermoState % nPoints(2), ThermoState % States(2) % Values)
   CALL MakeLinearGrid( ThermoState % minValues(3), ThermoState % maxValues(3),&
-         ThermoState % nValues(3), ThermoState % States(3) % Values)
+         ThermoState % nPoints(3), ThermoState % States(3) % Values)
 
   CALL InitializeHDF( )
   CALL OpenFileHDF( "ThermoStateFile.h5", .true., file_id )
@@ -51,12 +51,12 @@ PROGRAM wlThermoStateTest
   CALL DeAllocateThermoState( ThermoState )
 
   CALL OpenFileHDF( "ThermoStateFile.h5", .false., file_id )
-  CALL LoadThermoStateHDF( ThermoState2, file_id )
+  CALL ReadThermoStateHDF( ThermoState2, file_id )
   !CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
   !CALL ReadDimensionsHDF( npts, group_id )
   !CALL AllocateThermoState( ThermoState2, npts )
 
-  !ThermoState2 % nValues(1:3) = npts(1:3)
+  !ThermoState2 % nPoints(1:3) = npts(1:3)
 
   !CALL ReadThermoStateHDF( ThermoState2, group_id )
   !CALL CloseGroupHDF( group_id )
@@ -64,7 +64,7 @@ PROGRAM wlThermoStateTest
 
   DO j = 1,3
     WRITE(*,*) TRIM( ThermoState2 % Names(j) )
-    WRITE(*,*) ThermoState2 % nValues(j)
+    WRITE(*,*) ThermoState2 % nPoints(j)
     WRITE(*,*) ThermoState2 % minValues(j), ThermoState2 % maxValues(j)
     WRITE(*,*) ThermoState2 % States(j) % Values(:)
   END DO
