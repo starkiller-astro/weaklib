@@ -56,6 +56,7 @@ CONTAINS
    
     DEALLOCATE( DV % Variables )
     DEALLOCATE( DV % Names )
+    DEALLOCATE( DV % Units )
 
   END SUBROUTINE DeAllocateDependentVariables
 

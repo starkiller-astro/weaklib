@@ -324,13 +324,13 @@ CONTAINS
     INTEGER                                     :: i
 
     datasize1d(1) = 3
-    CALL Write1dHDF_integer( "Dimensions", TS % nValues(:), &
+    CALL Write1dHDF_integer( "Dimensions", TS % nPoints(:), &
                              group_id, datasize1d )
     
     CALL Write1dHDF_string( "Names", TS % Names(:), &
                              group_id, datasize1d )
     DO i = 1, 3
-      datasize1d(1) = TS % nValues(i)
+      datasize1d(1) = TS % nPoints(i)
       CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
                               group_id, datasize1d )
     END DO
@@ -375,7 +375,7 @@ CONTAINS
     CALL Read1dHDF_string( "Names", TS % Names(:), &
                               group_id, datasize1d )
     DO i = 1, 3
-      datasize1d(1) = TS % nValues(i)
+      datasize1d(1) = TS % nPoints(i)
       CALL Read1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
                               group_id, datasize1d )
       TS % minValues(i) = MINVAL( TS % States(i) % Values(:) )                     
@@ -445,7 +445,7 @@ CONTAINS
   CALL ReadDimensionsHDF( npts, group_id )
   CALL AllocateThermoState( TS, npts )
 
-  TS % nValues(1:3) = npts(1:3)
+  TS % nPoints(1:3) = npts(1:3)
 
   CALL ReadThermoStateHDF( TS, group_id )
   CALL CloseGroupHDF( group_id )

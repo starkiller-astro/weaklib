@@ -11,7 +11,7 @@ MODULE wlThermoStateModule
   
   TYPE, PUBLIC :: ThermoStateType
     CHARACTER(LEN=32), DIMENSION(3) :: Names
-    INTEGER, DIMENSION(3) :: nValues
+    INTEGER, DIMENSION(3) :: nPoints
     REAL(dp), DIMENSION(3) :: minValues
     REAL(dp), DIMENSION(3) :: maxValues
     TYPE(ValueType), DIMENSION(3) :: States
@@ -22,30 +22,30 @@ MODULE wlThermoStateModule
   
 CONTAINS 
 
-  SUBROUTINE AllocateThermoState( ThermoState, nValues )
+  SUBROUTINE AllocateThermoState( TS, nPoints )
      
-    TYPE(ThermoStateType) :: ThermoState
-    INTEGER, DIMENSION(3), INTENT(in) :: nValues
+    TYPE(ThermoStateType) :: TS
+    INTEGER, DIMENSION(3), INTENT(in) :: nPoints
 
     INTEGER :: i
    
-    ThermoState % nValues = nValues    
+    TS % nPoints = nPoints    
  
     DO i = 1, 3
-      ALLOCATE( ThermoState % States(i) % Values(1:ThermoState % nValues(i)) ) 
+      ALLOCATE( TS % States(i) % Values(1:TS % nPoints(i)) ) 
     END DO 
  
   END SUBROUTINE AllocateThermoState
 
 
-  SUBROUTINE DeAllocateThermoState( ThermoState )
+  SUBROUTINE DeAllocateThermoState( TS )
 
-    TYPE(ThermoStateType) :: ThermoState
+    TYPE(ThermoStateType) :: TS
 
     INTEGER :: i
     
     DO i = 1, 3
-      DEALLOCATE( ThermoState % States(i) % Values )
+      DEALLOCATE( TS % States(i) % Values )
     END DO 
 
   END SUBROUTINE DeAllocateThermoState

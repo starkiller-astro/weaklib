@@ -18,7 +18,7 @@ MODULE wlEquationOfStateTableModule
 
 
   PUBLIC AllocateEquationOfStateTable
-!  PUBLIC DeAllocateEquationOfStateTable
+  PUBLIC DeAllocateEquationOfStateTable
 
 CONTAINS 
 
@@ -36,5 +36,14 @@ CONTAINS
                                      EOSTable % nVariables ) 
 
   END SUBROUTINE AllocateEquationOfStateTable
+
+  SUBROUTINE DeAllocateEquationOfStateTable( EOSTable )
+
+    TYPE(EquationOfStateTableType) :: EOSTable
+
+    CALL DeAllocateThermoState( EOSTable % TS )
+    CALL DeAllocateDependentVariables( EOSTable % DV )
+
+  END SUBROUTINE DeAllocateEquationOfStateTable
 
 END MODULE wlEquationOfStateTableModule
