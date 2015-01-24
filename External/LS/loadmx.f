@@ -239,7 +239,7 @@ C        Read the file Boundary data file
 C-----------------------------------------------------------------------
 C
 C
-      IF ( myid .eq. 0 ) THEN
+!     IF ( myid .eq. 0 ) THEN
 C
       OPEN(UNIT=LUN2,FILE=FNAME2(1:FNML2),STATUS='OLD')
 C
@@ -340,10 +340,10 @@ C
 C
       CLOSE(UNIT=LUN2,STATUS='KEEP')
 C
-      ENDIF   ! myid == 0
+!     ENDIF   ! myid == 0
 
       i_extent = 7+2*NUMYE*NBPNTS
-      IF (i_extent .NE. KK .AND. myid .eq. 0) THEN
+      IF (i_extent .NE. KK ) THEN !.AND. myid .eq. 0) THEN
        WRITE(*,*) "Miss filled send_buf2 in loadmx."
        STOP
       ENDIF

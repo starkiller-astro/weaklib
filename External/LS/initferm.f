@@ -4,8 +4,8 @@ c      Program to compute spline fits to fermi integrals
 cc  Must provide data file 94
       subroutine initferm(FilePath)
 
-      use parallel_module
-      use mpi
+!     use parallel_module
+!     use mpi
 
       implicit  double precision (a-h,o-z)
       parameter (n=201)

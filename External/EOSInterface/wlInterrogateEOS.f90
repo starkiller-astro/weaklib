@@ -28,6 +28,8 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   REAL(dp)           :: z_heavy     ! Z for mean heavy nucleus
   REAL(dp)           :: be_heavy    ! Binding energy for mean heavy nucleus
 
+  INTEGER            :: i
+
   CHARACTER(len=32), DIMENSION(12) :: Names
   CHARACTER(len=32), DIMENSION(12) :: Units
 
@@ -38,7 +40,7 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
 !-- Initialize EoSs and labels
 
   LScompress = '220'
-  LSFilePath = '../LS/Data'
+  LSFilePath = '../../LS/Data'
   CALL  wlExtInitializeEOS( LSFilePath, LScompress )
 
   Names(1:12) = (/'Pressure                        ', &
@@ -72,7 +74,7 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   DO
     WRITE(*,*) 'Enter input parameters for EOS (EOS selection["L" or "B", density [g/cm^3], temperature[K], Ye) '
     WRITE(*,*) 'example: "L",1.5e13, 3.4e10, 0.4'
-    READ(*,*) 'Enter -->', EOSFlag, Density, Temperature, Ye
+    READ(*,*) EOSFlag, Density, Temperature, Ye
     CALL wlGetFullEOS( Density, Temperature, Ye, EOSFlag, fail, press, energ, &
                        entrop, chem_n, chem_p, chem_e, xn_neut, xn_prot,      &
                        xn_heavy, a_heavy, z_heavy, be_heavy )
@@ -93,9 +95,9 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
     WRITE(*,*) "EOS ", EOSFlag, " returns dependent variables:"
 
     DO i = 1,12
-      WRITE(*,99) Names(i), Values(i), TRIM( Units(i) )
+      WRITE(*,99) Names(i), Values(i), ADJUSTL( Units(i) )
     END DO
 
   END DO
 
-END PROGRAME wlInterrogateEOS
+END PROGRAM wlInterrogateEOS

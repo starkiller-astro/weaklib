@@ -7,7 +7,7 @@
 MODULE wlExtPhysicalConstantsModule
 
   USE wlKindModule, ONLY: dp
-  USE wlNumericalModule, ONLY: pi
+  USE wlExtNumericalModule, ONLY: pi
 
   REAL(dp), PARAMETER  :: Gw        = 1.027d-5      ! weak interaction constant (proton mass).
 
@@ -41,8 +41,6 @@ MODULE wlExtPhysicalConstantsModule
   REAL(dp), PARAMETER  :: cvel      = 2.99792d+10   ! velocity of light [cm s^{-1}]
 
   REAL(dp), PARAMETER  :: cvel_inv  = 1.d0/cvel     ! 1/( velocity of light [cm s^{-1}])
-
-  REAL(dp), PARAMETER  :: pi        = 3.1415926535897932385d0 ! pi
 
   REAL(dp), PARAMETER  :: h         = 4.13567d-21   ! Planck's constant [MeV s]
 

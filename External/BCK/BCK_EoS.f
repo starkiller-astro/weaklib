@@ -232,7 +232,6 @@ c***********************************************************************
 c***********************************************************************
       subroutine net1
 c***********************************************************************
-      USE array_module
       USE eos_bck_module
       USE wlExtPhysicalConstantsModule
       implicit double precision (a-h,o-z)
@@ -354,11 +353,11 @@ c***********************************************************************
 100   continue
 c***********************************************************************
 101   nflunk = nflunk + 1
-c     write(6,1000)jshel,nflunk,tbck,dbck/6.022e-16,yebck
+c     write(6,1000)nflunk,tbck,dbck/6.022e-16,yebck
 c     write(6,1001)un,uhat,dun,duhat,tolone,tolza
       if(nflunk.le.4) go to 5
             bad = .true.
-1000  format(' net fail -jshel nflunk tbck dbck yebck'
+1000  format(' net fail - nflunk tbck dbck yebck'
      & ,2i4,3(1pe11.3))
 1001  format(' un uhat dun duhat tolone tolza',6(1pe11.3))
             xpbck = xps
@@ -405,9 +404,7 @@ c***********************************************************************
 c***********************************************************************
       subroutine saha
 c***********************************************************************
-      USE array_module
       USE eos_bck_module
-      USE parallel_module, ONLY : myid
       USE wlExtPhysicalConstantsModule
       USE wlExtNumericalModule, ONLY: one, zero, third
       implicit double precision (a-h,o-z)
@@ -572,11 +569,11 @@ c***********************************************************************
 c******************************************************failure?*********
 11    nfail = nfail + 1
       if(.not. bad) go to 1
-      if(.not. fmbad) print *, jshel, myid, dbck * rmu/cm3fm3, tbck,
+      if(.not. fmbad) print *, dbck * rmu/cm3fm3, tbck,
      * yebck
-      if(.not. fmbad) WRITE (*,103) jshel, myid, dbck * rmu/cm3fm3, 
+      if(.not. fmbad) WRITE (*,103) dbck * rmu/cm3fm3, 
      * tbck/kmev, yebck
-  103 FORMAT (' Failure in Saha: j=',i4,' myid=',i4,' rho=',es11.3,
+  103 FORMAT (' Failure in Saha: rho=',es11.3,
      * ' t=',es11.3,' ye=',es11.3)
       if( .not. fmbad  .and.  dbck * rmu/cm3fm3 .le. 1.d+11 ) then
         stop 'failure in Saha'

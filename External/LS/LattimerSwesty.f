@@ -1331,8 +1331,6 @@ C                     Is the result consistent with electron number
 C                     density?
       IF(DABS((NE_CHK-NSUBE)/NSUBE).GT.1.0D-5) THEN
         WRITE(*,*) ' EL_EOS: Gaussian quadrature converged badly!'
-        c_diagnostic = ' EL_EOS: Gaussian quadrature converged badly!'
-        CALL terminate(c_diagnostic)
         STOP
       ENDIF
 C
@@ -1436,8 +1434,6 @@ C***********************************************************************
       DOUBLE PRECISION Y, YEXP
       IF(Y.GT.3.0D0) THEN
         WRITE(*,*) ' F_2(Y) FAILS FOR Y .GT. 3; Y =',Y
-        c_diagnostic = ' F_2(Y) FAILS FOR Y .GT. 3 in Eos_ls'
-        CALL terminate(c_diagnostic)
         STOP
       ENDIF
 C
@@ -3075,8 +3071,6 @@ c----------------------------------------------------------------------c
          DO j1 = 1,n
            WRITE (6,1001) (a(j1,j2),j2 = 1,n)
          END DO
-         c_diagnostic = ' Singular matrix in Eos_ls'
-         CALL terminate(c_diagnostic)
          STOP
        END IF
        vv(i)        = one/aamax
@@ -6176,8 +6170,6 @@ C                      Scream at the user & die!!!
 C23456789012345678901234567890123456789012345678901234567890123456789012
       ELSE
         WRITE(*,*) ' SILEOS: Mode # ',MODE,' not supported! '
-        c_diagnostic = ' SILEOS: Mode not supported in Eos_ls! '
-        CALL terminate(c_diagnostic)
         STOP
 C
       ENDIF
@@ -6220,8 +6212,6 @@ cc  Determine the bracketing indices
         IF((KHI.GT.N).OR.(KLO.LT.1)) THEN
           WRITE(*,*) ' SPLINT CRASHED '
           WRITE(*,*) ' N,KHI,KLO =',N,KHI,KLO
-          c_diagnostic = ' SPLINT CRASHED in Eos_ls'
-          CALL terminate(c_diagnostic)
           STOP
         ENDIF
 C

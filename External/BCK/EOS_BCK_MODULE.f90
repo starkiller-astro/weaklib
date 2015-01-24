@@ -17,8 +17,6 @@ USE wlKindModule, ONLY: dp
 !
 !  itsav  : the number of iterations done in SAHA.
 !
-!  jshel  : zone index ; for debugging.
-!
 !  af     : auxilary variable.
 !
 !  ahbck  : A[heavy nucleus].
@@ -150,7 +148,6 @@ LOGICAL                               :: bad
 LOGICAL                               :: fmbad
 
 INTEGER                               :: itsav
-INTEGER                               :: jshel
 
 INTEGER, PARAMETER                    :: nnc_nse_bck = 17
 
