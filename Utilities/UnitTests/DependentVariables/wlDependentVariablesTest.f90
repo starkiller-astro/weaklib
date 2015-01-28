@@ -3,17 +3,19 @@ PROGRAM wlDependentVariablesTest
   USE wlDependentVariablesModule
   USE HDF5
   USE wlThermoStateModule
+  USE wlEquationOfStateTableModule
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
                            WriteDependentVariablesHDF, CloseGroupHDF,        & 
                            ReadDependentVariablesHDF, CloseFileHDF,          &
                            FinalizeHDF, ReadDimensionsHDF,                   &
-                           LoadDependentVariablesHDF, ReadNumberVariablesHDF
+                           ReadDependentVariablesHDF, ReadNumberVariablesHDF
   implicit none
 
   INTEGER :: i
   INTEGER, DIMENSION(3) :: nPoints
   INTEGER, DIMENSION(3) :: nPoints2
   INTEGER :: nVariables
+  INTEGER :: nVariables2
   INTEGER :: j
   TYPE(DependentVariablesType) :: DV
   TYPE(DependentVariablesType) :: DV2
@@ -90,10 +92,29 @@ print*,"4"
 print*,"5"
 
   CALL OpenFileHDF( "DependentVariablesFile.h5", .false., file_id )
-  CALL LoadDependentVariablesHDF( DV2, file_id )
-  !CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+  CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+  CALL ReadDimensionsHDF( nPoints2, group_id )
+  CALL ReadNumberVariablesHDF( nVariables2, group_id )
+  CALL AllocateDependentVariables( DV2, nPoints2, nVariables2 )
+
+print*, "6"
+
+  DV2 % nPoints(1:3) = nPoints2(1:3)
+  DV2 % nVariables = nVariables2
+  DV2 % Units(1:12) = (/'Dynes per cm^2                  ', &
+                       'Entropy Per Baryon Units        ', &
+                       'Internal Energy Density         ', &
+                       'Neutron Chemical Potential      ', &
+                       'Electron Chemical Potential     ', &
+                       'Proton Chemical Potential       ', &
+                       'Neutron Mass Fraction           ', &
+                       'Proton Mass Fraction            ', &
+                       'Helium Mass Fraction            ', &
+                       'Heavy Mass Fraction             ', &
+                       'Heavy Mass Number               ', &
+                       'Heavy Charge Number             '/)
+  CALL ReadDependentVariablesHDF( DV2, file_id )
   !CALL ReadDimensionsHDF( nPoints2, group_id )
-  !CALL AllocateDependentVariables( DV2, nPoints2, nVariables )
 
 
   !CALL ReadDependentVariablesHDF( DV2, group_id )

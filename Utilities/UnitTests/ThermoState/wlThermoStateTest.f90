@@ -1,6 +1,8 @@
 PROGRAM wlThermoStateTest
 
   USE wlThermoStateModule
+  USE wlDependentVariablesModule
+  USE wlEquationOfStateTableModule
   USE wlKindModule, ONLY: dp
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
   USE HDF5
@@ -51,12 +53,20 @@ PROGRAM wlThermoStateTest
   CALL DeAllocateThermoState( ThermoState )
 
   CALL OpenFileHDF( "ThermoStateFile.h5", .false., file_id )
+  CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+  CALL ReadDimensionsHDF( npts2, group_id )
+  CALL AllocateThermoState( ThermoState2, npts2 )
+  ThermoState2 % nPoints(1:3) = npts(1:3)
+  ThermoState2 % Names(1:3) = (/'Density                         ',&
+                               'Temperature                     ',&
+                               'Electron Fraction               '/)
+    
+  ThermoState2 % minValues(1:3) =  (/1.0d06,0.1d00,1.0d-02/)
+  ThermoState2 % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
+  ThermoState2 % nPoints(1:3) = npts2(1:3)
   CALL ReadThermoStateHDF( ThermoState2, file_id )
-  !CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
-  !CALL ReadDimensionsHDF( npts, group_id )
   !CALL AllocateThermoState( ThermoState2, npts )
 
-  !ThermoState2 % nPoints(1:3) = npts(1:3)
 
   !CALL ReadThermoStateHDF( ThermoState2, group_id )
   !CALL CloseGroupHDF( group_id )
