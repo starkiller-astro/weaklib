@@ -11,6 +11,7 @@ MODULE wlThermoStateModule
   
   TYPE, PUBLIC :: ThermoStateType
     CHARACTER(LEN=32), DIMENSION(3) :: Names
+    CHARACTER(LEN=32), DIMENSION(3) :: Units
     INTEGER, DIMENSION(3) :: nPoints
     REAL(dp), DIMENSION(3) :: minValues
     REAL(dp), DIMENSION(3) :: maxValues

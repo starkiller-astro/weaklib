@@ -5,15 +5,30 @@ MODULE wlDependentVariablesModule
   implicit none
   PRIVATE
 
+  INTEGER, PUBLIC :: Pressure
+  INTEGER, PUBLIC :: Entropy  
+  INTEGER, PUBLIC :: InternalEnergy 
+  INTEGER, PUBLIC :: ChemicalPotentialElectron 
+  INTEGER, PUBLIC :: ChemicalPotentialProton 
+  INTEGER, PUBLIC :: ChemicalPotentialNeutron 
+  INTEGER, PUBLIC :: MassFractionProton 
+  INTEGER, PUBLIC :: MassFractionNeutron 
+  INTEGER, PUBLIC :: MassFractionAlpha 
+  INTEGER, PUBLIC :: MassFractionHeavy 
+  INTEGER, PUBLIC :: ChargeNumberHeavy 
+  INTEGER, PUBLIC :: MassNumberHeavy 
+  INTEGER, PUBLIC :: BindingEnergyHeavy 
+
   TYPE :: ValueType
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values
   END TYPE
 
   TYPE, PUBLIC :: DependentVariablesType
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
     INTEGER :: nVariables
     INTEGER, DIMENSION(3) :: nPoints
+    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
+    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Offsets
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
   END TYPE
 
@@ -32,6 +47,7 @@ CONTAINS
 
     ALLOCATE( DV % Names( nVariables ) )
     ALLOCATE( DV % Units( nVariables ) )
+    ALLOCATE( DV % Offsets( nVariables ) ) 
     ALLOCATE( DV % Variables( nVariables ) ) 
     
     DV % nPoints = nPoints

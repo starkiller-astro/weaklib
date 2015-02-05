@@ -1317,11 +1317,11 @@ C
 C
 C                                      If we reached this point the
 C                                      N-R iteration didn't converge
-      WRITE(*,*) ' EL_EOS: N-R iteration didnt converge!, 
-     *  T , YE, BRYDNS, RHO', T ,YE , BRYDNS, 
-     * BRYDNS * 1.674d-24/1.d-39
-      c_diagnostic = ' EL_EOS: N-R iteration didnt converge'
-      STOP
+C      WRITE(*,*) ' EL_EOS: N-R iteration didnt converge!, 
+C     *  T , YE, BRYDNS, RHO', T ,YE , BRYDNS, 
+C     * BRYDNS * 1.674d-24/1.d-39
+C      c_diagnostic = ' EL_EOS: N-R iteration didnt converge'
+C
 C
 C               If we reached this point then the N-R iteration has
 C               converged.
@@ -1329,10 +1329,10 @@ C               converged.
 C
 C                     Is the result consistent with electron number
 C                     density?
-      IF(DABS((NE_CHK-NSUBE)/NSUBE).GT.1.0D-5) THEN
-        WRITE(*,*) ' EL_EOS: Gaussian quadrature converged badly!'
-        STOP
-      ENDIF
+C      IF(DABS((NE_CHK-NSUBE)/NSUBE).GT.1.0D-5) THEN
+C        WRITE(*,*) ' EL_EOS: Gaussian quadrature converged badly!'
+C        STOP
+C      ENDIF
 C
 C             Calculate thermodynamic quantities...
 C

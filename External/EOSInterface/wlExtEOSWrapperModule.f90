@@ -140,8 +140,8 @@ END SUBROUTINE wlGetElectronEOS
 !-----------------------------------------------------------------------
 
 SUBROUTINE wlGetFullEOS( rho, temp, ye, flag, fail, press, energ,       &
-& entrop, chem_n, chem_p, chem_e, xn_neut, xn_prot, xn_heavy, a_heavy,  &
-& z_heavy, be_heavy )
+& entrop, chem_n, chem_p, chem_e, xn_neut, xn_prot, xn_alpha, xn_heavy, &
+& a_heavy, z_heavy, be_heavy )
 !-----------------------------------------------------------------------
 !
 !    Module:       wlGetFullEOS
@@ -172,7 +172,8 @@ SUBROUTINE wlGetFullEOS( rho, temp, ye, flag, fail, press, energ,       &
 !                   (positron chemical potential = -chem_e)
 !  xn_neut        : free neutron fraction
 !  xn_prot        : free proton fraction
-!  xn_heavy       : free proton fraction
+!  xn_alpha       : alpha fraction
+!  xn_heavy       : heavy nucleus fraction
 !  a_heavy        : A for mean heavy nucleus
 !  z_heavy        : Z for mean heavy nucleus
 !  be_heavy       : binding energy for mean heavy nucleus
@@ -206,12 +207,13 @@ LOGICAL, INTENT(out)        :: fail        ! did EoS fail to converge
 REAL(double), INTENT(out)   :: press       ! pressure
 REAL(double), INTENT(out)   :: energ       ! internal energy
 REAL(double), INTENT(out)   :: entrop      ! entropy [kb/baryon]
-REAL(double), INTENT(out)   :: chem_n      ! free neutron cemical potential
+REAL(double), INTENT(out)   :: chem_n      ! free neutron chemical potential
 REAL(double), INTENT(out)   :: chem_p      ! free proton chemical potential
 REAL(double), INTENT(out)   :: chem_e      ! electron chemical potential
 REAL(double), INTENT(out)   :: xn_neut     ! free neutron fraction
 REAL(double), INTENT(out)   :: xn_prot     ! free proton fraction
-REAL(double), INTENT(out)   :: xn_heavy    ! free proton fraction
+REAL(double), INTENT(out)   :: xn_alpha    ! alpha fraction
+REAL(double), INTENT(out)   :: xn_heavy    ! heavy fraction
 REAL(double), INTENT(out)   :: a_heavy     ! A for mean heavy nucleus
 REAL(double), INTENT(out)   :: z_heavy     ! Z for mean heavy nucleus
 REAL(double), INTENT(out)   :: be_heavy    ! Binding energy for mean heavy nucleus
@@ -253,6 +255,7 @@ chem_p    = zero
 chem_e    = zero
 xn_neut   = zero
 xn_prot   = zero
+xn_alpha  = zero
 xn_heavy  = zero
 a_heavy   = zero
 z_heavy   = zero
@@ -359,6 +362,7 @@ SELECT CASE ( flag )
   xn_neut  =   XNUT
   xn_prot  =   XPROT
   xn_heavy =   XH
+  xn_alpha =   MAX( zero, one - xn_neut - xn_prot -xn_alpha ) 
   a_heavy  =   A
   z_heavy  =   X * A
   be_heavy =   BUNUC
@@ -411,6 +415,7 @@ SELECT CASE ( flag )
   xn_neut  = DMAX1( xnbck , zero )
   xn_prot  = DMAX1( xpbck , zero )
   xn_heavy = DMAX1( xhbck , zero )
+  xn_alpha = MAX( zero, one - xn_neut - xn_prot -xn_alpha ) 
   a_heavy  = ahbck
   z_heavy  = zabck * ahbck
   be_heavy = b_hvy

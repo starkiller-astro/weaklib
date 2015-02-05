@@ -8,7 +8,7 @@ LAPACK_VER = LIBSCI
 #LAPACK_VER = ACML
 
 ## Define GPU LAPACK package
-GPU_LAPACK_VER = MAGMA
+#GPU_LAPACK_VER = MAGMA
 #GPU_LAPACK_VER = LIBSCIACC
 #GPU_LAPACK_VER = CULA
 #GPU_LAPACK_VER = CDP_LU
@@ -32,6 +32,7 @@ ifeq ($(PE_ENV),INTEL)
 #   LDR_MPI = ifort
     
     FC      = ftn
+    FC77    = ftn
     CC      = cc
     CXX     = CC
     LDR     = ftn
@@ -59,7 +60,7 @@ ifeq ($(PE_ENV),INTEL)
     NOOPT   = -O0
 
     DEBUGOPT = $(HIGHOPT) -g
-    DEBUG    = $(NOOPT) -g -check #-warn 
+    DEBUG    = $(NOOPT) -g -check -warn 
 
     R8   = -real-size 64 -integer-size 32
     FCLIST = -list

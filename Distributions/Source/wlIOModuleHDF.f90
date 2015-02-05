@@ -96,7 +96,6 @@ CONTAINS
   SUBROUTINE WriteHeaderHDF( file_id )
 
     INTEGER(HID_T), INTENT(in)                  :: file_id
-    ! Write EOS name, EOS parameters w/ names and comments
  
   END SUBROUTINE WriteHeaderHDF 
 
@@ -111,8 +110,6 @@ CONTAINS
 
     CALL WriteThermoStateHDF( ThermoState, group_id ) 
  
-    ! CALL WriteDependentVariablesHDF 
-
     CALL h5gclose_f( group_id, hdferr ) 
 
   END SUBROUTINE WriteEOSTableHDF
@@ -329,6 +326,9 @@ CONTAINS
     
     CALL Write1dHDF_string( "Names", TS % Names(:), &
                              group_id, datasize1d )
+
+    CALL Write1dHDF_string( "Units", TS % Units(:), &
+                             group_id, datasize1d )
     DO i = 1, 3
       datasize1d(1) = TS % nPoints(i)
       CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
@@ -348,6 +348,9 @@ CONTAINS
 
     datasize1d = SIZE( DV % Names )
     CALL Write1dHDF_string( "Names", DV % Names(:), &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_string( "Units", DV % Units(:), &
                              group_id, datasize1d )
 
     datasize1d = 3
@@ -377,6 +380,10 @@ CONTAINS
 
     CALL Read1dHDF_string( "Names", TS % Names(:), &
                               group_id, datasize1d )
+
+    CALL Read1dHDF_string( "Units", TS % Units(:), &
+                              group_id, datasize1d )
+
     DO i = 1, 3
       datasize1d(1) = TS % nPoints(i)
       CALL Read1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
@@ -403,6 +410,9 @@ CONTAINS
 
     datasize1d = SIZE( DV % Names )
     CALL Read1dHDF_string( "Names", DV % Names(:), &
+                              group_id, datasize1d )
+
+    CALL Read1dHDF_string( "Units", DV % Units(:), &
                               group_id, datasize1d )
 
     DO i = 1, SIZE( DV % Names ) 
