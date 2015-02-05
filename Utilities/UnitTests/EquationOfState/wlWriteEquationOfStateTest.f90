@@ -24,7 +24,7 @@ PROGRAM wlWriteEquationOfStateTest
 
 
   nPoints = (/10,10,10/)
-  nVariables = 12
+  nVariables = 13
 
   CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
@@ -42,7 +42,7 @@ PROGRAM wlWriteEquationOfStateTest
   CALL MakeLinearGrid( EOSTable % TS % minValues(3), EOSTable % TS % maxValues(3),&
          EOSTable % TS % nPoints(3), EOSTable % TS % States(3) % Values)
 
-  EOSTable % DV % Names(1:12) = (/'Pressure                        ', &
+  EOSTable % DV % Names(1:13) = (/'Pressure                        ', &
                                   'Entropy Per Baryon              ', &
                                   'Internal Energy Density         ', &
                                   'Neutron Chemical Potential      ', &
@@ -53,9 +53,10 @@ PROGRAM wlWriteEquationOfStateTest
                                   'Helium Mass Fraction            ', &
                                   'Heavy Mass Fraction             ', &
                                   'Heavy Mass Number               ', &
-                                  'Heavy Charge Number             '/)
+                                  'Heavy Charge Number             ', &
+                                  'Heavy Binding Energy            '/)
 
-  EOSTable % DV % Units(1:12) = (/'Dynes per cm^2                  ', &
+  EOSTable % DV % Units(1:13) = (/'Dynes per cm^2                  ', &
                                   'Entropy Per Baryon Units        ', &
                                   'Internal Energy Density         ', &
                                   'Neutron Chemical Potential      ', &
@@ -66,7 +67,8 @@ PROGRAM wlWriteEquationOfStateTest
                                   'Helium Mass Fraction            ', &
                                   'Heavy Mass Fraction             ', &
                                   'Heavy Mass Number               ', &
-                                  'Heavy Charge Number             '/)
+                                  'Heavy Mass Number               ', &
+                                  'MeV                             '/)
 
   WRITE (*,*) "Dimensions of rho, T, Ye"
   
@@ -85,7 +87,7 @@ PROGRAM wlWriteEquationOfStateTest
     WRITE(*,*) EOSTable % TS % States(j) % Values(:)
   END DO
 
-  DO j = 1,12
+  DO j = 1,13
     WRITE(*,*)
     WRITE(*,*) TRIM( EOSTable % DV % Names(j) ) , j
     WRITE(*,*)

@@ -1,15 +1,14 @@
 PROGRAM wlWriteEquationOfStateTest
  
   USE wlKindModule, ONLY: dp
-  USE wlDependentVariablesModule
-  USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   USE HDF5
-  USE wlThermoStateModule
+  USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,          &
                            WriteDependentVariablesHDF, CloseGroupHDF,         & 
                            CloseFileHDF, FinalizeHDF, WriteThermoStateHDF
+                           !Replace all of the above with WriteEquationOfStateTableHDF
 
   implicit none
 
@@ -26,21 +25,6 @@ PROGRAM wlWriteEquationOfStateTest
 
   LOGICAL            :: fail        ! did EoS fail to converge
 
-  !REAL(dp)           :: energ       ! internal energy
-  !REAL(dp)           :: entrop      ! entropy [kb/baryon]
-  !REAL(dp)           :: chem_n      ! free neutron cemical potential
-  !REAL(dp)           :: chem_p      ! free proton chemical potential
-  !REAL(dp)           :: chem_e      ! electron chemical potential
-  !REAL(dp)           :: xn_neut     ! free neutron fraction
-  !REAL(dp)           :: xn_prot     ! free proton fraction
-  !REAL(dp)           :: xn_alpha    ! alpha fraction
-  !REAL(dp)           :: xn_heavy    ! heavy fraction
-  !REAL(dp)           :: a_heavy     ! A for mean heavy nucleus
-  !REAL(dp)           :: z_heavy     ! Z for mean heavy nucleus
-  !REAL(dp)           :: be_heavy    ! Binding energy for mean heavy nucleus
-
-  !REAL(dp), DIMENSION(13)          :: Values
-
   nPoints = (/81,31,47/)
   nVariables = 13
   LScompress = '220'
@@ -54,7 +38,9 @@ PRINT*, "Allocate EOS"
   EOSTable % TS % Names(1:3) = (/'Density                         ',&
                                  'Temperature                     ',&
                                  'Electron Fraction               '/)
+
 PRINT*, "Allocate Independent Variable Units " 
+
   EOSTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
                                  'K                               ', &
                                  '                                '/) 
@@ -127,7 +113,7 @@ PRINT*, "Begin Associate"
   DO k = 1, EOSTable % nPoints(3) 
     DO j = 1, EOSTable % nPoints(2)
       DO i = 1, EOSTable % nPoints(1) 
-          PRINT*, "i,j,k = ", i,j,k
+         ! PRINT*, "i,j,k = ", i,j,k
           CALL wlGetFullEOS( Density(i), Temperature(j), Ye(k), EOSFlag, fail,      &
                        press(i,j,k), entrop(i,j,k), energ(i,j,k), chem_e(i,j,k),    &
                        chem_p(i,j,k), chem_n(i,j,k), xn_prot(i,j,k), xn_neut(i,j,k),&
@@ -145,6 +131,7 @@ PRINT*, "Begin Associate"
       = MAX( 0.0_dp, MINVAL( EOSTable % DV % Variables(l) % Values(:,:,:) ) ) 
   END DO 
 
+! Turn what follows into a WriteEquationOfStateTableHDF( EOSTable, Name of table ) subroutine in wlIOModul
   CALL InitializeHDF( )
 
   CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
@@ -159,9 +146,10 @@ PRINT*, "Begin Associate"
 
   CALL CloseFileHDF( file_id )
 
-  CALL DeAllocateEquationOfStateTable( EOSTable )
   CALL FinalizeHDF( )
-  
+
   WRITE (*,*) "HDF write successful"
+
+  CALL DeAllocateEquationOfStateTable( EOSTable )
 
 END PROGRAM wlWriteEquationOfStateTest

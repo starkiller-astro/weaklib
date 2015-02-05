@@ -32,7 +32,7 @@ PROGRAM wlReadEquationOfStateTest
     WRITE(*,*) EOSTable % TS % States(i) % Values(:)
   END DO
 
-  DO i = 1,12
+  DO i = 1,13
     WRITE(*,*)
     WRITE(*,*) TRIM( EOSTable % DV % Names(i) ) , i
     WRITE(*,*)
@@ -40,6 +40,7 @@ PROGRAM wlReadEquationOfStateTest
   END DO
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
+
   CALL FinalizeHDF( )
 
 END PROGRAM wlReadEquationOfStateTest

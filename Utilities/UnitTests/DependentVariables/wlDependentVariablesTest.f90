@@ -25,7 +25,7 @@ PROGRAM wlDependentVariablesTest
 print*,"1"
 
   nPoints = (/10,10,10/)
-  nVariables = 12
+  nVariables = 13
   CALL AllocateDependentVariables( DV, nPoints , nVariables )
 
   DV % nPoints(1:3) = nPoints(1:3)
@@ -33,32 +33,33 @@ print*,"1"
 
 print*,"2"
 
-  DV % Names(1:12) = (/'Pressure                        ', &
+  DV % Names(1:13) = (/'Pressure                        ', &
                        'Entropy Per Baryon              ', &
                        'Internal Energy Density         ', &
-                       'Neutron Chemical Potential      ', &
                        'Electron Chemical Potential     ', &
                        'Proton Chemical Potential       ', &
-                       'Neutron Mass Fraction           ', &
-                       'Proton Mass Fraction            ', &
-                       'Helium Mass Fraction            ', &
-                       'Heavy Mass Fraction             ', &
-                       'Heavy Mass Number               ', &
-                       'Heavy Charge Number             '/)
-
-  DV % Units(1:12) = (/'Dynes per cm^2                  ', &
-                       'Entropy Per Baryon Units        ', &
-                       'Internal Energy Density         ', &
                        'Neutron Chemical Potential      ', &
-                       'Electron Chemical Potential     ', &
-                       'Proton Chemical Potential       ', &
-                       'Neutron Mass Fraction           ', &
                        'Proton Mass Fraction            ', &
-                       'Helium Mass Fraction            ', &
+                       'Neutron Mass Fraction           ', &
+                       'Alpha Mass Fraction             ', &
                        'Heavy Mass Fraction             ', &
+                       'Heavy Charge Number             ', &
                        'Heavy Mass Number               ', &
-                       'Heavy Charge Number             '/)
+                       'Heavy Binding Energy            '/)               
 
+  DV % Units(1:13) = (/'Dynes per cm^2                  ', &
+                       'k_b per baryon                  ', &
+                       'erg per gram                    ', &
+                       'MeV                             ', &
+                       'MeV                             ', &
+                       'MeV                             ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       'MeV                             '/)
 
 print*,"3"
 
@@ -101,18 +102,19 @@ print*, "6"
 
   DV2 % nPoints(1:3) = nPoints2(1:3)
   DV2 % nVariables = nVariables2
-  DV2 % Units(1:12) = (/'Dynes per cm^2                  ', &
-                       'Entropy Per Baryon Units        ', &
-                       'Internal Energy Density         ', &
-                       'Neutron Chemical Potential      ', &
-                       'Electron Chemical Potential     ', &
-                       'Proton Chemical Potential       ', &
-                       'Neutron Mass Fraction           ', &
-                       'Proton Mass Fraction            ', &
-                       'Helium Mass Fraction            ', &
-                       'Heavy Mass Fraction             ', &
-                       'Heavy Mass Number               ', &
-                       'Heavy Charge Number             '/)
+  DV2 % Units(1:13) = (/'Dynes per cm^2                  ', &
+                       'k_b per baryon                  ', &
+                       'erg per gram                    ', &
+                       'MeV                             ', &
+                       'MeV                             ', &
+                       'MeV                             ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       '                                ', &
+                       'MeV                             '/)
   CALL ReadDependentVariablesHDF( DV2, file_id )
   !CALL ReadDimensionsHDF( nPoints2, group_id )
 

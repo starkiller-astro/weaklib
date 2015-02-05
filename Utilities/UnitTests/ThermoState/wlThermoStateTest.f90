@@ -32,6 +32,10 @@ PROGRAM wlThermoStateTest
   ThermoState % Names(1:3) = (/'Density                         ',&
                                'Temperature                     ',&
                                'Electron Fraction               '/)
+
+  ThermoState % Units(1:3) = (/'Grams per cm^3                  ', &
+                               'K                               ', &
+                               '                                '/)
     
   ThermoState % minValues(1:3) =  (/1.0d06,0.1d00,1.0d-02/)
   ThermoState % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
