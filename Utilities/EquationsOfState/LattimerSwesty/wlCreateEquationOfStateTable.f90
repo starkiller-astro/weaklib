@@ -1,4 +1,4 @@
-PROGRAM wlWriteEquationOfStateTest
+PROGRAM wlCreateEquationOfStateTable
  
   USE wlKindModule, ONLY: dp
   USE HDF5
@@ -7,7 +7,8 @@ PROGRAM wlWriteEquationOfStateTest
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,          &
                            WriteDependentVariablesHDF, CloseGroupHDF,         & 
-                           CloseFileHDF, FinalizeHDF, WriteThermoStateHDF
+                           CloseFileHDF, FinalizeHDF, WriteThermoStateHDF,    &
+                           WriteEquationOfStateTableHDF
                            !Replace all of the above with WriteEquationOfStateTableHDF
 
   implicit none
@@ -131,20 +132,9 @@ PRINT*, "Begin Associate"
       = MAX( 0.0_dp, MINVAL( EOSTable % DV % Variables(l) % Values(:,:,:) ) ) 
   END DO 
 
-! Turn what follows into a WriteEquationOfStateTableHDF( EOSTable, Name of table ) subroutine in wlIOModul
   CALL InitializeHDF( )
 
-  CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
-
-  CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-  CALL WriteThermoStateHDF( EOSTable % TS, group_id )
-  CALL CloseGroupHDF( group_id )
-
-  CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-  CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
-  CALL CloseGroupHDF( group_id )
-
-  CALL CloseFileHDF( file_id )
+  CALL WriteEquationOfStateTableHDF( EOSTable )
 
   CALL FinalizeHDF( )
 
@@ -152,4 +142,4 @@ PRINT*, "Begin Associate"
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
-END PROGRAM wlWriteEquationOfStateTest
+END PROGRAM wlCreateEquationOfStateTable

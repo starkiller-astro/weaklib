@@ -10,7 +10,7 @@ PROGRAM wlWriteEquationOfStateTest
                            ReadDependentVariablesHDF, CloseFileHDF,           &
                            FinalizeHDF, ReadDimensionsHDF,                    &
                            ReadDependentVariablesHDF, ReadNumberVariablesHDF, &
-                           WriteThermoStateHDF
+                           WriteThermoStateHDF, WriteEquationOfStateTableHDF
 
   implicit none
 
@@ -97,18 +97,7 @@ PROGRAM wlWriteEquationOfStateTest
 
   CALL InitializeHDF( )
 
-! Write WriteEquationOfStateTableHDF, OpenFileHDF to CloseFileHDF
-  CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
-
-  CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-  CALL WriteThermoStateHDF( EOSTable % TS, group_id )
-  CALL CloseGroupHDF( group_id )
-
-  CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-  CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
-  CALL CloseGroupHDF( group_id )
-
-  CALL CloseFileHDF( file_id )
+  CALL WriteEquationOfStateTableHDF( EOSTable )
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
   CALL FinalizeHDF( )

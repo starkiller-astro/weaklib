@@ -24,6 +24,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadDependentVariablesHDF
   PUBLIC ReadDimensionsHDF
   PUBLIC ReadNumberVariablesHDF
+  PUBLIC WriteEquationOfStateTableHDF
   PUBLIC ReadEquationOfStateTableHDF
 
 CONTAINS
@@ -448,6 +449,28 @@ CONTAINS
     nVariables = nVarTemp(1)
 
   END SUBROUTINE ReadNumberVariablesHDF
+
+  SUBROUTINE WriteEquationOfStateTableHDF( EOSTable )
+
+    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
+
+    CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
+
+    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+    CALL WriteThermoStateHDF( EOSTable % TS, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
+    CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL CloseFileHDF( file_id )
+
+  END SUBROUTINE WriteEquationOfStateTableHDF
+
   
   SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
 
