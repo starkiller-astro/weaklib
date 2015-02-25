@@ -26,7 +26,7 @@ PROGRAM wlCreateEquationOfStateTable
 
   LOGICAL            :: fail        ! did EoS fail to converge
 
-  nPoints = (/81,31,47/)
+  nPoints = (/10,10,10/)
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'

@@ -5,17 +5,16 @@ MODULE wlInterpolationModule
   implicit none
 
   PUBLIC LogInterpolateSingleVariable
-  PUBLIC LocateVariablePosition
+  PUBLIC locate 
 
 CONTAINS
 
-  SUBROUTINE locate(xx,n,x,j)
+  SUBROUTINE locate( xx, n, x, j )
 
-    USE Kind_Module, ONLY: dp    
     INTEGER, INTENT(in)      :: n
     INTEGER, INTENT(out)     :: j
-    REAL(dp), INTENT(in) ::  x,xx(n)	
-    INTEGER  ::  jl,jm,ju	
+    REAL(dp), INTENT(in)     ::  x,xx(n)
+    INTEGER                  ::  jl,jm,ju
 
     jl = 0
     ju = n+1
@@ -27,7 +26,7 @@ CONTAINS
         ju = jm
       END IF
     END DO
-	
+
     IF (x.eq.xx(1)) THEN
       j = 1
     ELSEIF (x.eq.xx(n)) THEN
@@ -71,10 +70,26 @@ CONTAINS
       p011 = Table( il1  , il2+1, il3+1 )
       p111 = Table( il1+1, il2+1, il3+1 )
   
+      IF LogInterp = (/.true.,.true.,.false./) THEN
+
       delta(1) = LOG10( x1(i) - Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) - Coordinate1(il1) )
       delta(2) = LOG10( x2(i) - Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) - Coordinate2(il2) )
       delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
+    
+      ELSEIF LogInterp = (/.true.,.false.,.true./) THEN
+
+      delta(1) = LOG10( x1(i) - Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) - Coordinate1(il1) )
+      delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
+      delta(3) = LOG10( x3(i) - Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) - Coordinate3(il3) )
   
+      ELSEIF LogInterp = (/.false.,.true.,.true./) THEN
+
+      delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
+      delta(2) = LOG10( x2(i) - Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) - Coordinate2(il2) )
+      delta(3) = LOG10( x3(i) - Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) - Coordinate3(il3) )
+  
+      END IF
+
       Interpolant(i) &
         = 10.d0**( &
             + (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
@@ -90,7 +105,6 @@ CONTAINS
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable
-
 
 END MODULE wlInterpolationModule
 
