@@ -106,8 +106,8 @@ writetest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariab
 readtest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
 	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o  wlReadEquationOfStateTest.o 
 
-test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule wlInterpolationTest.o
-        $(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o wlInterpolationTest.o 
+test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o wlInterpolationTest.o
+	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o wlInterpolationTest.o 
 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 

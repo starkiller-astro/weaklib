@@ -318,8 +318,8 @@ else
         MKL_INC += -mkl=parallel
         MKL_LIBS = -lmkl_avx
     else ifeq ($(PE_ENV),PGI)
-        MKL_INC += -mp -pgf90libs
-        MKL_LIBS = -lmkl_intel_lp64 -lmkl_pgi_thread -lmkl_core -lmkl_avx -ldl -lpthread -pgf90libs
+        MKL_INC += -mp -ftnlibs
+        MKL_LIBS = -lmkl_intel_lp64 -lmkl_pgi_thread -lmkl_core -lmkl_avx -ldl -lpthread -ftnlibs
     else ifeq ($(PE_ENV),GNU)
         MKL_INC += -fopenmp
         MKL_LIBS = -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lmkl_avx -ldl -lpthread
