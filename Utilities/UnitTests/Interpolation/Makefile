@@ -1,4 +1,5 @@
-vpath %.f90 ../../../Distributions/Source:.
+vpath %.f90 ../../../Distributions/Source:../../../External/LS:../../../External/BCK:../../../External/SharedModules:../../../External/EOSInterface:.
+vpath %.f ../../../External/LS:../../../External/BCK
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
 CMODE = DEBUG
@@ -106,8 +107,8 @@ writetest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariab
 readtest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
 	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o  wlReadEquationOfStateTest.o 
 
-test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o wlInterpolationTest.o
-	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o wlInterpolationTest.o 
+test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o fexp.o initferm.o loadmx.o wlExtInitializeEOS.o wlExtEOSWrapperModule.o wlInterpolationTest.o
+	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlInterpolationModule.o EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o fexp.o initferm.o loadmx.o wlExtInitializeEOS.o wlExtEOSWrapperModule.o wlInterpolationTest.o 
 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
