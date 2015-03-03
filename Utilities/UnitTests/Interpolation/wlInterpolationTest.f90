@@ -51,21 +51,6 @@ PROGRAM wlInterpolationTest
     rho(i) = 10.d0**logrho 
   END DO 
 
-  WRITE (*,*) "rho=", rho
-  WRITE (*,*) "T=", T 
-  WRITE (*,*) "Ye=", Ye 
-  
-!  rho = ( EOSTable % TS % States(1) % Values(6) -         &
-!          EOSTable % TS % States(1) % Values(5) )/2.0d0 + &
-!          EOSTable % TS % States(1) % Values(5) 
-
-!  T = ( EOSTable % TS % States(2) % Values(6) -         &
-!        EOSTable % TS % States(2) % Values(5) )/2.0d0 + &
-!        EOSTable % TS % States(2) % Values(5) 
-
-!  Ye = ( EOSTable % TS % States(3) % Values(6) -         &
-!         EOSTable % TS % States(3) % Values(5) )/2.0d0 + &
-!         EOSTable % TS % States(3) % Values(5) 
 
    EOSTable % DV % Variables(1) % Values(:,:,:) &
            = LOG10( EOSTable % DV % Variables(1) % Values(:,:,:) ) 
@@ -77,8 +62,11 @@ PROGRAM wlInterpolationTest
                                      LogInterp,                                    &
                                      EOSTable % DV % Variables(1) % Values(:,:,:), & 
                                      Interpolant )
-   WRITE (*,*) "Pressure =", Interpolant
 
+  WRITE (*, '(4A22)' ) "rho=", "T=", "Ye=", "Pressure=" 
+  DO i=1,10 
+    WRITE (*, '(4E)' ) rho(i), T(i), Ye(i), Interpolant(i) 
+  END DO
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
