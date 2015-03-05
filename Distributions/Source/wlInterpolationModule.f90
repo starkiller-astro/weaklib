@@ -6,6 +6,7 @@ MODULE wlInterpolationModule
 
   PUBLIC LogInterpolateSingleVariable
   PUBLIC locate 
+  PUBLIC MonotonicityCheck
 
 CONTAINS
 
@@ -105,6 +106,68 @@ CONTAINS
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable
+
+  
+  SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe )
+
+    REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
+    INTEGER, INTENT(in) :: Nrho 
+    INTEGER, INTENT(in) :: NT
+    INTEGER, INTENT(in) :: NYe
+
+    INTEGER :: i, j, k
+
+      DO k = 1, NYe - 2.0d0
+        DO j = 1, NT - 2.0d0 
+          DO i = 1, Nrho - 2.0d0
+
+            IF ( ( ( Table(i+2, j, k) - Table(i+1, j, k) ) * &
+                 ( Table(i+1, j, k) - Table(i, j, k) ) ).gt.0 ) THEN
+            CYCLE
+            ELSE
+            WRITE (*,*) "Table not monotonic in rho at (Nrho, NT, NYe) = ", i, j, k
+
+            END IF
+
+          END DO
+        END DO
+      END DO
+
+      DO k = 1, NYe - 2.0d0
+        DO j = 1, NT - 2.0d0 
+          DO i = 1, Nrho - 2.0d0
+
+            IF ( ( ( Table(i, j+2, k) - Table(i, j+1, k) ) * &
+                 ( Table(i, j+1, k) - Table(i, j, k) ) ).gt.0 ) THEN
+            CYCLE
+            ELSE
+            WRITE (*,*) "Table not monotonic in T at (Nrho, NT, NYe) = ", i, j, k
+            CYCLE
+
+            END IF
+
+          END DO
+        END DO
+      END DO
+
+      DO k = 1, NYe - 2.0d0
+        DO j = 1, NT - 2.0d0 
+          DO i = 1, Nrho - 2.0d0
+
+            IF ( ( ( Table(i, j, k+2) - Table(i, j, k+1) ) * &
+                 ( Table(i, j, k+1) - Table(i, j, k) ) ).gt.0 ) THEN
+            CYCLE
+            ELSE
+            WRITE (*,*) "Table not monotonic in Ye at (Nrho, NT, NYe) = ", i, j, k
+            CYCLE
+
+            END IF
+
+          END DO
+        END DO
+      END DO
+
+  END SUBROUTINE MonotonicityCheck 
 
 END MODULE wlInterpolationModule
 

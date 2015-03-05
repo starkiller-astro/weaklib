@@ -39,12 +39,16 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
   INTEGER :: i
-  REAL(dp) :: LogT, logrho
+  INTEGER, PARAMETER :: NumPoints = 100
+  REAL(dp) :: LogT, logrho, L1norm, maxnorm 
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
   CHARACTER(len=128) :: LSFilePath
 
   LOGICAL            :: fail        ! did EoS fail to converge
+
+  99 FORMAT ("rho=", es12.5, " T=", es12.5, " Ye=" , es12.5, 3(1x,es12.5) )  
+
 
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -52,14 +56,16 @@ PROGRAM wlInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "SmallEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "LargeEquationOfStateTable.h5" )
 
   LogInterp = (/.true.,.true.,.false./)
 
-  ALLOCATE( rho(10), T(10), Ye(10), rand(10,3), Interpolant(10), DirectCall(10),  &
-            press(10), entrop(10), energ(10), chem_e(10), chem_p(10), chem_n(10), &
-            xn_prot(10), xn_neut(10), xn_alpha(10), xn_heavy(10), z_heavy(10),    &
-            a_heavy(10), be_heavy(10) ) 
+  ALLOCATE( rho( NumPoints ), T( NumPoints ), Ye( NumPoints ), rand( NumPoints, 3 ), &
+            Interpolant( NumPoints ), DirectCall( NumPoints ), press( NumPoints ),   &
+            entrop( NumPoints ), energ( NumPoints ), chem_e( NumPoints ),            & 
+            chem_p( NumPoints ), chem_n( NumPoints ), xn_prot( NumPoints ),          &
+            xn_neut( NumPoints ), xn_alpha( NumPoints ), xn_heavy( NumPoints ),      &
+            z_heavy( NumPoints ), a_heavy( NumPoints ), be_heavy( NumPoints ) ) 
 
   CALL RANDOM_SEED( )
   CALL RANDOM_NUMBER( rand )
@@ -70,7 +76,8 @@ PROGRAM wlInterpolationTest
   logTmax = LOG10( EOSTable % TS % maxValues(2) )
   logrhomin = LOG10( EOSTable % TS % minValues(1) )
   logrhomax = LOG10( EOSTable % TS % maxValues(1) )
-  DO i=1,10
+
+  DO i=1, NumPoints
     Ye(i) = (Yemax - Yemin ) * rand(i,3) + Yemin   
     logT = (logTmax - logTmin ) * rand(i,2) + logTmin   
     T(i) = 10.d0**logT 
@@ -78,8 +85,7 @@ PROGRAM wlInterpolationTest
     rho(i) = 10.d0**logrho 
   END DO 
 
-
-   EOSTable % DV % Variables(1) % Values(:,:,:) &
+    EOSTable % DV % Variables(1) % Values(:,:,:) &
            = LOG10( EOSTable % DV % Variables(1) % Values(:,:,:) ) 
 
   CALL LogInterpolateSingleVariable( rho, T, Ye,                                   &
@@ -102,15 +108,23 @@ PROGRAM wlInterpolationTest
   END DO
 
 
-  WRITE (*, '(4A22)' ) "rho=", "T=", "Ye=", "Pressure=" 
-  DO i=1,10 
-    WRITE (*, '(4E)' ) rho(i), T(i), Ye(i), Interpolant(i) 
+  WRITE (*, '(4A22)' ) "rho=", " T=", " Ye=", "Pressure=" 
+
+  DO i = 1, NumPoints 
+    WRITE (*, '(4ES12.5)' ) rho(i), T(i), Ye(i), Interpolant(i) 
   END DO
 
-  WRITE (*, '(3A25)' ) "Interpolated Pressure= ", "Direct Call Pressure=", "Residual=" 
-  DO i=1,10 
-    WRITE (*, '(3E)' ) Interpolant(i), DirectCall(i), ABS( Interpolant(i) - DirectCall(i) ) 
+!  WRITE (*, '(3A25)' ) "  Interp P= ", "Dir Call P=", "Residual=" 
+  DO i = 1, NumPoints 
+    WRITE (*, 99 ) rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i), ABS( Interpolant(i) - DirectCall(i) ) 
   END DO
+
+  L1norm = 0
+  DO i =1, NumPoints 
+    L1norm = L1norm + ABS( Interpolant(i) - DirectCall(i) ) !/ DirectCall(i)  
+  END DO
+
+  WRITE (*, '(A,ES12.5)' ) "L1norm =" , L1norm
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 

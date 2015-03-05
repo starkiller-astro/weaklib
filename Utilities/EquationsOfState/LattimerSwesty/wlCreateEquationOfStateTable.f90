@@ -26,7 +26,7 @@ PROGRAM wlCreateEquationOfStateTable
 
   LOGICAL            :: fail        ! did EoS fail to converge
 
-  nPoints = (/10,10,10/)
+  nPoints = (/100,100,100/)
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -114,7 +114,6 @@ PRINT*, "Begin Associate"
   DO k = 1, EOSTable % nPoints(3) 
     DO j = 1, EOSTable % nPoints(2)
       DO i = 1, EOSTable % nPoints(1) 
-         ! PRINT*, "i,j,k = ", i,j,k
           CALL wlGetFullEOS( Density(i), Temperature(j), Ye(k), EOSFlag, fail,      &
                        press(i,j,k), entrop(i,j,k), energ(i,j,k), chem_e(i,j,k),    &
                        chem_p(i,j,k), chem_n(i,j,k), xn_prot(i,j,k), xn_neut(i,j,k),&
