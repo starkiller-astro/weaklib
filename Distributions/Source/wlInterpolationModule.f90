@@ -126,7 +126,7 @@ CONTAINS
             CYCLE
             ELSE
             WRITE (*,*) "Table not monotonic in rho at (Nrho, NT, NYe) = ", i, j, k
-
+            CYCLE
             END IF
 
           END DO
