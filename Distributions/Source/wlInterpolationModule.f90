@@ -117,6 +117,10 @@ CONTAINS
     INTEGER, INTENT(in) :: Axis
 
     INTEGER :: i, j, k, count
+
+    97 FORMAT ("Table not monotonic in rho at (Nrho, NT, NYe) = ", 3(1x,i4) )
+    98 FORMAT ("Table not monotonic in T at (Nrho, NT, NYe) = ", 3(1x,i4) )
+    99 FORMAT ("Table not monotonic in Ye at (Nrho, NT, NYe) = ", 3(1x,i4) )
  
     count = 0
     
@@ -124,12 +128,12 @@ CONTAINS
      
     CASE( 1 )
       DO k = 1, NYe
-        DO j = 1, NT
+        DO j = 1, NT  
           DO i = 2, Nrho - 1
 
             IF ( ( ( Table(i+1, j, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i-1, j, k) ) ) < 0. ) THEN
-              WRITE (*,*) "Table not monotonic in rho at (Nrho, NT, NYe) = ", i, j, k
+              WRITE (*,97) i, j, k
               count = count + 1
             END IF
           END DO
@@ -143,7 +147,7 @@ CONTAINS
 
             IF ( ( ( Table(i, j+1, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j-1, k) ) ) < 0.) THEN 
-              WRITE (*,*) "Table not monotonic in T at (Nrho, NT, NYe) = ", i, j, k
+              WRITE (*,98) i, j, k
               count = count + 1
             END IF
           END DO
@@ -157,7 +161,7 @@ CONTAINS
 
             IF ( ( ( Table(i, j, k+1) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j, k-1) ) ) < 0. ) &
-            WRITE (*,*) "Table not monotonic in Ye at (Nrho, NT, NYe) = ", i, j, k
+            WRITE (*, 99) i, j, k
 
           END DO
         END DO

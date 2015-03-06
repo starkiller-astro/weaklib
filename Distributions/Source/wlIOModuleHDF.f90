@@ -360,9 +360,9 @@ CONTAINS
     datasize1d = 1 
     CALL Write1dHDF_integer( "nVariables", (/DV % nVariables/), &
                              group_id, datasize1d )
-    !datasize1d = DV % nVariables 
-    !CALL Write1dHDF_double( "Offsets", (/DV % Offsets/), &
-    !                         group_id, datasize1d )
+    datasize1d = DV % nVariables 
+    CALL Write1dHDF_double( "Offsets", (/DV % Offsets/), &
+                             group_id, datasize1d )
     DO i = 1, SIZE( DV % Names ) 
       datasize3d = SHAPE( DV % Variables(i) % Values ) 
       CALL Write3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &

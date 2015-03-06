@@ -55,8 +55,8 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
-  EOSTable % TS % minValues(1:3) =  (/1.0d07, 1.0d09, 0.05d0/)
-  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.51d0/)
+  EOSTable % TS % minValues(1:3) =  (/1.0d07, 5.0d09, 0.05d0/)
+  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 5.0d12, 0.51d0/)
 
 !------------------------------------------------------------------------------
 ! Generate rho, T, Ye grid from limits
@@ -99,8 +99,6 @@ PRINT*, "Allocate Dependent Variable Units "
                                   '                                ', &
                                   '                                ', &
                                   'MeV                             '/)
-
-PRINT*, "Allocate Dependent Variable Offsets"
 
 PRINT*, "Begin Associate" 
   ASSOCIATE(&
