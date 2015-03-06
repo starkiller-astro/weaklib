@@ -26,6 +26,15 @@ PROGRAM wlCreateEquationOfStateTable
 
   LOGICAL            :: fail        ! did EoS fail to converge
 
+  94 FORMAT ("rho=", es12.5,1x, "T=", es12.5,1x, "Ye=" , es12.5 )
+  95 FORMAT ("Press=", es12.5,1x, "Entropy=", es12.5,1x, "Energy=" , es12.5 )
+  96 FORMAT ("Elec Chem Pot=", es12.5,1x, "Prot Chem Pot=", es12.5,1x,         &
+             "Neut Chem Pot=" , es12.5 )
+  97 FORMAT ("Prot Mass Fract=", es12.5,1x, "Neut Mass Fract=", es12.5,1x,     &
+             "Alpha Mass Fract=" , es12.5 )
+  98 FORMAT ("Heavy Mass Fract=", es12.5,1x, "Heavy Charge # =", es12.5,1x,    &
+             "Heavy Mass #=" , es12.5,1x, "Heavy Binding Energy=", es12.5 )
+
   nPoints = (/100,100,100/)
   nVariables = 13
   LScompress = '220'
@@ -90,6 +99,9 @@ PRINT*, "Allocate Dependent Variable Units "
                                   '                                ', &
                                   '                                ', &
                                   'MeV                             '/)
+
+PRINT*, "Allocate Dependent Variable Offsets"
+
 PRINT*, "Begin Associate" 
   ASSOCIATE(&
     Density     => EOSTable % TS % States(1) % Values, &
@@ -119,6 +131,18 @@ PRINT*, "Begin Associate"
                        chem_p(i,j,k), chem_n(i,j,k), xn_prot(i,j,k), xn_neut(i,j,k),&
                        xn_alpha(i,j,k), xn_heavy(i,j,k), z_heavy(i,j,k),            &
                        a_heavy(i,j,k), be_heavy(i,j,k) )   
+          IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. xn_prot(i,j,k) < 0.   &
+               .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
+          WRITE (*, 94 ) Density(i), Temperature(j), Ye(k)
+          WRITE (*, 95 ) press(i,j,k), entrop(i,j,k), energ(i,j,k) 
+          WRITE (*, 96 ) chem_e(i,j,k), chem_p(i,j,k), chem_n(i,j,k) 
+          WRITE (*, 97 ) xn_prot(i,j,k), xn_neut(i,j,k), xn_alpha(i,j,k) 
+          WRITE (*, 98 ) xn_heavy(i,j,k), z_heavy(i,j,k), a_heavy(i,j,k), be_heavy(i,j,k) 
+          WRITE (*,*) "  "
+
+          END IF
+          
+               
       END DO
     END DO
   END DO

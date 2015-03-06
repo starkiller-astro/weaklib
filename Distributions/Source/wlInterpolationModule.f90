@@ -108,65 +108,67 @@ CONTAINS
   END SUBROUTINE LogInterpolateSingleVariable
 
   
-  SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe )
+  SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe, Axis )
 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     INTEGER, INTENT(in) :: Nrho 
     INTEGER, INTENT(in) :: NT
     INTEGER, INTENT(in) :: NYe
+    INTEGER, INTENT(in) :: Axis
 
-    INTEGER :: i, j, k
+    INTEGER :: i, j, k, count
+ 
+    count = 0
+    
+    SELECT CASE ( Axis ) 
+     
+    CASE( 1 )
+      DO k = 1, NYe
+        DO j = 1, NT
+          DO i = 2, Nrho - 1
 
-      DO k = 1, NYe - 2.0d0
-        DO j = 1, NT - 2.0d0 
-          DO i = 1, Nrho - 2.0d0
-
-            IF ( ( ( Table(i+2, j, k) - Table(i+1, j, k) ) * &
-                 ( Table(i+1, j, k) - Table(i, j, k) ) ).gt.0 ) THEN
-            CYCLE
-            ELSE
-            WRITE (*,*) "Table not monotonic in rho at (Nrho, NT, NYe) = ", i, j, k
-            CYCLE
+            IF ( ( ( Table(i+1, j, k) - Table(i, j, k) ) * &
+                 ( Table(i, j, k) - Table(i-1, j, k) ) ) < 0. ) THEN
+              WRITE (*,*) "Table not monotonic in rho at (Nrho, NT, NYe) = ", i, j, k
+              count = count + 1
             END IF
-
           END DO
         END DO
       END DO
 
-      DO k = 1, NYe - 2.0d0
-        DO j = 1, NT - 2.0d0 
-          DO i = 1, Nrho - 2.0d0
+    CASE( 2 )
+      DO k = 1, NYe
+        DO j = 2, NT - 1 
+          DO i = 1, Nrho
 
-            IF ( ( ( Table(i, j+2, k) - Table(i, j+1, k) ) * &
-                 ( Table(i, j+1, k) - Table(i, j, k) ) ).gt.0 ) THEN
-            CYCLE
-            ELSE
-            WRITE (*,*) "Table not monotonic in T at (Nrho, NT, NYe) = ", i, j, k
-            CYCLE
-
+            IF ( ( ( Table(i, j+1, k) - Table(i, j, k) ) * &
+                 ( Table(i, j, k) - Table(i, j-1, k) ) ) < 0.) THEN 
+              WRITE (*,*) "Table not monotonic in T at (Nrho, NT, NYe) = ", i, j, k
+              count = count + 1
             END IF
-
           END DO
         END DO
       END DO
 
-      DO k = 1, NYe - 2.0d0
-        DO j = 1, NT - 2.0d0 
-          DO i = 1, Nrho - 2.0d0
+   CASE( 3 )
+      DO k = 2, NYe - 1
+        DO j = 1, NT
+          DO i = 1, Nrho
 
-            IF ( ( ( Table(i, j, k+2) - Table(i, j, k+1) ) * &
-                 ( Table(i, j, k+1) - Table(i, j, k) ) ).gt.0 ) THEN
-            CYCLE
-            ELSE
+            IF ( ( ( Table(i, j, k+1) - Table(i, j, k) ) * &
+                 ( Table(i, j, k) - Table(i, j, k-1) ) ) < 0. ) &
             WRITE (*,*) "Table not monotonic in Ye at (Nrho, NT, NYe) = ", i, j, k
-            CYCLE
-
-            END IF
 
           END DO
         END DO
       END DO
 
+    CASE DEFAULT
+      WRITE (*,*) "Invalid Axis", Axis
+      STOP
+
+    END SELECT
+    WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
   END SUBROUTINE MonotonicityCheck 
 
 END MODULE wlInterpolationModule

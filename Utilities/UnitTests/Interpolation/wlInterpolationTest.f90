@@ -58,6 +58,11 @@ PROGRAM wlInterpolationTest
 
   CALL ReadEquationOfStateTableHDF( EOSTable, "LargeEquationOfStateTable.h5" )
 
+  WRITE (*,*) "Table Minimums"
+  DO i = 1, EOSTable % DV % nVariables
+    WRITE (*,*) EOSTable % DV % Names(i) , MINVAL( EOSTable % DV % Variables(i) % Values) 
+  END DO
+
   LogInterp = (/.true.,.true.,.false./)
 
   ALLOCATE( rho( NumPoints ), T( NumPoints ), Ye( NumPoints ), rand( NumPoints, 3 ), &
@@ -107,6 +112,7 @@ PROGRAM wlInterpolationTest
     DirectCall(i) = press(i)
   END DO
 
+  WRITE (*,*) "Pressure Interpolation Comparison"
 
   WRITE (*, '(4A22)' ) "rho=", " T=", " Ye=", "Pressure=" 
 
@@ -116,7 +122,8 @@ PROGRAM wlInterpolationTest
 
 !  WRITE (*, '(3A25)' ) "  Interp P= ", "Dir Call P=", "Residual=" 
   DO i = 1, NumPoints 
-    WRITE (*, 99 ) rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i), ABS( Interpolant(i) - DirectCall(i) ) 
+    WRITE (*, 99 ) rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i), &
+                   ABS( Interpolant(i) - DirectCall(i) ) 
   END DO
 
   L1norm = 0
@@ -125,6 +132,16 @@ PROGRAM wlInterpolationTest
   END DO
 
   WRITE (*, '(A,ES12.5)' ) "L1norm =" , L1norm
+
+    EOSTable % DV % Variables(3) % Values(:,:,:) &
+           = LOG10( EOSTable % DV % Variables(3) % Values(:,:,:) ) 
+
+  WRITE (*,*) "Internal Energy Monotonicity Check"
+
+  CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
+                          EOSTable % nPoints(1), EOSTable % nPoints(2), &
+                          EOSTable % nPoints(3), 2 )
+
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
