@@ -13,7 +13,7 @@ PROGRAM wlCreateEquationOfStateTable
 
   implicit none
 
-  INTEGER                        :: i, j, k, l
+  INTEGER                        :: i, j, k, l, count
   INTEGER, DIMENSION(3)          :: nPoints
   INTEGER                        :: nVariables
   TYPE(EquationOfStateTableType) :: EOSTable
@@ -35,7 +35,7 @@ PROGRAM wlCreateEquationOfStateTable
   98 FORMAT ("Heavy Mass Fract=", es12.5,1x, "Heavy Charge # =", es12.5,1x,    &
              "Heavy Mass #=" , es12.5,1x, "Heavy Binding Energy=", es12.5 )
 
-  nPoints = (/100,100,100/)
+  nPoints = (/500,500,500/)
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -55,8 +55,8 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
-  EOSTable % TS % minValues(1:3) =  (/1.0d07, 5.0d09, 0.05d0/)
-  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 5.0d12, 0.51d0/)
+  EOSTable % TS % minValues(1:3) =  (/1.0d07, 2.0d09, 0.05d0/)
+  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.51d0/)
 
 !------------------------------------------------------------------------------
 ! Generate rho, T, Ye grid from limits
@@ -121,6 +121,8 @@ PRINT*, "Begin Associate"
 
   EOSFlag = "L" 
 
+  count = 0
+
   DO k = 1, EOSTable % nPoints(3) 
     DO j = 1, EOSTable % nPoints(2)
       DO i = 1, EOSTable % nPoints(1) 
@@ -137,13 +139,15 @@ PRINT*, "Begin Associate"
           WRITE (*, 97 ) xn_prot(i,j,k), xn_neut(i,j,k), xn_alpha(i,j,k) 
           WRITE (*, 98 ) xn_heavy(i,j,k), z_heavy(i,j,k), a_heavy(i,j,k), be_heavy(i,j,k) 
           WRITE (*,*) "  "
-
+          count = count + 1
           END IF
           
                
       END DO
     END DO
   END DO
+
+WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3) 
 
   END ASSOCIATE
 

@@ -39,15 +39,16 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
   INTEGER :: i
-  INTEGER, PARAMETER :: NumPoints = 100
-  REAL(dp) :: LogT, logrho, L1norm, maxnorm 
+  INTEGER, PARAMETER :: NumPoints = 500
+  REAL(dp) :: LogT, logrho, L1norm, Maxnorm 
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
   CHARACTER(len=128) :: LSFilePath
 
   LOGICAL            :: fail        ! did EoS fail to converge
 
-  99 FORMAT ("rho=", es12.5, " T=", es12.5, " Ye=" , es12.5, 3(1x,es12.5) )  
+  99 FORMAT ("rho=", es12.5, " T=", es12.5, " Ye=" , es12.5, " Int=", es12.5, &
+             " DC=", es12.5, " Diff=", es12.5 ) 
 
 
   LScompress = '220'
@@ -56,7 +57,7 @@ PROGRAM wlInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "LargeEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "LargerEquationOfStateTable.h5" )
 
   WRITE (*,*) "Table Minimums"
   DO i = 1, EOSTable % DV % nVariables
@@ -104,38 +105,44 @@ PROGRAM wlInterpolationTest
   CALL wlExtInitializeEOS( LSFilePath, LScompress )
 
   DO i = 1, SIZE( rho )
+
     CALL wlGetFullEOS( rho(i), T(i), Ye(i), EOSFlag, fail, press(i), energ(i), &
                        entrop(i), chem_n(i), chem_p(i), chem_e(i), xn_neut(i), &
                        xn_prot(i), xn_alpha(i), xn_heavy(i), a_heavy(i),       &
                        z_heavy(i), be_heavy(i) ) 
 
     DirectCall(i) = press(i)
+
   END DO
 
   WRITE (*,*) "Pressure Interpolation Comparison"
 
-  WRITE (*, '(4A22)' ) "rho=", " T=", " Ye=", "Pressure=" 
+  WRITE (*, '(A)' ) "rho=         T=         Ye=         Pressure=" 
 
-  DO i = 1, NumPoints 
-    WRITE (*, '(4ES12.5)' ) rho(i), T(i), Ye(i), Interpolant(i) 
-  END DO
+  WRITE (*, '(4ES12.5)' ) rho, T, Ye, Interpolant 
 
-!  WRITE (*, '(3A25)' ) "  Interp P= ", "Dir Call P=", "Residual=" 
-  DO i = 1, NumPoints 
-    WRITE (*, 99 ) rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i), &
-                   ABS( Interpolant(i) - DirectCall(i) ) 
-  END DO
+  WRITE (*,*) " "
 
-  L1norm = 0
-  DO i =1, NumPoints 
-    L1norm = L1norm + ABS( Interpolant(i) - DirectCall(i) ) !/ DirectCall(i)  
-  END DO
+  WRITE (*, 99 ) rho, T, Ye, Interpolant, DirectCall, &
+                   ABS( Interpolant - DirectCall ) 
+
+  WRITE (*,*) " "
+  WRITE (*,*) "L1 and Max Norms"
+  WRITE (*,*) " "
+  L1norm = SUM(ABS( Interpolant - DirectCall ) / ABS( DirectCall ) ,  &
+          MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
+
+  Maxnorm = MAXVAL(ABS( Interpolant - DirectCall ) / ABS( DirectCall ) ,  &
+          MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
 
   WRITE (*, '(A,ES12.5)' ) "L1norm =" , L1norm
+  WRITE (*, '(A,ES12.5)' ) "L1norm/N =" , L1norm/NumPoints
+  WRITE (*, '(A,ES12.5)' ) "Maxnorm =" , Maxnorm
 
     EOSTable % DV % Variables(3) % Values(:,:,:) &
            = LOG10( EOSTable % DV % Variables(3) % Values(:,:,:) ) 
 
+  WRITE (*,*) " "
   WRITE (*,*) "Internal Energy Monotonicity Check"
 
   CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
