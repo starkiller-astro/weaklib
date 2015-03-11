@@ -25,8 +25,8 @@ CONTAINS
     BinWidth = ( UpperBound - LowerBound ) / DBLE( nPoints - 1 )
 
     Grid(1) = LowerBound
-
-    DO m=2,nPoints - 1
+ 
+    DO m = 2, nPoints - 1
       Grid(m) = Grid(m-1) + BinWidth
     END DO
 
@@ -49,7 +49,7 @@ CONTAINS
 
     Grid(1) = LowerBound
 
-    DO m=2,nPoints - 1
+    DO m = 2, nPoints - 1
       Grid(m) = Grid(m-1) * ScaleFactor
     END DO
 

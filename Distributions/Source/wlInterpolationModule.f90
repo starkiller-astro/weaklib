@@ -173,7 +173,54 @@ CONTAINS
 
     END SELECT
     WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
+
   END SUBROUTINE MonotonicityCheck 
+
+!  SUBROUTINE LogSecantInterpolateSingleVariable( Coordinate1, Coordinate2, Interpolant  ) 
+!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
+!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
+    
+!    INTEGER :: i
+
+!    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
+
+!  END SUBROUTINE LogSecantInterpolateSingleVariable
+ 
+  SUBROUTINE ChimeraRead( FileName, MaxZone) !, TS ) 
+
+    CHARACTER(len=*), INTENT(in) :: FileName
+    INTEGER, INTENT(in)          :: MaxZone 
+
+!    TYPE(ThermoStateType), INTENT(out) :: TS
+
+    INTEGER :: i, z
+    INTEGER, DIMENSION(:), ALLOCATABLE :: j
+    LOGICAL, DIMENSION(:), ALLOCATABLE :: L
+    CHARACTER(len=1), DIMENSION(:), ALLOCATABLE :: nnse, shock, EOS 
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: u, v, w, r, dr, p, flat, lum, rstmss, rho, Tmev, T, s, ah, Ye 
+
+    93  FORMAT ("zone=", i4, " rho=", es11.3, " T=", es11.3, " Ye=", es11.3) 
+    257 FORMAT (1x,i4,6es11.3,a1,es11.3,L3,es11.3,es14.6,4(es11.3),es10.2,a1,es11.3,2x,a1)
+   
+    z = ( MaxZone - 1 ) !540 
+ 
+    ALLOCATE( j(z), u(z), v(z), w(z), r(z), dr(z), p(z), shock(z),  & 
+              flat(z), L(z), lum(z), rstmss(z), rho(z), Tmev(z),    &
+                          T(z), s(z), ah(z), nnse(z), Ye(z), EOS(z) ) 
+
+    READ(FileName,*)
+    DO i = MaxZone, 2, -1  
+      READ(FileName, 257) j(i), u(i), v(i), w(i), r(i), dr(i), p(i), shock(i), &
+                          flat(i), L(i), lum(i), rstmss(i), rho(i), Tmev(i),   &
+                          T(i), s(i), ah(i), nnse(i), Ye(i), EOS(i) 
+
+      WRITE(*, 93) j(i), rho(i), T(i), Ye(i)
+
+    END DO
+
+
+  END SUBROUTINE ChimeraRead
+
 
 END MODULE wlInterpolationModule
 

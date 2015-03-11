@@ -38,8 +38,8 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: be_heavy 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
-  INTEGER :: i
-  INTEGER, PARAMETER :: NumPoints = 500
+  INTEGER :: i, MaxZone
+  INTEGER, PARAMETER :: NumPoints = 10
   REAL(dp) :: LogT, logrho, L1norm, Maxnorm 
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
@@ -57,7 +57,7 @@ PROGRAM wlInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "LargerEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "SmallEquationOfStateTable.h5" )
 
   WRITE (*,*) "Table Minimums"
   DO i = 1, EOSTable % DV % nVariables
@@ -153,5 +153,8 @@ PROGRAM wlInterpolationTest
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
   CALL FinalizeHDF( )
+
+  MaxZone = 541
+  CALL ChimeraRead( "chimerafile", MaxZone )
 
 END PROGRAM wlInterpolationTest
