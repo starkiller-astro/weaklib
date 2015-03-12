@@ -1,0 +1,43 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:50      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/SharedModules/wlExtNumericalModule.f90
+
+(    1) MODULE wlExtNumericalModule
+(    2) 
+(    3) !  replicates "numerical_module" functions for routines/modules extracted from Chimera
+(    4) 
+(    5)   USE wlKindModule, ONLY: dp
+(    6) 
+(    7)   REAL(dp), PARAMETER, PUBLIC :: zero    = 0.d0
+(    8)   REAL(dp), PARAMETER, PUBLIC :: one     = 1.d0
+(    9)   REAL(dp), PARAMETER, PUBLIC :: half    = 1.d0/2.d0
+(   10)   REAL(dp), PARAMETER, PUBLIC :: third   = 1.d0/3.d0
+(   11) 
+(   12)   REAL(dp), PARAMETER, PUBLIC :: pi      = 3.1415926535897932385d0 ! pi
+(   13) 
+(   14)   REAL(dp), PARAMETER, PUBLIC :: epsilon = 1.d-100 ! small number
+(   15) 
+(   16)   PRIVATE
+(   17) 
+(   18) END MODULE wlExtNumericalModule

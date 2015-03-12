@@ -1,0 +1,286 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:50      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/BCK/EOS_BCK_MODULE.f90
+
+(    1) !-----------------------------------------------------------------------
+(    2) !    Module:       eos_bck_module
+(    3) !    Author:       S. W. Bruenn
+(    4) !    Date:         8/16/02
+(    5) !-----------------------------------------------------------------------
+(    6) 
+(    7) MODULE eos_bck_module
+(    8) 
+(    9) USE wlKindModule, ONLY: dp
+(   10) 
+(   11) !-----------------------------------------------------------------------
+(   12) !  Quantities used in the BCK EOS
+(   13) !-----------------------------------------------------------------------
+(   14) !  bad    : auxilary variable.
+(   15) !
+(   16) !  fmbad  : auxilary variable.
+(   17) !
+(   18) !  itsav  : the number of iterations done in SAHA.
+(   19) !
+(   20) !  af     : auxilary variable.
+(   21) !
+(   22) !  ahbck  : A[heavy nucleus].
+(   23) !
+(   24) !  b_hvy  : mean binding energy per particle of the of the heavies
+(   25) !            excluding n, p, and He).
+(   26) !
+(   27) !  b      : mean binding energy per particle.
+(   28) !
+(   29) !  con    : auxilary variable.
+(   30) !
+(   31) !  dbck   : density (baryons/fm**3).
+(   32) !
+(   33) !  d0     : saturation density of dense phase, or density of nuclear matter
+(   34) !   (baryons/fm**3).
+(   35) !
+(   36) !  d00    : zero value of saturation density of dense phase, or density of
+(   37) !   Fe56 (baryons/fm**3).
+(   38) !
+(   39) !  dbdlu  : auxilary variable.
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:50      page 2
+
+(   40) !
+(   41) !  dedt - dE / dT  [approximate!].
+(   42) !
+(   43) !  delbet : ( ue - uneu - uhat ) [affinity] : not functional.
+(   44) !
+(   45) !  dtran  : transition density to nuclear matter.
+(   46) !
+(   47) !  ed     : energy in drip (including heavy translation).
+(   48) !
+(   49) !  ee     : energy in electrons.
+(   50) !
+(   51) !  egy0   : zero value of energy of Fe56 [MeV].
+(   52) !
+(   53) !  eh     : energy in heavy nuclei (or nuclear matter) w/o tranlation.
+(   54) !
+(   55) !  enu    : energy in neutrinos ; not calculated.
+(   56) !
+(   57) !  erad   : photon energy.
+(   58) !
+(   59) !  etot   : total energy ; no neutrinos ; includes radiation.
+(   60) !
+(   61) !  fa     : auxilary variable.
+(   62) !
+(   63) !  fm     : auxilary variable.
+(   64) !
+(   65) !  pd     : drip pressure (including heavy translation).
+(   66) !
+(   67) !  pe     : electron pressure.
+(   68) !
+(   69) !  ph     : heavy pressure (no translation).
+(   70) !
+(   71) !  phi    : auxilary variable.
+(   72) !
+(   73) !  pnu    : neutrino pressure ; not calculated.
+(   74) !
+(   75) !  prad   : photon pressure
+(   76) !
+(   77) !  ptotbck: total pressure (includes radiation).
+(   78) !
+(   79) !  rel    : 3 * pressure / kinetic energy (from 1(rel) to 2(nonrel)).
+(   80) !
+(   81) !  sd     : entropy in drip (includes heavy translation).
+(   82) !
+(   83) !  se     : entropy in electrons.
+(   84) !
+(   85) !  sh     : entropy in heavy nuclei (intrinsic only).
+(   86) !
+(   87) !  size0  : zero value of size of Fe56.
+(   88) !
+(   89) !  sneu   : neutrino entropy (not calculated).
+(   90) !
+(   91) !  stotbck: total entropy ; includes radiation.
+(   92) !
+(   93) !  tbck   : temperature [MeV].
+(   94) !
+(   95) !  therm  : auxilary variable.
+(   96) !
+(   97) !  theta  : density of dense phase / saturation density of dense phase.
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:50      page 3
+
+(   98) !
+(   99) !  theta0 : zero value of Fe56 density / saturation density of Fe56.
+(  100) !
+(  101) !  tsi    : auxilary variable.
+(  102) !
+(  103) !  upack  : packing fraction of dense phase.
+(  104) !
+(  105) !  u1pack : 1 - upack.
+(  106) !
+(  107) !  ue     : electron chemical potential (mu_e).
+(  108) !
+(  109) !  uhat   :  mu_n - mu_p.
+(  110) !
+(  111) !  uhtra  :  auxiliary variable
+(  112) !
+(  113) !  un     :  neutron chemical potential (mu_n).
+(  114) !
+(  115) !  uneu   :  neutrino chemical potential (mu_nu) ; not calculated.
+(  116) !
+(  117) !  xabck  :  alpha particle mass fraction ; = 0 for nuclear matter.
+(  118) !
+(  119) !  xhbck  :  heavy nuclei mass fraction ; = 1 for nuclear matter.
+(  120) !
+(  121) !  xmstar :  m* / m for heavy nuclei or nuclear matter.
+(  122) !
+(  123) !  xnbck  :  free neutron mass fraction ; = 0 for nuclear matter.
+(  124) !
+(  125) !  xpbck  :  free proton mass fraction  ; = 0 for nuclear matter.
+(  126) !
+(  127) !  ya     :  auxilary variable.
+(  128) !
+(  129) !  yeFe   :  zero value of Y_e^- - Y_e^+ for Fe56.
+(  130) !
+(  131) !  yebck  :  Y_e^- - Y_e^+.
+(  132) !
+(  133) !  yeplus :  Y_e^+.
+(  134) !
+(  135) !  yh     :  auxilary variable.
+(  136) !
+(  137) !  ynbck  :  auxilary variable.
+(  138) !
+(  139) !  ynu    :  Y_nu ; not used.
+(  140) !
+(  141) !  ypbck  :  auxilary variable.
+(  142) !
+(  143) !  zabck  :  Z / A for heavy nucleus ; = ye for nuclear matter. 
+(  144) !
+(  145) !-----------------------------------------------------------------------
+(  146) 
+(  147) LOGICAL                               :: bad
+(  148) LOGICAL                               :: fmbad
+(  149) 
+(  150) INTEGER                               :: itsav
+(  151) 
+(  152) INTEGER, PARAMETER                    :: nnc_nse_bck = 17
+(  153) 
+(  154) REAL(dp)                              :: af
+(  155) REAL(dp)                              :: ahbck
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:50      page 4
+
+(  156) REAL(dp)                              :: b
+(  157) REAL(dp)                              :: b_hvy
+(  158) REAL(dp)                              :: con
+(  159) REAL(dp)                              :: dbck
+(  160) REAL(dp)                              :: d0
+(  161) REAL(dp)                              :: d00
+(  162) REAL(dp)                              :: dbdlu
+(  163) REAL(dp)                              :: dedt
+(  164) REAL(dp)                              :: delbet
+(  165) REAL(dp)                              :: dtran  = 0.0d0
+(  166) REAL(dp)                              :: ed
+(  167) REAL(dp)                              :: ee
+(  168) REAL(dp)                              :: egy0
+(  169) REAL(dp)                              :: eh
+(  170) REAL(dp)                              :: enu
+(  171) REAL(dp)                              :: erad
+(  172) REAL(dp)                              :: etot
+(  173) REAL(dp)                              :: fa
+(  174) REAL(dp)                              :: fm
+(  175) REAL(dp)                              :: pd
+(  176) REAL(dp)                              :: pe
+(  177) REAL(dp)                              :: ph
+(  178) REAL(dp)                              :: phi
+(  179) REAL(dp)                              :: pnu
+(  180) REAL(dp)                              :: prad
+(  181) REAL(dp)                              :: ptotbck
+(  182) REAL(dp)                              :: rel
+(  183) REAL(dp)                              :: sd
+(  184) REAL(dp)                              :: se
+(  185) REAL(dp)                              :: sh
+(  186) REAL(dp)                              :: size0
+(  187) REAL(dp)                              :: sneu
+(  188) REAL(dp)                              :: stotbck
+(  189) REAL(dp)                              :: tbck
+(  190) REAL(dp)                              :: therm
+(  191) REAL(dp)                              :: theta
+(  192) REAL(dp)                              :: theta0
+(  193) REAL(dp)                              :: tsi
+(  194) REAL(dp)                              :: upack
+(  195) REAL(dp)                              :: u1pack
+(  196) REAL(dp)                              :: ue
+(  197) REAL(dp)                              :: uhat
+(  198) REAL(dp)                              :: uhtra
+(  199) REAL(dp)                              :: un
+(  200) REAL(dp)                              :: uneu
+(  201) REAL(dp)                              :: xabck
+(  202) REAL(dp)                              :: xhbck
+(  203) REAL(dp)                              :: xmstar
+(  204) REAL(dp)                              :: xnbck
+(  205) REAL(dp)                              :: xpbck
+(  206) REAL(dp)                              :: ya
+(  207) REAL(dp)                              :: yeFe
+(  208) REAL(dp)                              :: yebck
+(  209) REAL(dp)                              :: yeplus
+(  210) REAL(dp)                              :: yh
+(  211) REAL(dp)                              :: ynbck
+(  212) REAL(dp)                              :: ynu
+(  213) REAL(dp)                              :: ypbck
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:50      page 5
+
+(  214) REAL(dp)                              :: zabck
+(  215) 
+(  216) !-----------------------------------------------------------------------
+(  217) !  eos_gamma:  value of gamma for the gamma-law equation of state
+(  218) !-----------------------------------------------------------------------
+(  219) 
+(  220) REAL(dp)                              :: eos_gamma
+(  221) 
+(  222) !-----------------------------------------------------------------------
+(  223) !  ye_nnc_nse_min:  lower bound of ye for use of the 17 nuclear specie
+(  224) !                    system in NSE for nse = 1 and for 'B' EOS
+(  225) !-----------------------------------------------------------------------
+(  226) 
+(  227) REAL(dp), PARAMETER                   :: ye_nnc_nse_min = 26.d0/56.d0
+(  228) 
+(  229) END module eos_bck_module

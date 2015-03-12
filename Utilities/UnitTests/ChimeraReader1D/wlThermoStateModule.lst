@@ -1,0 +1,87 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:47      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../Distributions/Source/wlThermoStateModule.f90
+
+(    1) MODULE wlThermoStateModule
+(    2)   
+(    3)   USE wlKindModule, ONLY: dp
+(    4) 
+(    5)   implicit none
+(    6)   PRIVATE
+(    7) 
+(    8)   TYPE :: ValueType
+(    9)     REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
+(   10)   END TYPE
+(   11)   
+(   12)   TYPE, PUBLIC :: ThermoStateType
+(   13)     CHARACTER(LEN=32), DIMENSION(3) :: Names
+(   14)     CHARACTER(LEN=32), DIMENSION(3) :: Units
+(   15)     INTEGER, DIMENSION(3) :: nPoints
+(   16)     REAL(dp), DIMENSION(3) :: minValues
+(   17)     REAL(dp), DIMENSION(3) :: maxValues
+(   18)     TYPE(ValueType), DIMENSION(3) :: States
+(   19)   END TYPE  
+(   20) 
+(   21)   PUBLIC AllocateThermoState 
+(   22)   PUBLIC DeAllocateThermoState 
+(   23)   
+(   24) CONTAINS 
+(   25) 
+(   26)   SUBROUTINE AllocateThermoState( TS, nPoints )
+(   27)      
+(   28)     TYPE(ThermoStateType) :: TS
+(   29)     INTEGER, DIMENSION(3), INTENT(in) :: nPoints
+(   30) 
+(   31)     INTEGER :: i
+(   32)    
+(   33)     TS % nPoints = nPoints    
+(   34)  
+(   35)     DO i = 1, 3
+(   36)       ALLOCATE( TS % States(i) % Values(1:TS % nPoints(i)) ) 
+(   37)     END DO 
+(   38)  
+(   39)   END SUBROUTINE AllocateThermoState
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:47      page 2
+
+(   40) 
+(   41) 
+(   42)   SUBROUTINE DeAllocateThermoState( TS )
+(   43) 
+(   44)     TYPE(ThermoStateType) :: TS
+(   45) 
+(   46)     INTEGER :: i
+(   47)     
+(   48)     DO i = 1, 3
+(   49)       DEALLOCATE( TS % States(i) % Values )
+(   50)     END DO 
+(   51) 
+(   52)   END SUBROUTINE DeAllocateThermoState
+(   53) 
+(   54) END MODULE wlThermoStateModule 

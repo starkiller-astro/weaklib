@@ -17,6 +17,7 @@ PROGRAM wlInterpolationTest
   INTEGER :: RhoLocation
   INTEGER :: TLocation
   INTEGER :: YeLocation
+  INTEGER, DIMENSION(1) :: LocMax
   LOGICAL, DIMENSION(3) :: LogInterp
   TYPE(EquationOfStateTableType) :: EOSTable
 
@@ -38,9 +39,9 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: be_heavy 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
-  INTEGER :: i, MaxZone
-  INTEGER, PARAMETER :: NumPoints = 10
-  REAL(dp) :: LogT, logrho, L1norm, Maxnorm 
+  INTEGER :: i
+  INTEGER, PARAMETER :: NumPoints = 16000
+  REAL(dp) :: LogT, logrho, L1norm, Maxnorm
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
   CHARACTER(len=128) :: LSFilePath
@@ -57,7 +58,7 @@ PROGRAM wlInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "SmallEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "HighResEquationOfStateTable.h5" )
 
   WRITE (*,*) "Table Minimums"
   DO i = 1, EOSTable % DV % nVariables
@@ -91,8 +92,12 @@ PROGRAM wlInterpolationTest
     rho(i) = 10.d0**logrho 
   END DO 
 
+  WHERE ( EOSTable % DV % Variables(1) % Values(:,:,:) > 0.0d0 )
     EOSTable % DV % Variables(1) % Values(:,:,:) &
            = LOG10( EOSTable % DV % Variables(1) % Values(:,:,:) ) 
+  ELSEWHERE 
+    EOSTable % DV % Variables(1) % Values(:,:,:) = 0.0d0
+  END WHERE
 
   CALL LogInterpolateSingleVariable( rho, T, Ye,                                   &
                                      EOSTable % TS % States(1) % Values,           &
@@ -117,28 +122,31 @@ PROGRAM wlInterpolationTest
 
   WRITE (*,*) "Pressure Interpolation Comparison"
 
-  WRITE (*, '(A)' ) "rho=         T=         Ye=         Pressure=" 
 
-  WRITE (*, '(4ES12.5)' ) rho, T, Ye, Interpolant 
-
-  WRITE (*,*) " "
-
-  WRITE (*, 99 ) rho, T, Ye, Interpolant, DirectCall, &
-                   ABS( Interpolant - DirectCall ) 
+!  WRITE (*, 99 ) rho, T, Ye, Interpolant, DirectCall, &
+!                   ABS( Interpolant - DirectCall ) 
 
   WRITE (*,*) " "
   WRITE (*,*) "L1 and Max Norms"
   WRITE (*,*) " "
-  L1norm = SUM(ABS( Interpolant - DirectCall ) / ABS( DirectCall ) ,  &
-          MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
+  L1norm = SUM( ABS( Interpolant - DirectCall ) / ABS( DirectCall ),  &
+               MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
 
-  Maxnorm = MAXVAL(ABS( Interpolant - DirectCall ) / ABS( DirectCall ) ,  &
-          MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
+  Maxnorm = MAXVAL( ABS( Interpolant - DirectCall ) / ABS( DirectCall ),  &
+                   MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
 
-  WRITE (*, '(A,ES12.5)' ) "L1norm =" , L1norm
-  WRITE (*, '(A,ES12.5)' ) "L1norm/N =" , L1norm/NumPoints
-  WRITE (*, '(A,ES12.5)' ) "Maxnorm =" , Maxnorm
+  LocMax = MAXLOC( ABS( Interpolant - DirectCall ) / ABS( DirectCall ),  &
+                   MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
 
+  WRITE (*, '(ES12.5)' ) L1norm
+  WRITE (*, '(ES12.5)' ) L1norm/NumPoints
+  WRITE (*, '(ES12.5)' ) Maxnorm
+!  WRITE (*, '(A,ES12.5)' ) "L1norm =" , L1norm
+!  WRITE (*, '(A,ES12.5)' ) "L1norm/N =" , L1norm/NumPoints
+!  WRITE (*, '(A,ES12.5)' ) "Maxnorm =" , Maxnorm
+  i = LocMax(1)
+  WRITE (*, '(A,i4,5ES12.5)' ) "LocMax =" , i, rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i)
+  STOP
     EOSTable % DV % Variables(3) % Values(:,:,:) &
            = LOG10( EOSTable % DV % Variables(3) % Values(:,:,:) ) 
 
@@ -153,8 +161,5 @@ PROGRAM wlInterpolationTest
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
   CALL FinalizeHDF( )
-
-  MaxZone = 541
-  CALL ChimeraRead( "chimerafile", MaxZone )
 
 END PROGRAM wlInterpolationTest

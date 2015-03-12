@@ -1,0 +1,113 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:47      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../Distributions/Source/wlDependentVariablesModule.f90
+
+(    1) MODULE wlDependentVariablesModule
+(    2) 
+(    3)   USE wlKindModule, ONLY: dp
+(    4) 
+(    5)   implicit none
+(    6)   PRIVATE
+(    7) 
+(    8)   INTEGER, PUBLIC :: Pressure
+(    9)   INTEGER, PUBLIC :: Entropy  
+(   10)   INTEGER, PUBLIC :: InternalEnergy 
+(   11)   INTEGER, PUBLIC :: ChemicalPotentialElectron 
+(   12)   INTEGER, PUBLIC :: ChemicalPotentialProton 
+(   13)   INTEGER, PUBLIC :: ChemicalPotentialNeutron 
+(   14)   INTEGER, PUBLIC :: MassFractionProton 
+(   15)   INTEGER, PUBLIC :: MassFractionNeutron 
+(   16)   INTEGER, PUBLIC :: MassFractionAlpha 
+(   17)   INTEGER, PUBLIC :: MassFractionHeavy 
+(   18)   INTEGER, PUBLIC :: ChargeNumberHeavy 
+(   19)   INTEGER, PUBLIC :: MassNumberHeavy 
+(   20)   INTEGER, PUBLIC :: BindingEnergyHeavy 
+(   21) 
+(   22)   TYPE :: ValueType
+(   23)     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values
+(   24)   END TYPE
+(   25) 
+(   26)   TYPE, PUBLIC :: DependentVariablesType
+(   27)     INTEGER :: nVariables
+(   28)     INTEGER, DIMENSION(3) :: nPoints
+(   29)     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
+(   30)     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
+(   31)     REAL(dp), DIMENSION(:), ALLOCATABLE :: Offsets
+(   32)     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
+(   33)   END TYPE
+(   34) 
+(   35)   PUBLIC AllocateDependentVariables
+(   36)   PUBLIC DeAllocateDependentVariables
+(   37) 
+(   38) CONTAINS
+(   39) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:47      page 2
+
+(   40)   SUBROUTINE AllocateDependentVariables( DV, nPoints, nVariables )
+(   41)    
+(   42)     TYPE(DependentVariablesType) :: DV 
+(   43)     INTEGER, INTENT(in) :: nVariables
+(   44)     INTEGER, DIMENSION(3), INTENT(in) :: nPoints
+(   45) 
+(   46)     INTEGER :: i
+(   47) 
+(   48)     ALLOCATE( DV % Names( nVariables ) )
+(   49)     ALLOCATE( DV % Units( nVariables ) )
+(   50)     ALLOCATE( DV % Offsets( nVariables ) ) 
+(   51)     ALLOCATE( DV % Variables( nVariables ) ) 
+(   52)     
+(   53)     DV % nPoints = nPoints
+(   54)     DV % nVariables = nVariables
+(   55) 
+(   56)     DO i = 1, nVariables
+(   57)       ALLOCATE( DV % Variables(i) &
+(   58)                    % Values( 1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3) ) ) 
+(   59)     END DO
+(   60) 
+(   61)   END SUBROUTINE AllocateDependentVariables
+(   62) 
+(   63)   SUBROUTINE DeAllocateDependentVariables( DV )
+(   64)   
+(   65)     TYPE(DependentVariablesType) :: DV
+(   66) 
+(   67)     INTEGER :: i
+(   68) 
+(   69)     DO i = 1, SIZE( DV % Variables )
+(   70)       DEALLOCATE( DV % Variables(i) % Values )
+(   71)     END DO
+(   72)    
+(   73)     DEALLOCATE( DV % Variables )
+(   74)     DEALLOCATE( DV % Names )
+(   75)     DEALLOCATE( DV % Units )
+(   76) 
+(   77)   END SUBROUTINE DeAllocateDependentVariables
+(   78) 
+(   79) END MODULE wlDependentVariablesModule
+(   80) 

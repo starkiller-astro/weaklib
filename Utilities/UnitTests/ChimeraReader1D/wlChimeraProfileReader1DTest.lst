@@ -1,0 +1,50 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:14:51      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: wlChimeraProfileReader1DTest.f90
+
+(    1) PROGRAM wlChimeraProfileReader1Dtest
+(    2) 
+(    3)   USE wlKindModule, ONLY: dp 
+(    4)   USE wlIOModuleCHIMERA
+(    5)   implicit none
+(    6) 
+(    7)   INTEGER  :: i, Maxzone
+(    8)   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
+(    9)   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
+(   10)   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
+(   11)   !REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
+(   12)   !REAL(dp), DIMENSION(:), ALLOCATABLE :: T
+(   13)   !REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
+(   14) 
+(   15)   Maxzone = 540
+(   16) 
+(   17)   ALLOCATE( rho( Maxzone ), T( Maxzone ), Ye( Maxzone ) ) 
+(   18) 
+(   19)   CALL ReadChimeraProfile1D( "chimerafile", Maxzone, rho, T, Ye, 1)
+(   20) 
+(   21)   DO i = Maxzone, 1, -1
+(   22)     WRITE (*,*) rho(i), T(i), Ye(i) 
+(   23)   END DO
+(   24) 
+(   25) END PROGRAM wlChimeraProfileReader1Dtest

@@ -1,0 +1,865 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/BCK/BCK_EoS.f
+
+(    1)       subroutine eos0
+(    2) c***********************************************************************
+(    3)       USE eos_bck_module
+(    4)       USE wlExtPhysicalConstantsModule
+(    5)       implicit double precision (a-h,o-z)
+(    6)       logical, save :: first=.true.
+(    7) c***********************************************************************
+(    8)       parameter(third=1./3.,ba=-7.073915,zero=0.0,dnp=1.29333)
+(    9)       parameter(a0=.067,c0=2.37745e-4)
+(   10) c                                                                      c
+(   11) c***********************************************************************
+(   12)       f3(z)        = sign( (abs(z))**third , z)
+(   13)       fw1(x)       = 78.0 * x * x * (1.0-x) * f3(1.0-x)
+(   14)       fbulk(x)     = wnm + ws * (1.0-2.0*x)*(1.0-2.0*x)
+(   15)       fphi(x)      = 1.0 - 3.0 * (0.5-x)**2
+(   16)       fxk(zabck)   = xk0*(1. - xkzafac*(1.- 2.*zabck)**2)
+(   17)       fcomp(theta) = (fxk(zabck)/18.0) * (1.0 - theta)*(1.0 - theta)
+(   18) c******************************************** get energy zeroes ********
+(   19)               if(first)then
+(   20)       d00 = 0.16
+(   21)       yeFe = 26./56.
+(   22)       zabck = yeFe
+(   23)       theta0 = 1.0
+(   24)       size0 = fw1(yeFe) /(fphi(yeFe))**third
+(   25)       theta0 = 1 +(3.0/fxk(yeFe))*size0/theta0/theta0**third
+(   26)       size0 = size0/theta0**third
+(   27)       theta0 = 1 +(3.0/fxk(yeFe))*size0/theta0/theta0**third
+(   28)       size0 = size0/theta0**third
+(   29)       egy0 = fbulk(yeFe) + size0 + fcomp(theta0)
+(   30)       write(*,999)yeFe,d00*theta0*fphi(yeFe),theta0,size0,egy0
+(   31)       first = .false.
+(   32)              endif
+(   33) c***********************************************************************
+(   34)                         return
+(   35) c***********************************************************************
+(   36) 999   format(' zero level for fe: yebck,d0,theta,wsize,egy',5f10.5)
+(   37)                         end
+
+
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 2
+
+(   38) 
+(   39) !///////////////////////////////////////////////////////////////////////
+(   40) 
+(   41) c***********************************************************************
+(   42)       subroutine hvbub(tol1,tol2,tol3,tol4)
+(   43) c***********************************************************************
+(   44)       USE eos_bck_module
+(   45)       USE wlExtPhysicalConstantsModule
+(   46)       USE wlExtNumericalModule, ONLY: one, zero, third
+(   47)       implicit double precision (a-h,o-z)
+(   48)       save
+(   49) c                                                                      c
+(   50)       parameter(xms=.7,xm0=2.,xm0ms=xm0-xms)
+(   51)       parameter(bsil=-8.447744,ba=-7.073915)
+(   52)       parameter(a0=.067,c0=2.37745e-4,piby2=1.570796327)
+(   53)       common /tcrit/tc
+(   54) c***********************************************************************
+(   55)       f3(z) = sign( (abs(z))**third , z)
+(   56)       frho(upack) = 1.0 -1.5*f3(upack) +0.5*upack + 1.e-8
+(   57)       fg(upack,u1pack) = f3(frho(upack)) + f3(frho(u1pack))
+(   58)       fw1(x) = 78.0 * x * x * (1.0-x) * f3(1.0-x)
+(   59)       fwsize(zabck,upack,u1pack) = u1pack * fw1(zabck)
+(   60)      *           * fg(upack,u1pack) / f3((phi*theta))
+(   61)       fbulk(x)  = wnm + ws * (1.0-2.0*x)*(1.0-2.0*x)
+(   62)       fdbldx(x) = - 4.0 * ws * (1.0-2.0*x)
+(   63)       fdwszx(x) = wsize * 2.0 * (1.0-(5./3.)*x)/(x*(1.0-x))
+(   64)       fphi(x) = 1.0 - 3.0 * (0.5-x)**2
+(   65)       fder(upack) = ( f3(upack) - upack ) / f3(frho(upack))**2
+(   66)       fdbdlu(upack) = -  fw1(zabck) / (phi*theta)**(third) *
+(   67)      *              ( upack*fg(upack,u1pack) +(u1pack*fder(upack)
+(   68)      *              -upack*fder(u1pack) )/6.0 )
+(   69)       fah(zabck,upack) = 193.3333333 * (1.0-zabck)**2 / frho(upack)
+(   70)       fuhtra(yh) = (tbck/ahbck) 
+(   71)      *              *log (abs( yh/ (ahbck*sqrt(ahbck)*therm) ) )
+(   72)       fxk(zabck) = xk0*(1. - xkzafac*(1. - 2.*zabck)**2)
+(   73)       fcomp(theta) = (fxk(zabck)/18.0) * (1.0 - theta)*(1.0 - theta)
+(   74)       fpcomp(theta,zabck) = -(fxk(zabck)/9.0)*theta*(1.0-theta)
+(   75)       fbxthe(theta) = xk0*xkzafac*4./18.*(1. - 2.*zabck)
+(   76)      *            *(1. - theta)**2
+(   77)       faf(x) = sin(piby2*min(one,x)) / x**(2.*third)
+(   78)       fcot(x) = cos(piby2*min(one,x)) / sin(piby2*min(one,x))
+(   79)       fpth(x) = - af*xmstar*(-2.*third + piby2*x*fcot(x))
+(   80)       fpick(adum,bdum,xdum) =
+(   81)      &     dim(sign(one,xdum),zero)*adum+dim(zero,sign(one,xdum))*bdum
+(   82) c****** x.lt.0:f=b *********   x.gt.0:f=a *****************x.eq.0:f=a*
+(   83) c*********************************************************************
+(   84)       tc              = 12.
+(   85)       fmbad           = .false.
+(   86)       if(abs(un/tbck) .ge. 500. .or. abs(uhat/tbck) .ge. 500.) then
+(   87)       fmbad           = .true.
+(   88)                       return
+(   89)                       endif
+(   90)       ynbck              = 2.0 * therm * exp((un/tbck))
+(   91)       ypbck              = ynbck * exp(-(uhat/tbck))
+(   92)       etaatr          = ( 4.0*(un-0.5*uhat-ba)/tbck )
+(   93)       ya              = 8.0 * therm * exp(etaatr)
+(   94)                       if( max(ynbck,ypbck,ya) .ge. 2.0) then
+(   95)       fmbad           = .true.
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 3
+
+(   96)                       return
+(   97)                       endif
+(   98) c*********************************************************************
+(   99)       fm      = ynbck + ypbck + 4.0*ya
+(  100)       phi     = fphi(zabck)
+(  101)       dlphix  = 6.0*(0.5-zabck)/phi
+(  102)       d0      = d00 * phi * theta
+(  103)       upack       = (1.0 - fm) / (d0/dbck - fm)
+(  104)       u1pack      = 1.0 - upack
+(  105)       xhbck      = upack * d0/dbck
+(  106)       ahbck      = fah(zabck,upack)
+(  107)               if(ahbck .le. zero) then
+(  108)       fmbad   = .true.
+(  109)               return
+(  110)               endif
+(  111)               if ( u1pack .le. zero ) then
+(  112)       xabck      = zero
+(  113)       zabck      = zero
+(  114)       dtran   = zero
+(  115)       fmbad   = .true.
+(  116)               return
+(  117)               endif
+(  118)       yh      = xhbck/(ahbck*u1pack)
+(  119)       tsi     = ynbck + ypbck + ya + yh
+(  120) c*********************************************************************
+(  121)       wsize   = fwsize(zabck,upack,u1pack)
+(  122)       uhtra   = fuhtra(yh)
+(  123)       xmstar  = xms + xm0ms * wsize/size0 / (1.+tbck/tc)**2
+(  124)       af      = a0 * faf(phi*theta)
+(  125)       excit   = af*tbck*tbck
+(  126)       tcorr   = 1.0 - excit*xm0ms/size0/(1.+tbck/tc)**2
+(  127)       dbdlu   = fdbdlu(upack)*tcorr
+(  128)      &        - 0.5*(uhtra+1.5*tbck/ahbck)
+(  129)      *        * (f3(upack)-upack)/frho(upack)
+(  130)       pcomp   = fpcomp(theta,zabck)
+(  131)       dbdlth  = pcomp - third * wsize * tcorr 
+(  132)      *        + fpth(theta*phi)*tbck*tbck
+(  133)       dbdlph  = dbdlth - pcomp
+(  134)       dbdx    = fdbldx(zabck) + fdwszx(zabck)*tcorr
+(  135)      *        + (dbdlph-dbdlth)*dlphix
+(  136)      &        + (uhtra+1.5*tbck/ahbck) *2.0/(1.0-zabck)
+(  137)      &        + fbxthe(theta)
+(  138) c***********************************************************************
+(  139)       b_hvy   = fbulk(zabck) + wsize - excit*xmstar + fcomp(theta)
+(  140)       tol1    = (dbdlu - dbdlth + tsi*tbck*dbck/d0)
+(  141)      *        / (fxk(zabck)/9.*theta)
+(  142)       tol2    = dbdx + uhat
+(  143)       tol3    = yebck -  (2.0 * ya + ypbck)*u1pack - zabck * xhbck
+(  144)       tol4    = -un + zabck*uhat + b_hvy + dbdlth + uhtra
+(  145) c***********************************************************************
+(  146)               return
+(  147) c***********************************************************************
+(  148) c***********************************************************************
+(  149)       entry getzeros
+(  150) c***********************************************************************
+(  151) c******************************************** get energy zeroes ********
+(  152)       yeFe = 26./56.
+(  153)       zabck = yeFe
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 4
+
+(  154)       theta0 = 1.0
+(  155)       size0 = fw1(yeFe) /(fphi(yeFe))**third
+(  156)       theta0 = 1 +(3.0/fxk(yeFe))*size0/theta0/theta0**third
+(  157)       size0 = size0/theta0**third
+(  158)       theta0 = 1 +(3.0/fxk(yeFe))*size0/theta0/theta0**third
+(  159)       size0 = size0/theta0**third
+(  160)       egy0 = fbulk(yeFe) + size0 + fcomp(theta0)
+(  161) c***********************************************************************
+(  162)       write(*,999)yeFe,d00*theta0*fphi(yeFe),theta0,size0,egy0
+(  163) 999   format(' zero level for fe: yebck,d0,theta,wsize,egy',5f10.5)
+(  164)       return
+(  165) c***********************************************************************
+(  166)       entry guess
+(  167) c***********************************************************************
+(  168)       rxhmax = xhbck*fpick( yeFe/yebck,(1.-yeFe)/(1.-yebck), 
+(  169)      *        yeFe-yebck)
+(  170)       zabck = rxhmax*yebck + (1. - rxhmax)*yeFe
+(  171)       phi = fphi(zabck)
+(  172)       theta = 1.0+fw1(zabck)*(3.0/fxk(zabck))*(1.0-4.0*dbck/d00/phi)
+(  173)       d0 = d00 * theta * phi
+(  174)       excit = a0/(theta*phi)**(2.0*third) * tbck * tbck
+(  175)       excit = a0 * tbck * tbck
+(  176)       tcorr = 1.0 - excit*xm0ms/size0
+(  177)       upack = dbck/d0 * yebck/zabck
+(  178)       u1pack = 1.0 - upack
+(  179)       wsize = fwsize(zabck,upack,u1pack)
+(  180)       ahbck = fah(zabck,upack)
+(  181)       uhathv = -fdbldx(zabck) - fdwszx(zabck) * tcorr
+(  182)       unhv   = zabck * uhathv +(fbulk(zabck) + wsize - excit)
+(  183)      *       + fdbdlu(upack)*tcorr +  fuhtra(1.0/ahbck/u1pack)
+(  184)      *       + upack * tbck/ahbck/u1pack
+(  185) c***********************************************************************
+(  186)        un = unhv*rxhmax + (1.-rxhmax)*(un-.001)
+(  187)        uhat = uhathv*rxhmax + (1. - rxhmax)*uhat
+(  188) c***********************************************************************
+(  189)                         return
+(  190) c***********************************************************************
+(  191) c************************************************ nuclear matter eos ***
+(  192)       entry eosnm
+(  193) c***********************************************************************
+(  194)                         ahbck = zero
+(  195)                         pd = zero
+(  196)                         sd = zero
+(  197)                         ed = zero
+(  198)                         xabck = zero
+(  199)                         xnbck = zero
+(  200)                         xpbck = zero
+(  201)                         xhbck = 1.0
+(  202)                         upack = 1.0
+(  203)                         zabck = yebck
+(  204)                         d0 = dbck
+(  205)                         xmstar = xms
+(  206)               theta = (d0/d00)/fphi(yebck)
+(  207)               af    = a0 * faf(d0/d00)
+(  208)               excit = xmstar * af * tbck * tbck
+(  209)       if (theta.gt.1.0) then
+(  210)               ecomp = (fxk(zabck)/9.0/gamhv) *
+(  211)      &            ( (theta**(gamhv-1.)-gamhv)/(gamhv-1.) + 1./theta)
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 5
+
+(  212)               pcomp = (fxk(zabck)/9.0/gamhv)
+(  213)      &                 * (theta**(gamhv-1.) - 1.0/theta)
+(  214)       else
+(  215)               ecomp = fcomp(theta)
+(  216)               pcomp = fpcomp(theta,zabck)
+(  217)       endif
+(  218)               b_hvy = fbulk(yebck) - excit + ecomp
+(  219)               ph = dbck * (pcomp + fpth(d0/d00) *tbck*tbck)
+(  220)               sh = 2.0 * excit/tbck
+(  221)               eh = b_hvy + tbck * sh
+(  222)               dlphix = 6.0*(0.5-yebck)/fphi(yebck)
+(  223)               uhat = -fdbldx(zabck) + pcomp*dlphix
+(  224)      &             - ecomp/fxk(zabck)*xk0*xkzafac*4.*(1. - 2.*zabck)
+(  225)               un = b_hvy + yebck * uhat + ph/dbck
+(  226)                         return
+(  227) c***********************************************************************
+(  228)       end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 6
+
+(  229) 
+(  230) !///////////////////////////////////////////////////////////////////////
+(  231) 
+(  232) c***********************************************************************
+(  233)       subroutine net1
+(  234) c***********************************************************************
+(  235)       USE eos_bck_module
+(  236)       USE wlExtPhysicalConstantsModule
+(  237)       implicit double precision (a-h,o-z)
+(  238)       save
+(  239) c                                                                      c
+(  240)       parameter(nuc=6,zero=0.0,const=2.37745e-4,ncnvge=20,dnp=1.29333)
+(  241)       parameter (expmax = 75.,three9 = 0.999, five9 = 0.99999)
+(  242) c                                                                      c
+(  243)       dimension a(nuc),z(nuc),zza(nuc),zan(nuc),a52(nuc),bn(nuc)
+(  244)       dimension x(nuc),betem(nuc)
+(  245) c                                                                      c
+(  246)       data x/nuc*0./
+(  247)       data a/1,1,4,56,28,16/,z/1,0,2,26,14,8/
+(  248)       data zan/1.,0.,.5,.4642857,.5,.5/,zza/1.,0.,1.,12.07142857,7.,4./
+(  249)       data bn/0.,0.,-7.073915,-8.790323,-8.447744,-7.976206/
+(  250)       data betem/0.,0.,-7.073915,-8.790323,-8.447744,-7.976206/
+(  251)       data a52/2.,2.,32.,23467.7,4148.54,1024./
+(  252) c*** 1=p 2=n 3=2He4 4=26Fe56 5=14Si28 6=8O16****************************
+(  253) c***********************************************************************
+(  254)       fexp(f) = exp( min( expmax, max( -expmax , f) ) )
+(  255) c***********************************************************************
+(  256)       nflunk      = 0
+(  257)       bad         = .false.
+(  258)       epsp        = 5000.
+(  259)                   if(uhat.ne. zero) go to 8
+(  260) 5                 continue
+(  261)                   if (nflunk .le. 1) then
+(  262)                   if(yebck.lt. 0.4643) then
+(  263)       un          = tbck*log(0.5*(1.-yebck/.4643)/therm)
+(  264)       uhat        = (un-bn(4)-tbck/a(4)*log(yebck/.4643/therm/a52(4)))
+(  265)      *             /.4643
+(  266)                   else
+(  267)       xhbck       = (1.0-yebck)/(.5357)
+(  268)       xpbck       = 1.-xhbck
+(  269)       uhat        = (bn(4)+tbck/a(4)*log(xhbck/a52(4)/therm)
+(  270)      &                    - tbck*log(xpbck*0.5/therm))/.5357
+(  271)       un          = uhat + tbck*log(xpbck*0.5/therm)
+(  272)                   endif
+(  273)                   else if(nflunk.eq.2) then
+(  274)       uhat        = tbck*log((1.0-yebck)/yebck)
+(  275)       un          = tbck*log((0.5/therm)*(1.0-yebck))
+(  276)                   else if (nflunk .eq. 3 .and. yebck .ge. .50) then
+(  277)       xsil        = min((1-yebck)*2.,three9)
+(  278)       xpbck       = 1.-xsil
+(  279)       uhat        = (bn(5)+tbck/a(5)*log(xsil/a52(5)/therm)
+(  280)      &               -tbck*log(xpbck*0.5/therm))/.5
+(  281)       un          = uhat + tbck*log(xpbck*0.5/therm)
+(  282)                   else if (nflunk .eq. 3) then
+(  283)       xsil        = min(yebck*2.,three9)
+(  284)       xpbck       = 1.-xsil
+(  285)       uhat        = (bn(5)+tbck/a(5)*log(xsil/a52(5)/therm)
+(  286)      &               -tbck*log(xpbck*0.5/therm))/.5
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 7
+
+(  287)       un          = uhat + tbck*log(xpbck*0.5/therm)
+(  288)                   else if(nflunk .eq. 4) then
+(  289)       xhbck       = min(2.*yebck,five9)
+(  290)       xpbck       = 1. - xhbck
+(  291)       uhat        = (bn(4)+tbck/a(4)*log(xhbck/a52(4)/therm)
+(  292)      &              - tbck*log(xpbck*0.5/therm))/.5357
+(  293)       un          = uhat + tbck*log(xpbck*0.5/therm)
+(  294)                   endif
+(  295) 8                 continue
+(  296) c***********************************************************************
+(  297) c                  if(exfac.eq.zero)then
+(  298) c      write(6,*)' give exfac'
+(  299) c      read(5,*)exfac
+(  300) c                   endif
+(  301)       exfac = zero
+(  302)       excited = exfac*.067 * 2.0 * tbck * tbck
+(  303)       do 90 n = 4,nuc
+(  304)               betem(n) = bn(n) - excited
+(  305) 90            continue
+(  306) c***********************************************************************
+(  307)       do 100 itrat = 1,ncnvge
+(  308)               ones=     zero
+(  309)               zas =     zero
+(  310)               zs =      zero
+(  311)               as =      zero
+(  312)               zzas =    zero
+(  313)               bes  =    zero
+(  314)               tsi =     zero
+(  315) c***********************************************************************
+(  316)               do 10 n = 1,nuc
+(  317)                 x(n) = fexp(log(a52(n)*therm)
+(  318)      &                 + (a(n)*un-z(n)*uhat-a(n)*betem(n))/tbck )
+(  319)                  ones=     ones + x(n)
+(  320)                  zas =     zas + x(n)*zan(n)
+(  321)                  zzas =    zzas + x(n)*zza(n)
+(  322)                  zs =      zs + x(n)*z(n)
+(  323)                  as =      as + x(n)*a(n)
+(  324)                  bes =     bes + x(n)*bn(n)
+(  325)                  tsi =     tsi + x(n)/a(n)
+(  326) 10            continue
+(  327) c***********************************************************************
+(  328)               tolone = log(ones)
+(  329)               tolza = log(zas/yebck)
+(  330)               eps = abs(tolone) + abs(tolza)
+(  331)               if(eps.le. 2.e-5) go to 200
+(  332) c***********************************************************************
+(  333)               epssav = min(abs(eps),epsp)
+(  334)               if(epssav .lt. epsp) then
+(  335)                  epsp = epssav
+(  336)                  xps = x(1)
+(  337)                  xns = x(2)
+(  338)                  xas = x(3)
+(  339)                  xhs = x(4) + x(5) + x(6)
+(  340)                  uns = un
+(  341)                  uhats = uhat
+(  342)               endif
+(  343) c***********************************************************************
+(  344)               if (tolone.ge.75. .and. tolza.ge.75.)go to 101
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 8
+
+(  345) c***********************************************************************
+(  346)               rdenom = ((zs/ones*zs/zas - as/ones*zzas/zas))
+(  347)               if(rdenom .eq. zero) go to 101
+(  348)               rdenom = tbck/rdenom
+(  349)               dun = (tolone*zzas/zas - tolza/ones*zs)*rdenom
+(  350)               duhat = (zs/zas*tolone - as/ones*tolza) * rdenom
+(  351)               un = un + dun
+(  352)               uhat = uhat + duhat
+(  353) 100   continue
+(  354) c***********************************************************************
+(  355) 101   nflunk = nflunk + 1
+(  356) c     write(6,1000)nflunk,tbck,dbck/6.022e-16,yebck
+(  357) c     write(6,1001)un,uhat,dun,duhat,tolone,tolza
+(  358)       if(nflunk.le.4) go to 5
+(  359)             bad = .true.
+(  360) 1000  format(' net fail - nflunk tbck dbck yebck'
+(  361)      & ,2i4,3(1pe11.3))
+(  362) 1001  format(' un uhat dun duhat tolone tolza',6(1pe11.3))
+(  363)             xpbck = xps
+(  364)             xnbck = xns
+(  365)             xabck = xas
+(  366)             xhbck = xhs
+(  367)             un = uns
+(  368)             uhat = uhats
+(  369)             go to 201
+(  370) 200   continue
+(  371)       xpbck = x(1)
+(  372)       xnbck = x(2)
+(  373)       xabck = x(3)
+(  374)       xhbck = x(4) + x(5) + x(6)
+(  375) c***********************************************************************
+(  376) 201   continue
+(  377)       upack  = zero
+(  378)       theta = zero
+(  379)       ahbck = zero
+(  380)       zabck = zero
+(  381)       xhsum = zero
+(  382)            do 202 n = 4,nuc
+(  383)       ahbck = ahbck + x(n)*a(n)
+(  384)       zabck = zabck + x(n)*zan(n)
+(  385)       xhsum = xhsum + x(n)
+(  386) 202        continue
+(  387)       ahbck = ahbck/xhsum
+(  388)       zabck = zabck/xhsum
+(  389)       ph = zero
+(  390)       sh = xhsum * excited * 2.0 / tbck
+(  391) c Change made on 10/18/05 by SWB
+(  392)       b = bes
+(  393)       b_hvy = ( bes - x(3)*bn(3) )/( dabs( xhbck ) + 1.d-100 )
+(  394)       eh = bes  + xhsum*excited
+(  395)       pd = dbck * tbck * tsi
+(  396)       ed = 1.5 * tbck * tsi
+(  397)       sd = 2.5 * tsi - (un - yebck*uhat - bes + xhsum*excited) /tbck
+(  398)                         return
+(  399) c***********************************************************************
+(  400)                         end
+
+
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 9
+
+(  401) 
+(  402) !///////////////////////////////////////////////////////////////////////
+(  403) 
+(  404) c***********************************************************************
+(  405)       subroutine saha
+(  406) c***********************************************************************
+(  407)       USE eos_bck_module
+(  408)       USE wlExtPhysicalConstantsModule
+(  409)       USE wlExtNumericalModule, ONLY: one, zero, third
+(  410)       implicit double precision (a-h,o-z)
+(  411)       logical test,first
+(  412)       save
+(  413) c                                                                      c
+(  414)       parameter(xms=.7,xm0=2.,xm0ms=xm0-xms)
+(  415)       parameter(ba=-7.073915)
+(  416)       parameter(a0=.067,c0=2.37745e-4)
+(  417)       parameter(ncnvge = 10,epsf=4.e-7,epsg=4.e-8,epsh=4.e-7,epse=4.e-8)
+(  418)       parameter (bsil = -8.447744)
+(  419)       parameter (tenm3=1.e-3,dzamin=1.e-12)
+(  420) c                                                                      c
+(  421)       dimension w(2),x(2),y(2),z(2),e(5),f(5),gg(5),hh(5),a(4,4)
+(  422)       dimension fvec(4),delta(4)
+(  423) c                                                                      c
+(  424)       data first /.true./
+(  425) c***********************************************************************
+(  426)       fpick(adum,bdum,xdum) =
+(  427)      &     dim(sign(one,xdum),zero)*adum+dim(zero,sign(one,xdum))*bdum
+(  428) c ******* x.lt.0:f=b *********   x.gt.0:f=a *****************x.eq.0:f=a*
+(  429)       feps(j)   = e(j)**2/epse +f(j)**2/epsf +gg(j)**2/epsg
+(  430)      * + hh(j)**2/epsh
+(  431)       test(j)      = feps(j) .lt.1.0  .or.
+(  432)      &             (abs(xhbck) .lt. 0.005 .and.
+(  433)      &    4.* gg(j)**2 .lt. epsg .and. abs(hh(j))*ahbck/tbck .lt. 1.)
+(  434) c************************************* if a guess or no nuclei *********
+(  435)           if (first) then
+(  436)       con        = 0.01
+(  437)       tc         = 12.
+(  438)       first      = .false.
+(  439)           end if
+(  440)       bad = .false.
+(  441)       nfail = 0
+(  442)       therm = c0 * tbck * sqrt(tbck) / dbck
+(  443)       if ( yebck > 26./56. ) then
+(  444)         call net
+(  445)         return
+(  446)       end if
+(  447)       if( ((xabck .ne. zero) .or. (zabck .ne. zero)) .and.
+(  448)      &   (theta .ne. zero) ) go to 2
+(  449) 1     call net1
+(  450) c********************************************* no nuclei needed ********
+(  451) c      if( (xhbck .lt. con .or. nfail.ge.2) .and. (.not. bad)
+(  452) c     & .and. (nfail.ne.0 .or. dbck.lt.1.e12*6.02e-16) ) return
+(  453)       if( (xhbck .lt. con .or. nfail.ge.2) .and. (.not. bad) ) return
+(  454) c******************************************choose guess and set up ****
+(  455)               call guess
+(  456) c*******************************************begin the iterations********
+(  457) 2      continue
+(  458) c***********************************************************************
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 10
+
+(  459)              do 10 iters = 1, ncnvge
+(  460)               itsav = iters
+(  461)               w(1) = theta
+(  462)               x(1) = zabck
+(  463)               y(1) = uhat
+(  464)               z(1) = un
+(  465) c*****************get the zero point************************************
+(  466) c
+(  467)                   call hvbub(e(1),f(1),gg(1),hh(1))
+(  468)       if(fmbad) go to 11
+(  469)       phi0 = phi
+(  470)       u0 = upack
+(  471)       ya0 = ya
+(  472)       fm0 = fm
+(  473)                   if (test(1)) go to 25
+(  474)       dzap = dza
+(  475)       duhatp = duhat
+(  476)       dunp = dun
+(  477)       dthetp = dtheta
+(  478)       dza = 1.0/(8.0*ws*zabck)/xhbck
+(  479)       duhat = sign(tenm3,gg(1))
+(  480)       dun = sign(tenm3,hh(1)*0.5)
+(  481)       dtheta = .001
+(  482)                    if(iters.gt.1) then
+(  483)       dza=sign(max(dzamin,min(abs(dza), .05*abs(dzap))),-dzap)
+(  484)       duhat=sign(min(abs(duhat),.01*abs(duhatp)),-duhatp)
+(  485)       dun=sign(min(abs(dun),.01*abs(dunp)),-dunp)
+(  486)       dtheta=sign(min(abs(dtheta), .05*abs(dthetp)),-dthetp)
+(  487)                    endif
+(  488)       dza = sign(min(abs(dza),0.001*zabck),dza)
+(  489)             x(2) = x(1) + dza
+(  490)             zabck = x(2)
+(  491)             call hvbub(e(2),f(2),gg(2),hh(2))
+(  492)             if(fmbad) go to 11
+(  493)             if(test(2)) go to 25
+(  494)                   zabck = x(1)
+(  495)             uhat = uhat + duhat
+(  496)             y(2) = uhat
+(  497)             call hvbub(e(3),f(3),gg(3),hh(3))
+(  498)             if(fmbad) go to 11
+(  499)             if(test(3)) go to 25
+(  500)             uhat = y(1)
+(  501)             un = un + dun
+(  502)             z(2) = un
+(  503)             call hvbub(e(4),f(4),gg(4),hh(4))
+(  504)             if(fmbad) go to 11
+(  505)             if(test(4)) go to 25
+(  506)             un = z(1)
+(  507)                  theta = theta + dtheta
+(  508)                  w(2) = theta
+(  509)                     call hvbub(e(5),f(5),gg(5),hh(5))
+(  510)                     if(fmbad) go to 11
+(  511)              if (test(5)) go to 25
+(  512) c********************************************find derivs,fill matrix****
+(  513)             a(1,1) = (f(2) - f(1))/(x(2) - x(1))
+(  514)             a(1,2) = (f(3) - f(1))/(y(2) - y(1))
+(  515)             a(1,3) = (f(4) - f(1))/(z(2) - z(1))
+(  516)             a(1,4) = (f(5) - f(1))/(w(2) - w(1))
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 11
+
+(  517)             a(2,1) = (gg(2) - gg(1))/(x(2) - x(1))
+(  518)             a(2,2) = (gg(3) - gg(1))/(y(2) - y(1))
+(  519)             a(2,3) = (gg(4) - gg(1))/(z(2) - z(1))
+(  520)             a(2,4) = (gg(5) - gg(1))/(w(2) - w(1))
+(  521)             a(3,1) = (hh(2) - hh(1))/(x(2) - x(1))
+(  522)             a(3,2) = (hh(3) - hh(1))/(y(2) - y(1))
+(  523)             a(3,3) = (hh(4) - hh(1))/(z(2) - z(1))
+(  524)             a(3,4) = (hh(5) - hh(1))/(w(2) - w(1))
+(  525)             a(4,1) = (e(2) - e(1))/(x(2) - x(1))
+(  526)             a(4,2) = (e(3) - e(1))/(y(2) - y(1))
+(  527)             a(4,3) = (e(4) - e(1))/(z(2) - z(1))
+(  528)             a(4,4) = (e(5) - e(1))/(w(2) - w(1))
+(  529)             fvec(1) = -f(1)
+(  530)             fvec(2) = -gg(1)
+(  531)             fvec(3) = -hh(1)
+(  532)             fvec(4) = -e(1)
+(  533) c********************************************invert the matrix**********
+(  534)       call solve(4,a,fvec,delta,fmbad)
+(  535)       if(fmbad) go to 11
+(  536)       dza = delta(1)
+(  537)       duhat = delta(2)
+(  538)       dun = delta(3)
+(  539)       dtheta = delta(4)
+(  540) c***********************************limit step size*********************
+(  541)       dza = max(yebck-.1-x(1),min(dza,.55-x(1)))
+(  542)       dza = sign(min(abs(x(1)*0.25),abs(dza)),dza)
+(  543)       dtheta = sign(min(theta*0.2,abs(dtheta)),dtheta)
+(  544) c************************************* shuffle to keep upack .gt. 0 ****
+(  545)       if( fm0 .gt. 1.0001 .and. iters .gt. 1) then
+(  546)       unshuf = - fpick(tbck*(fm0-1.0)/(fm0+12.0*ya0),0.75*dzap ,-dzap)
+(  547)       dunp = dun + unshuf
+(  548)       dun = unshuf
+(  549)       duhat = 1.0*tbck*(fm0-1.0)/(fm0+4.0*ya0)
+(  550)       endif
+(  551) c******************************** update the values ********************
+(  552)       zabck = x(1) + dza
+(  553)       uhat = y(1) + duhat
+(  554)       un = z(1) + dun
+(  555)       theta = w(1) + dtheta
+(  556) c***********************************************************************
+(  557)                 if(iters.ge.5) then
+(  558)       if((abs(dza/x(1))+abs(duhat/y(1))+abs(dun/z(1))).le.3.e-7)go to 20
+(  559)       if(dbck .le. 0.1) go to 10
+(  560)       if( (dbck .ge. d00*phi0) .or. (u0.gt.0.99)
+(  561)      & .or. (iters.ge. ncnvge .and. bad) ) then
+(  562)                         dtran = dbck
+(  563)                         write(*,993)dtran,upack,d0,theta,xhbck
+(  564)                         call eosnm
+(  565)                         return
+(  566)                  endif
+(  567)                  endif
+(  568) 10                     continue
+(  569) c******************************************************failure?*********
+(  570) 11    nfail = nfail + 1
+(  571)       if(.not. bad) go to 1
+(  572)       if(.not. fmbad) print *, dbck * rmu/cm3fm3, tbck,
+(  573)      * yebck
+(  574)       if(.not. fmbad) WRITE (*,103) dbck * rmu/cm3fm3, 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 12
+
+(  575)      * tbck/kmev, yebck
+(  576)   103 FORMAT (' Failure in Saha: rho=',es11.3,
+(  577)      * ' t=',es11.3,' ye=',es11.3)
+(  578)       if( .not. fmbad  .and.  dbck * rmu/cm3fm3 .le. 1.d+11 ) then
+(  579)         stop 'failure in Saha'
+(  580)       else
+(  581)         return
+(  582)       end if ! .not. fmbad  .and.  dbck * rmu/cm3fm3 .le. 1.d+11
+(  583) c******************************************************failure?*********
+(  584)                         dtran = dbck
+(  585)                         write(*,993)dtran,upack,d0,theta,xhbck
+(  586)                         call eosnm
+(  587)                         return
+(  588) c******************************************************failure?*********
+(  589) 20    continue
+(  590) 25    continue
+(  591)       xnbck = ynbck*u1pack
+(  592)       xpbck = ypbck*u1pack
+(  593)       xabck = 4.0*u1pack*ya
+(  594)       pd  = dbck * (tsi*tbck)
+(  595)       ed = 1.5*(tsi*tbck)*u1pack
+(  596)       sd = tsi * u1pack * 2.5 - ( (1.-xhbck)*un 
+(  597)      * -(yebck-zabck*xhbck)*uhat -xabck*ba)/tbck - xhbck * uhtra/tbck
+(  598)       ph = xhbck * dbck * dbdlu
+(  599) !      sh = 0.d0
+(  600)       sh = xhbck * af * tbck
+(  601)      * * (2.*xmstar-2.*tbck/tc/(1.+tbck/tc)*(xmstar-xms) )
+(  602)       eh = xhbck * b_hvy + xabck*ba + tbck*sh
+(  603)       b  = xhbck * b_hvy + xabck * ba
+(  604) !      eh = b
+(  605)       return
+(  606) c***********************************************************************
+(  607) 993   format(' set dtran=',f8.5,'  upack=',f7.3,'  d0=',f8.5,
+(  608)      &' theta=',f7.4,' xhbck = ',1pe12.3)
+(  609) 999   format(' zero level for fe: yebck,d0,theta,wsize,egy',5f10.5)
+(  610) 1000  format(' i failed iters,zabck,uhat,un,theta ',/,2i3,4(1pe12.5))
+(  611)                         end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 13
+
+(  612) 
+(  613) !///////////////////////////////////////////////////////////////////////
+(  614) 
+(  615) c***********************************************************************
+(  616) c      comments of september 7,1984
+(  617) c       solves the matrix equation a * x = b where
+(  618) c     a is an n by n matrix, b and x n-component vectors
+(  619) c
+(  620) c
+(  621) c***********************************************************************
+(  622) c***********************************************************************
+(  623)       subroutine solve(n,a,bb,x,fmbad)
+(  624) c***********************************************************************
+(  625)       implicit double precision (a-h,o-z)
+(  626)       logical fmbad
+(  627)       save
+(  628)       parameter (nsize = 4)
+(  629)       dimension a(nsize,nsize),bb(nsize),x(nsize)
+(  630)       dimension xl(nsize,nsize),u(nsize,nsize),y(nsize)
+(  631)       do 10 m=1,n
+(  632) 10    xl(m,m)=1.
+(  633)         do 100 k=1,n
+(  634)         do 40 j=k,n
+(  635)         u(k,j)=a(k,j)
+(  636)         if(k.eq.1)go to 40
+(  637)         do 310 m=1,k-1
+(  638) 310      u(k,j)=u(k,j)-xl(k,m)*u(m,j)
+(  639) 40    continue
+(  640) 41      if(k.eq.n)go to 100
+(  641)         do 50 i=k+1,n
+(  642)         xl(i,k)=a(i,k)
+(  643)         if(k.eq.1) go to 50
+(  644)         do 45 m=1,k-1
+(  645) 45      xl(i,k)=xl(i,k)-xl(i,m)*u(m,k)
+(  646)       if(u(k,k) .eq. 0.) then
+(  647)       fmbad = .true.
+(  648)       return
+(  649)       endif
+(  650) 50      xl(i,k)=xl(i,k)/u(k,k)
+(  651) 100     continue
+(  652)       do 200 i=1,n
+(  653)       y(i)=bb(i)
+(  654)       if(i.eq.1) go to 200
+(  655)       do 150 k=1,i-1
+(  656) 150   y(i)=y(i)-xl(i,k)*y(k)
+(  657) 200   continue
+(  658)       do 300 ii=1,n
+(  659)       i=n+1-ii
+(  660)       x(i)=y(i)
+(  661)       if(i.eq.n)go to 300
+(  662)       do 250 k=i+1,n
+(  663) 250   x(i)=x(i)-u(i,k)*x(k)
+(  664) 300   x(i)=x(i)/u(i,i)
+(  665)       return
+(  666)       end
+
+
+
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 14
+
+(  667) c***********************************************************************

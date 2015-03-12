@@ -1,0 +1,807 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/LS/e_p_eos.f90
+
+(    1) SUBROUTINE e_p_eos( brydns, t_mev, ye, pe, ee, se, ue, yeplus, rel )
+(    2) !-----------------------------------------------------------------------
+(    3) !
+(    4) !    File:         e_p_eos
+(    5) !    Module:       e_p_eos
+(    6) !    Type:         Subprogram
+(    7) !    Author:       S. W. Bruenn, Dept of Physics, FAU,
+(    8) !                  Boca Raton, FL 33431-0991
+(    9) !
+(   10) !    Date:         7/17/04
+(   11) !
+(   12) !    Purpose:
+(   13) !	 To compute the electron-positron contribution to the equation of state,
+(   14) !	  given rho, t, and ye. The electron chemical potential is iterated until
+(   15) !     the appropriate Fermi-Dirac integrals, or approximations thereof, for
+(   16) !     the electron - positron number converge to the electron positron number
+(   17) !     given by rho*ye/mb.
+(   18) !    This subroutine is similar to lectron except that variables are
+(   19) !     passed throught the calling statement rather than common.
+(   20) !
+(   21) !    Variables that must be passed through common:
+(   22) !        none
+(   23) !
+(   24) !    Subprograms called:
+(   25) !        glaquad
+(   26) !
+(   27) !    Input arguments:
+(   28) !  brydns :  density (baryons/fm**3)
+(   29) !  t_mev  :  temperature [MeV]
+(   30) !  ye     :  Y_e^- - Y_e^+  (ye)
+(   31) !
+(   32) !    Output arguments:
+(   33) !  pe     : electron-positron pressure [dynes cm^{-2}]
+(   34) !  ee     : electron-positron energy [ergs cm^{-3}]
+(   35) !  se     : electron-positron entropy
+(   36) !  ue     : electron chemical potential [MeV]
+(   37) !  yeplus : positron fraction
+(   38) !  rel    : relativity parameter
+(   39) !
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 2
+
+(   40) !    Include files:
+(   41) !  wlKindModule
+(   42) !  wlExtNumericalModule
+(   43) !  wlExtPhysicalConstantsModule
+(   44) !
+(   45) !-----------------------------------------------------------------------
+(   46) 
+(   47) USE wlKindModule, ONLY: double => dp
+(   48) USE wlExtNumericalModule, ONLY: zero, third, half, pi
+(   49) USE wlExtPhysicalConstantsModule, ONLY: hbarc, me, rmu, cm3fm3
+(   50) 
+(   51) IMPLICIT NONE
+(   52) SAVE
+(   53) 
+(   54) !-----------------------------------------------------------------------
+(   55) !        Input variables
+(   56) !-----------------------------------------------------------------------
+(   57) 
+(   58) REAL(KIND=double), INTENT(in)      :: brydns         ! density (number of baryons fm^{-3})
+(   59) REAL(KIND=double), INTENT(in)      :: t_mev          ! temperature [MeV]
+(   60) REAL(KIND=double), INTENT(in)      :: ye             ! electron fraction
+(   61) 
+(   62) !-----------------------------------------------------------------------
+(   63) !        Input variables
+(   64) !-----------------------------------------------------------------------
+(   65) 
+(   66) REAL(KIND=double), INTENT(out)     :: pe            ! electron-positron pressure [dynes cm^{-2}]
+(   67) REAL(KIND=double), INTENT(out)     :: ee            ! electron-positron energy [ergs cm^{-3}]
+(   68) REAL(KIND=double), INTENT(out)     :: se            ! electron-positron entropy
+(   69) REAL(KIND=double), INTENT(out)     :: ue            ! electron chemical potential [MeV]
+(   70) REAL(KIND=double), INTENT(out)     :: yeplus        ! positron fraction
+(   71) REAL(KIND=double), INTENT(out)     :: rel           ! relativity parameter
+(   72) 
+(   73) !-----------------------------------------------------------------------
+(   74) !        Local variables
+(   75) !-----------------------------------------------------------------------
+(   76) 
+(   77) LOGICAL                            :: first = .true.
+(   78) LOGICAL                            :: non_rel        ! nonrelativistic flag
+(   79) LOGICAL                            :: approx
+(   80) LOGICAL                            :: Sommerfeld
+(   81) LOGICAL                            :: Failure
+(   82) 
+(   83) INTEGER                            :: i              ! summation index
+(   84) INTEGER                            :: j              ! summation index
+(   85) INTEGER                            :: it             ! iteration index
+(   86) INTEGER                            :: l              ! iteration index
+(   87) INTEGER, PARAMETER                 :: nlag = 48      ! number of points of Gauss-Laguerre quadrature
+(   88) INTEGER, PARAMETER                 :: ncnvge = 30    ! number of iterations
+(   89) 
+(   90) REAL(KIND=double), DIMENSION(nlag) :: xa             ! points of Gauss-Lagendre quadrature
+(   91) REAL(KIND=double), DIMENSION(nlag) :: wt0            ! unscaled weights of Gauss-Lagendre quadrature
+(   92) REAL(KIND=double), DIMENSION(nlag) :: wta            ! weights of Gauss-Lagendre quadrature
+(   93) REAL(KIND=double), DIMENSION(nlag) :: fn_a           ! electron occupation number
+(   94) REAL(KIND=double), DIMENSION(nlag) :: fp_a           ! positron occupation number
+(   95) 
+(   96) REAL(KIND=double), PARAMETER       :: eps1 = 1.d-4   ! tolerance
+(   97) REAL(KIND=double), PARAMETER       :: eps2 = 1.d-6   ! tolerance
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 3
+
+(   98) REAL(KIND=double), PARAMETER       :: beta_max = 2.d0  ! high temperature approximation criterion
+(   99) REAL(KIND=double), PARAMETER       :: relmin = 1.2d0
+(  100) REAL(KIND=double), PARAMETER       :: etabet = 2.d0
+(  101) REAL(KIND=double), PARAMETER       :: tthird = 2.d0/3.d0
+(  102) REAL(KIND=double)                  :: pi2            ! pi^{2}
+(  103) REAL(KIND=double)                  :: pi4            ! pi^{4}
+(  104) 
+(  105) REAL(KIND=double)                  :: const          ! coef used in the high temperature approx
+(  106) REAL(KIND=double)                  :: cnstnr         ! coef for the nr expression for n(electron) - n(positron)
+(  107) REAL(KIND=double)                  :: coef_e_fermi_nr ! coef for nr electron Fermi energy
+(  108) REAL(KIND=double)                  :: rmuec          ! coef for nr, nondegenerate electron chemical potential
+(  109) 
+(  110) REAL(KIND=double)                  :: e_fermi_nr     ! nonrelativistic Fermi energy
+(  111) 
+(  112) REAL(KIND=double)                  :: ne_x_coef      ! ne x coefficient, ye * ne_x_coef = integral for ne sans coefficient
+(  113) REAL(KIND=double)                  :: beta           ! me c^{2}/kT
+(  114) REAL(KIND=double)                  :: beta2          ! beta^{2}
+(  115) REAL(KIND=double)                  :: etae           ! ( electron chemical potential - mec2 )/kT  
+(  116) REAL(KIND=double)                  :: wwchk          ! ne_x_coef calculated by Gause-Leguerre integration
+(  117) REAL(KIND=double)                  :: deriv          ! d(ne_x_coef)/d(etae)
+(  118) REAL(KIND=double)                  :: tol            ! tolerance
+(  119) REAL(KIND=double)                  :: tolp           ! tolerance
+(  120) REAL(KIND=double)                  :: fact           ! integrand
+(  121) 
+(  122) REAL(KIND=double)                  :: pfc            ! Fermi momentum * c
+(  123) REAL(KIND=double)                  :: rb2            ! pi^{2}/beta^{2}
+(  124) REAL(KIND=double)                  :: xans           ! (pfc/me)^{3}
+(  125) REAL(KIND=double)                  :: xx             ! pfc/me
+(  126) REAL(KIND=double)                  :: dxx            ! correction to xx
+(  127) REAL(KIND=double)                  :: dxxp           ! correction to xx
+(  128) REAL(KIND=double)                  :: ped            ! pe/brydns
+(  129) REAL(KIND=double)                  :: deta           ! change in eta
+(  130) REAL(KIND=double)                  :: detap          ! change in eta
+(  131) REAL(KIND=double)                  :: ek             ! electron kinetic energy/baryon [MeV]
+(  132) REAL(KIND=double)                  :: etad           ! degenerate approximation for eta
+(  133) REAL(KIND=double)                  :: rmuend         ! nondegenerate approximation for eta * t_mev
+(  134) REAL(KIND=double)                  :: etand          ! nondegenerate approximation for eta
+(  135) REAL(KIND=double)                  :: rintrp         ! interpolant between etad and etand
+(  136) REAL(KIND=double)                  :: yans           ! nonrelativistic Sommerfeld variable
+(  137) REAL(KIND=double)                  :: y              ! nonrelativistic Sommerfeld variable
+(  138) REAL(KIND=double)                  :: dy             ! change in y
+(  139) REAL(KIND=double)                  :: dyp            ! change in y
+(  140) 
+(  141) !-----------------------------------------------------------------------
+(  142) !        Formats
+(  143) !-----------------------------------------------------------------------
+(  144) 
+(  145)  1001 FORMAT (' Convergence failure in electron relativistic Sommerfeld in e_p_eos')
+(  146)  1003 FORMAT (' rho=',es11.3,' tmev=',es11.3,' ye=',es11.3)
+(  147)  1005 FORMAT (' tol=',es11.3,' xx=',es11.3,' xans**third=',es11.3, &
+(  148) & ' ffn(xx)=',es11.3,' xans=',es11.3)
+(  149)  2001 FORMAT (' Convergence failure in electron nonrelativistic Gauss-Laguerre integration in e_p_eos')
+(  150)  2003 FORMAT (' rho=',es11.3,' tmev=',es11.3,' ye=',es11.3)
+(  151)  2005 FORMAT (' etae=',es11.3,' deta=',es11.3,' tol=',es11.3,' ne_x_coef*yebc=',es11.3,' wwchk=',es11.3)
+(  152)  3001 FORMAT (' Convergence failure in electron nonrelativistic Sommerfeld in e_p_eos')
+(  153)  3003 FORMAT (' rho=',es11.3,' tmev=',es11.3,' ye=',es11.3)
+(  154)  3005 FORMAT (' tol=',es11.3,' y=',es11.3,' yans**(tthird)=',es11.3)
+(  155) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 4
+
+(  156) !-----------------------------------------------------------------------
+(  157) !-----------------------------------------------------------------------
+(  158) 
+(  159) !-----------------------------------------------------------------------
+(  160) !  Initialize
+(  161) !-----------------------------------------------------------------------
+(  162) 
+(  163) IF ( first ) THEN
+(  164) 
+(  165) !-----------------------------------------------------------------------
+(  166) !  Get quadrature points and weights
+(  167) !-----------------------------------------------------------------------
+(  168) 
+(  169)   first         = .false.
+(  170)   CALL glaquad(nlag, xa, wt0, nlag)
+(  171)   DO i = 1,nlag
+(  172)     wta(i) = fexp(xa(i)) * wt0(i)
+(  173)   END DO
+(  174) 
+(  175) !-----------------------------------------------------------------------
+(  176) !  Initialize coefficients
+(  177) !-----------------------------------------------------------------------
+(  178) 
+(  179)   pi2           = pi * pi
+(  180)   pi4           = pi2 * pi2
+(  181)   const         = hbarc**3 * pi**2
+(  182)   cnstnr        = hbarc**3 * 3.d0 * pi2/DSQRT( 2.d0 * me**3 )
+(  183)   coef_e_fermi_nr = ( hbarc**2/( 2.d0 * me ) ) * ( 3.d0 * pi2 )**tthird
+(  184)   rmuec         = 0.5d0 * ( 2.d0 * pi * hbarc**2/me )**1.5d0
+(  185) 
+(  186) END IF ! first
+(  187) 
+(  188) !-----------------------------------------------------------------------
+(  189) !  Relativistic or Nonrelativistic?
+(  190) !   e_fermi_nr:     nonrelativistic Fermi energy.
+(  191) !
+(  192) !  Perform nonrelativistic calculation if
+(  193) !   e_fermi_nr/mec2   < 0.01
+(  194) !  and
+(  195) !   tbck      < 0.01
+(  196) !-----------------------------------------------------------------------
+(  197) 
+(  198) e_fermi_nr       = coef_e_fermi_nr * ( brydns * ye )**tthird
+(  199) non_rel          = .false.
+(  200) IF ( e_fermi_nr < 0.01 * me  .and.  t_mev < 0.01 * me ) non_rel = .true.
+(  201) 
+(  202) IF ( .not. non_rel ) THEN
+(  203) 
+(  204) !-----------------------------------------------------------------------
+(  205) !
+(  206) !                    \\\\\ RELATIVISTIC CASE /////
+(  207) !
+(  208) !-----------------------------------------------------------------------
+(  209) 
+(  210)   ne_x_coef     = brydns * const/t_mev**3
+(  211)   pfc           = hbarc * ( 3.d0 * pi2 * brydns * ye )**third
+(  212)   beta          = me/t_mev
+(  213)   beta2         = beta * beta
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 5
+
+(  214)   etae          = zero
+(  215) 
+(  216) !-----------------------------------------------------------------------
+(  217) !  The high temperature approximation is tried if
+(  218) !   beta < 2/3
+(  219) !  or
+(  220) !   beta < 2  and  etae > 2*beta
+(  221) !  It is used if
+(  222) !   rel = 3*pressure/( kinetic energy density ) > relmin = 1.2
+(  223) !-----------------------------------------------------------------------
+(  224) 
+(  225)   approx        = ( beta <= beta_max )
+(  226)   IF ( approx ) THEN
+(  227)     etae        = cube( 1.5d0 * ( ne_x_coef * ye ), DMAX1( pi2 * third - 0.5d0 * beta2, zero ) )
+(  228)     approx      = ( beta <= tthird ) .or. ( etae > etabet * beta )
+(  229) 
+(  230) !-----------------------------------------------------------------------
+(  231) !-----------------------------------------------------------------------
+(  232) !        High-Temperature Approximation
+(  233) !-----------------------------------------------------------------------
+(  234) !-----------------------------------------------------------------------
+(  235) 
+(  236)     IF ( approx ) THEN
+(  237)       ped       = ( t_mev/ne_x_coef ) * third * ( g3( etae * etae ) - 1.5d0 * beta2 * g1( etae * etae ) )
+(  238)       pe        = brydns * ped
+(  239)       se        = ( 4.d0/t_mev ) * ped - ye * etae + beta2 * g1( etae * etae )/ne_x_coef
+(  240)       ee        = t_mev * ( se + ye * etae ) - ped
+(  241)       yeplus    = 2.0d0 * fexp(-etae) * ( 1.0d0 - fexp(-etae)/8.0d0 )/ne_x_coef
+(  242) 
+(  243)       rel       = 3.0d0 * ped/( ee - me * ( ye + 2.0d0 * yeplus ) )
+(  244)       approx = ( rel <= relmin )
+(  245) 
+(  246)     END IF ! beta < beta_max
+(  247)   END IF ! beta < tthird  .or.  etae > etabet*beta
+(  248) 
+(  249)   IF ( approx ) THEN
+(  250)     ue          = etae * t_mev
+(  251)     RETURN! Computation of e-p eos by high T approx was successful
+(  252)   END IF ! approx
+(  253) 
+(  254) !-----------------------------------------------------------------------
+(  255) !  If high-temperature approximation is inappropriate, then
+(  256) !   guess etae. (Note that etae computed by the high-temperature
+(  257) !   approximation gives a lower limit.)
+(  258) !
+(  259) !  Redo calculation with Sommerfeld approximation if
+(  260) !   etae - beta > 35.
+(  261) !-----------------------------------------------------------------------
+(  262) 
+(  263) !-----------------------------------------------------------------------
+(  264) !-----------------------------------------------------------------------
+(  265) !        Relativistic Gauss-Laguerre Integration
+(  266) !-----------------------------------------------------------------------
+(  267) !-----------------------------------------------------------------------
+(  268) 
+(  269)   etae  = cube( 1.5d0 * ( ne_x_coef * ye ) , DMAX1( pi2 * third - 0.5d0 * beta2, zero) )
+(  270) 
+(  271) !-----------------------------------------------------------------------
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 6
+
+(  272) !  Iterate on etae until wwchk = ne_x_coef*yebck
+(  273) !-----------------------------------------------------------------------
+(  274) 
+(  275)   tolp          = zero
+(  276)   Failure       = .false.
+(  277) 
+(  278)   DO it = 1,ncnvge
+(  279)     wwchk       = zero
+(  280)     deriv       = zero
+(  281) 
+(  282) !-----------------------------------------------------------------------
+(  283) !  Gauss-Laguerre
+(  284) !-----------------------------------------------------------------------
+(  285) 
+(  286)     DO j = 1,nlag
+(  287)       fact      = wta(j) * DSQRT( xa(j) * ( xa(j) + 2.0d0 * beta ) ) * ( xa(j) + beta )                          ! *
+(  288)       fn_a(j)   = 1.0d0/( 1.0d0 + fexp( xa(j) + beta - etae ) )
+(  289)       fp_a(j)   = 1.0d0/( 1.0d0 + fexp( xa(j) + beta + etae ) )
+(  290)       wwchk     = wwchk + fact * ( fn_a(j) - fp_a(j) )
+(  291)       deriv     = deriv + fact * ( fn_a(j)*( 1.d0 - fn_a(j) ) + fp_a(j) * ( 1.d0 - fp_a(j) ) )
+(  292)     END DO ! j = 1,nlag
+(  293) 
+(  294) !-----------------------------------------------------------------------
+(  295) !  Check convergence and compute correction
+(  296) !-----------------------------------------------------------------------
+(  297) 
+(  298)     IF ( wwchk <= zero ) THEN
+(  299)       Failure   = .true.
+(  300)       EXIT
+(  301)     END IF ! wwchk <= zero
+(  302) 
+(  303)     tol         = DLOG( wwchk/( ne_x_coef * ye ) )
+(  304)     IF ( DABS(tol) <= eps1 ) EXIT
+(  305)     deriv       =   deriv/wwchk
+(  306) 
+(  307) !-----------------------------------------------------------------------
+(  308) !  Tricks to avoid oscillations and help assure convergence
+(  309) !-----------------------------------------------------------------------
+(  310) 
+(  311)     IF ( tol * tolp >= zero ) THEN
+(  312)       deta      = - tol/deriv
+(  313)     ELSE
+(  314)       deta      = detap *tol / ( tolp - tol )
+(  315)     END IF ! tol * tolp >= zero
+(  316) 
+(  317)     IF ( DABS(deta) <= eps2 * DABS(etae) ) EXIT
+(  318) 
+(  319)     IF ( etae + deta <= zero ) deta = deta/10.d0
+(  320)     etae        = etae + deta
+(  321) 
+(  322)     IF ( etae <= zero ) etae = DABS(deta)
+(  323)     tolp        = tol
+(  324)     detap       = deta
+(  325) 
+(  326)     IF ( it == ncnvge ) Failure  = .true.
+(  327) 
+(  328)   END DO ! it = 1,ncnvge
+(  329) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 7
+
+(  330)   IF ( .not. Failure  .and.  ( etae < 35.d0  .or.  pfc/me < 10.d0 ) ) THEN
+(  331) 
+(  332) !-----------------------------------------------------------------------
+(  333) !  Convergence success? Compute the rest of the eos functions.
+(  334) !
+(  335) !   ee:     electron energy/baryon (including rest mass) [MeV]
+(  336) !   pe:     electron pressure (MeV/fm**3)
+(  337) !   se:     electron entropy/baryon (dimensionless)
+(  338) !   yeplus: positron fraction (exact here)
+(  339) !   rel:    relativistic parameter
+(  340) !-----------------------------------------------------------------------
+(  341) 
+(  342)     pe          = zero
+(  343)     ee          = zero
+(  344)     se          = zero
+(  345)     yeplus      = zero
+(  346) 
+(  347)     DO j = 1,nlag                              ! *   Gauss
+(  348)       fact      = wta(j) * DSQRT( xa(j) * ( xa(j) + 2.0d0 * beta ) )
+(  349)       pe        = pe + fact * ( fn_a(j) + fp_a(j) ) * xa(j) * ( xa(j) + 2.0d0 * beta )
+(  350)       ee        = ee + fact * ( fn_a(j) + fp_a(j) ) * ( xa(j) + beta )**2
+(  351)       yeplus    = yeplus + fact * fp_a(j) * ( xa(j) + beta )
+(  352)     END DO ! j = 1,nlag
+(  353) 
+(  354)     yeplus      = yeplus/ne_x_coef
+(  355)     ue          = etae * t_mev
+(  356)     pe          = ( t_mev/ne_x_coef ) * brydns * third * pe
+(  357)     ee          = ( t_mev/ne_x_coef ) * ee
+(  358)     se          = ( ee + pe/brydns )/t_mev - ye * etae
+(  359)     rel         = 3.0d0 * pe/brydns/( ee - me * ( ye + 2.0d0 * yeplus ) )
+(  360)     RETURN
+(  361) 
+(  362)   END IF ! .not. Failure  .and.  etae < 35.d0
+(  363) 
+(  364) !-----------------------------------------------------------------------
+(  365) !  Convergence failure or etae > 35, use the Sommerfeld
+(  366) !   approximation
+(  367) !-----------------------------------------------------------------------
+(  368) 
+(  369) !-----------------------------------------------------------------------
+(  370) !-----------------------------------------------------------------------
+(  371) !        Relativistic Sommerfeld Approximation
+(  372) !-----------------------------------------------------------------------
+(  373) !-----------------------------------------------------------------------
+(  374) 
+(  375)   rb2           = pi2/beta2
+(  376)   xans          = ( pfc/me )**3
+(  377)   xx            = pfc/me
+(  378)   dxxp          = zero
+(  379) 
+(  380) !-----------------------------------------------------------------------
+(  381) !  Iterate on xx until ffn(xx) = xans
+(  382) !-----------------------------------------------------------------------
+(  383) 
+(  384)   Failure       = .false.
+(  385)   DO l = 1,50
+(  386)     tol         = ( ffn(xx) - xans )/xans
+(  387)     IF ( DABS(tol) <= 1.d-7 ) EXIT
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 8
+
+(  388)     dxx         = -tol * xans/dfndx(xx)
+(  389)     IF( dxx * dxxp < zero ) dxx = dxx/2.d0
+(  390)     dxxp        = dxx
+(  391)     xx          = xx + dxx
+(  392)     IF ( l == 50 ) Failure = .true.
+(  393)   END DO ! l = 1,50
+(  394) 
+(  395) !-----------------------------------------------------------------------
+(  396) !  Convergence success? Compute the rest of the eos functions.
+(  397) !
+(  398) !   ee:     electron energy/baryon (including rest mass) [MeV]
+(  399) !   ek:     electron kinetic energy/baryon [MeV]
+(  400) !   pe:     electron pressure (MeV/fm**3)
+(  401) !   se:     electron entropy/baryon (dimensionless)
+(  402) !   yeplus: positron fraction = 0
+(  403) !   rel:    relativistic parameter
+(  404) !-----------------------------------------------------------------------
+(  405) 
+(  406)   IF ( .not. Failure ) THEN
+(  407) 
+(  408)     pe          = me**4 / ( 24.d0 * pi2 * hbarc**3 ) * ( f(xx) + 4.d0 * rb2 * xx * DSQRT( 1.d0 + xx * xx ) &
+(  409) &               + 7.d0/15.d0 * rb2 * rb2 * DSQRT( 1.d0 + xx * xx ) * ( 2.d0 * xx * xx - 1.d0 )/xx**3 )
+(  410)     ek          = me**4 / ( 24.d0 * pi2 * hbarc**3 ) * ( gg(xx) + 4.d0 * rb2 &
+(  411) &               * ( DSQRT( 1.d0 + xx * xx ) * ( 3.d0 * xx * xx + 1.d0 )/xx - ( 2.d0 * xx * xx + 1.d0 )/xx ) )
+(  412)     ee          = ek/brydns + ye * me
+(  413)     ue          = me * DSQRT( 1.d0 + xx * xx )
+(  414)     se          = ( ee + pe/brydns - ue * ye )/t_mev
+(  415)     rel         = 3.d0 * pe/ek
+(  416)     yeplus      = zero
+(  417) 
+(  418)     RETURN
+(  419) 
+(  420)   END IF ! .not. Failure
+(  421) 
+(  422) !-----------------------------------------------------------------------
+(  423) !  Convergence failure? Write memo to unit 6 and continue
+(  424) !-----------------------------------------------------------------------
+(  425) 
+(  426)   WRITE (*,1001)
+(  427)   WRITE (*,1003) brydns * rmu/cm3fm3, t_mev, ye
+(  428)   WRITE (*,1005) tol, xx, xans**third, ffn(xx), xans
+(  429)   STOP
+(  430) 
+(  431) END IF ! .not. non_rel
+(  432) 
+(  433) IF ( non_rel ) THEN
+(  434) 
+(  435) !-----------------------------------------------------------------------
+(  436) !
+(  437) !                   \\\\\ NONRELATIVISTIC CASE /////
+(  438) !
+(  439) !-----------------------------------------------------------------------
+(  440) 
+(  441) !-----------------------------------------------------------------------
+(  442) !  Guess etae by interpolating between its degenerate and
+(  443) !   nondegenerate value.
+(  444) !
+(  445) !  Use nonrelativistic Sommerfeld approximation if e_fermi_nr/kt > 35
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 9
+
+(  446) !-----------------------------------------------------------------------
+(  447)  
+(  448)   tolp          = zero
+(  449)   e_fermi_nr    = coef_e_fermi_nr * ( brydns * ye )**( tthird )
+(  450)   etad          = e_fermi_nr/t_mev
+(  451) 
+(  452)   Sommerfeld    = .false.
+(  453)   IF ( e_fermi_nr/t_mev > 35 ) Sommerfeld = .true.
+(  454) 
+(  455)   IF ( .not. Sommerfeld ) THEN
+(  456) 
+(  457) !-----------------------------------------------------------------------
+(  458) !-----------------------------------------------------------------------
+(  459) !        Nonrelativistic Gauss-Laguerre Integration
+(  460) !-----------------------------------------------------------------------
+(  461) !-----------------------------------------------------------------------
+(  462) 
+(  463) !-----------------------------------------------------------------------
+(  464) !  Guess etae by interpolating between its degenerate and
+(  465) !   nondegenerate value.
+(  466) !-----------------------------------------------------------------------
+(  467) 
+(  468)     rmuend      = t_mev * DLOG( brydns * ye * rmuec/t_mev**1.5 )
+(  469)     etand       = rmuend/t_mev
+(  470)     rintrp      = etad/( 1.d0 + etad )
+(  471)     etae        = etand + rintrp * ( etad - etand )
+(  472)     ne_x_coef          = cnstnr * brydns * ye/t_mev**1.5
+(  473) 
+(  474) !-----------------------------------------------------------------------
+(  475) !  Iterate on etae until wwchk = ne_x_coef
+(  476) !-----------------------------------------------------------------------
+(  477) 
+(  478)     Failure     = .false.
+(  479)     DO it = 1,ncnvge
+(  480)       wwchk     = zero
+(  481)       deriv     = zero
+(  482)       DO j = 1,nlag
+(  483)         fact    = wta(j) * DSQRT( xa(j) )
+(  484)         fn_a(j) = 1.0d0/( 1.0d0 + fexp( xa(j) - etae ) )
+(  485)         wwchk   = wwchk + fact * fn_a(j)
+(  486)         deriv   = deriv + fact * ( fn_a(j) * ( 1.0d0 - fn_a(j) ) )
+(  487)       END DO
+(  488) 
+(  489) !-----------------------------------------------------------------------
+(  490) !  Check convergence and compute correction
+(  491) !-----------------------------------------------------------------------
+(  492) 
+(  493)       tol       = DLOG( wwchk/ne_x_coef )
+(  494)       IF ( DABS(tol) <= eps1 ) EXIT
+(  495)       deriv     = deriv/wwchk
+(  496) 
+(  497) !-----------------------------------------------------------------------
+(  498) !  Tricks to avoid oscillations and help assure convergence
+(  499) !-----------------------------------------------------------------------
+(  500) 
+(  501)       IF ( tol * tolp >= zero ) THEN
+(  502)         deta    = - tol/deriv
+(  503)       ELSE
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 10
+
+(  504)         deta    = detap * tol/( tolp - tol )
+(  505)       END IF
+(  506) 
+(  507)       IF( DABS(deta) <= eps2 * DABS(etae) ) EXIT
+(  508)       etae      = etae + deta
+(  509)       tolp      = tol
+(  510)       detap     = deta
+(  511)       IF ( it == ncnvge ) Failure = .true.
+(  512)     END DO ! iteration
+(  513) 
+(  514) !-----------------------------------------------------------------------
+(  515) !  Convergence failure? Write memo to unit 6 and continue
+(  516) !-----------------------------------------------------------------------
+(  517) 
+(  518)     IF ( Failure ) THEN
+(  519)       WRITE (6,2001)
+(  520)       WRITE (6,2003) brydns * rmu/cm3fm3, t_mev, ye
+(  521)       WRITE (6,2005) etae,deta,tol,ne_x_coef*ye,wwchk
+(  522)     END IF ! Failure
+(  523)     
+(  524)     IF ( .not. Failure ) THEN
+(  525) 
+(  526) !-----------------------------------------------------------------------
+(  527) !  Convergence success? Compute the rest of the eos functions.
+(  528) !
+(  529) !   ee:     electron energy/baryon (including rest mass) [MeV]
+(  530) !   ek:     electron kinetic energy/baryon [MeV]
+(  531) !   pe:     electron pressure (MeV fm^{-3})
+(  532) !   se:     electron entropy/baryon (dimensionless)
+(  533) !   yeplus: positron fraction = 0
+(  534) !   rel:    relativistic parameter = 0
+(  535) !-----------------------------------------------------------------------
+(  536) 
+(  537)       pe        = zero
+(  538)       ek        = zero
+(  539)       se        = zero
+(  540)       DO j = 1,nlag
+(  541)         fact    = wta(j) * xa(j)**1.5
+(  542)         ek      = ek + fact * fn_a(j)
+(  543)       END DO
+(  544)       ue        = etae * t_mev + me
+(  545)       ek        = ek * t_mev * ye/ne_x_coef
+(  546)       ee        = ek + ye * me
+(  547)       pe        = 2.d0 * ek * brydns/3.d0
+(  548)       se        = ( ee + pe/brydns )/t_mev - ye * ue/t_mev
+(  549)       yeplus    = zero
+(  550)       rel       = zero
+(  551)       RETURN
+(  552) 
+(  553)     END IF ! .not. Failure
+(  554) 
+(  555)   END IF ! .not. Sommerfeld
+(  556) 
+(  557)   IF ( Sommerfeld  .or.  Failure ) THEN
+(  558) 
+(  559) !-----------------------------------------------------------------------
+(  560) !-----------------------------------------------------------------------
+(  561) !        Nonrelativistic Sommerfeld Approximation
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 11
+
+(  562) !-----------------------------------------------------------------------
+(  563) !-----------------------------------------------------------------------
+(  564) 
+(  565)     yans        = 3.d0 * pi2 * brydns * ye * ( hbarc**2/( 2.d0 * me * t_mev ) )**1.5
+(  566)     y           = yans**(tthird)
+(  567)     dyp         = zero
+(  568) 
+(  569) !-----------------------------------------------------------------------
+(  570) !  Iterate on y until ffnr(y) = yans
+(  571) !-----------------------------------------------------------------------
+(  572) 
+(  573)     Failure     = .false.
+(  574)     DO l = 1,50
+(  575)       tol       = ( ffnr(y) - yans )/yans
+(  576)       IF ( DABS(tol) <= 1.d-7 ) EXIT
+(  577)       dy        = -tol * yans/dfnrdy(y)
+(  578)       IF ( dy * dyp < zero ) dy = dy/2.d0
+(  579)       dyp       = dy
+(  580)       y         = y + dy
+(  581)       IF ( l == 50 ) Failure = .true.
+(  582)     END DO
+(  583) 
+(  584) !-----------------------------------------------------------------------
+(  585) !  Convergence failure? Write memo to unit 6 and continue
+(  586) !-----------------------------------------------------------------------
+(  587) 
+(  588)     IF ( Failure ) THEN
+(  589)       WRITE (*,3001)
+(  590)       WRITE (*,3003) brydns * rmu/cm3fm3, t_mev, ye
+(  591)       WRITE (*,3005) tol,y,yans**(tthird)
+(  592)     END IF ! Failure
+(  593)     
+(  594)     IF ( .not. Failure ) THEN
+(  595) 
+(  596) !-----------------------------------------------------------------------
+(  597) !  Convergence success? Compute the rest of the eos functions.
+(  598) !
+(  599) !   ee:     electron energy/baryon (including rest mass) [MeV]
+(  600) !   ek:     electron kinetic energy/baryon [MeV]
+(  601) !   pe:     electron pressure (MeV fm^{-3})
+(  602) !   se:     electron entropy/baryon (dimensionless)
+(  603) !   yeplus: positron fraction = 0
+(  604) !   rel:    relativistic parameter = 0
+(  605) !-----------------------------------------------------------------------
+(  606) 
+(  607)       pe        = 2.d0 * t_mev * pnr(y)/( 15.d0 * pi2 ) * ( 2.d0 * me * t_mev/( hbarc**2 ) )**1.5d0
+(  608)       ek        = 1.5d0 * pe
+(  609)       ee        = ek/brydns + ye * me
+(  610)       ue        = y * t_mev + me
+(  611)       se        = ( ee + pe/brydns - ue * ye )/t_mev
+(  612)       yeplus    = zero
+(  613)       rel       = zero
+(  614) 
+(  615)     END IF ! .not. Failure
+(  616)   END IF ! Sommerfeld  .or.  Failure
+(  617) END IF ! non_rel
+(  618) 
+(  619) RETURN
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 12
+
+(  620) 
+(  621) CONTAINS
+(  622) 
+(  623) REAL (KIND=double) FUNCTION sq(aa,bb)
+(  624) REAL (KIND=double) :: aa, bb
+(  625) sq              = DSQRT( aa * aa + bb * bb * bb )
+(  626) END FUNCTION sq
+(  627) 
+(  628) REAL (KIND=double) FUNCTION cube(aa,bb)
+(  629) REAL (KIND=double) :: aa, bb
+(  630) cube            = ( sq(aa,bb) + aa )**third - ( DMAX1(sq(aa,bb) - aa , zero ) )**third
+(  631) END FUNCTION cube
+(  632) 
+(  633) REAL (KIND=double) FUNCTION g1(x2)
+(  634) REAL (KIND=double) :: x2
+(  635) g1              = half * x2 + 1.644934067d0
+(  636) END FUNCTION g1
+(  637) 
+(  638) REAL (KIND=double) FUNCTION g3(x2)
+(  639) REAL (KIND=double) :: x2
+(  640) g3              = 11.36439395 + x2 * ( 4.9934802201d0 + 0.25d0 * x2 )
+(  641) END FUNCTION g3
+(  642) 
+(  643) REAL (KIND=double) FUNCTION fexp(xx)
+(  644) REAL (KIND=double) :: xx
+(  645) REAL (KIND=double), PARAMETER :: expmax = 300.d0
+(  646) fexp            = DEXP( DMIN1( expmax, DMAX1( - expmax, xx ) ) )
+(  647) END FUNCTION fexp
+(  648) 
+(  649) REAL (KIND=double) FUNCTION ffn(xx)
+(  650) REAL (KIND=double) :: xx
+(  651) ffn             = xx**3 * ( 1.d0 + pi2/beta2 * (2.d0 * xx * xx + 1.d0 )/( 2.d0 * xx**4 ) &
+(  652) &               + 7.d0/40.d0 * ( pi2/beta2 )**2/xx**8)
+(  653) END FUNCTION ffn
+(  654) 
+(  655) REAL (KIND=double) FUNCTION dfndx(xx)
+(  656) REAL (KIND=double) :: xx
+(  657) dfndx           = 3.d0 * ffn(xx)/xx + pi2/beta2 * ( 2.d0 - 4.d0 * (2.d0 * xx * xx + 1.d0 )/xx**2)
+(  658) END FUNCTION dfndx
+(  659) 
+(  660) REAL (KIND=double) FUNCTION ffnr(yy)
+(  661) REAL (KIND=double) :: yy
+(  662) ffnr            = yy**1.5d0 * (1.d0 + pi2/(8.d0 * yy**2 ) + 7.d0 * pi4/( 640.d0 * yy**4 ) )
+(  663) END FUNCTION ffnr
+(  664) 
+(  665) REAL (KIND=double) FUNCTION dfnrdy(yy)
+(  666) REAL (KIND=double) :: yy
+(  667) dfnrdy          = DSQRT(yy) * ( 1.d0 - pi2/( 24.d0 * yy**2 ) - 7.d0 * pi4/( 384.d0 * yy**4 ) )
+(  668) END FUNCTION dfnrdy
+(  669) 
+(  670) REAL (KIND=double) FUNCTION pnr(yy)
+(  671) REAL (KIND=double) :: yy
+(  672) pnr             = yy**2.5d0 * ( 1.d0 + 5.d0 * pi2/( 8.d0 * yy**2 ) - 7.d0 * pi4/( 384.d0 * yy**4 ) )
+(  673) END FUNCTION pnr
+(  674) 
+(  675) REAL (KIND=double) FUNCTION f(xx)
+(  676) REAL (KIND=double) :: xx
+(  677) f               = xx * ( 2.d0 * xx * xx - 3.d0 ) * DSQRT( xx * xx + 1.d0 ) &
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:51      page 13
+
+(  678) &               + 3.d0 * DLOG( xx + DSQRT( 1.d0 + xx * xx ) )
+(  679) END FUNCTION f
+(  680) 
+(  681) REAL (KIND=double) FUNCTION gg(xx)
+(  682) REAL (KIND=double) :: xx
+(  683) gg              = 8.d0 * xx**3 * ( DSQRT( xx * xx + 1.d0 ) -1.d0 ) - f(xx)
+(  684) END FUNCTION gg
+(  685) 
+(  686) END SUBROUTINE e_p_eos

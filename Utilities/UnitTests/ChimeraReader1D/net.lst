@@ -1,0 +1,651 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/BCK/net.f90
+
+(    1) SUBROUTINE net
+(    2) !-----------------------------------------------------------------------
+(    3) !
+(    4) !    File:         net
+(    5) !    Module:       net
+(    6) !    Type:         Subprogram
+(    7) !    Author:       S. W. Bruenn, Dept of Physics, FAU,
+(    8) !                  Boca Raton, FL 33431-0991
+(    9) !
+(   10) !    Date:         1/17/11
+(   11) !
+(   12) !    Purpose:
+(   13) !      To compute the nuclear statistical equilibrium of neutrons,
+(   14) !       protons, alpha nuclei and 55Fe.
+(   15) !
+(   16) !    Input arguments:
+(   17) !        none
+(   18) !
+(   19) !    Output arguments:
+(   20) !        none
+(   21) !
+(   22) !    Subprograms called:
+(   23) !        none
+(   24) !
+(   25) !    Include files:
+(   26) !  wlKindModule
+(   27) !  wlExtNumericalModule
+(   28) !  wlExtPhysicalConstantsModule
+(   29) !
+(   30) !  eos_bck_module
+(   31) !
+(   32) !-----------------------------------------------------------------------
+(   33) 
+(   34) USE wlKindModule, ONLY: dp
+(   35) USE wlExtNumericalModule, ONLY: zero, third, half, one, epsilon, pi
+(   36) USE wlExtPhysicalConstantsModule, ONLY: mb, hbarc, rmu, cm3fm3, kmev
+(   37) 
+(   38) USE eos_bck_module, ONLY: d=>dbck, t=>tbck, ye=>yebck, un, uhat, xpbck,  &
+(   39) & xnbck, xabck, xhbck, ahbck, zabck, ph, sh, eh, b_energy=>b, pd, ed, sd, &
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 2
+
+(   40) & upack, theta, b_hvy, nnc_nse_bck, ye_nnc_nse_min
+(   41) 
+(   42) IMPLICIT none
+(   43) 
+(   44) !-----------------------------------------------------------------------
+(   45) !        Local variables
+(   46) !-----------------------------------------------------------------------
+(   47) 
+(   48) LOGICAL, SAVE                     :: first = .true.
+(   49) 
+(   50) INTEGER, PARAMETER                :: ncnvge = 20        ! number of iterations to converge
+(   51) 
+(   52) INTEGER                           :: n                  ! do index
+(   53) INTEGER                           :: n_flunk            ! number of attempts at convergece
+(   54) INTEGER                           :: itrat              ! iteration index
+(   55) 
+(   56) INTEGER                           :: it_uhat            ! iteration index for uhat iteration
+(   57) INTEGER                           :: it_un              ! iteration index for un iteration
+(   58) INTEGER, PARAMETER                :: it_uhat_max = 50   ! maximum iteration index for uhat iteration
+(   59) INTEGER, PARAMETER                :: it_un_max = 50     ! maximum iteration index for un iteration
+(   60) 
+(   61) REAL(dp), PARAMETER           :: tol = 1.d-07       ! tolerance
+(   62) 
+(   63) REAL(dp), PARAMETER, DIMENSION(nnc_nse_bck)                    &
+(   64) &                                 :: a = (/ 1.d0,                  &
+(   65) &                                           1.d0,                  &
+(   66) &                                           4.d0,                  &
+(   67) &                                          12.d0,                  &
+(   68) &                                          16.d0,                  &
+(   69) &                                          20.d0,                  &
+(   70) &                                          24.d0,                  &
+(   71) &                                          28.d0,                  &
+(   72) &                                          32.d0,                  &
+(   73) &                                          36.d0,                  &
+(   74) &                                          40.d0,                  &
+(   75) &                                          44.d0,                  &
+(   76) &                                          48.d0,                  &
+(   77) &                                          52.d0,                  &
+(   78) &                                          56.d0,                  &
+(   79) &                                          60.d0,                  &
+(   80) &                                          56.d0 /)     ! nuclear mass number
+(   81) 
+(   82) REAL(dp), PARAMETER, DIMENSION(nnc_nse_bck)                    &
+(   83) &                                 :: z = (/ 0.d0,                  &
+(   84) &                                           1.d0,                  &
+(   85) &                                           2.d0,                  &
+(   86) &                                           6.d0,                  &
+(   87) &                                           8.d0,                  &
+(   88) &                                          10.d0,                  &
+(   89) &                                          12.d0,                  &
+(   90) &                                          14.d0,                  &
+(   91) &                                          16.d0,                  &
+(   92) &                                          18.d0,                  &
+(   93) &                                          20.d0,                  &
+(   94) &                                          22.d0,                  &
+(   95) &                                          24.d0,                  &
+(   96) &                                          26.d0,                  &
+(   97) &                                          28.d0,                  &
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 3
+
+(   98) &                                          30.d0,                  &
+(   99) &                                          26.d0 /)     ! nuclear charge number
+(  100) 
+(  101) REAL(dp), PARAMETER, DIMENSION(nnc_nse_bck)                    &
+(  102) &                                 :: z_over_a(1:nnc_nse_bck) = z(1:nnc_nse_bck)/a(1:nnc_nse_bck)
+(  103)                                                         ! charge to mass ratios
+(  104) 
+(  105) REAL(dp), PARAMETER, DIMENSION(nnc_nse_bck)                    &
+(  106) &                                 :: g = (/ 2.d0,                  &
+(  107) &                                           2.d0,                  &
+(  108) &                                           1.d0,                  &
+(  109) &                                           1.d0,                  &
+(  110) &                                           1.d0,                  &
+(  111) &                                           1.d0,                  &
+(  112) &                                           1.d0,                  &
+(  113) &                                           1.d0,                  &
+(  114) &                                           1.d0,                  &
+(  115) &                                           1.d0,                  &
+(  116) &                                           1.d0,                  &
+(  117) &                                           1.d0,                  &
+(  118) &                                           1.d0,                  &
+(  119) &                                           1.d0,                  &
+(  120) &                                           1.d0,                  &
+(  121) &                                           1.d0,                  &
+(  122) &                                           1.d0 /)     ! nuclear charge number
+(  123)                                                        
+(  124) REAL(dp), PARAMETER, DIMENSION(nnc_nse_bck)                    &
+(  125) &                                 :: z2_over_a(1:nnc_nse_bck)  = z(1:nnc_nse_bck)*z(1:nnc_nse_bck)/a(1:nnc_nse_bck)
+(  126)                                                         ! charge squared to mass ratios
+(  127)                                                         
+(  128) REAL(dp), DIMENSION(nnc_nse_bck), SAVE :: a52(1:nnc_nse_bck)    ! a**5/2
+(  129) REAL(dp), DIMENSION(nnc_nse_bck), SAVE :: a52_1(1:nnc_nse_bck)  ! 1/a**5/2
+(  130) 
+(  131) REAL(dp), PARAMETER, DIMENSION(nnc_nse_bck)                    &
+(  132) &                                 :: b = (/ 0.d0      ,            &
+(  133) &                                           0.d0      ,            &
+(  134) &                                          -7.073915d0,            &
+(  135) &                                          -7.680144d0,            &
+(  136) &                                          -7.976206d0,            &
+(  137) &                                          -8.032240d0,            &
+(  138) &                                          -8.260709d0,            &
+(  139) &                                          -8.447744d0,            &
+(  140) &                                          -8.493134d0,            &
+(  141) &                                          -8.519909d0,            &
+(  142) &                                          -8.551301d0,            &
+(  143) &                                          -8.533518d0,            &
+(  144) &                                          -8.572210d0,            &
+(  145) &                                          -8.609598d0,            &
+(  146) &                                          -8.642709d0,            &
+(  147) &                                          -8.583273d0,            &
+(  148) &                                          -8.790323d0 /)
+(  149) 
+(  150) REAL(dp)                      :: tolone             ! difference or x_tot from unity
+(  151) REAL(dp)                      :: tolza              ! difference or z_over_a_sum from ye
+(  152) REAL(dp)                      :: eps                ! measure of convergence
+(  153) 
+(  154) REAL(dp), SAVE                :: c0                 ! Saha constant
+(  155) REAL(dp)                      :: therm              ! Saha constant
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 4
+
+(  156) REAL(dp)                      :: therm_1            ! 1/therm
+(  157) REAL(dp), PARAMETER           :: three9 = 0.999d0
+(  158) REAL(dp), PARAMETER           :: five9 = 0.99999d0
+(  159) 
+(  160) REAL(dp)                      :: x_n                ! neutron mass fraction
+(  161) REAL(dp)                      :: x_p                ! proton mass fraction
+(  162) REAL(dp)                      :: x_a                ! alpha mass fraction
+(  163) REAL(dp)                      :: x_Si               ! 28Si mass fraction
+(  164) REAL(dp)                      :: x_Fe               ! 56Fe mass fraction
+(  165) REAL(dp)                      :: x_Ni               ! 56Ni mass fraction
+(  166) REAL(dp)                      :: up                 ! proton chemical potential
+(  167) REAL(dp)                      :: u_a                ! alpha chemical potential
+(  168) REAL(dp)                      :: u_Fe               ! 56Fe chemical potential
+(  169) REAL(dp)                      :: u_Ni               ! 56Ni chemical potential
+(  170) 
+(  171) REAL(dp)                      :: x_tot              ! sum of the xn_net's
+(  172) REAL(dp)                      :: z_over_a_sum       ! sum of the xn_net * z/a
+(  173) REAL(dp)                      :: z_sum              ! sum of the xn_net * z
+(  174) REAL(dp)                      :: a_sum              ! sum of the xn_net * a
+(  175) REAL(dp)                      :: zza_sum            ! sum of the xn_net**2/a
+(  176) REAL(dp)                      :: b_sum              ! sum of the xn_net * b
+(  177) REAL(dp)                      :: a_1_sum            ! sum of the xn_net/a
+(  178) REAL(dp)                      :: xhsum              ! mass fraction of heavy nuclei
+(  179) REAL(dp)                      :: excited            ! energy of excited states
+(  180) REAL(dp)                      :: rdenom             ! denominaor
+(  181) REAL(dp)                      :: dun                ! correction to un
+(  182) REAL(dp)                      :: duhat              ! correction to uhat
+(  183) 
+(  184) REAL(dp)                      :: uhat_min           ! minimum value of uhat to begin bisection iteration
+(  185) REAL(dp)                      :: uhat_max           ! maximum value of uhat to begin bisection iteration
+(  186) REAL(dp)                      :: un_min             ! minimum value of un to begin bisection iteration
+(  187) REAL(dp)                      :: un_max             ! maximum value of un to begin bisection iteration
+(  188) 
+(  189) REAL(dp), DIMENSION(nnc_nse_bck) :: xn_net          ! composition mass fraction array
+(  190) 
+(  191) REAL(dp), EXTERNAL            :: fexp
+(  192) 
+(  193) !-----------------------------------------------------------------------
+(  194) !        Formats
+(  195) !-----------------------------------------------------------------------
+(  196) 
+(  197)  1001 FORMAT (' un will not converge in net; un_min=',es11.3,' un_max=',es11.3, &
+(  198) & ' un=',es11.3,' x_tot=',es11.3,' d=',es11.3,' t=',es11.3,' ye=',es11.3)
+(  199) 
+(  200) !-----------------------------------------------------------------------
+(  201) !-----------------------------------------------------------------------
+(  202) 
+(  203) !-----------------------------------------------------------------------
+(  204) !  Initialize nuclear parameters
+(  205) !-----------------------------------------------------------------------
+(  206) 
+(  207) IF ( first ) THEN
+(  208) 
+(  209)   first                = .false.
+(  210)   c0                   = ( mb/( 2.d0 * pi * hbarc**2 ) )**( 3.d0/2.d0 )
+(  211)   a52(1:nnc_nse_bck)   = a(1:nnc_nse_bck)**2.5
+(  212)   a52_1(1:nnc_nse_bck) = 1.d0/a52(1:nnc_nse_bck)
+(  213) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 5
+
+(  214) END IF ! first
+(  215) 
+(  216) !-----------------------------------------------------------------------
+(  217) !  Initialize constants
+(  218) !-----------------------------------------------------------------------
+(  219) 
+(  220) n_flunk               = 0
+(  221) therm                 = c0 * t * sqrt(t) / d
+(  222) therm_1               = 1.d0/therm
+(  223) 
+(  224) !-----------------------------------------------------------------------
+(  225) !  Begin cycle
+(  226) !-----------------------------------------------------------------------
+(  227) 
+(  228)   100 CONTINUE
+(  229) 
+(  230) !-----------------------------------------------------------------------
+(  231) !  Estimate initial values for un and uhat
+(  232) !-----------------------------------------------------------------------
+(  233) 
+(  234) IF ( n_flunk == 0 ) THEN
+(  235) 
+(  236) !-----------------------------------------------------------------------
+(  237) !  If n_flunk <= 1 and ye < ye_nnc_nse_min, compute initial un and uhat
+(  238) !   assuming only Fe56 and neutrons if ye < ye_nnc_nse_min
+(  239) !-----------------------------------------------------------------------
+(  240) 
+(  241)   IF ( ye < ye_nnc_nse_min ) THEN
+(  242) 
+(  243)     x_Fe              = ye /ye_nnc_nse_min
+(  244)     x_n               = 1.d0 - x_n
+(  245)     un                = t * DLOG( half * therm_1 * x_n )
+(  246)     uhat              = ( un - b(17) - t/a(17) * DLOG( therm_1 * a52_1(17) * x_Fe ) ) &
+(  247) &                     / ye_nnc_nse_min
+(  248)     GO TO 50
+(  249) 
+(  250) !-----------------------------------------------------------------------
+(  251) !  If n_flunk <= 1 and ye_nnc_nse_min < ye < 0.5d0, compute initial un
+(  252) !   and uhat assuming only Fe56 and Ni56
+(  253) !-----------------------------------------------------------------------
+(  254) 
+(  255)   ELSE IF ( ye_nnc_nse_min < ye  .and.  ye <= 0.5d0 ) THEN
+(  256) 
+(  257)     x_Fe              = DMAX1( ( 1.d0 - 2 * ye )/( 1.d0 - 2.d0 * ye_nnc_nse_min ), epsilon )
+(  258)     x_Ni              = DMAX1( 1.d0 - x_Fe, epsilon )
+(  259)     u_Fe              = t * DLOG( x_Fe * a52_1(17) * therm_1 )
+(  260)     u_Ni              = t * DLOG( x_Ni * a52_1(15) * therm_1 )
+(  261)     up                = 0.25d0 * ( 60.d0 * b(15) - 56.d0 * b(17) + 60.d0 * u_Ni/56.d0 - u_Fe )
+(  262)     un                = - up + 2.d0 * b(15) + u_Ni/28.d0
+(  263)     uhat              = un - up
+(  264)     GO TO 50
+(  265) 
+(  266) !-----------------------------------------------------------------------
+(  267) !  If n_flunk <= 1 and ye > 0.5, compute initial un and uhat assuming
+(  268) !   only Ni56 and protons
+(  269) !-----------------------------------------------------------------------
+(  270) 
+(  271)   ELSE ! ye > 0.5d0
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 6
+
+(  272) 
+(  273)     x_Ni             = DMIN1( 2.d0 * ( 1.d0 - ye), three9 )
+(  274)     x_p              = 1.d0 - x_Ni
+(  275)     up               = t * DLOG( 0.5d0 * therm_1 * x_p )
+(  276)     uhat             = 2.d0 * ( b(15) + t/a(15) * DLOG( therm_1 * a52_1(15) * x_Ni ) - up )
+(  277)     un               = uhat + up
+(  278)     GO TO 50
+(  279) 
+(  280)   END IF ! ye < ye_nnc_nse_min
+(  281) 
+(  282) !-----------------------------------------------------------------------
+(  283) !  If n_flunk = 1 and ye_nnc_nse_min < ye < 0.5, compute initial un and
+(  284) !   uhat assuming only Fe56 and alphas
+(  285) !-----------------------------------------------------------------------
+(  286) 
+(  287) ELSE IF ( n_flunk == 1 ) THEN
+(  288)   IF ( ye <= 0.5d0 ) THEN
+(  289) 
+(  290)     x_Fe              = DMAX1( ( 1.d0 - 2 * ye )/( 1.d0 - 2.d0 * ye_nnc_nse_min ), epsilon )
+(  291)     x_a               = DMAX1( 1.d0 - x_Fe, epsilon )
+(  292)     u_Fe              = t * DLOG( x_Fe * a52_1(17) * therm_1 )
+(  293)     u_a               = t * DLOG( x_a  * a52_1( 3) * therm_1 )
+(  294)     un                = 0.25d0 * ( 56.d0 * b(17) - 52.d0 * b(3) + u_Fe - 13.d0 * u_a )
+(  295)     up                = - un + 2.d0 * b(3) + 0.5d0 * u_a
+(  296)     uhat              = un - up
+(  297)     GO TO 50
+(  298) 
+(  299) !-----------------------------------------------------------------------
+(  300) !  If n_flunk = 1 and ye > 0.5, compute initial un and uhat assuming
+(  301) !   only protons and alphas
+(  302) !-----------------------------------------------------------------------
+(  303) 
+(  304)   ELSE ! ye > 0.5d0
+(  305) 
+(  306)     x_a              = DMAX1( 0.5d0 * a(3) * ( 1.d0 - ye ), epsilon )
+(  307)     x_p              = DMAX1( 1.d0 - x_a, epsilon )
+(  308)     up               = t * DLOG( 0.5d0 * therm_1 * x_p )
+(  309)     un               = 2.d0 * b(3) + 0.5d0 * t * DLOG( therm_1 * a52_1(3) * x_a ) - up
+(  310)     uhat             = un - up
+(  311)     GO TO 50
+(  312) 
+(  313)   END IF ! ye <= 0.5d0
+(  314) 
+(  315) !-----------------------------------------------------------------------
+(  316) !  If n_flunk = 2 and ye < 0.5, compute initial un and uhat assuming
+(  317) !   only neutrons and alphas
+(  318) !-----------------------------------------------------------------------
+(  319) 
+(  320) ELSE IF ( n_flunk == 2  .and.  ye < 0.5d0 ) THEN
+(  321) 
+(  322)   IF ( ye < 0.5d0 ) THEN
+(  323) 
+(  324)     x_a              = 0.5d0 * a(3) * ye
+(  325)     x_n              = DMAX1( 1.d0 - x_a, epsilon )
+(  326)     un               = t * DLOG( 0.5d0 * therm_1 * x_n )
+(  327)     uhat             = 2.d0 * un - 2.d0 * b(3) - 0.5d0 * t * DLOG( therm_1 * a52_1(3) * x_a )
+(  328)     GO TO 50
+(  329) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 7
+
+(  330) !-----------------------------------------------------------------------
+(  331) !  If n_flunk = 2 and ye > 0.5, compute initial un and uhat assuming
+(  332) !   only protons and alphas
+(  333) !-----------------------------------------------------------------------
+(  334) 
+(  335)   ELSE ! ye > 0.5d0
+(  336) 
+(  337)     x_a              = DMAX1( 0.5d0 * a(3) * ( 1.d0 - ye ), epsilon )
+(  338)     x_p              = DMAX1( 1.d0 - x_a, epsilon )
+(  339)     up               = t * DLOG( 0.5d0 * therm_1 * x_p )
+(  340)     un               = 2.d0 * b(3) + 0.5d0 * t * DLOG( therm_1 * a52_1(3) * x_a ) - up
+(  341)     uhat             = un - up
+(  342)     GO TO 50
+(  343) 
+(  344)   END IF ! ye < 0.5d0
+(  345) 
+(  346) !-----------------------------------------------------------------------
+(  347) !  If n_flunk = 3, compute initial un and uhat assuming only neutrons
+(  348) !   and protons
+(  349) !-----------------------------------------------------------------------
+(  350) 
+(  351) ELSE IF ( n_flunk == 3 ) THEN
+(  352) 
+(  353)   x_n                = 1.d0 - ye
+(  354)   x_p                = ye
+(  355)   uhat               = t * DLOG( x_n/x_p )
+(  356)   un                 = t * DLOG( 0.5d0 * therm_1 * x_n )
+(  357)   GO TO 50
+(  358) 
+(  359) !-----------------------------------------------------------------------
+(  360) !  If n_flunk = 4, compute initial un and uhat assuming only 28Si
+(  361) !   and protons
+(  362) !-----------------------------------------------------------------------
+(  363) 
+(  364) ELSE IF ( n_flunk == 4 ) THEN
+(  365) 
+(  366)   x_Si               = DMIN1( 2.d0 * ( 1.d0 - ye ),three9 )
+(  367)   x_p                = DMAX1( 1.d0 - x_Si, epsilon )
+(  368)   up                 = t * DLOG( 0.5d0 * therm_1 * x_p )
+(  369)   uhat               = 2.d0 * ( b(8) + t/a(8) * DLOG( therm_1 * a52_1(8) * x_Si ) - up )
+(  370)   un                 = uhat + up
+(  371)   GO TO 50
+(  372) 
+(  373) !-----------------------------------------------------------------------
+(  374) !  If n_flunk = 5, compute initial un and uhat assuming only 56Fe
+(  375) !   and protons
+(  376) !-----------------------------------------------------------------------
+(  377) 
+(  378) ELSE IF ( n_flunk == 5 ) THEN
+(  379) 
+(  380)   x_Fe               = DMIN1( 2.d0 * ye, five9 )
+(  381)   x_p                = DMAX1( 1.d0 - x_Fe, epsilon )
+(  382)   up                 = t * DLOG( 0.5d0 * therm_1 * x_p )
+(  383)   uhat               = ye_nnc_nse_min * ( b(17) + t/a(17) * DLOG( therm_1 * a52_1(17) * x_Fe ) - up )
+(  384)   un                 = uhat + up
+(  385)   GO TO 50
+(  386) 
+(  387) !-----------------------------------------------------------------------
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 8
+
+(  388) !  If n_flunk = 6, in desparation, do a bisection iteration
+(  389) !-----------------------------------------------------------------------
+(  390) 
+(  391) ELSE IF ( n_flunk == 6 ) THEN
+(  392) 
+(  393)   uhat_min           = -100.d0
+(  394)   uhat_max           = 100.d0
+(  395)   
+(  396)   DO it_uhat = 1, it_uhat_max
+(  397)     uhat             = 0.5d0 * ( uhat_min + uhat_max )
+(  398)     un_min           = - 100.d0
+(  399)     un_max           = 100.d0
+(  400)     DO it_un = 1, it_un_max
+(  401)       un             = 0.5d0 * ( un_min + un_max )
+(  402)       DO n = 1, nnc_nse_bck
+(  403)         xn_net(n)    = fexp( DLOG( g(n) * a52(n) * therm ) + ( a(n) * un - z(n) * uhat - a(n) * b(n) )/t )
+(  404)       END DO ! n = 1, nnc_nse_bck
+(  405)       x_tot          = SUM( xn_net(1:nnc_nse_bck) )
+(  406)       tolone         = DLOG(x_tot)
+(  407)       eps            = DABS(tolone)
+(  408)       IF ( eps < tol ) EXIT
+(  409)       IF ( it_un == it_un_max ) THEN
+(  410)         WRITE (*,1001) un_min, un_max, un, x_tot, rmu * d/cm3fm3, t/kmev, ye
+(  411)         STOP
+(  412)       END IF ! it_un == it_un_max
+(  413)       IF ( x_tot < 1.d0 ) THEN
+(  414)         un_min       = un
+(  415)       ELSE
+(  416)         un_max       = un
+(  417)       END IF ! x_tot < 1.d0
+(  418)     END DO ! it_un = 1, it_un_max
+(  419)     z_over_a_sum     = SUM( xn_net(1:nnc_nse_bck) * z_over_a(1:nnc_nse_bck) )
+(  420)     tolza            = DLOG(z_over_a_sum/ye)
+(  421)     eps              = DABS(tolza)
+(  422)     IF ( eps < tol ) EXIT
+(  423)     IF ( it_uhat == it_uhat_max ) THEN
+(  424)       WRITE (*,1001) un_min, un_max, un, x_tot, rmu * d/cm3fm3, t/kmev, ye
+(  425)       STOP
+(  426)     END IF ! it_uhat == it_uhat_max
+(  427)     IF ( z_over_a_sum < ye ) THEN
+(  428)       uhat_max       = uhat
+(  429)     ELSE
+(  430)       uhat_min       = uhat
+(  431)     END IF ! z_over_a_sum < ye
+(  432)   END DO ! it_uhat = 1, it_uhat_max
+(  433) 
+(  434)   excited            = zero
+(  435) 
+(  436)   DO n = 1, nnc_nse_bck
+(  437)     xn_net(n)        = fexp( DLOG( g(n) * a52(n) * therm ) + ( a(n) * un - z(n) * uhat - a(n) * b(n) )/t )
+(  438)   END DO ! n = 1, nnc_nse_bck
+(  439)   x_tot              = SUM( xn_net(1:nnc_nse_bck) )
+(  440)   zza_sum            = SUM( xn_net(1:nnc_nse_bck) * z2_over_a(1:nnc_nse_bck) )
+(  441)   b_sum              = SUM( xn_net(1:nnc_nse_bck) * b(1:nnc_nse_bck) )
+(  442)   a_1_sum            = SUM( xn_net(1:nnc_nse_bck)/a(1:nnc_nse_bck) )
+(  443)   GO TO 200
+(  444) 
+(  445) END IF ! n_flunk <= 1
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 9
+
+(  446) 
+(  447) !-----------------------------------------------------------------------
+(  448) !  Iterate on un and uhat
+(  449) !-----------------------------------------------------------------------
+(  450) 
+(  451)    50 CONTINUE
+(  452) 
+(  453) DO itrat = 1, ncnvge
+(  454) 
+(  455)   excited            = zero
+(  456)   
+(  457)   DO n = 1, nnc_nse_bck
+(  458)     xn_net(n)        = fexp( DLOG( g(n) * a52(n) * therm ) + ( a(n) * un - z(n) * uhat - a(n) * b(n) )/t )
+(  459)   END DO ! n = 1, nnc_nse_bck
+(  460)   x_tot              = SUM( xn_net(1:nnc_nse_bck) )
+(  461)   zza_sum            = SUM( xn_net(1:nnc_nse_bck) * z2_over_a(1:nnc_nse_bck) )
+(  462)   z_sum              = SUM( xn_net(1:nnc_nse_bck) * z(1:nnc_nse_bck) )
+(  463)   a_sum              = SUM( xn_net(1:nnc_nse_bck) * a(1:nnc_nse_bck) )
+(  464)   b_sum              = SUM( xn_net(1:nnc_nse_bck) * b(1:nnc_nse_bck) )
+(  465)   a_1_sum            = SUM( xn_net(1:nnc_nse_bck)/a(1:nnc_nse_bck) )
+(  466)   z_over_a_sum       = SUM( xn_net(1:nnc_nse_bck) * z_over_a(1:nnc_nse_bck) )
+(  467)   tolone             = DLOG(x_tot)
+(  468)   tolza              = DLOG(z_over_a_sum/ye)
+(  469)   eps                = DABS(tolone) + DABS(tolza)
+(  470) 
+(  471) !-----------------------------------------------------------------------
+(  472) !  If eps < tol, done
+(  473) !-----------------------------------------------------------------------
+(  474) 
+(  475)   IF ( eps < tol ) go to 200
+(  476) 
+(  477) !-----------------------------------------------------------------------
+(  478) !  tolone >= 75.  .and.  tolza >= 75., try again with a different guess
+(  479) !-----------------------------------------------------------------------
+(  480) 
+(  481)   IF ( tolone >= 75.  .and.  tolza >= 75. ) THEN
+(  482)     n_flunk          = n_flunk + 1
+(  483)     GO TO 100
+(  484)   END IF ! tolone >= 75.  .and.  tolza >= 75.
+(  485) 
+(  486) !-----------------------------------------------------------------------
+(  487) !  Compute the denominator of the solution matrix
+(  488) !-----------------------------------------------------------------------
+(  489) 
+(  490)   rdenom             = ( ( z_sum/x_tot * z_sum/z_over_a_sum - a_sum/x_tot * zza_sum/z_over_a_sum ) )
+(  491) 
+(  492) !-----------------------------------------------------------------------
+(  493) !  If rdenom = 0, try again with a different guess
+(  494) !-----------------------------------------------------------------------
+(  495) 
+(  496)   IF ( rdenom == zero) THEN
+(  497)     n_flunk          = n_flunk + 1
+(  498)     GO TO 100
+(  499)   END IF ! rdenom == zero
+(  500) 
+(  501) !-----------------------------------------------------------------------
+(  502) !  Compute corrections
+(  503) !-----------------------------------------------------------------------
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 10
+
+(  504) 
+(  505)   rdenom             = t/rdenom
+(  506)   dun                = ( tolone * zza_sum/z_over_a_sum - tolza/x_tot * z_sum) * rdenom
+(  507)   duhat              = ( z_sum/z_over_a_sum * tolone - a_sum/x_tot * tolza) * rdenom
+(  508)   un                 = un + dun
+(  509)   uhat               = uhat + duhat
+(  510)   
+(  511)   IF ( itrat == ncnvge ) THEN
+(  512)     n_flunk          = n_flunk + 1
+(  513)     GO TO 100
+(  514)   END IF ! itrat == ncnvge
+(  515) 
+(  516) END DO ! itrat = 1, ncnvge
+(  517) 
+(  518)   200 CONTINUE
+(  519) 
+(  520) !-----------------------------------------------------------------------
+(  521) !  Store mass fractions
+(  522) !-----------------------------------------------------------------------
+(  523) 
+(  524) xnbck                = xn_net(1)
+(  525) xpbck                = xn_net(2)
+(  526) xabck                = xn_net(3)
+(  527) xhbck                = SUM( xn_net(4:nnc_nse_bck) )
+(  528) 
+(  529) !-----------------------------------------------------------------------
+(  530) !  Compute thermodynamic quantities
+(  531) !-----------------------------------------------------------------------
+(  532) 
+(  533) upack                = zero
+(  534) theta                = zero
+(  535) 
+(  536) xhsum                = xhbck
+(  537) ahbck                = SUM( xn_net(4:nnc_nse_bck) * a(4:nnc_nse_bck) )
+(  538) ahbck                = ahbck/xhsum
+(  539) zabck                = SUM( xn_net(4:nnc_nse_bck) * z_over_a(4:nnc_nse_bck) )
+(  540) 
+(  541) eh                   = zero
+(  542) ph                   = zero
+(  543) sh                   = zero
+(  544) 
+(  545) b_energy             = b_sum
+(  546) b_hvy                = ( b_sum - xn_net(3) * b(3) )/( DABS( 1.d0 - xn_net(1) - xn_net(2) - xn_net(3) ) + epsilon )
+(  547) eh                   = b_sum  + eh
+(  548) pd                   = d * t * a_1_sum
+(  549) ed                   = 1.5 * t * a_1_sum
+(  550) sd                   = 2.5 * a_1_sum - ( un - ye * uhat - b_sum + xhsum * excited )/t
+(  551) 
+(  552) RETURN
+(  553) 
+(  554) END SUBROUTINE net

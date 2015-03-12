@@ -1,0 +1,700 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/LS/loadmx.f
+
+(    1) C23456789012345678901234567890123456789012345678901234567890123456789012
+(    2) C***********************************************************************
+(    3) C
+(    4) C    FILE:         ALOADMX.FOR
+(    5) C    MODULE:       LOADMX
+(    6) C    TYPE:         LOADMX
+(    7) C
+(    8) C    PURPOSE:      LOAD THE LOOK-UP TABLE FOR THE MAXWELL CONSTRUCTION
+(    9) C
+(   10) C    AUTHOR:       F. DOUGLAS SWESTY, Dpt of Physics SUNY @ Stony Brook
+(   11) C
+(   12) C    DATE:         7/16/90
+(   13) C
+(   14) C    CALL LINE:    CALL LOADMX
+(   15) C
+(   16) C    INPUTS:       N/A
+(   17) C
+(   18) C    OUTPUTS       N/A
+(   19) C
+(   20) C    SUBROUTINE CALLS: EOS_M4C
+(   21) C
+(   22) C    INCLUDE FILES:  EOS_M4C.INC, MAXWEL.INC
+(   23) C
+(   24) C
+(   25) C***********************************************************************
+(   26) C23456789012345678901234567890123456789012345678901234567890123456789012
+(   27) C
+(   28)       SUBROUTINE LOADMX(FilePath,lscompress)
+(   29) C
+(   30) C
+(   31)       USE eos_m4c_module
+(   32)       USE maxwel_module
+(   33) C
+(   34)       IMPLICIT NONE
+(   35) C
+(   36) C
+(   37)       INTEGER NTMP, NYE, NYE2, NUM_BP
+(   38)       INTEGER LUN1, LUN2, KK, KMIN
+(   39)       PARAMETER(LUN1=54,LUN2=55)
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 2
+
+(   40) C
+(   41) C
+(   42)       INTEGER FNML1, FNML2
+(   43)       CHARACTER*3   lscompress
+(   44)       CHARACTER*128 FilePath
+(   45)       CHARACTER*128 FNAME1, FNAME2
+(   46)       CHARACTER*128 TERM_STR
+(   47)       logical loaddata
+(   48) C
+(   49)       DOUBLE PRECISION N_SM, SYMM_M, COMP_M, BINDEM, SYM_SM, SIG_SM
+(   50)       DOUBLE PRECISION N_SB, SYMM_B, COMP_B, BINDEB, SYM_SB, SIG_SB
+(   51)       DOUBLE PRECISION MSCDD3, BSCDD3
+(   52) 
+(   53)       DOUBLE PRECISION :: send_buf1(12+2*NUMYE+2*NUMYE*NUMTMP)
+(   54)       DOUBLE PRECISION :: send_buf2(7+2*NUMYE*NBPNTS)
+(   55)       INTEGER i_extent
+(   56) C
+(   57)       INCLUDE 'force.inc'
+../../../External/LS/force.inc
+(    1)*C23456789012345678901234567890123456789012345678901234567890123456789012
+(    2)*C***********************************************************************
+(    3)*C
+(    4)*C    MODULE:       FORCE.INC
+(    5)*C    TYPE:         INCLUDE FILE
+(    6)*C    AUTHOR:       F. DOUGLAS SWESTY
+(    7)*C    DATE:         2/29/92
+(    8)*C
+(    9)*C    PURPOSE:      This include file contains the statement function
+(   10)*C                  definitions for the nuclear force expressions.  To
+(   11)*C                  change the nucleon-nucleon interaction only this file
+(   12)*C                  need be changed.  NOTE:  We have assumed that the
+(   13)*C                  interaction is only density dependent, and that the
+(   14)*C                  INTERACTION HAS NO EXPLICIT TEMPERATURE DEPENDENCE!
+(   15)*C                  To introduce a temperature dependent interaction will
+(   16)*C                  require modification of the temperature derivatives
+(   17)*C                  in the routines NUCEOS & ALFEOS.
+(   18)*C
+(   19)*C
+(   20)*C    CALL LINE:    INCLUDE 'FORCE.INC/LIST'
+(   21)*C
+(   22)*C23456789012345678901234567890123456789012345678901234567890123456789012
+(   23)*C***********************************************************************
+(   24)*C
+(   25)*C                          Nucleon-Nucleon interaction parameters
+(   26)*      DOUBLE PRECISION AA, BB, CC, DD, DD3, SCRDD3
+(   27)*C
+(   28)*C                          Compression modulus, symmetry energy,
+(   29)*C                          binding energy, & saturation density
+(   30)*      DOUBLE PRECISION COMP, SYMM, BIND_E, NSUBS
+(   31)*C
+(   32)*C                          Surface symmetry energy & surface tension
+(   33)*      DOUBLE PRECISION SYM_S, SIG_S
+(   34)*C
+(   35)*C                          Numerical coefficient (called alpha in
+(   36)*C                          the Nucl. Phys. A, vol. 535, pg. 331 paper)
+(   37)*      DOUBLE PRECISION SKYRMC
+(   38)*C
+(   39)*C
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 3
+
+(   40)*C                   This common block contains the variables that
+(   41)*C                   specify the particular interaction used
+(   42)*      COMMON /SKYRME/ AA, BB, CC, DD, DD3, SCRDD3,
+(   43)*     1                COMP, SYMM, SKYRMC, BIND_E,
+(   44)*     2                NSUBS, SYM_S, SIG_S
+(   45)*C
+(   46)*      DOUBLE PRECISION PV_E, DPVEDN, DPVEDX
+(   47)*      DOUBLE PRECISION PV_PR, DPVRDP, DPVRDN
+(   48)*      DOUBLE PRECISION PVP, DPVPDP, DPVPDN, DVP_DX, DVP_DI
+(   49)*      DOUBLE PRECISION PVN, DPVNDP, DPVNDN, DVN_DX, DVN_DI
+(   50)*      DOUBLE PRECISION DENOM, VETERM, VTERM1, VTERM2
+(   51)*      DOUBLE PRECISION PROT_D, NUT_D, DENSIT, NNN, XXX
+(   52)*C
+(   53)*C
+(   54)*C23456789012345678901234567890123456789012345678901234567890123456789012
+(   55)*C-----------------------------------------------------------------------
+(   56)*C                 These terms enter in many of the equations
+(   57)*C-----------------------------------------------------------------------
+(   58)*C
+(   59)*      DENOM(DENSIT)=1.0+DD3*(DENSIT**(DD-1.0D+00))
+(   60)*C
+(   61)*      VETERM(DENSIT)= (CC*(1.0+DD)*(DENSIT**DD)+
+(   62)*     1     2.0D+00*CC*DD3*(DENSIT**(2.0D+00*DD-1.0D+00)))/
+(   63)*     2     (DENOM(DENSIT)**2)
+(   64)*C
+(   65)*C-----------------------------------------------------------------------
+(   66)*C                        Internal energy stuff
+(   67)*C-----------------------------------------------------------------------
+(   68)*C
+(   69)*C                 Internal energy (IE) due to interaction
+(   70)*      PV_E(PROT_D,NUT_D)=AA*((PROT_D+NUT_D)**2)+
+(   71)*     1     4.0D+00*BB*PROT_D*NUT_D+( CC*((PROT_D+NUT_D)**(1.0D+00+DD))/
+(   72)*     2     DENOM(PROT_D+NUT_D) )+PROT_D*DELTAM
+(   73)*C
+(   74)*C                 Derivative of IE w.r.t. density at fixed X
+(   75)*      DPVEDN(NNN,XXX)=2.0D+00*NNN*
+(   76)*     1    (AA+4.0D+00*BB*XXX*(1.0D+00-XXX))+VETERM(NNN)+XXX*DELTAM
+(   77)*C
+(   78)*C                 Derivative of IE w.r.t. X at fixed density
+(   79)*      DPVEDX(NNN,XXX)=4.0D+00*BB*(1.0D+00-2.0D+00*XXX)*(NNN**2)+
+(   80)*     1    NNN*DELTAM
+(   81)*C
+(   82)*C-----------------------------------------------------------------------
+(   83)*C                        Interaction potential stuff
+(   84)*C-----------------------------------------------------------------------
+(   85)*C
+(   86)*C                 Proton & neutron interaction potentials
+(   87)*      PVP(PROT_D,NUT_D)=2.0D+00*AA*(PROT_D+NUT_D)+
+(   88)*     1     4.0D+00*BB*NUT_D+VETERM(PROT_D+NUT_D)+DELTAM
+(   89)*C
+(   90)*      PVN(PROT_D,NUT_D)=2.0D+00*AA*(PROT_D+NUT_D)+
+(   91)*     1     4.0D+00*BB*PROT_D+VETERM(PROT_D+NUT_D)
+(   92)*C
+(   93)*C                 These terms enter in all of the equations
+(   94)*      VTERM1(DENSIT)=CC*(
+(   95)*     1    DD*(1.0D+00+DD)*(DENSIT**(DD-1.0D+00))+
+(   96)*     2    2.0D+00*DD3*(2.0D+00*DD-1.0D0)*(DENSIT**(2.0D0*DD-2.0D0))
+(   97)*     3    )/(DENOM(DENSIT)**2)
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 4
+
+(   98)*      VTERM2(DENSIT)=-2.0D+00*CC*DD3*(
+(   99)*     1    (DD**2-1.0D+00)*(DENSIT**(2.0D+00*DD-2.0D+00))+
+(  100)*     2    2.0D+00*DD3*(DD-1.0D+00)*(DENSIT**(3.0D+00*DD-3.0D+00))
+(  101)*     3    )/(DENOM(DENSIT)**3)
+(  102)*C
+(  103)*C                 Derivative of proton potential w.r.t.
+(  104)*C                 proton density at fixed neutron density
+(  105)*      DPVPDP(PROT_D,NUT_D)=2.0D+00*AA+
+(  106)*     1    VTERM1(PROT_D+NUT_D)+VTERM2(PROT_D+NUT_D)
+(  107)*C
+(  108)*C                 Derivative of proton potential w.r.t.
+(  109)*C                 neutron density at fixed proton density
+(  110)*      DPVPDN(PROT_D,NUT_D)=2.0D+00*AA+4.0D+00*BB+
+(  111)*     1    VTERM1(PROT_D+NUT_D)+VTERM2(PROT_D+NUT_D)
+(  112)*C
+(  113)*C                 Derivative of proton potential w.r.t.
+(  114)*C                 X at fixed density
+(  115)*cc      DVP_DX(NNN,XXX)=-4.0D+00*BB*NNN
+(  116)*C
+(  117)*C                 Derivative of proton potential w.r.t.
+(  118)*C                 density at fixed X
+(  119)*cc      DVP_DI(NNN,XXX)=2.0D+00*AA+4.0D+00*BB*(1.0D+00-XXX)+
+(  120)*cc     1    VTERM1(NNN)+VTERM2(NNN)
+(  121)*C
+(  122)*C                 Derivative of neutron potential w.r.t.
+(  123)*C                 neutron density at fixed proton density
+(  124)*      DPVNDN(PROT_D,NUT_D)=2.0D+00*AA+
+(  125)*     1    VTERM1(PROT_D+NUT_D)+VTERM2(PROT_D+NUT_D)
+(  126)*C
+(  127)*C                 Derivative of neutron potential w.r.t.
+(  128)*C                 proton density at fixed neutron density
+(  129)*      DPVNDP(PROT_D,NUT_D)=2.0D+00*AA+4.0D+00*BB+
+(  130)*     1    VTERM1(PROT_D+NUT_D)+VTERM2(PROT_D+NUT_D)
+(  131)*C
+(  132)*C                 Derivative of neutron potential w.r.t.
+(  133)*C                 X at fixed density
+(  134)*cc      DVN_DX(NNN,XXX)=4.0D+00*BB*NNN
+(  135)*C
+(  136)*C                 Derivative of neutron potential w.r.t.
+(  137)*C                 density at fixed X
+(  138)*cc      DVN_DI(NNN,XXX)=2.0D+00*AA+4.0D+00*BB*XXX+
+(  139)*cc     1    VTERM1(NNN)+VTERM2(NNN)
+(  140)*C
+(  141)*C-----------------------------------------------------------------------
+(  142)*C                        Pressure potential stuff
+(  143)*C-----------------------------------------------------------------------
+(  144)*C
+(  145)*C                 Interaction contribution to the pressure (IP)
+(  146)*      PV_PR(PROT_D,NUT_D)=PROT_D*PVP(PROT_D,NUT_D)+
+(  147)*     1    NUT_D*PVN(PROT_D,NUT_D)-PV_E(PROT_D,NUT_D)
+(  148)*C
+(  149)*C                 Derivative of IP w.r.t. proton density at
+(  150)*C                 fixed neutron density
+(  151)*      DPVRDP(PROT_D,NUT_D)=PROT_D*
+(  152)*     1    DPVPDP(PROT_D,NUT_D)+NUT_D*DPVNDP(PROT_D,NUT_D)
+(  153)*C
+(  154)*C                 Derivative of IP w.r.t. neutron density at
+(  155)*C                 fixed proton density
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 5
+
+(  156)*      DPVRDN(PROT_D,NUT_D)=PROT_D*
+(  157)*     1    DPVPDN(PROT_D,NUT_D)+NUT_D*DPVNDN(PROT_D,NUT_D)
+(  158)*C
+(  159)*C
+(   58)       data loaddata /.false./
+(   59) C
+(   60) C
+(   61)           if ( loaddata ) return
+(   62)       FNAME1        = TRIM(FilePath)//'/max'//
+(   63)      &      lscompress//'.atb'
+(   64)       FNML1         = 42
+(   65)       FNAME2        = TRIM(FilePath)//'/bd'//
+(   66)      &      lscompress//'.atb'
+(   67)       FNML2         = 41
+(   68)       loaddata      = .true.
+(   69)       WRITE(*,*) "Reading LS EoS data files:"
+(   70)       WRITE(*,*) FNAME1
+(   71)       WRITE(*,*) FNAME2
+(   72) 
+(   73)       i_extent = 12+2*NUMYE+2*NUMYE*NUMTMP
+(   74) 
+(   75) !     IF ( myid .eq. 0) THEN
+(   76) C
+(   77) C
+(   78) C
+(   79) C-----------------------------------------------------------------------
+(   80) C        Read the file Maxwell construction data file
+(   81) C-----------------------------------------------------------------------
+(   82) C
+(   83) C
+(   84) C
+(   85)       OPEN(UNIT=LUN1,FILE=FNAME1(1:FNML1),STATUS='OLD')
+(   86) C
+(   87) C
+(   88) C
+(   89) C
+(   90) C
+(   91) C
+(   92)       READ(LUN1,*) N_SM, SYMM_M
+(   93)       READ(LUN1,*) COMP_M,BINDEM
+(   94)       READ(LUN1,*) SYM_SM, SIG_SM
+(   95) 
+(   96)       send_buf1(1) = N_SM
+(   97)       send_buf1(2) = SYMM_M
+(   98)       send_buf1(3) = COMP_M
+(   99)       send_buf1(4) = BINDEM
+(  100)       send_buf1(5) = SYM_SM
+(  101)       send_buf1(6) = SIG_SM
+(  102) C
+(  103) C
+(  104) C
+(  105) C
+(  106)       READ(LUN1,*) NTMP,NYE
+(  107)       READ(LUN1,*) T_LOW,T_HI
+(  108)       READ(LUN1,*) Y_LOW,Y_HI
+(  109) 
+(  110)       send_buf1(7) = T_LOW
+(  111)       send_buf1(8) = T_HI
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 6
+
+(  112)       send_buf1(9) = Y_LOW
+(  113)       send_buf1(10) = Y_HI
+(  114) C
+(  115) C
+(  116) C
+(  117)       IF((NTMP.NE.NUMTMP).OR.(NYE.NE.NUMYE)) THEN
+(  118)         WRITE(*,*) 'LOADMX:  MXWL TABLE IS INCOMPATIBLE WITH ARRAYS'
+(  119)         STOP
+(  120)       ENDIF
+(  121) C
+(  122) C
+(  123)       DO 101 J=1,NUMYE,1
+(  124)         DO 100 I=1,NUMTMP,3
+(  125)           KMIN = MIN0(I+2,NUMTMP)
+(  126)           READ(LUN1,*) (BRYLOW(KK,J),KK=I,KMIN,1)
+(  127)  100    CONTINUE
+(  128)  101  CONTINUE
+(  129) C
+(  130) C
+(  131)       DO 103 J=1,NUMYE,1
+(  132)         DO 102 I=1,NUMTMP,3
+(  133)           KMIN = MIN0(I+2,NUMTMP)
+(  134)           READ(LUN1,*) (BRYHI(KK,J),KK=I,KMIN,1)
+(  135)  102    CONTINUE
+(  136)  103  CONTINUE
+(  137) C
+(  138) C
+(  139) C
+(  140)       DO 104 I=1,NUMYE,3
+(  141)         KMIN = MIN0(I+2,NUMYE)
+(  142)         READ(LUN1,*) (T_H(KK),KK=I,KMIN,1)
+(  143)  104  CONTINUE
+(  144) C
+(  145) C
+(  146)       DO 105 I=1,NUMYE,3
+(  147)         KMIN = MIN0(I+2,NUMYE)
+(  148)         READ(LUN1,*) (D_H(KK),KK=I,KMIN,1)
+(  149)  105  CONTINUE
+(  150) C
+(  151)       READ(LUN1,*) YCUT
+(  152)       READ(LUN1,*) MSCDD3
+(  153) C
+(  154)       send_buf1(11) = YCUT
+(  155)       send_buf1(12) = MSCDD3
+(  156) C
+(  157)       CLOSE(UNIT=LUN1,STATUS='KEEP')
+(  158) 
+(  159)       KK = 13
+(  160)       DO I = 1,NUMYE
+(  161)         send_buf1(KK) = T_H(I)
+(  162)         KK = KK + 1
+(  163)       ENDDO
+(  164)       DO I = 1,NUMYE
+(  165)         send_buf1(KK) = D_H(I)
+(  166)         KK = KK + 1
+(  167)       ENDDO
+(  168)       DO J=1,NUMYE
+(  169)         DO I=1,NUMTMP
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 7
+
+(  170)           send_buf1(KK) = BRYLOW(I,J)
+(  171)           KK = KK + 1
+(  172)         ENDDO
+(  173)       ENDDO
+(  174)       DO J=1,NUMYE
+(  175)         DO I=1,NUMTMP
+(  176)           send_buf1(KK) = BRYHI(I,J)
+(  177)           KK = KK + 1
+(  178)         ENDDO
+(  179)       ENDDO
+(  180)       KK = KK - 1
+(  181) C
+(  182)       IF (i_extent .NE. KK ) THEN
+(  183)        TERM_STR = "Miss filled send_buf1 in loadmx."
+(  184)        WRITE(*,*) TERM_STR
+(  185) !      CALL TERMINATE( TERM_STR )
+(  186)        STOP
+(  187)       ENDIF
+(  188) 
+(  189) !     ENDIF !myid == 0
+(  190) 
+(  191) !     CALL MPI_BCAST( send_buf1 , i_extent, MPI_DOUBLE_PRECISION, 0,
+(  192) !    &                     MPI_COMM_WORLD, ierr)
+(  193) 
+(  194) 
+(  195)       N_SM = send_buf1(1) 
+(  196)       SYMM_M = send_buf1(2) 
+(  197)       COMP_M = send_buf1(3) 
+(  198)       BINDEM = send_buf1(4) 
+(  199)       SYM_SM = send_buf1(5) 
+(  200)       SIG_SM = send_buf1(6) 
+(  201)       T_LOW = send_buf1(7) 
+(  202)       T_HI = send_buf1(8) 
+(  203)       Y_LOW = send_buf1(9) 
+(  204)       Y_HI = send_buf1(10) 
+(  205)       YCUT = send_buf1(11) 
+(  206)       MSCDD3 = send_buf1(12) 
+(  207)       KK = 13
+(  208)       DO I = 1,NUMYE
+(  209)         T_H(I) = send_buf1(KK)
+(  210)         KK = KK + 1
+(  211)       ENDDO
+(  212)       DO I = 1,NUMYE
+(  213)         D_H(I) = send_buf1(KK)
+(  214)         KK = KK + 1
+(  215)       ENDDO
+(  216)       DO J=1,NUMYE
+(  217)         DO I=1,NUMTMP
+(  218)           BRYLOW(I,J) = send_buf1(KK)
+(  219)           KK = KK + 1
+(  220)         ENDDO
+(  221)       ENDDO
+(  222)       DO J=1,NUMYE
+(  223)         DO I=1,NUMTMP
+(  224)           BRYHI(I,J) = send_buf1(KK)
+(  225)           KK = KK + 1
+(  226)         ENDDO
+(  227)       ENDDO
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 8
+
+(  228)       KK = KK - 1
+(  229) C
+(  230) C
+(  231)       WRITE(*,*)
+(  232)       WRITE(*,*) '<<LOADMX:  MAXWELL CON. TABLE IS INITIALIZED>>'
+(  233)       WRITE(*,*)
+(  234) C
+(  235) C
+(  236) C
+(  237) C-----------------------------------------------------------------------
+(  238) C        Read the file Boundary data file
+(  239) C-----------------------------------------------------------------------
+(  240) C
+(  241) C
+(  242) !     IF ( myid .eq. 0 ) THEN
+(  243) C
+(  244)       OPEN(UNIT=LUN2,FILE=FNAME2(1:FNML2),STATUS='OLD')
+(  245) C
+(  246) C
+(  247) C
+(  248) C
+(  249)       READ(LUN2,*) N_SB,SYMM_B
+(  250)       READ(LUN2,*) COMP_B,BINDEB
+(  251)       READ(LUN2,*) SYM_SB,SIG_SB
+(  252) C
+(  253) C
+(  254) C
+(  255) C
+(  256) C
+(  257) C
+(  258)       READ(LUN2,*) NUM_BP,NYE2
+(  259)       READ(LUN2,*) LNL,LNH,LNC
+(  260)       READ(LUN2,*) Y_LOW2,Y_HI2
+(  261) C
+(  262) C
+(  263)       IF((NBPNTS.NE.NUM_BP).OR.(NYE2.NE.NUMYE)) THEN
+(  264)         WRITE(*,*) 'LOADMX:  BNDY TABLE IS INCOMPATIBLE WITH ARRAYS'
+(  265)         STOP
+(  266)       ENDIF
+(  267) C
+(  268)       IF(ABS(LNL-LNLOW).GT.1.0D-10) THEN
+(  269)         WRITE(*,*) 'LOADMX:  LOWER END OF PHASE BNDY IS INCONSIST.'
+(  270)         STOP
+(  271)       ENDIF
+(  272) C
+(  273) C
+(  274)       IF(ABS(LNH-LNHI).GT.1.0D-10) THEN
+(  275)         WRITE(*,*) 'LOADMX:  UPPER END OF PHASE BNDY IS INCONSIST.'
+(  276)         STOP
+(  277)       ENDIF
+(  278) C
+(  279) C
+(  280)       IF(ABS(LNC-LNCUT).GT.1.0D-10) THEN
+(  281)         WRITE(*,*) 'LOADMX:  MID CUT OF PHASE BNDY IS INCONSIST.'
+(  282)         STOP
+(  283)       ENDIF
+(  284) C
+(  285)       IF(ABS(Y_LOW-Y_LOW2).GT.1.0D-10) THEN
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 9
+
+(  286)         WRITE(*,*) 'LOADMX:  LOWER YE LIMITS ARE INCONSIST.'
+(  287)         STOP
+(  288)       ENDIF
+(  289) C
+(  290)       IF(ABS(Y_HI-Y_HI2).GT.1.0D-10) THEN
+(  291)         WRITE(*,*) 'LOADMX:  UPPER YE LIMITS ARE INCONSIST.'
+(  292)         STOP
+(  293)       ENDIF
+(  294) C
+(  295)       send_buf2(1) = N_SB
+(  296)       send_buf2(2) = SYMM_B
+(  297)       send_buf2(3) = COMP_B
+(  298)       send_buf2(4) = BINDEB
+(  299)       send_buf2(5) = SYM_SB
+(  300)       send_buf2(6) = SIG_SB
+(  301) C
+(  302)       DO 201 J=1,NUMYE,1
+(  303)         DO 200 I=1,NBPNTS,3
+(  304)           KMIN = MIN0(I+2,NBPNTS)
+(  305)           READ(LUN2,*) (LBOUND(KK,J),KK=I,KMIN,1)
+(  306)  200    CONTINUE
+(  307)  201  CONTINUE
+(  308) C
+(  309) C
+(  310)       DO 203 J=1,NUMYE,1
+(  311)         DO 202 I=1,NBPNTS,3
+(  312)           KMIN = MIN0(I+2,NBPNTS)
+(  313)           READ(LUN2,*) (UBOUND(KK,J),KK=I,KMIN,1)
+(  314)  202    CONTINUE
+(  315)  203  CONTINUE
+(  316) C
+(  317)       READ(LUN2,*) BSCDD3
+(  318)       send_buf2(7) = BSCDD3
+(  319) C
+(  320)       IF(ABS(MSCDD3-BSCDD3).GT.1.0D-10) THEN
+(  321)         WRITE(*,*) 'LOADMX:  SCRDD3 VALUES ARE INCONSIST.'
+(  322)         STOP
+(  323)       ENDIF
+(  324) C
+(  325)       KK = 8
+(  326)       DO J=1,NUMYE
+(  327)         DO I=1,NBPNTS
+(  328)           send_buf2(KK) = LBOUND(I,J)
+(  329)           KK = KK + 1
+(  330)         ENDDO
+(  331)       ENDDO
+(  332)       DO J=1,NUMYE
+(  333)         DO I=1,NBPNTS
+(  334)           send_buf2(KK) = UBOUND(I,J)
+(  335)           KK = KK + 1
+(  336)         ENDDO
+(  337)       ENDDO
+(  338) C
+(  339)       KK = KK - 1
+(  340) C
+(  341)       CLOSE(UNIT=LUN2,STATUS='KEEP')
+(  342) C
+(  343) !     ENDIF   ! myid == 0
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 10
+
+(  344) 
+(  345)       i_extent = 7+2*NUMYE*NBPNTS
+(  346)       IF (i_extent .NE. KK ) THEN !.AND. myid .eq. 0) THEN
+(  347)        WRITE(*,*) "Miss filled send_buf2 in loadmx."
+(  348)        STOP
+(  349)       ENDIF
+(  350) 
+(  351) !     CALL MPI_BCAST( send_buf2 , i_extent, MPI_DOUBLE_PRECISION, 0,
+(  352) !    &                     MPI_COMM_WORLD, ierr)
+(  353) 
+(  354) 
+(  355)       N_SB = send_buf2(1)
+(  356)       SYMM_B = send_buf2(2)
+(  357)       COMP_B = send_buf2(3)
+(  358)       BINDEB = send_buf2(4)
+(  359)       SYM_SB = send_buf2(5)
+(  360)       SIG_SB = send_buf2(6)
+(  361)       BSCDD3 = send_buf2(7)
+(  362)       KK = 8
+(  363)       DO J=1,NUMYE
+(  364)         DO I=1,NBPNTS
+(  365)           LBOUND(I,J) = send_buf2(KK)
+(  366)           KK = KK + 1
+(  367)         ENDDO
+(  368)       ENDDO
+(  369)       DO J=1,NUMYE
+(  370)         DO I=1,NBPNTS
+(  371)           UBOUND(I,J) = send_buf2(KK)
+(  372)           KK = KK + 1
+(  373)         ENDDO
+(  374)       ENDDO
+(  375) C
+(  376)       WRITE(*,*)
+(  377)       WRITE(*,*) '<<LOADMX:  BOUNDARY TABLE IS INITIALIZED>>'
+(  378)       WRITE(*,*)
+(  379) C
+(  380) C
+(  381) C
+(  382) C-----------------------------------------------------------------------
+(  383) C                  All arrays are now loaded so return
+(  384) C-----------------------------------------------------------------------
+(  385) C
+(  386)       SCRDD3 = BSCDD3
+(  387)       N_S = N_SM
+(  388)       NSUBS = N_SM
+(  389)       SYMM = SYMM_M
+(  390)       COMP = COMP_M
+(  391)       BIND_E = BINDEM
+(  392)       SYM_S = SYM_SM
+(  393)       SIG_S = SIG_SM
+(  394) C
+(  395) c20      SKYRMC=(.3*((HBAR*C)**2)/MASSN)*(1.5*N_S*(PI**2))**OVR23
+(  396) c20      DD = (COMP+2.0*SKYRMC)/(3.0*SKYRMC+9.0*BIND_E)
+(  397) c20      BB = (SKYRMC*(2.0**OVR23-1.0)-SYMM)/N_S
+(  398) c20      AA = (OVR23*SKYRMC-DD*(SKYRMC+BIND_E))/(N_S*(DD-1.0))-BB
+(  399) c20      CC = (COMP+2.0*SKYRMC)/(9.0*DD*(DD-1.0)*N_S**DD)
+(  400)       SKYRMC=(.3*((HBAR*C)**2)/MASSN)*(1.5*N_S*(PI**2))**OVR23
+(  401)       DD = (COMP+2.0*SKYRMC+SCRDD3*(COMP-4.0*SKYRMC-18.0*BIND_E))/
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:53      page 11
+
+(  402)      1    ((1.0-SCRDD3)*(3.0*SKYRMC+9.0*BIND_E))
+(  403)       BB = (SKYRMC*(2.0**OVR23-1.0)-SYMM)/N_S
+(  404)       CC = ((OVR3*SKYRMC+BIND_E)*(1.0+SCRDD3)**2)/((N_S**DD)*(DD-1.0))
+(  405)       AA = ((OVR23*SKYRMC-DD*(SKYRMC+BIND_E)-SCRDD3*(OVR3*SKYRMC+BIND_E)
+(  406)      1    )/(N_S*(DD-1.0)) )-BB
+(  407)       DD3 = SCRDD3/(N_S**(DD-1.0))
+(  408) C23456789012345678901234567890123456789012345678901234567890123456789012
+(  409) C
+(  410) C
+(  411)       WRITE(*,*)
+(  412)       WRITE(*,*) '<<LOADMX:  SKYRME PARAMETERS FOR THIS RUN ARE:>>'
+(  413)       WRITE(*,*) 'ABCD: ',AA,BB,CC,DD,SCRDD3
+(  414)       WRITE(*,*) ' Satur. density, symmetry engy, & compression
+(  415)      1 mod.:'
+(  416)       WRITE(*,*) N_SM, SYMM_M, COMP_M
+(  417)       WRITE(*,*) N_SB, SYMM_B, COMP_B
+(  418)       WRITE(*,*) ' Binding engy, surf. symm. engy, & surface
+(  419)      1 tension:'
+(  420)       WRITE(*,*) BINDEM,SYM_SM,SIG_SM
+(  421)       WRITE(*,*) BINDEB,SYM_SB,SIG_SB
+(  422) C
+(  423)       WRITE(*,*)
+(  424) C
+(  425) C
+(  426)       CALL INITFERM(FilePath)
+(  427) C
+(  428)       WRITE(*,*)
+(  429)       WRITE(*,*) '<<LOADMX: FERMI INTEGRAL TABLES ARE INITIALIZED>>'
+(  430)       WRITE(*,*)
+(  431) C
+(  432) C
+(  433)       RETURN
+(  434) C
+(  435)       END SUBROUTINE LOADMX

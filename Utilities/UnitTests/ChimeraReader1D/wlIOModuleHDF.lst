@@ -1,0 +1,603 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../Distributions/Source/wlIOModuleHDF.f90
+
+(    1) MODULE wlIOModuleHDF
+(    2) 
+(    3)   USE wlKindModule, ONLY: dp
+(    4)   USE HDF5 
+(    5)   USE wlThermoStateModule
+(    6)   USE wlDependentVariablesModule
+(    7)   USE wlEquationOfStateTableModule
+(    8) 
+(    9)   implicit none
+(   10)   PRIVATE
+(   11)   INTEGER                                     :: hdferr
+(   12) 
+(   13)   PUBLIC InitializeHDF
+(   14)   PUBLIC FinalizeHDF
+(   15)   PUBLIC OpenFileHDF
+(   16)   PUBLIC CloseFileHDF
+(   17)   PUBLIC OpenGroupHDF
+(   18)   PUBLIC CloseGroupHDF
+(   19)   PUBLIC WriteHeaderHDF
+(   20)   PUBLIC WriteEOSTableHDF
+(   21)   PUBLIC WriteThermoStateHDF
+(   22)   PUBLIC WriteDependentVariablesHDF
+(   23)   PUBLIC ReadThermoStateHDF
+(   24)   PUBLIC ReadDependentVariablesHDF
+(   25)   PUBLIC ReadDimensionsHDF
+(   26)   PUBLIC ReadNumberVariablesHDF
+(   27)   PUBLIC WriteEquationOfStateTableHDF
+(   28)   PUBLIC ReadEquationOfStateTableHDF
+(   29) 
+(   30) CONTAINS
+(   31) 
+(   32)   SUBROUTINE InitializeHDF( )
+(   33) 
+(   34)     CALL h5open_f( hdferr )
+(   35) 
+(   36)   END SUBROUTINE InitializeHDF 
+(   37) 
+(   38)   SUBROUTINE FinalizeHDF( )
+(   39) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 2
+
+(   40)     CALL h5close_f( hdferr )
+(   41) 
+(   42)   END SUBROUTINE FinalizeHDF 
+(   43) 
+(   44)   SUBROUTINE OpenFileHDF( FileName, NewFile, file_id )  
+(   45) 
+(   46)     CHARACTER(len=*), INTENT(in)               :: FileName
+(   47)     LOGICAL, INTENT(in)                        :: NewFile
+(   48)     INTEGER(HID_T), INTENT(out)                :: file_id
+(   49) 
+(   50)     IF ( NewFile ) THEN
+(   51) 
+(   52)       CALL h5fcreate_f( TRIM( FileName ), H5F_ACC_TRUNC_F, file_id, hdferr)
+(   53) 
+(   54)     ELSE
+(   55) 
+(   56)       CALL h5fopen_f( TRIM( FileName ), H5F_ACC_RDONLY_F, file_id, hdferr)
+(   57)     
+(   58)     END IF
+(   59) 
+(   60)   END SUBROUTINE OpenFileHDF
+(   61) 
+(   62)   SUBROUTINE CloseFileHDF( file_id )  
+(   63) 
+(   64)     INTEGER(HID_T), INTENT(in)                  :: file_id
+(   65) 
+(   66)     CALL h5fclose_f( file_id, hdferr )
+(   67) 
+(   68)   END SUBROUTINE CloseFileHDF
+(   69) 
+(   70)   SUBROUTINE OpenGroupHDF( GroupName, NewGroup, file_id, group_id )  
+(   71) 
+(   72)     CHARACTER(len=*), INTENT(in)                :: GroupName
+(   73)     LOGICAL, INTENT(in)                         :: NewGroup
+(   74)     INTEGER(HID_T), INTENT(in)                  :: file_id
+(   75)     INTEGER(HID_T), INTENT(out)                 :: group_id
+(   76) 
+(   77)     IF ( NewGroup ) THEN
+(   78) 
+(   79)       CALL h5gcreate_f( file_id, TRIM( GroupName ), group_id, hdferr )
+(   80) 
+(   81)     ELSE
+(   82) 
+(   83)       CALL h5gopen_f( file_id, TRIM( GroupName ), group_id, hdferr )
+(   84)     
+(   85)     END IF
+(   86) 
+(   87)   END SUBROUTINE OpenGroupHDF
+(   88) 
+(   89)   SUBROUTINE CloseGroupHDF( group_id )  
+(   90) 
+(   91)     INTEGER(HID_T), INTENT(in)                  :: group_id
+(   92) 
+(   93)     CALL h5gclose_f( group_id, hdferr )
+(   94) 
+(   95)   END SUBROUTINE CloseGroupHDF
+(   96) 
+(   97)   SUBROUTINE WriteHeaderHDF( file_id )
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 3
+
+(   98) 
+(   99)     INTEGER(HID_T), INTENT(in)                  :: file_id
+(  100)  
+(  101)   END SUBROUTINE WriteHeaderHDF 
+(  102) 
+(  103)   SUBROUTINE WriteEOSTableHDF( ThermoState, file_id )
+(  104) 
+(  105)     INTEGER(HID_T), INTENT(in)                  :: file_id
+(  106)     TYPE(ThermoStateType), INTENT(in)           :: ThermoState
+(  107) 
+(  108)     INTEGER(HID_T) :: group_id
+(  109)    
+(  110)     CALL h5gcreate_f( file_id, "EOSTable", group_id, hdferr ) 
+(  111) 
+(  112)     CALL WriteThermoStateHDF( ThermoState, group_id ) 
+(  113)  
+(  114)     CALL h5gclose_f( group_id, hdferr ) 
+(  115) 
+(  116)   END SUBROUTINE WriteEOSTableHDF
+(  117) 
+(  118)   SUBROUTINE Write1dHDF_double( name, values, group_id, datasize, &
+(  119)                desc_option, unit_option)
+(  120) 
+(  121)     CHARACTER(*), INTENT(in)                    :: name
+(  122)     CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+(  123)     CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+(  124)     INTEGER(HID_T)                              :: group_id
+(  125)     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
+(  126)     REAL(dp), DIMENSION(:), INTENT(in)          :: values
+(  127)    
+(  128)     INTEGER(HID_T)                              :: dataset_id
+(  129)     INTEGER(HID_T)                              :: dataspace_id
+(  130)     INTEGER(HID_T)                              :: atype_id
+(  131)     INTEGER(HID_T)                              :: attr_id
+(  132)     INTEGER(SIZE_T)                             :: attr_len
+(  133)     INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+(  134)   
+(  135)     
+(  136)     CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
+(  137) 
+(  138)     CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
+(  139)            dataspace_id, dataset_id, hdferr )
+(  140) 
+(  141)     CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
+(  142)            values, datasize, hdferr )
+(  143) 
+(  144)     CALL h5sclose_f( dataspace_id, hdferr ) 
+(  145) 
+(  146)     CALL h5dclose_f( dataset_id, hdferr )
+(  147) 
+(  148)   END SUBROUTINE Write1dHDF_double
+(  149) 
+(  150)   SUBROUTINE Read1dHDF_double( name, values, group_id, datasize )
+(  151) 
+(  152)     CHARACTER(*), INTENT(in)                    :: name
+(  153)     INTEGER(HID_T)                               :: group_id
+(  154)     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+(  155)     REAL(dp), DIMENSION(:), INTENT(out)          :: values
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 4
+
+(  156)     
+(  157)     INTEGER(HID_T)                               :: dataset_id
+(  158)   
+(  159)     CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+(  160)     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, &
+(  161)                    values, datasize, hdferr )
+(  162)     CALL h5dclose_f( dataset_id, hdferr )
+(  163) 
+(  164)   END SUBROUTINE Read1dHDF_double
+(  165)   
+(  166)   SUBROUTINE Write3dHDF_double( name, values, group_id, datasize, &
+(  167)                desc_option, unit_option)
+(  168) 
+(  169)     CHARACTER(*), INTENT(in)                    :: name
+(  170)     CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+(  171)     CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+(  172)     INTEGER(HID_T)                              :: group_id
+(  173)     INTEGER(HSIZE_T), DIMENSION(3), INTENT(in)  :: datasize
+(  174)     REAL(dp), DIMENSION(:,:,:), INTENT(in)      :: values
+(  175)    
+(  176)     INTEGER(HID_T)                              :: dataset_id
+(  177)     INTEGER(HID_T)                              :: dataspace_id
+(  178)     INTEGER(HID_T)                              :: atype_id
+(  179)     INTEGER(HID_T)                              :: attr_id
+(  180)     INTEGER(SIZE_T)                             :: attr_len
+(  181)     INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+(  182)   
+(  183)     
+(  184)     CALL h5screate_simple_f( 3, datasize, dataspace_id, hdferr )
+(  185) 
+(  186)     CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
+(  187)            dataspace_id, dataset_id, hdferr )
+(  188) 
+(  189)     CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
+(  190)            values, datasize, hdferr )
+(  191) 
+(  192)     CALL h5sclose_f( dataspace_id, hdferr ) 
+(  193) 
+(  194)     CALL h5dclose_f( dataset_id, hdferr )
+(  195) 
+(  196)   END SUBROUTINE Write3dHDF_double
+(  197) 
+(  198)   SUBROUTINE Read3dHDF_double( name, values, group_id, datasize )
+(  199) 
+(  200)     CHARACTER(*), INTENT(in)                     :: name
+(  201)     INTEGER(HID_T)                               :: group_id
+(  202)     INTEGER(HSIZE_T), DIMENSION(3), INTENT(in)   :: datasize
+(  203)     REAL(dp), DIMENSION(:,:,:), INTENT(out)      :: values
+(  204)     
+(  205)     INTEGER(HID_T)                               :: dataset_id
+(  206)   
+(  207)     CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+(  208)     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, &
+(  209)                    values, datasize, hdferr )
+(  210)     CALL h5dclose_f( dataset_id, hdferr )
+(  211) 
+(  212)   END SUBROUTINE Read3dHDF_double
+(  213)   
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 5
+
+(  214)   SUBROUTINE Write1dHDF_integer( name, values, group_id, datasize, &
+(  215)                desc_option, unit_option)
+(  216) 
+(  217)     CHARACTER(*), INTENT(in)                    :: name
+(  218)     CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+(  219)     CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+(  220)     INTEGER(HID_T)                              :: group_id
+(  221)     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
+(  222)     INTEGER, DIMENSION(:), INTENT(in)           :: values
+(  223)    
+(  224)     INTEGER(HID_T)                              :: dataset_id
+(  225)     INTEGER(HID_T)                              :: dataspace_id
+(  226)     INTEGER(HID_T)                              :: atype_id
+(  227)     INTEGER(HID_T)                              :: attr_id
+(  228)     INTEGER(SIZE_T)                             :: attr_len
+(  229)     INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+(  230)   
+(  231)     
+(  232)     CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
+(  233) 
+(  234)     CALL h5dcreate_f( group_id, name, H5T_NATIVE_INTEGER, &
+(  235)            dataspace_id, dataset_id, hdferr )
+(  236) 
+(  237)     CALL h5dwrite_f( dataset_id, H5T_NATIVE_INTEGER, &
+(  238)            values, datasize, hdferr )
+(  239) 
+(  240)     CALL h5sclose_f( dataspace_id, hdferr ) 
+(  241) 
+(  242)     CALL h5dclose_f( dataset_id, hdferr )
+(  243) 
+(  244)   END SUBROUTINE Write1dHDF_integer
+(  245) 
+(  246)   SUBROUTINE Read1dHDF_integer( name, values, group_id, datasize )
+(  247) 
+(  248)     CHARACTER(*), INTENT(in)                    :: name
+(  249)     INTEGER(HID_T)                               :: group_id
+(  250)     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+(  251)     INTEGER, DIMENSION(:), INTENT(out)           :: values
+(  252)     
+(  253)     INTEGER(HID_T)                               :: dataset_id
+(  254)   
+(  255)     CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+(  256)     CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
+(  257)                    values, datasize, hdferr )
+(  258)     CALL h5dclose_f( dataset_id, hdferr )
+(  259) 
+(  260)   END SUBROUTINE Read1dHDF_integer
+(  261) 
+(  262)   SUBROUTINE Write1dHDF_string( name, values, group_id, datasize, &
+(  263)                desc_option, unit_option)
+(  264) 
+(  265)     CHARACTER(*), INTENT(in)                    :: name
+(  266)     CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+(  267)     CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+(  268)     INTEGER(HID_T)                              :: group_id
+(  269)     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
+(  270)     CHARACTER(len=*), DIMENSION(:), INTENT(in)  :: values
+(  271)    
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 6
+
+(  272)     INTEGER(HSIZE_T)                            :: sizechar
+(  273)     INTEGER(HID_T)                              :: dataset_id
+(  274)     INTEGER(HID_T)                              :: dataspace_id
+(  275)     INTEGER(HID_T)                              :: atype_id
+(  276)     INTEGER(HID_T)                              :: attr_id
+(  277)     INTEGER(SIZE_T)                             :: attr_len
+(  278)     INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+(  279)   
+(  280)     
+(  281)     CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
+(  282)     sizechar = LEN( values(1) )
+(  283) 
+(  284)     CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
+(  285)     CALL h5dcreate_f( group_id, name, H5T_NATIVE_CHARACTER, &
+(  286)            dataspace_id, dataset_id, hdferr )
+(  287) 
+(  288)     CALL h5dwrite_f( dataset_id, H5T_NATIVE_CHARACTER, &
+(  289)            values, datasize, hdferr )
+(  290) 
+(  291)     CALL h5sclose_f( dataspace_id, hdferr ) 
+(  292) 
+(  293)     CALL h5dclose_f( dataset_id, hdferr )
+(  294) 
+(  295)   END SUBROUTINE Write1dHDF_string
+(  296) 
+(  297)   SUBROUTINE Read1dHDF_string( name, values, group_id, datasize )
+(  298) 
+(  299)     CHARACTER(*), INTENT(in)                      :: name
+(  300)     INTEGER(HID_T)                                :: group_id
+(  301)     INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)    :: datasize
+(  302)     CHARACTER(len=*), DIMENSION(:), INTENT(inout) :: values
+(  303) 
+(  304)     INTEGER(HSIZE_T)                              :: sizechar
+(  305)     INTEGER(HID_T)                                :: dataset_id
+(  306)   
+(  307)     sizechar = LEN( values(1) )
+(  308)     CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
+(  309)     CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+(  310)     CALL h5dread_f( dataset_id, H5T_NATIVE_CHARACTER, &
+(  311)                    values, datasize, hdferr )
+(  312)     CALL h5dclose_f( dataset_id, hdferr )
+(  313) 
+(  314)   END SUBROUTINE Read1dHDF_string
+(  315)   
+(  316)   SUBROUTINE WriteThermoStateHDF( TS, group_id )
+(  317) 
+(  318)     TYPE(ThermoStateType), INTENT(in)           :: TS
+(  319)     INTEGER(HID_T), INTENT(in)                  :: group_id
+(  320) 
+(  321)     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+(  322)     INTEGER                                     :: i
+(  323) 
+(  324)     datasize1d(1) = 3
+(  325)     CALL Write1dHDF_integer( "Dimensions", TS % nPoints(:), &
+(  326)                              group_id, datasize1d )
+(  327)     
+(  328)     CALL Write1dHDF_string( "Names", TS % Names(:), &
+(  329)                              group_id, datasize1d )
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 7
+
+(  330) 
+(  331)     CALL Write1dHDF_string( "Units", TS % Units(:), &
+(  332)                              group_id, datasize1d )
+(  333)     DO i = 1, 3
+(  334)       datasize1d(1) = TS % nPoints(i)
+(  335)       CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
+(  336)                               group_id, datasize1d )
+(  337)     END DO
+(  338) 
+(  339)   END SUBROUTINE WriteThermoStateHDF
+(  340) 
+(  341)   SUBROUTINE WriteDependentVariablesHDF( DV, group_id )
+(  342) 
+(  343)     TYPE(DependentVariablesType), INTENT(in)    :: DV
+(  344)     INTEGER(HID_T), INTENT(in)                  :: group_id
+(  345)     
+(  346)     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+(  347)     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
+(  348)     INTEGER                                     :: i
+(  349) 
+(  350)     datasize1d = SIZE( DV % Names )
+(  351)     CALL Write1dHDF_string( "Names", DV % Names(:), &
+(  352)                              group_id, datasize1d )
+(  353) 
+(  354)     CALL Write1dHDF_string( "Units", DV % Units(:), &
+(  355)                              group_id, datasize1d )
+(  356) 
+(  357)     datasize1d = 3
+(  358)     CALL Write1dHDF_integer( "Dimensions", DV % nPoints(:), &
+(  359)                              group_id, datasize1d )
+(  360)     datasize1d = 1 
+(  361)     CALL Write1dHDF_integer( "nVariables", (/DV % nVariables/), &
+(  362)                              group_id, datasize1d )
+(  363)     datasize1d = DV % nVariables 
+(  364)     CALL Write1dHDF_double( "Offsets", (/DV % Offsets/), &
+(  365)                              group_id, datasize1d )
+(  366)     DO i = 1, SIZE( DV % Names ) 
+(  367)       datasize3d = SHAPE( DV % Variables(i) % Values ) 
+(  368)       CALL Write3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &
+(  369)                               group_id, datasize3d )
+(  370)     END DO
+(  371) 
+(  372)   END SUBROUTINE WriteDependentVariablesHDF
+(  373) 
+(  374)   SUBROUTINE ReadThermoStateHDF( TS, file_id )
+(  375) 
+(  376)     TYPE(ThermoStateType), INTENT(inout)        :: TS
+(  377)     INTEGER(HID_T), INTENT(in)                  :: file_id
+(  378) 
+(  379)     INTEGER(HID_T)                              :: group_id
+(  380)     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+(  381)     INTEGER                                     :: i
+(  382)     
+(  383)     CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+(  384) 
+(  385)     CALL Read1dHDF_string( "Names", TS % Names(:), &
+(  386)                               group_id, datasize1d )
+(  387) 
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 8
+
+(  388)     CALL Read1dHDF_string( "Units", TS % Units(:), &
+(  389)                               group_id, datasize1d )
+(  390) 
+(  391)     DO i = 1, 3
+(  392)       datasize1d(1) = TS % nPoints(i)
+(  393)       CALL Read1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
+(  394)                               group_id, datasize1d )
+(  395)       TS % minValues(i) = MINVAL( TS % States(i) % Values(:) )                     
+(  396)       TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
+(  397)     END DO
+(  398) 
+(  399)     CALL CloseGroupHDF( group_id )
+(  400) 
+(  401)   END SUBROUTINE ReadThermoStateHDF
+(  402) 
+(  403)   SUBROUTINE ReadDependentVariablesHDF( DV, file_id )
+(  404) 
+(  405)     TYPE(DependentVariablesType), INTENT(inout) :: DV
+(  406)     INTEGER(HID_T), INTENT(in)                  :: file_id
+(  407) 
+(  408)     INTEGER(HID_T)                              :: group_id
+(  409)     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+(  410)     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
+(  411)     INTEGER                                     :: i
+(  412) 
+(  413)     CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+(  414) 
+(  415)     datasize1d = SIZE( DV % Names )
+(  416)     CALL Read1dHDF_string( "Names", DV % Names(:), &
+(  417)                               group_id, datasize1d )
+(  418) 
+(  419)     CALL Read1dHDF_string( "Units", DV % Units(:), &
+(  420)                               group_id, datasize1d )
+(  421) 
+(  422)     DO i = 1, SIZE( DV % Names ) 
+(  423)       datasize3d = SHAPE( DV % Variables(i) % Values ) 
+(  424)       CALL Read3dHDF_double( DV % Names(i), DV % Variables(i) % Values(:,:,:), &
+(  425)                               group_id, datasize3d )
+(  426)     END DO
+(  427) 
+(  428)     CALL CloseGroupHDF( group_id )
+(  429) 
+(  430)   END SUBROUTINE ReadDependentVariablesHDF
+(  431)   
+(  432)   SUBROUTINE ReadDimensionsHDF ( Dimensions, group_id ) 
+(  433) 
+(  434)     INTEGER(HID_T), INTENT(in)                  :: group_id
+(  435)     INTEGER, DIMENSION(:), INTENT(inout)        :: Dimensions
+(  436)     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+(  437) 
+(  438)     datasize1d(1) = SIZE( Dimensions )
+(  439)     CALL Read1dHDF_integer( "Dimensions", Dimensions(:), group_id, datasize1d ) 
+(  440) 
+(  441)   END SUBROUTINE ReadDimensionsHDF
+(  442) 
+(  443)   SUBROUTINE ReadNumberVariablesHDF ( nVariables, group_id )
+(  444) 
+(  445)     INTEGER(HID_T), INTENT(in)                  :: group_id
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 9
+
+(  446)     INTEGER, INTENT(inout)                      :: nVariables
+(  447)     INTEGER, DIMENSION(1)                       :: nVarTemp  
+(  448)     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+(  449) 
+(  450)     datasize1d(1) = 1
+(  451)     CALL Read1dHDF_integer( "nVariables", nVarTemp(:), group_id, datasize1d )
+(  452)     nVariables = nVarTemp(1)
+(  453) 
+(  454)   END SUBROUTINE ReadNumberVariablesHDF
+(  455) 
+(  456)   SUBROUTINE WriteEquationOfStateTableHDF( EOSTable )
+(  457) 
+(  458)     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+(  459) 
+(  460)     INTEGER(HID_T)                                :: file_id
+(  461)     INTEGER(HID_T)                                :: group_id
+(  462) 
+(  463)     CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
+(  464) 
+(  465)     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+(  466)     CALL WriteThermoStateHDF( EOSTable % TS, group_id )
+(  467)     CALL CloseGroupHDF( group_id )
+(  468) 
+(  469)     CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
+(  470)     CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
+(  471)     CALL CloseGroupHDF( group_id )
+(  472) 
+(  473)     CALL CloseFileHDF( file_id )
+(  474) 
+(  475)   END SUBROUTINE WriteEquationOfStateTableHDF
+(  476) 
+(  477)   
+(  478)   SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
+(  479) 
+(  480)     CHARACTER(len=*), INTENT(in)                  :: FileName
+(  481)     INTEGER, DIMENSION(3)                         :: nPoints
+(  482)     INTEGER                                       :: nVariables
+(  483)     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+(  484)     INTEGER(HID_T)                                :: file_id
+(  485)     INTEGER(HID_T)                                :: group_id
+(  486) 
+(  487)     CALL OpenFileHDF( FileName, .false., file_id )
+(  488) 
+(  489)     CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+(  490) 
+(  491)     CALL ReadDimensionsHDF( nPoints, group_id )
+(  492)     CALL ReadNumberVariablesHDF( nVariables, group_id )
+(  493)     CALL CloseGroupHDF( group_id )
+(  494) 
+(  495)     CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+(  496) 
+(  497)     CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+(  498) 
+(  499)     CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
+(  500) 
+(  501)     CALL CloseFileHDF( file_id )
+(  502) 
+(  503)   END SUBROUTINE ReadEquationOfStateTableHDF
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:48      page 10
+
+(  504) 
+(  505) END MODULE wlIOModuleHDF
+(  506) 

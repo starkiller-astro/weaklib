@@ -1,0 +1,84 @@
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /opt/cray/hdf5/1.8.13/PGI/141/include
+          -idir /opt/cray/mpt/7.0.4/gni/mpich2-pgi/141/include
+          -idir /opt/cray/rca/1.0.0-2.0502.53711.3.127.ari/include
+          -idir /opt/cray/xpmem/0.1-2.0502.55507.3.2.ari/include
+          -idir /opt/cray/gni-headers/3.0-1.0502.9684.5.2.ari/include
+          -idir /opt/cray/pmi/5.0.4-1.0000.10161.132.4.ari/include
+          -idir /opt/cray/ugni/5.0-1.0502.9685.4.24.ari/include
+          -idir /opt/cray/udreg/2.3.2-1.0502.9275.1.12.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/wlm_detect/1.0-1.0502.53341.1.1.ari/include
+          -idir /opt/cray/alps/5.2.1-2.0502.9072.13.1.ari/include
+          -idir /opt/cray/krca/1.0.0-2.0502.53880.4.104.ari/include
+          -idir /opt/cray-hss-devel/7.2.0/include
+          -inform severe -opt 0 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ../../../External/LS/initferm.f
+
+(    1) C23456789012345678901234567890123456789012345678901234567890123456789012
+(    2) C
+(    3) c      Program to compute spline fits to fermi integrals
+(    4) cc  Must provide data file 94
+(    5)       subroutine initferm(FilePath)
+(    6) 
+(    7) !     use parallel_module
+(    8) !     use mpi
+(    9) 
+(   10)       implicit  double precision (a-h,o-z)
+(   11)       parameter (n=201)
+(   12)       character*128 FilePath
+(   13)       dimension f32(n),f12(n),fm12(n),eta(n),fr(n)
+(   14)       dimension f32a(n),f12a(n),fra(n),fia(n)
+(   15)       common /spl/eta,f32,f12,fr,f32a,f12a,fra,fia
+(   16)       dimension send_buf(4,n)
+(   17) C
+(   18) !     if (myid.eq.0) then
+(   19)       open(94,file=TRIM(FilePath)//'/fermi.atb',
+(   20)      & status='old')
+(   21) C
+(   22)       do 10 i=1,n
+(   23)        read(94,*)eta(i),f32(i),f12(i),fm12(i)
+(   24)        send_buf(1,i) = eta(i)
+(   25)        send_buf(2,i) = f32(i)
+(   26)        send_buf(3,i) = f12(i)
+(   27)        send_buf(4,i) = fm12(i)
+(   28)  10   continue
+(   29) C
+(   30)       close(94,status='keep')
+(   31)       
+(   32) !     endif
+(   33) 
+(   34) !     i_extent=n*4
+(   35) !     CALL MPI_BCAST( send_buf , i_extent, MPI_DOUBLE_PRECISION, 0,
+(   36) !    &                     MPI_COMM_WORLD, ierr)
+(   37) 
+(   38)       do 20 i=1,n
+(   39)        eta(i) = send_buf(1,i)
+
+
+
+
+
+
+PGF90 (Version     14.9)          03/12/2015  00:11:52      page 2
+
+(   40)        f32(i) = send_buf(2,i)
+(   41)        f12(i) = send_buf(3,i)
+(   42)        fm12(i) = send_buf(4,i)
+(   43)  20    fr(i)=f12(i)/fm12(i)
+(   44) 
+(   45) C
+(   46)        call spline(eta,f12,n,f12a)
+(   47)        call spline(eta,f32,n,f32a)
+(   48)        call spline(eta,fr,n,fra)
+(   49)        call spline(f12,eta,n,fia)
+(   50)        return
+(   51)        end subroutine initferm

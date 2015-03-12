@@ -35,7 +35,9 @@ PROGRAM wlCreateEquationOfStateTable
   98 FORMAT ("Heavy Mass Fract=", es12.5,1x, "Heavy Charge # =", es12.5,1x,    &
              "Heavy Mass #=" , es12.5,1x, "Heavy Binding Energy=", es12.5 )
 
-  nPoints = (/500,500,500/)
+  !nPoints = (/81,28,24/)
+  !nPoints = (/161,55,47/)
+  nPoints = (/321,109,93/)
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -55,7 +57,7 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
-  EOSTable % TS % minValues(1:3) =  (/1.0d07, 2.0d09, 0.05d0/)
+  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.3, 0.05d0/)
   EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.51d0/)
 
 !------------------------------------------------------------------------------
