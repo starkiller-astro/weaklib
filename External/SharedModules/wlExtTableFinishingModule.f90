@@ -1,6 +1,7 @@
 MODULE wlExtTableFinishingModule
 
   USE wlKindModule, ONLY: dp 
+  USE wlInterpolationModule
 
   implicit none
 
@@ -41,7 +42,7 @@ MODULE wlExtTableFinishingModule
     END SUBROUTINE LoneCellLocate
 
 !    SUBROUTINE LoneCellInterpolate( LoneCell, Table )
-        
+
 !    END SUBROUTINE LoneCellInterpolate
 
 END MODULE wlExtTableFinishingModule

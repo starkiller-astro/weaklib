@@ -106,7 +106,7 @@ PROGRAM wlInterpolationTest
                                      LogInterp,                                    &
                                      EOSTable % DV % Variables(1) % Values(:,:,:), & 
                                      Interpolant )
-
+  WRITE (*,*) Interpolant(1)
   CALL wlExtInitializeEOS( LSFilePath, LScompress )
 
   DO i = 1, SIZE( rho )
