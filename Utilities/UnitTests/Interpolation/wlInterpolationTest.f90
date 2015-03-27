@@ -40,7 +40,7 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
   INTEGER :: i
-  INTEGER, PARAMETER :: NumPoints = 16000
+  INTEGER, PARAMETER :: NumPoints = 10000
   REAL(dp) :: LogT, logrho, L1norm, Maxnorm
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
@@ -106,7 +106,7 @@ PROGRAM wlInterpolationTest
                                      LogInterp,                                    &
                                      EOSTable % DV % Variables(1) % Values(:,:,:), & 
                                      Interpolant )
-  WRITE (*,*) Interpolant(1)
+
   CALL wlExtInitializeEOS( LSFilePath, LScompress )
 
   DO i = 1, SIZE( rho )
