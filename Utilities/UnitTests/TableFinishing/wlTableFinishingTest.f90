@@ -11,7 +11,7 @@ PROGRAM wlTableFinishingTest
                            WriteEquationOfStateTableHDF
   implicit none
 
-  INTEGER  :: i, j, k, l
+  INTEGER  :: i, j, k, l, MinGradient
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
   REAL(dp) :: Interpolant
@@ -42,13 +42,25 @@ PROGRAM wlTableFinishingTest
 
     fails(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0 
 
-    !WRITE (*,*) "fails =", fails 
 
   CALL HoleCharacterize( fails, LinOkX, LinOkY, LinOkZ )
 
-    !WRITE (*,*) "fails =", fails 
-    !WRITE (*,*) LinOkY 
-    !WRITE (*,*) "that was LinOkY" 
+      DO k = 1, SIZE(fails, DIM=3)
+        DO j = 1, SIZE(fails, DIM=2)
+          DO i = 1, SIZE(fails, DIM=1)
+
+            IF ( .not.fails(i,j,k) ) CYCLE
+            IF ( fails(i,j,k) ) THEN
+              CALL GradientCheck( i, j, k, LinOkX, LinOkY, LinOkZ, &
+                                  EOSTable % DV % Variables(1) % Values(:,:,:) , MinGradient)            
+              WRITE (*,*) i, j, k, MinGradient
+              CALL LogLineInterpolateSingleVariable( i, j, k, &
+                     EOSTable % DV % Variables(1) % Values(:,:,:), MinGradient, Interpolant)
+              WRITE (*,*) Interpolant 
+            END IF
+          END DO
+        END DO
+      END DO
 
   STOP
   CALL LoneCellLocate( fails, LoneCells )
