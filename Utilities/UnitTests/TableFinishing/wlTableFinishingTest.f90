@@ -26,7 +26,7 @@ PROGRAM wlTableFinishingTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "LowResEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "StandardResEquationOfStateTableFirstPass.h5" )
 
     WRITE (*,*) "Table Read", EOSTable % nPoints 
 
@@ -45,52 +45,53 @@ PROGRAM wlTableFinishingTest
 
   CALL HoleCharacterize( fails, LinOkX, LinOkY, LinOkZ )
 
-      DO k = 1, SIZE(fails, DIM=3)
-        DO j = 1, SIZE(fails, DIM=2)
-          DO i = 1, SIZE(fails, DIM=1)
+    DO k = 1, SIZE(fails, DIM=3)
+      DO j = 1, SIZE(fails, DIM=2)
+        DO i = 1, SIZE(fails, DIM=1)
 
-            IF ( .not.fails(i,j,k) ) CYCLE
-            IF ( fails(i,j,k) ) THEN
-              CALL GradientCheck( i, j, k, LinOkX, LinOkY, LinOkZ, &
-                                  EOSTable % DV % Variables(1) % Values(:,:,:) , MinGradient)            
-              WRITE (*,*) i, j, k, MinGradient
-              CALL LogLineInterpolateSingleVariable( i, j, k, &
-                     EOSTable % DV % Variables(1) % Values(:,:,:), MinGradient, Interpolant)
-              WRITE (*,*) Interpolant 
-            END IF
-          END DO
-        END DO
-      END DO
-
-  STOP
-  CALL LoneCellLocate( fails, LoneCells )
-
-      DO k = 2, SIZE(LoneCells, DIM=3) - 1
-        DO j = 2, SIZE(LoneCells, DIM=2) - 1
-          DO i = 2, SIZE(LoneCells, DIM=1) - 1
-
-            IF ( LoneCells(i,j,k) ) THEN
-              DO l = 1, EOSTable % nVariables 
-                CALL LoneCellLogInterpolateSingleVariable( i, j, k,                 &
-                                      EOSTable % TS % States(1) % Values,           &
-                                      EOSTable % TS % States(2) % Values,           &
-                                      EOSTable % TS % States(3) % Values,           &
-                                      LogInterp,                                    &
-                                      EOSTable % DV % Variables(l) % Values(:,:,:), &
-                                      Interpolant )
-                EOSTable % DV % Variables(l) % Values(i,j,k) = Interpolant
-              END DO
-              WRITE (*,*) i, j, k
-              WRITE (*,*) Interpolant 
-              WRITE (*,*) EOSTable % DV % Variables(1) % Values(i,j,k)
-            ELSE
+          IF ( .not.fails(i,j,k) ) CYCLE
+          IF ( fails(i,j,k) ) THEN
+            CALL GradientCheck( i, j, k, LinOkX, LinOkY, LinOkZ, &
+                                EOSTable % DV % Variables(1) % Values(:,:,:) , MinGradient)            
+          WRITE (*,*) i, j, k, MinGradient
+            IF ( MinGradient == 0 ) THEN
               CYCLE
+            ELSE
+            CALL LogLineInterpolateSingleVariable( i, j, k, &
+                   EOSTable % DV % Variables(1) % Values(:,:,:), MinGradient, Interpolant)
+            EOSTable % DV % Variables(1) % Values(i,j,k) = Interpolant
             END IF
-
-          END DO
+          WRITE (*,*) Interpolant 
+          END IF
         END DO
       END DO
-    !WRITE (*,*) EOSTable % DV % Variables(1) % Values  
+    END DO
+
+!  STOP
+!  CALL LoneCellLocate( fails, LoneCells )
+!
+!    DO k = 2, SIZE(LoneCells, DIM=3) - 1
+!      DO j = 2, SIZE(LoneCells, DIM=2) - 1
+!        DO i = 2, SIZE(LoneCells, DIM=1) - 1
+!
+!          IF ( LoneCells(i,j,k) ) THEN
+!            DO l = 1, EOSTable % nVariables 
+!              CALL LoneCellLogInterpolateSingleVariable( i, j, k,                 &
+!                                    EOSTable % TS % States(1) % Values,           &
+!                                    EOSTable % TS % States(2) % Values,           &
+!                                    EOSTable % TS % States(3) % Values,           &
+!                                    LogInterp,                                    &
+!                                    EOSTable % DV % Variables(l) % Values(:,:,:), &
+!                                      Interpolant )
+!              EOSTable % DV % Variables(l) % Values(i,j,k) = Interpolant
+!            END DO
+!          ELSE
+!            CYCLE
+!          END IF
+
+!        END DO
+!      END DO
+!    END DO
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
 

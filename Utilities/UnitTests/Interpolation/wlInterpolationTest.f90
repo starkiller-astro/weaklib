@@ -40,7 +40,7 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
   INTEGER :: i
-  INTEGER, PARAMETER :: NumPoints = 10000
+  INTEGER, PARAMETER :: NumPoints = 1000
   REAL(dp) :: LogT, logrho, L1norm, Maxnorm
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
@@ -58,7 +58,7 @@ PROGRAM wlInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "HighResEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "LowResEOSTableFilled.h5" )
 
   WRITE (*,*) "Table Minimums"
   DO i = 1, EOSTable % DV % nVariables

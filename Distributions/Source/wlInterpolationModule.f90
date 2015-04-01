@@ -153,7 +153,6 @@ CONTAINS
     LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     
-    !INTEGER :: i
 
     REAL(dp), INTENT(out) :: Interpolant 
 
@@ -279,16 +278,6 @@ WRITE (*,*) Interpolant
     WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
 
   END SUBROUTINE MonotonicityCheck 
-
-!  SUBROUTINE LogSecantInterpolateSingleVariable( Coordinate1, Coordinate2, Interpolant  ) 
-!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
-!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
-    
-!    INTEGER :: i
-
-!    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
-
-!  END SUBROUTINE LogSecantInterpolateSingleVariable
 
 END MODULE wlInterpolationModule
 
