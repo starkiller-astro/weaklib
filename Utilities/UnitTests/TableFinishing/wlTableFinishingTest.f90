@@ -11,64 +11,78 @@ PROGRAM wlTableFinishingTest
                            WriteEquationOfStateTableHDF
   implicit none
 
-  INTEGER  :: i, j, k, l, MinGradient
+  INTEGER  :: i, j, k, l, idim
+  INTEGER, DIMENSION(:,:,:), ALLOCATABLE :: iMinGradient
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
   REAL(dp) :: Interpolant
+  REAL(dp) :: delta
 
-  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE            :: fails     
-  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE            :: LoneCells    
-  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE            :: LinOkX 
-  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE            :: LinOkY 
-  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE            :: LinOkZ 
+  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: fail     
+  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired 
+  LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: LoneCells    
+  LOGICAL, DIMENSION(:,:,:,:), ALLOCATABLE :: LinearOK 
 
   LogInterp = (/.true.,.true.,.false./)
-
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "StandardResEquationOfStateTableFirstPass.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "StandardResEquationOfStateTable.h5" )
 
-    WRITE (*,*) "Table Read", EOSTable % nPoints 
+  ASSOCIATE( nPoints => EOSTable % nPoints )
 
-    ALLOCATE( fails( EOSTable % nPoints(1), EOSTable % nPoints(2),              &
-                     EOSTable % nPoints(3) ), LoneCells( EOSTable % nPoints(1), &
-                     EOSTable % nPoints(2), EOSTable % nPoints(3) ),            &
-                     LinOkX(EOSTable % nPoints(1), EOSTable % nPoints(2),       &   
-                     EOSTable % nPoints(3)), LinOkY(EOSTable % nPoints(1),      &
-                     EOSTable % nPoints(2), EOSTable % nPoints(3)),             &
-                     LinOkZ(EOSTable % nPoints(1), EOSTable % nPoints(2),       &   
-                     EOSTable % nPoints(3))  )
-    WRITE (*,*) "Logicals Allocated" 
+  WRITE (*,*) "Table Read", nPoints 
 
-    fails(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0 
+  ALLOCATE( fail( nPoints(1), nPoints(2), nPoints(3) ),        &
+            Repaired( nPoints(1), nPoints(2), nPoints(3) ),    & 
+            LoneCells( nPoints(1), nPoints(2), nPoints(3) ),   & 
+            LinearOK(3, nPoints(1), nPoints(2), nPoints(3) ),  &
+            iMinGradient( nPoints(1), nPoints(2), nPoints(3)) ) 
+            
+  
+  END ASSOCIATE
 
+  WRITE (*,*) "Logicals Allocated" 
 
-  CALL HoleCharacterize( fails, LinOkX, LinOkY, LinOkZ )
+  Repaired = .false.
 
-    DO k = 1, SIZE(fails, DIM=3)
-      DO j = 1, SIZE(fails, DIM=2)
-        DO i = 1, SIZE(fails, DIM=1)
+  fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0 
 
-          IF ( .not.fails(i,j,k) ) CYCLE
-          IF ( fails(i,j,k) ) THEN
-            CALL GradientCheck( i, j, k, LinOkX, LinOkY, LinOkZ, &
-                                EOSTable % DV % Variables(1) % Values(:,:,:) , MinGradient)            
-          WRITE (*,*) i, j, k, MinGradient
-            IF ( MinGradient == 0 ) THEN
-              CYCLE
-            ELSE
-            CALL LogLineInterpolateSingleVariable( i, j, k, &
-                   EOSTable % DV % Variables(1) % Values(:,:,:), MinGradient, Interpolant)
-            EOSTable % DV % Variables(1) % Values(i,j,k) = Interpolant
-            END IF
-          WRITE (*,*) Interpolant 
-          END IF
-        END DO
+  
+  ASSOCIATE( Pressure => EOSTable % DV % Variables(1) % Values(:,:,:) )
+
+  CALL HoleCharacterize( fail, LinearOK, Pressure, iMinGradient )
+
+  DO k = 1, SIZE(fail, DIM=3)
+    DO j = 1, SIZE(fail, DIM=2)
+      DO i = 1, SIZE(fail, DIM=1)
+
+        IF ( .not.fail(i,j,k) ) CYCLE
+
+        WRITE (*,*) i, j, k, iMinGradient(i,j,k)
+
+        IF ( iMinGradient(i,j,k) == 0 ) CYCLE 
+
+        delta = 0.5d0  !REPLACE 
+
+        idim = iMinGradient(i,j,k)
+
+        CALL LogLineInterpolateSingleVariable &
+               ( i, j, k, idim, delta, Pressure, Interpolant )
+
+        Pressure(i,j,k) = Interpolant
+
+        Repaired(i,j,k) = .true.
+
+        WRITE (*,*) Interpolant 
+
       END DO
     END DO
+  END DO
+
+  END ASSOCIATE ! Pressure
 
 !  STOP
-!  CALL LoneCellLocate( fails, LoneCells )
+!  CALL LoneCellLocate( fail, LoneCells )
 !
 !    DO k = 2, SIZE(LoneCells, DIM=3) - 1
 !      DO j = 2, SIZE(LoneCells, DIM=2) - 1

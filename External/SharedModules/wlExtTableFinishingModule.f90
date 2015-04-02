@@ -41,56 +41,67 @@ MODULE wlExtTableFinishingModule
 
     END SUBROUTINE LoneCellLocate
 
-    SUBROUTINE HoleCharacterize( fail, LinOkX, LinOkY, LinOkZ )
+    SUBROUTINE HoleCharacterize( fail, LinearOK, Table, iMinGradient )
+
       LOGICAL, DIMENSION(:,:,:), INTENT(in) :: fail
-      LOGICAL, DIMENSION(:,:,:), INTENT(out) :: LinOkX 
-      LOGICAL, DIMENSION(:,:,:), INTENT(out) :: LinOkY 
-      LOGICAL, DIMENSION(:,:,:), INTENT(out) :: LinOkZ 
+      REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
+      LOGICAL, DIMENSION(:,:,:,:), INTENT(out) :: LinearOK 
+      INTEGER, DIMENSION(:,:,:), INTENT(out) :: iMinGradient
 
-      INTEGER :: i, j, k
+      INTEGER :: i, j, k, idim 
+      INTEGER :: isize, jsize, ksize 
+      REAL(dp) :: Gradient
+      REAL(dp) :: MinGradient
 
-      LinOkX = .false.
-      DO k = 1, SIZE(fail, DIM=3)
-        DO j = 1, SIZE(fail, DIM=2)
-          DO i = 1, SIZE(fail, DIM=1)
+      LinearOK = .false.
+      iMinGradient = 0
 
+      isize = SIZE(fail, DIM=1)
+      jsize = SIZE(fail, DIM=2)
+      ksize = SIZE(fail, DIM=3)
+
+      DO k = 1, ksize
+        DO j = 1, jsize
+          DO i = 1, isize 
+            
             IF ( .not.fail(i,j,k) ) CYCLE
-            IF ( .not.fail(i-1,j,k) .and. .not.fail(i+1,j,k) .and. i/=1 .and. &
-                 i/= SIZE(fail, DIM=1)  ) THEN 
-            LinOkX(i,j,k) = .true.
-            WRITE (*,*) "Ok to linearly interpolate in x at point =", i, j, k 
-            END IF 
+      
+            MinGradient = 1.d99
 
-          END DO
-        END DO
-      END DO
+            IF ( i == 1 .or. i == isize ) THEN 
+            ELSE
+              IF ( .not.fail(i-1,j,k) .and. .not.fail(i+1,j,k) ) LinearOK(1,i,j,k) = .true. 
+            END IF
+            IF ( LinearOK(1,i,j,k) ) THEN 
+              Gradient = ABS(Table(i+1,j,k) - Table(i-1,j,k))
+              IF ( Gradient < MinGradient ) THEN
+                MinGradient = Gradient
+                iMinGradient(i,j,k) = 1
+              END IF  
+            END IF
 
-      LinOkY = .false.
-      DO k = 1, SIZE(fail, DIM=3)
-        DO j = 1, SIZE(fail, DIM=2)
-          DO i = 1, SIZE(fail, DIM=1)
+            IF ( j == 1 .or. j == jsize ) THEN 
+            ELSE
+              IF ( .not.fail(i,j-1,k) .and. .not.fail(i,j+1,k) ) LinearOK(2,i,j,k) = .true. 
+            END IF
+            IF ( LinearOK(2,i,j,k) ) THEN 
+              Gradient = ABS(Table(i,j+1,k) - Table(i,j-1,k))
+              IF ( Gradient < MinGradient ) THEN
+                MinGradient = Gradient
+                iMinGradient(i,j,k) = 2
+              END IF  
+            END IF
 
-            IF ( .not.fail(i,j,k) ) CYCLE
-            IF ( .not.fail(i,j-1,k) .and. .not.fail(i,j+1,k) .and. j/=1 .and. & 
-                 j/= SIZE(fail, DIM=2)  ) THEN 
-            LinOkY(i,j,k) = .true.
-            WRITE (*,*) "Ok to linearly interpolate in y at point =", i, j, k 
-            END IF 
-
-          END DO
-        END DO
-      END DO
-
-      LinOkZ = .false.
-      DO k = 1, SIZE(fail, DIM=3)
-        DO j = 1, SIZE(fail, DIM=2)
-          DO i = 1, SIZE(fail, DIM=1)
-
-            IF ( .not.fail(i,j,k) ) CYCLE
-            IF ( .not.fail(i,j,k-1) .and. .not.fail(i,j,k+1) .and. k/=1 .and. & 
-                 k/= SIZE(fail, DIM=3)  ) THEN 
-            LinOkZ(i,j,k) = .true.
-            WRITE (*,*) "Ok to linearly interpolate in z at point =", i, j, k 
+            IF ( k == 1 .or. k == ksize ) THEN 
+            ELSE
+              IF ( .not.fail(i,j,k-1) .and. .not.fail(i,j,k+1) ) LinearOK(3,i,j,k) = .true. 
+            END IF
+            IF ( LinearOK(3,i,j,k) ) THEN 
+              Gradient = ABS(Table(i,j,k+1) - Table(i,j,k-1))
+              IF ( Gradient < MinGradient ) THEN
+                MinGradient = Gradient
+                iMinGradient(i,j,k) = 3
+              END IF  
             END IF
 
           END DO
@@ -98,109 +109,5 @@ MODULE wlExtTableFinishingModule
       END DO
 
     END SUBROUTINE HoleCharacterize
-
-    SUBROUTINE GradientCheck( i, j, k, LinOkX, LinOkY, LinOkZ, Table, MinGradient )
-
-      INTEGER, INTENT(in) :: i 
-      INTEGER, INTENT(in) :: j
-      INTEGER, INTENT(in) :: k
-      LOGICAL, DIMENSION(:,:,:), INTENT(in) :: LinOkX
-      LOGICAL, DIMENSION(:,:,:), INTENT(in) :: LinOkY
-      LOGICAL, DIMENSION(:,:,:), INTENT(in) :: LinOkZ
-      REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-
-      INTEGER, INTENT(out) :: MinGradient 
-      REAL(dp) :: px0, px1, py0, py1, pz0, pz1 
-      INTEGER :: il1, il2, il3
-
-      MinGradient = 0
-
-      IF ( LinOkX(i,j,k) .and. LinOkY(i,j,k) .and. LinOkZ(i,j,k) ) THEN
-
-           px0 = Table( i-1, j, k ) 
-           px1 = Table( i+1, j, k ) 
-           py0 = Table( i, j-1, k ) 
-           py1 = Table( i, j+1, k ) 
-           pz0 = Table( i, j, k-1 ) 
-           pz1 = Table( i, j, k+1 )
-
-        IF ( ( LOG10(px1/px0) <= LOG10(py1/py0) ) .and. ( LOG10(px1/px0) <= LOG10(pz1/pz0) ) ) THEN  
-
-        MinGradient = 1
-             
-        ELSE IF ( ( LOG10(py1/py0) <= LOG10(px1/px0) ) .and. ( LOG10(py1/py0) <= LOG10(pz1/pz0) ) ) THEN 
-        MinGradient = 2
-
-        ELSE IF ( ( LOG10(pz1/pz0) <= LOG10(py1/py0) ) .and. ( LOG10(pz1/pz0) <= LOG10(px1/px0) ) ) THEN   
-        MinGradient = 3
-
-        END IF
-
-      ELSE IF ( LinOkX(i,j,k) .and. LinOkY(i,j,k) .and. .not.LinOkZ(i,j,k) ) THEN
-
-           px0 = Table( i-1, j, k )
-           px1 = Table( i+1, j, k )
-           py0 = Table( i, j-1, k )
-           py1 = Table( i, j+1, k )
-
-        IF ( LOG10(px1/px0) <= LOG10(py1/py0) ) THEN    
-
-        MinGradient = 1
-
-        ELSE IF ( LOG10(py1/py0) <= LOG10(px1/px0) ) THEN  
-
-        MinGradient = 2
-
-        END IF
-
-      ELSE IF ( LinOkX(i,j,k) .and. .not.LinOkY(i,j,k) .and. LinOkZ(i,j,k) ) THEN
-
-           px0 = Table( i-1, j, k )
-           px1 = Table( i+1, j, k )
-           pz0 = Table( i, j, k-1 )
-           pz1 = Table( i, j, k+1 )
-
-        IF ( LOG10(px1/px0) <= LOG10(py1/py0) .and. LOG10(px1/px0) <= LOG10(pz1/pz0) ) THEN 
-
-        MinGradient = 1
-
-        ELSE IF ( LOG10(pz1/pz0) <= LOG10(py1/py0) .and. LOG10(pz1/pz0) <= LOG10(px1/px0) ) THEN   
-
-        MinGradient = 3
-
-        END IF
-
-      ELSE IF ( .not.LinOkX(i,j,k) .and. LinOkY(i,j,k) .and. LinOkZ(i,j,k) ) THEN
-
-           py0 = Table( i, j-1, k )
-           py1 = Table( i, j+1, k )
-           pz0 = Table( i, j, k-1 )
-           pz1 = Table( i, j, k+1 )
-             
-        IF ( LOG10(py1/py0) <= LOG10(px1/px0) .and. LOG10(py1/py0) <= LOG10(pz1/pz0) ) THEN   
-
-        MinGradient = 2
-
-        ELSE IF ( LOG10(pz1/pz0) <= LOG10(py1/py0) .and. LOG10(pz1/pz0) <= LOG10(px1/px0) ) THEN   
-
-        MinGradient = 3
-
-        END IF
-
-      ELSE IF ( LinOkX(i,j,k) .and. .not.LinOkY(i,j,k) .and. .not.LinOkZ(i,j,k) ) THEN
-
-        MinGradient = 1
-
-      ELSE IF ( .not.LinOkX(i,j,k) .and. LinOkY(i,j,k) .and. .not.LinOkZ(i,j,k) ) THEN
-
-        MinGradient = 2
-
-      ELSE IF ( .not.LinOkX(i,j,k) .and. .not.LinOkY(i,j,k) .and. LinOkZ(i,j,k) ) THEN
-
-        MinGradient = 3
-
-      END IF
-
-    END SUBROUTINE GradientCheck 
 
 END MODULE wlExtTableFinishingModule

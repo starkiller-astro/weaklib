@@ -38,34 +38,34 @@ CONTAINS
 
   END SUBROUTINE locate
 
-  SUBROUTINE LogLineInterpolateSingleVariable( i, j, k, Table, MinGradient, Interpolant )
+  SUBROUTINE LogLineInterpolateSingleVariable( i, j, k, iMinGradient, delta, Table, Interpolant )
 
-    INTEGER, INTENT(in) :: i
-    INTEGER, INTENT(in) :: j
-    INTEGER, INTENT(in) :: k
-    INTEGER, INTENT(in) :: MinGradient
+    INTEGER, INTENT(in) :: i, j, k
+    REAL(dp), INTENT(in) :: delta
+    INTEGER, INTENT(in) :: iMinGradient
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     
     REAL(dp), INTENT(out) :: Interpolant 
 
     REAL(dp) :: p0, p1
+    
+    SELECT CASE( iMinGradient ) 
 
-      IF ( MinGradient == 1 ) THEN 
-        p0 = Table( i-1, j, k )
-        p1 = Table( i+1, j, k )
-        Interpolant = 10**((LOG10(p1 * p0))/2)
+      CASE(1) 
+        p0 = LOG10( Table( i-1, j, k ) )
+        p1 = LOG10( Table( i+1, j, k ) )
 
-      ELSE IF ( MinGradient == 2 ) THEN 
-        p0 = Table( i, j-1, k )
-        p1 = Table( i, j+1, k )
-        Interpolant = 10**((LOG10(p1 * p0))/2)
+      CASE(2)
+        p0 = LOG10( Table( i, j-1, k ) )
+        p1 = LOG10( Table( i, j+1, k ) )
 
-      ELSE IF ( MinGradient == 3 ) THEN 
-        p0 = Table( i, j, k-1 )
-        p1 = Table( i, j, k+1 )
-        Interpolant = 10**((LOG10(p1 * p0))/2)
+      CASE(3)
+        p0 = LOG10( Table( i, j, k-1 ) )
+        p1 = LOG10( Table( i, j, k+1 ) )
+        
+      END SELECT
 
-      END IF
+      Interpolant = 10.d0**( delta * p1 + ( 1.d0 - delta ) * p0 )
 
   END SUBROUTINE LogLineInterpolateSingleVariable
 
