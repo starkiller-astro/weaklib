@@ -72,15 +72,14 @@ CONTAINS
   SUBROUTINE LogInterpolateCoarse1D( i, j, k, iMinGradient, iLimits, delta, Table, Interpolant )
 
     INTEGER, INTENT(in) :: i, j, k
-    REAL(dp), DIMENSION(:), INTENT(in) :: delta
+    REAL(dp), INTENT(in) :: delta
     INTEGER, INTENT(in) :: iMinGradient
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     INTEGER, DIMENSION(:,:,:,:), INTENT(in) :: iLimits
     
-    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
+    REAL(dp), INTENT(out) :: Interpolant 
 
     REAL(dp) :: p0, p1
-    INTEGER :: l
     
     SELECT CASE( iMinGradient ) 
 
@@ -98,11 +97,9 @@ CONTAINS
         
       END SELECT
       WRITE (*,*) "p0, p1 =", p0, p1
-      DO l = 1, ( iLimits(2,i,j,k) - iLimits(1,i,j,k) - 1 )
-        Interpolant(l) = 10.d0**( delta(l) * p1 + ( 1.d0 - delta(l) ) * p0 )
-        WRITE (*,*) "Interpolant=", Interpolant(l) 
-        WRITE (*,*) "Delta=", delta(l) 
-      END DO
+      Interpolant = 10.d0**( delta * p1 + ( 1.d0 - delta ) * p0 )
+      WRITE (*,*) "Interpolant=", Interpolant 
+      WRITE (*,*) "Delta=", delta 
 
   END SUBROUTINE LogInterpolateCoarse1D
 

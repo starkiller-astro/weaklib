@@ -11,15 +11,15 @@ PROGRAM wlTableFinishingTest
                            WriteEquationOfStateTableHDF
   implicit none
 
-  INTEGER  :: i, j, k, l, m, nHoles
+  INTEGER  :: i, j, k, l
   INTEGER, DIMENSION(:,:,:), ALLOCATABLE :: iMinGradient
   INTEGER, DIMENSION(:,:,:,:), ALLOCATABLE :: iLimits
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
   REAL(dp) :: InterpolantFine
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: InterpolantCoarse
+  REAL(dp) :: InterpolantCoarse
   REAL(dp) :: DeltaFine
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: DeltaCoarse
+  REAL(dp) :: DeltaCoarse
 
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Fail 
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired 
@@ -92,75 +92,34 @@ PROGRAM wlTableFinishingTest
 
         IF ( iMinGradient(i,j,k) == 0 ) CYCLE
 
-        nHoles = ( iLimits(2,i,j,k) - iLimits(1,i,j,k) - 1 )
-          WRITE (*,*) "nHoles=", nHoles 
-        WRITE (*,*) "iLimits =", iLimits(1,i,j,k), iLimits(2,i,j,k), "nHoles=", nHoles
-        ALLOCATE( DeltaCoarse( nHoles ), InterpolantCoarse( nHoles ) )
+        WRITE (*,*) "iLimits =", iLimits(1,i,j,k), iLimits(2,i,j,k)
 
-        DO m = 1, nHoles 
-          DeltaCoarse(m) = (m)/(nHoles+1.d0) 
-          WRITE (*,*) "DC=", DeltaCoarse(m)
-        END DO
+        SELECT CASE( iMinGradient(i,j,k) )
+          CASE(1)
+            DeltaCoarse = DBLE( i - iLimits(1,i,j,k) ) & 
+                            / DBLE( iLimits(2,i,j,k) - iLimits(1,i,j,k) )
+          CASE(2)
+            DeltaCoarse = DBLE( j - iLimits(1,i,j,k) ) & 
+                            / DBLE( iLimits(2,i,j,k) - iLimits(1,i,j,k) )
+          CASE(3)
+            DeltaCoarse = DBLE( k - iLimits(1,i,j,k) ) & 
+                            / DBLE( iLimits(2,i,j,k) - iLimits(1,i,j,k) )
+        END SELECT
 
         CALL LogInterpolateCoarse1D&
                ( i, j, k, iMinGradient(i,j,k), iLimits, DeltaCoarse, Pressure, InterpolantCoarse )
-        
-        DO l = 1, nHoles
 
-          SELECT CASE( iMinGradient(i,j,k) )
-
-            CASE(1)
-              Pressure(i+l-1,j,k) = InterpolantCoarse(l)
-
-              Repaired(i+l-1,j,k) = .true.
-
-            CASE(2)
-              Pressure(i,j+l-1,k) = InterpolantCoarse(l)
-
-              Repaired(i,j+l-1,k) = .true.
-
-            CASE(3)
-              Pressure(i,j,k+l-1) = InterpolantCoarse(l)
-
-              Repaired(i,j,k+l-1) = .true.
-
-          END SELECT
-        END DO
+        Pressure(i,j,k) = InterpolantCoarse
+        ! Add other DV's
+        Repaired(i,j,k) = .true.
 
         WRITE (*,*) InterpolantCoarse
 
-        DEALLOCATE( DeltaCoarse, InterpolantCoarse )
       END DO
     END DO
   END DO
 
   END ASSOCIATE ! Pressure
-
-!  STOP
-!  CALL LoneCellLocate( fail, LoneCells )
-!
-!    DO k = 2, SIZE(LoneCells, DIM=3) - 1
-!      DO j = 2, SIZE(LoneCells, DIM=2) - 1
-!        DO i = 2, SIZE(LoneCells, DIM=1) - 1
-!
-!          IF ( LoneCells(i,j,k) ) THEN
-!            DO l = 1, EOSTable % nVariables 
-!              CALL LoneCellLogInterpolateSingleVariable( i, j, k,                 &
-!                                    EOSTable % TS % States(1) % Values,           &
-!                                    EOSTable % TS % States(2) % Values,           &
-!                                    EOSTable % TS % States(3) % Values,           &
-!                                    LogInterp,                                    &
-!                                    EOSTable % DV % Variables(l) % Values(:,:,:), &
-!                                      Interpolant )
-!              EOSTable % DV % Variables(l) % Values(i,j,k) = Interpolant
-!            END DO
-!          ELSE
-!            CYCLE
-!          END IF
-
-!        END DO
-!      END DO
-!    END DO
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
 

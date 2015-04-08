@@ -39,7 +39,6 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: be_heavy 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
-  INTEGER :: i
   INTEGER, PARAMETER :: NumPoints = 1000
   REAL(dp) :: LogT, logrho, L1norm, Maxnorm
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
@@ -58,7 +57,7 @@ PROGRAM wlInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "LowResEOSTableFilled.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "HighRes.h5" )
 
   WRITE (*,*) "Table Minimums"
   DO i = 1, EOSTable % DV % nVariables
@@ -126,6 +125,8 @@ PROGRAM wlInterpolationTest
 !  WRITE (*, 99 ) rho, T, Ye, Interpolant, DirectCall, &
 !                   ABS( Interpolant - DirectCall ) 
 
+!  ASSOCIATE( Pressure => EOSTable % DV % Variables(1) % Values )
+
   WRITE (*,*) " "
   WRITE (*,*) "L1 and Max Norms"
   WRITE (*,*) " "
@@ -138,6 +139,15 @@ PROGRAM wlInterpolationTest
   LocMax = MAXLOC( ABS( Interpolant - DirectCall ) / ABS( DirectCall ),  &
                    MASK = Interpolant.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
 
+!  L1norm = SUM( ABS( Pressure  - DirectCall ) / ABS( DirectCall ) ,  &
+!               MASK = Pressure.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
+
+!  Maxnorm = MAXVAL( ABS( Pressure - DirectCall ) / ABS( DirectCall ) ,  &
+!                   MASK = Pressure.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
+
+!  LocMax = MAXLOC( ABS( Pressure - DirectCall ) / ABS( DirectCall ) ,  &
+!                   MASK = Pressure.gt.0.0d0 .and. DirectCall.gt.0.0d0 )
+
   WRITE (*, '(ES12.5)' ) L1norm
   WRITE (*, '(ES12.5)' ) L1norm/NumPoints
   WRITE (*, '(ES12.5)' ) Maxnorm
@@ -146,6 +156,9 @@ PROGRAM wlInterpolationTest
 !  WRITE (*, '(A,ES12.5)' ) "Maxnorm =" , Maxnorm
   i = LocMax(1)
   WRITE (*, '(A,i4,5ES12.5)' ) "LocMax =" , i, rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i)
+
+!  END ASSOCIATE
+
   STOP
     EOSTable % DV % Variables(3) % Values(:,:,:) &
            = LOG10( EOSTable % DV % Variables(3) % Values(:,:,:) ) 
