@@ -47,25 +47,35 @@ CONTAINS
     
     REAL(dp), INTENT(out) :: Interpolant 
 
-    REAL(dp) :: p0, p1
-    
+    REAL(dp) :: p0, p1, epsilon, offset 
+   
+    epsilon = 1.d-200
+ 
     SELECT CASE( iMinGradient ) 
 
       CASE(1) 
-        p0 = LOG10( Table( i-1, j, k ) )
-        p1 = LOG10( Table( i+1, j, k ) )
+        offset = -2.d0*MIN( 0.d0, Table( i-1, j, k ), Table( i+1, j, k ) )
+        WRITE (*,*) "Offset=", offset
+        p0 = LOG10( Table( i-1, j, k ) + offset + epsilon  )
+        p1 = LOG10( Table( i+1, j, k ) + offset + epsilon )
 
       CASE(2)
-        p0 = LOG10( Table( i, j-1, k ) )
-        p1 = LOG10( Table( i, j+1, k ) )
+        offset = -2.d0*MIN( 0.d0, Table( i, j-1, k ), Table( i, j+1, k ) )
+        WRITE (*,*) "Offset=", offset
+        p0 = LOG10( Table( i, j-1, k ) + offset + epsilon  )
+        p1 = LOG10( Table( i, j+1, k ) + offset + epsilon  )
 
       CASE(3)
-        p0 = LOG10( Table( i, j, k-1 ) )
-        p1 = LOG10( Table( i, j, k+1 ) )
+        offset = -2.d0*MIN( 0.d0, Table( i, j, k-1 ), Table( i, j, k+1 ) )
+        WRITE (*,*) "Offset=", offset
+        p0 = LOG10( Table( i, j, k-1 ) + offset + epsilon  )
+        p1 = LOG10( Table( i, j, k+1 ) + offset + epsilon  )
         
-      END SELECT
+    END SELECT
 
-      Interpolant = 10.d0**( delta * p1 + ( 1.d0 - delta ) * p0 )
+    Interpolant = 10.d0**( delta * p1 + ( 1.d0 - delta ) * p0 ) - offset 
+    WRITE (*,*) "Interpolant=", Interpolant 
+    WRITE (*,*) "Delta=", delta 
 
   END SUBROUTINE LogInterpolateFine1D
 
@@ -79,32 +89,40 @@ CONTAINS
     
     REAL(dp), INTENT(out) :: Interpolant 
 
-    REAL(dp) :: p0, p1
+    REAL(dp) :: p0, p1, offset, epsilon
     
+    epsilon = 1.d-200
+
     SELECT CASE( iMinGradient ) 
 
       CASE(1) 
-        p0 = LOG10( Table( iLimits(1,i,j,k), j, k ) )
-        p1 = LOG10( Table( iLimits(2,i,j,k), j, k ) )
+        offset = -2.d0*MIN( 0.d0, Table(iLimits(1,i,j,k ),j,k), Table(iLimits(2,i,j,k),j,k) )
+        WRITE (*,*) "Offset=", offset
+        p0 = LOG10( Table( iLimits(1,i,j,k), j, k ) + offset + epsilon  )
+        p1 = LOG10( Table( iLimits(2,i,j,k), j, k ) + offset + epsilon  )
 
       CASE(2)
-        p0 = LOG10( Table( i, iLimits(1,i,j,k), k ) )
-        p1 = LOG10( Table( i, iLimits(2,i,j,k), k ) )
+        offset = -2.d0*MIN( 0.d0, Table(i,iLimits(1,i,j,k ),k), Table(i,iLimits(2,i,j,k),k) )
+        WRITE (*,*) "Offset=", offset
+        p0 = LOG10( Table( i, iLimits(1,i,j,k), k ) + offset + epsilon  )
+        p1 = LOG10( Table( i, iLimits(2,i,j,k), k ) + offset + epsilon  )
 
       CASE(3)
-        p0 = LOG10( Table( i, j, iLimits(1,i,j,k) ) )
-        p1 = LOG10( Table( i, j, iLimits(2,i,j,k) ) )
+        offset = -2.d0*MIN( 0.d0, Table(i,j,iLimits(1,i,j,k )), Table(i,j,iLimits(2,i,j,k)) )
+        WRITE (*,*) "Offset=", offset
+        p0 = LOG10( Table( i, j, iLimits(1,i,j,k) ) + offset + epsilon  )
+        p1 = LOG10( Table( i, j, iLimits(2,i,j,k) ) + offset + epsilon  )
         
-      END SELECT
-      WRITE (*,*) "p0, p1 =", p0, p1
-      Interpolant = 10.d0**( delta * p1 + ( 1.d0 - delta ) * p0 )
-      WRITE (*,*) "Interpolant=", Interpolant 
-      WRITE (*,*) "Delta=", delta 
+    END SELECT
+    WRITE (*,*) "p0, p1 =", p0, p1
+    Interpolant = 10.d0**( delta * p1 + ( 1.d0 - delta ) * p0 ) - offset 
+    WRITE (*,*) "Interpolant=", Interpolant 
+    WRITE (*,*) "Delta=", delta 
 
   END SUBROUTINE LogInterpolateCoarse1D
 
   SUBROUTINE LogInterpolateSingleVariable( x1, x2, x3, Coordinate1, Coordinate2, &
-                                           Coordinate3, LogInterp, Table, Interpolant )
+                                           Coordinate3, LogInterp, Offset, Table, Interpolant )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -114,29 +132,41 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
     LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
+    REAL(dp), INTENT(in) :: Offset
     
-    INTEGER :: i
-
     REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
 
-    REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111
+    REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
     REAL(dp), DIMENSION(3) :: delta
-    INTEGER :: il1, il2, il3
+    INTEGER :: i, il1, il2, il3
   
+    epsilon = 1.d-200
+
     DO i = 1, SIZE(x1)  
   
       CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 ) 
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
-    
-      p000 = Table( il1  , il2  , il3   )
-      p100 = Table( il1+1, il2  , il3   )
-      p010 = Table( il1  , il2+1, il3   )
-      p110 = Table( il1+1, il2+1, il3   )
-      p001 = Table( il1  , il2  , il3+1 )
-      p101 = Table( il1+1, il2  , il3+1 )
-      p011 = Table( il1  , il2+1, il3+1 )
-      p111 = Table( il1+1, il2+1, il3+1 )
+
+     !   Offset = -2.d0*MIN( 0.d0, &
+     !                       Table( il1  , il2  , il3   ), & 
+     !                       Table( il1+1, il2  , il3   ), &
+     !                       Table( il1  , il2+1, il3   ), &
+     !                       Table( il1+1, il2+1, il3   ), &
+     !                       Table( il1  , il2  , il3+1 ), &
+     !                       Table( il1+1, il2  , il3+1 ), &
+     !                       Table( il1  , il2+1, il3+1 ), &
+     !                       Table( il1+1, il2+1, il3+1 ) )
+        WRITE (*,*) "Offset=", Offset
+
+      p000 = ( Table( il1  , il2  , il3   ) + Offset + epsilon )
+      p100 = ( Table( il1+1, il2  , il3   ) + Offset + epsilon )
+      p010 = ( Table( il1  , il2+1, il3   ) + Offset + epsilon )
+      p110 = ( Table( il1+1, il2+1, il3   ) + Offset + epsilon )
+      p001 = ( Table( il1  , il2  , il3+1 ) + Offset + epsilon )
+      p101 = ( Table( il1+1, il2  , il3+1 ) + Offset + epsilon )
+      p011 = ( Table( il1  , il2+1, il3+1 ) + Offset + epsilon )
+      p111 = ( Table( il1+1, il2+1, il3+1 ) + Offset + epsilon )
 
       WRITE (*,*) "p000 =", p000
 
@@ -159,6 +189,7 @@ CONTAINS
       END IF
       WRITE (*,*) "Deltas = ", delta
       Interpolant(i) &
+       ! = ( &
         = 10.d0**( &
               (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
                                    +            delta(1)  * (1.0_dp - delta(2)) * p100   &
@@ -169,7 +200,7 @@ CONTAINS
                                    +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
                                    +            delta(1)  *           delta(2)  * p111 ) &
  
-                 ) 
+                 ) - Offset - epsilon 
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable

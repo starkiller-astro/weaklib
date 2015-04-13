@@ -425,6 +425,12 @@ CONTAINS
                               group_id, datasize3d )
     END DO
 
+    DO i = 1, SIZE( DV % Names ) 
+      datasize1d = SIZE( DV % Names )
+      CALL Read1dHDF_double( "Offsets", DV % Offsets(:), &
+                              group_id, datasize1d )
+    END DO
+
     CALL CloseGroupHDF( group_id )
 
   END SUBROUTINE ReadDependentVariablesHDF

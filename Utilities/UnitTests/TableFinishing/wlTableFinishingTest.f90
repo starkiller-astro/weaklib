@@ -6,6 +6,7 @@ PROGRAM wlTableFinishingTest
   USE wlEquationOfStateTableModule
   USE wlInterpolationModule
   USE wlExtTableFinishingModule
+  USE wlExtNumericalModule, ONLY: epsilon, zero
   USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF,  & 
                            ReadEquationOfStateTableHDF, & 
                            WriteEquationOfStateTableHDF
@@ -16,11 +17,9 @@ PROGRAM wlTableFinishingTest
   INTEGER, DIMENSION(:,:,:,:), ALLOCATABLE :: iLimits
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
-  REAL(dp) :: InterpolantFine
-  REAL(dp) :: InterpolantCoarse
-  REAL(dp) :: DeltaFine
-  REAL(dp) :: DeltaCoarse
-
+  REAL(dp) :: InterpolantFine, InterpolantCoarse
+  REAL(dp) :: DeltaFine, DeltaCoarse
+  REAL(dp) :: minvar
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Fail 
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired 
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: LoneCells    
@@ -28,7 +27,7 @@ PROGRAM wlTableFinishingTest
   LogInterp = (/.true.,.true.,.false./)
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "HighResEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "StandardResEquationOfStateTable.h5" )
 
   ASSOCIATE( nPoints => EOSTable % nPoints )
 
@@ -48,12 +47,12 @@ PROGRAM wlTableFinishingTest
 
   Fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0 
   
-  ASSOCIATE( Pressure => EOSTable % DV % Variables(1) % Values(:,:,:) )
+  !ASSOCIATE( Pressure => EOSTable % DV % Variables(1) % Values(:,:,:) )
 
   ! Find dimension (iMinGradient) with smallest gradient 
   !   for interpolation across single cell hole 
   
-  CALL HoleCharacterizeFine( Fail, Pressure, iMinGradient )
+  CALL HoleCharacterizeFine( Fail, EOSTable % DV % Variables(1) % Values, iMinGradient )
 
   DO k = 1, SIZE(Fail, DIM=3)
     DO j = 1, SIZE(Fail, DIM=2)
@@ -65,14 +64,19 @@ PROGRAM wlTableFinishingTest
 
         IF ( iMinGradient(i,j,k) == 0 ) CYCLE 
 
-        DeltaFine = 0.5d0  !REPLACE 
+        DeltaFine = 0.5d0 
 
-        CALL LogInterpolateFine1D&
-               ( i, j, k, iMinGradient(i,j,k), DeltaFine, Pressure, InterpolantFine )
+        DO l = 1, EOSTable % nVariables
 
-        Pressure(i,j,k) = InterpolantFine
+          CALL LogInterpolateFine1D&
+                 ( i, j, k, iMinGradient(i,j,k), DeltaFine, &
+                 EOSTable % DV % Variables(l) % Values, InterpolantFine )
 
-        Repaired(i,j,k) = .true.
+          EOSTable % DV % Variables(l) % Values(i,j,k) = InterpolantFine
+
+          Repaired(i,j,k) = .true.
+
+        END DO
 
         WRITE (*,*) InterpolantFine 
 
@@ -80,7 +84,8 @@ PROGRAM wlTableFinishingTest
     END DO
   END DO
 
-  CALL HoleCharacterizeCoarse( Fail, Repaired, Pressure, iMinGradient, iLimits ) 
+  CALL HoleCharacterizeCoarse( Fail, Repaired, &
+         EOSTable % DV % Variables(1) % Values, iMinGradient, iLimits ) 
 
   DO k = 1, SIZE(Fail, DIM=3)
     DO j = 1, SIZE(Fail, DIM=2)
@@ -106,20 +111,32 @@ PROGRAM wlTableFinishingTest
                             / DBLE( iLimits(2,i,j,k) - iLimits(1,i,j,k) )
         END SELECT
 
-        CALL LogInterpolateCoarse1D&
-               ( i, j, k, iMinGradient(i,j,k), iLimits, DeltaCoarse, Pressure, InterpolantCoarse )
+        DO l = 1, EOSTable % nVariables
+          CALL LogInterpolateCoarse1D&
+                 ( i, j, k, iMinGradient(i,j,k), iLimits, DeltaCoarse, &
+                  EOSTable % DV % Variables(l) % Values, InterpolantCoarse )
 
-        Pressure(i,j,k) = InterpolantCoarse
-        ! Add other DV's
-        Repaired(i,j,k) = .true.
+          EOSTable % DV % Variables(l) % Values(i,j,k) = InterpolantCoarse
+          Repaired(i,j,k) = .true.
 
         WRITE (*,*) InterpolantCoarse
+        END DO
 
       END DO
     END DO
   END DO
 
-  END ASSOCIATE ! Pressure
+  DO l = 1, EOSTable % nVariables
+
+    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
+    WRITE (*,*) "minvar=", minvar
+    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
+    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
+    EOSTable % DV % Variables(l) % Values &
+      = LOG10( EOSTable % DV % Variables(l) % Values &
+               + EOSTable % DV % Offsets(l) + epsilon )        
+
+  END DO
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
 
