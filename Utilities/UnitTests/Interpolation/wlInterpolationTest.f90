@@ -14,13 +14,11 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
-  INTEGER :: RhoLocation
-  INTEGER :: TLocation
-  INTEGER :: YeLocation
+  INTEGER :: RhoLocation, TLocation, YeLocation
+  INTEGER :: NumGoodPoints
   INTEGER, DIMENSION(1) :: LocMax
   LOGICAL, DIMENSION(3) :: LogInterp
   TYPE(EquationOfStateTableType) :: EOSTable
-
 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: DirectCall 
@@ -38,9 +36,9 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: a_heavy 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: be_heavy 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
-  REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax
+  REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax, epsilon
   INTEGER, PARAMETER :: NumPoints = 1000
-  REAL(dp) :: LogT, logrho, L1norm, Maxnorm
+  REAL(dp) :: LogT, logrho, L1norm, Maxnorm, L1norm2, Maxnorm2
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
   CHARACTER(len=128) :: LSFilePath
@@ -49,7 +47,7 @@ PROGRAM wlInterpolationTest
 
   99 FORMAT ("rho=", es12.5, " T=", es12.5, " Ye=" , es12.5, " Int=", es12.5, &
              " DC=", es12.5, " Diff=", es12.5 ) 
-
+  epsilon = 1.d-100
   nout  = 3216
 
   LScompress = '220'
@@ -119,13 +117,9 @@ PROGRAM wlInterpolationTest
 
   END DO
   
+  NumGoodPoints = 0
+
   DO j = 1, EOSTable % DV % nVariables
-
-!   ADD OFFSET OPERATION to LogInterpolateSingleVariable 
-
-!      EOSTable % DV % Variables(1) % Values(:,:,:) &
-!             = LOG10( EOSTable % DV % Variables(1) % Values(:,:,:) ) 
-
 
     CALL LogInterpolateSingleVariable( rho, T, Ye,                                   &
                                        EOSTable % TS % States(1) % Values,           &
@@ -140,47 +134,45 @@ PROGRAM wlInterpolationTest
     WRITE (nout,*) EOSTable % DV % Names(j), " Interpolation Comparison"
     WRITE (nout,*) " "
 
-    WRITE (nout,*) "Offset =",  EOSTable % DV % Offsets(j)
-    WRITE (nout,*) "Interpolant =", Interpolant 
-    WRITE (nout,*) "Direct Call =", DirectCall(:,j) 
+    !WRITE (nout,*) "Offset =",  EOSTable % DV % Offsets(j)
+!    WRITE (nout,*) "Interpolant =", Interpolant 
+!    WRITE (nout,*) "Direct Call =", DirectCall(:,j) 
 
     WRITE (nout,*) " "
-    WRITE (nout,*) "L1 and Max Norms"
+    WRITE (nout,*) "L1 and Max Norms Normalized"
     WRITE (nout,*) " "
-    L1norm = SUM( ABS( Interpolant - DirectCall(:,j) )/ ABS( DirectCall(:,j) ),  &
-                 MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
+    L1norm = SUM( ABS( Interpolant - DirectCall(:,j) )/ ABS( DirectCall(:,j) + epsilon ),  &
+                 MASK = DirectCall(:,1).gt.0.0d0 )
+                 !MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
+
+    NumGoodPoints = COUNT( DirectCall(:,1).gt.0.0d0 )
 
     Maxnorm = MAXVAL( ABS( Interpolant - DirectCall(:,j) ) / ABS( DirectCall(:,j) ),  &
-                   MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
+                 MASK = DirectCall(:,1).gt.0.0d0 )
+                 !MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
 
     LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) ) / ABS( DirectCall(:,j) ),  &
-                   MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
+                 MASK = DirectCall(:,1).gt.0.0d0 )
+                 !MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
+    L1norm2 = SUM( ABS( Interpolant - DirectCall(:,j) ), MASK = DirectCall(:,1).gt.0.0d0 )
+    Maxnorm2 = MAXVAL( ABS( Interpolant - DirectCall(:,j) ),  MASK = DirectCall(:,1).gt.0.0d0 )
 
-  !  L1norm = SUM( ABS( Interpolant  - DirectCall(:,j) ) / ABS( DirectCall(:,j) ) ,  &
-  !               MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
-
-  !  Maxnorm = MAXVAL( ABS( Interpolant - DirectCall(:,j) ) / ABS( DirectCall(:,j) ) ,  &
-  !                   MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
-
-  !  LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) ) / ABS( DirectCall(:,j) ) ,  &
-  !                   MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
-
-  !  WRITE (nout, '(ES12.5)' ) L1norm
-  !  WRITE (nout, '(ES12.5)' ) L1norm/NumPoints
-  !  WRITE (nout, '(ES12.5)' ) Maxnorm
-    WRITE (nout, '(A,ES12.5)' ) "L1norm =" , L1norm
-    WRITE (nout, '(A,ES12.5)' ) "L1norm/N =" , L1norm/NumPoints
-    WRITE (nout, '(A,ES12.5)' ) "Maxnorm =" , Maxnorm
+    WRITE (nout, '(A,ES12.5)' ) "L1norm=", L1norm
+    WRITE (nout, '(A,ES12.5)' ) "L1norm/N=", L1norm/NumPoints
+    WRITE (nout, '(A,ES12.5)' ) "L1norm2/N=", L1norm2/NumPoints
+    WRITE (nout, '(A,ES12.5)' ) "Maxnorm=", Maxnorm
+    WRITE (nout, '(A,ES12.5)' ) "Maxnorm2=", Maxnorm2
     i = LocMax(1)
-    WRITE (nout, '(A,i4,5ES12.5)' ) "LocMax =" , i, rho(i), T(i), Ye(i), Interpolant(i), DirectCall(i)
+    WRITE (nout, '(A,i4,5ES12.5)' ) "LocMax =" , i, rho(i), T(i), Ye(i), &
+                                      Interpolant(i), DirectCall(i)
 
   END DO
+
+  WRITE (*,*) NumGoodPoints
 
   CLOSE(nout)
 
 !  STOP
-!    EOSTable % DV % Variables(3) % Values(:,:,:) &
-!           = LOG10( EOSTable % DV % Variables(3) % Values(:,:,:) ) 
 
 !  WRITE (*,*) " "
 !  WRITE (*,*) "Internal Energy Monotonicity Check"

@@ -148,25 +148,16 @@ CONTAINS
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
 
-     !   Offset = -2.d0*MIN( 0.d0, &
-     !                       Table( il1  , il2  , il3   ), & 
-     !                       Table( il1+1, il2  , il3   ), &
-     !                       Table( il1  , il2+1, il3   ), &
-     !                       Table( il1+1, il2+1, il3   ), &
-     !                       Table( il1  , il2  , il3+1 ), &
-     !                       Table( il1+1, il2  , il3+1 ), &
-     !                       Table( il1  , il2+1, il3+1 ), &
-     !                       Table( il1+1, il2+1, il3+1 ) )
         WRITE (*,*) "Offset=", Offset
 
-      p000 = ( Table( il1  , il2  , il3   ) + Offset + epsilon )
-      p100 = ( Table( il1+1, il2  , il3   ) + Offset + epsilon )
-      p010 = ( Table( il1  , il2+1, il3   ) + Offset + epsilon )
-      p110 = ( Table( il1+1, il2+1, il3   ) + Offset + epsilon )
-      p001 = ( Table( il1  , il2  , il3+1 ) + Offset + epsilon )
-      p101 = ( Table( il1+1, il2  , il3+1 ) + Offset + epsilon )
-      p011 = ( Table( il1  , il2+1, il3+1 ) + Offset + epsilon )
-      p111 = ( Table( il1+1, il2+1, il3+1 ) + Offset + epsilon )
+      p000 = ( Table( il1  , il2  , il3   ) )
+      p100 = ( Table( il1+1, il2  , il3   ) )
+      p010 = ( Table( il1  , il2+1, il3   ) )
+      p110 = ( Table( il1+1, il2+1, il3   ) )
+      p001 = ( Table( il1  , il2  , il3+1 ) )
+      p101 = ( Table( il1+1, il2  , il3+1 ) )
+      p011 = ( Table( il1  , il2+1, il3+1 ) )
+      p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
       WRITE (*,*) "p000 =", p000
 
@@ -189,7 +180,6 @@ CONTAINS
       END IF
       WRITE (*,*) "Deltas = ", delta
       Interpolant(i) &
-       ! = ( &
         = 10.d0**( &
               (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
                                    +            delta(1)  * (1.0_dp - delta(2)) * p100   &
@@ -200,7 +190,7 @@ CONTAINS
                                    +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
                                    +            delta(1)  *           delta(2)  * p111 ) &
  
-                 ) - Offset - epsilon 
+                 ) - Offset 
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable

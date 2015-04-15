@@ -127,7 +127,7 @@ PROGRAM wlTableFinishingTest
   END DO
 
   DO l = 1, EOSTable % nVariables
-
+    WRITE (*,*) EOSTable % DV % Names(l)
     minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
     WRITE (*,*) "minvar=", minvar
     EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
