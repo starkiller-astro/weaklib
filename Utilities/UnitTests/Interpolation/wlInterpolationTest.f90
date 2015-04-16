@@ -38,7 +38,8 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax, epsilon
   INTEGER, PARAMETER :: NumPoints = 1000
-  REAL(dp) :: LogT, logrho, L1norm, Maxnorm, L1norm2, Maxnorm2
+  REAL(dp) :: LogT, logrho
+  REAL(dp), DIMENSION(13) :: L1norm, Maxnorm, L1norm2, Maxnorm2
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
   CHARACTER(len=128) :: LSFilePath
@@ -130,43 +131,51 @@ PROGRAM wlInterpolationTest
                                        EOSTable % DV % Variables(j) % Values(:,:,:), & 
                                        Interpolant )
 
-    WRITE (nout,*) " "
     WRITE (nout,*) EOSTable % DV % Names(j), " Interpolation Comparison"
-    WRITE (nout,*) " "
 
     !WRITE (nout,*) "Offset =",  EOSTable % DV % Offsets(j)
 !    WRITE (nout,*) "Interpolant =", Interpolant 
 !    WRITE (nout,*) "Direct Call =", DirectCall(:,j) 
 
-    WRITE (nout,*) " "
-    WRITE (nout,*) "L1 and Max Norms Normalized"
-    WRITE (nout,*) " "
-    L1norm = SUM( ABS( Interpolant - DirectCall(:,j) )/ ABS( DirectCall(:,j) + epsilon ),  &
+    L1norm(j) = SUM( ABS( Interpolant - DirectCall(:,j) )/ ( ABS( DirectCall(:,j) ) + epsilon ),  &
                  MASK = DirectCall(:,1).gt.0.0d0 )
                  !MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
 
     NumGoodPoints = COUNT( DirectCall(:,1).gt.0.0d0 )
 
-    Maxnorm = MAXVAL( ABS( Interpolant - DirectCall(:,j) ) / ABS( DirectCall(:,j) ),  &
+    Maxnorm(j) = MAXVAL( ABS( Interpolant - DirectCall(:,j) ) / ( ABS( DirectCall(:,j) ) + epsilon ) ,  &
                  MASK = DirectCall(:,1).gt.0.0d0 )
                  !MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
 
-    LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) ) / ABS( DirectCall(:,j) ),  &
+    LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) ) / ( ABS( DirectCall(:,j) ) + epsilon ) ,  &
                  MASK = DirectCall(:,1).gt.0.0d0 )
                  !MASK = Interpolant.gt.0.0d0 .and. DirectCall(:,j).gt.0.0d0 )
-    L1norm2 = SUM( ABS( Interpolant - DirectCall(:,j) ), MASK = DirectCall(:,1).gt.0.0d0 )
-    Maxnorm2 = MAXVAL( ABS( Interpolant - DirectCall(:,j) ),  MASK = DirectCall(:,1).gt.0.0d0 )
+    L1norm2(j) = SUM( ABS( Interpolant - DirectCall(:,j) ), MASK = DirectCall(:,1).gt.0.0d0 )
+    Maxnorm2(j) = MAXVAL( ABS( Interpolant - DirectCall(:,j) ),  MASK = DirectCall(:,1).gt.0.0d0 )
 
-    WRITE (nout, '(A,ES12.5)' ) "L1norm=", L1norm
-    WRITE (nout, '(A,ES12.5)' ) "L1norm/N=", L1norm/NumPoints
-    WRITE (nout, '(A,ES12.5)' ) "L1norm2/N=", L1norm2/NumPoints
-    WRITE (nout, '(A,ES12.5)' ) "Maxnorm=", Maxnorm
-    WRITE (nout, '(A,ES12.5)' ) "Maxnorm2=", Maxnorm2
-    i = LocMax(1)
-    WRITE (nout, '(A,i4,5ES12.5)' ) "LocMax =" , i, rho(i), T(i), Ye(i), &
-                                      Interpolant(i), DirectCall(i)
+    !WRITE (nout, '(A,ES12.5)' ) "L1norm=", L1norm
+    !WRITE (nout, '(A,ES12.5)' ) "L1norm/N=", L1norm/NumPoints
+    !WRITE (nout, '(A,ES12.5)' ) "L1norm2/N=", L1norm2/NumPoints
+    !WRITE (nout, '(A,ES12.5)' ) "Maxnorm=", Maxnorm
+    !WRITE (nout, '(A,ES12.5)' ) "Maxnorm2=", Maxnorm2
+    !i = LocMax(1)
+    !WRITE (nout, '(A,i4,5ES12.5)' ) "LocMax =" , i, rho(i), T(i), Ye(i), &
+    !                                  Interpolant(i), DirectCall(i,j)
+    !LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) ) ,  &
+    !             MASK = DirectCall(:,1).gt.0.0d0 )
+    !i = LocMax(1)
+    !WRITE (nout, '(A,i4,5ES12.5)' ) "LocMax2 =" , i, rho(i), T(i), Ye(i), &
+    !                                  Interpolant(i), DirectCall(i,j)
+    
+    L1norm(j) = MIN( L1norm(j), L1norm2(j) )/NumPoints
+    Maxnorm(j) = MIN( Maxnorm(j), Maxnorm2(j) )
+
 
   END DO
+  WRITE ( *, * ) "press        energ        entrop       chem_n       chem_p       chem_e       xn_neut      xn_prot      xn_alpha      xn_heavy      a_heavy     z_heavy      be_heavy"
+  WRITE ( *, '( 13(es12.5,x) )' ) L1norm(1), L1norm(2), L1norm(3), L1norm(4), L1norm(5), L1norm(6), L1norm(7), L1norm(8), L1norm(9), L1norm(10), L1norm(11), L1norm(12), L1norm(13)
+  WRITE ( *,'( 13(es12.5,x) )' ) Maxnorm(1), Maxnorm(2), Maxnorm(3), Maxnorm(4), Maxnorm(5), Maxnorm(6), Maxnorm(7), Maxnorm(8), Maxnorm(9), Maxnorm(10), Maxnorm(11), Maxnorm(12), Maxnorm(13)
+
 
   WRITE (*,*) NumGoodPoints
 
