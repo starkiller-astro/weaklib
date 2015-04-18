@@ -129,7 +129,7 @@ PRINT*, "Begin Associate"
     DO j = 1, EOSTable % nPoints(2)
       DO i = 1, EOSTable % nPoints(1) 
           CALL wlGetFullEOS( Density(i), Temperature(j), Ye(k), EOSFlag, fail,      &
-                       press(i,j,k), entrop(i,j,k), energ(i,j,k), chem_e(i,j,k),    &
+                       press(i,j,k), energ(i,j,k), entrop(i,j,k), chem_e(i,j,k),    &
                        chem_p(i,j,k), chem_n(i,j,k), xn_prot(i,j,k), xn_neut(i,j,k),&
                        xn_alpha(i,j,k), xn_heavy(i,j,k), z_heavy(i,j,k),            &
                        a_heavy(i,j,k), be_heavy(i,j,k) )   
@@ -154,10 +154,10 @@ WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3)
   END ASSOCIATE
 
 
-  DO l = 1, nVariables 
-    EOSTable % DV % Offsets(l) & 
-      = MAX( 0.0_dp, MINVAL( EOSTable % DV % Variables(l) % Values(:,:,:) ) ) 
-  END DO 
+!  DO l = 1, nVariables 
+!    EOSTable % DV % Offsets(l) & 
+!      = MAX( 0.0_dp, MINVAL( EOSTable % DV % Variables(l) % Values(:,:,:) ) ) 
+!  END DO 
 
   CALL InitializeHDF( )
 

@@ -11,19 +11,19 @@ MODULE wlIOModuleCHIMERA
 
 CONTAINS
 
-  SUBROUTINE ReadChimeraProfile1D( FileName, MaxZone, rho, T, Ye, SkipLinesOption )
+  SUBROUTINE ReadChimeraProfile1D( FileName, MaxZone, r, rho, T, Ye, s, SkipLinesOption )
 
     CHARACTER(len=*), INTENT(in) :: FileName
     INTEGER, INTENT(in)          :: MaxZone
     INTEGER, INTENT(in), OPTIONAL :: SkipLinesOption
-    REAL(dp), DIMENSION(:), INTENT(out) :: rho, T, Ye
+    REAL(dp), DIMENSION(:), INTENT(out) :: r, rho, T, Ye, s
 
     INTEGER :: i
     INTEGER :: j, FileUnit, SkipLines
     LOGICAL, DIMENSION(MaxZone) :: L, shock
     CHARACTER(len=1), DIMENSION(MaxZone) :: nnse, EOS
-    REAL(dp), DIMENSION(MaxZone) :: u, v, w, r, dr, dummy14, flat, lum, &
-                                           rstmss, Tmev, s, ah
+    REAL(dp), DIMENSION(MaxZone) :: u, v, w, dr, dummy14, flat, lum, &
+                                           rstmss, Tmev, ah
 
     257 FORMAT (1x,i4,6es11.3,a1,es11.3,L3,es11.3,es14.6,4(es11.3),es10.2,a1,es11.3,2x,a1)
 

@@ -27,7 +27,7 @@ PROGRAM wlTableFinishingTest
   LogInterp = (/.true.,.true.,.false./)
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "StandardResEquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
 
   ASSOCIATE( nPoints => EOSTable % nPoints )
 

@@ -4,22 +4,24 @@ PROGRAM wlChimeraProfileReader1Dtest
   USE wlIOModuleCHIMERA
   implicit none
 
-  INTEGER  :: i, Maxzone
+  INTEGER  :: i, Maxzone, nout
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
-  !REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
-  !REAL(dp), DIMENSION(:), ALLOCATABLE :: T
-  !REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: r 
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: s 
 
-  Maxzone = 540
+  nout = 3216
+  Maxzone = 720
 
-  ALLOCATE( rho( Maxzone ), T( Maxzone ), Ye( Maxzone ) ) 
+  ALLOCATE( r( Maxzone ), rho( Maxzone ), T( Maxzone ), Ye( Maxzone ), s( Maxzone ) ) 
 
-  CALL ReadChimeraProfile1D( "chimerafile", Maxzone, rho, T, Ye, 1)
+  CALL ReadChimeraProfile1D( "10ms.d", Maxzone, r, rho, T, Ye, s, 46)
 
+  OPEN(nout, FILE="Output10ms10ms10ms10ms10ms10ms10ms10ms10ms10ms.d")
   DO i = Maxzone, 1, -1
-    WRITE (*,*) rho(i), T(i), Ye(i) 
+    WRITE (nout,'(5(es12.5,x))') r(i), rho(i), T(i), Ye(i), s(i) 
   END DO
+  CLOSE(nout)
 
 END PROGRAM wlChimeraProfileReader1Dtest

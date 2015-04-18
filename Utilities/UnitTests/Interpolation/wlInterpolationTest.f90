@@ -103,8 +103,8 @@ PROGRAM wlInterpolationTest
                        z_heavy(i), be_heavy(i) ) 
 
     DirectCall(i,1) = press(i)
-    DirectCall(i,2) = energ(i)
-    DirectCall(i,3) = entrop(i)
+    DirectCall(i,3) = energ(i)
+    DirectCall(i,2) = entrop(i)
     DirectCall(i,4) = chem_n(i)
     DirectCall(i,5) = chem_p(i)
     DirectCall(i,6) = chem_e(i)
@@ -134,8 +134,7 @@ PROGRAM wlInterpolationTest
     WRITE (nout,*) EOSTable % DV % Names(j), " Interpolation Comparison"
 
     !WRITE (nout,*) "Offset =",  EOSTable % DV % Offsets(j)
-!    WRITE (nout,*) "Interpolant =", Interpolant 
-!    WRITE (nout,*) "Direct Call =", DirectCall(:,j) 
+    WRITE (nout,*) "Interpolant =", Interpolant, "Direct Call =", DirectCall(:,j) 
 
     L1norm(j) = SUM( ABS( Interpolant - DirectCall(:,j) )/ ( ABS( DirectCall(:,j) ) + epsilon ),  &
                  MASK = DirectCall(:,1).gt.0.0d0 )
