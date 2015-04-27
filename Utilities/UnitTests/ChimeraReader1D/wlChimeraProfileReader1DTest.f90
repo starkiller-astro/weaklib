@@ -42,11 +42,18 @@ PROGRAM wlChimeraProfileReader1Dtest
 
   OPEN(nout, FILE="Output10ms.d")
 
-  DO i = Maxzone, 1, -1
-    WRITE (nout,'(20(es12.5,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i), &
-                                    xn(i), xp(i), xhe(i), xa(i), chem_n(i), chem_p(i),  &
-                                    chem_e(i), a_heavy(i), z_heavy(i), be_heavy(i),     &
-                                    u(i), rstmss(i), vsound(i) 
+  DO i = 1, Maxzone
+!    WRITE (nout,'(20(es12.5,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i), &
+!                                    xn(i), xp(i), xhe(i), xa(i), chem_n(i), chem_p(i),  &
+!                                    chem_e(i), a_heavy(i), z_heavy(i), be_heavy(i),     &
+!                                    u(i), rstmss(i), vsound(i) 
+
+    WRITE (nout,'(17(es11.3,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i),   &
+                                    chem_n(i), chem_p(i), chem_e(i), xn(i), xp(i),  &
+                                    xa(i), xhe(i), z_heavy(i), a_heavy(i), be_heavy(i)
+                                     
+
+
   END DO
   CLOSE(nout)
 

@@ -148,7 +148,7 @@ CONTAINS
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
 
-        WRITE (*,*) "Offset=", Offset
+    !    WRITE (*,*) "Offset=", Offset
 
       p000 = ( Table( il1  , il2  , il3   ) )
       p100 = ( Table( il1+1, il2  , il3   ) )
@@ -159,7 +159,7 @@ CONTAINS
       p011 = ( Table( il1  , il2+1, il3+1 ) )
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
-      WRITE (*,*) "p000 =", p000
+     ! WRITE (*,*) "p000 =", p000
 
       IF ( LogInterp(1) ) THEN 
       delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
@@ -178,7 +178,7 @@ CONTAINS
       ELSE
       delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
-      WRITE (*,*) "Deltas = ", delta
+     ! WRITE (*,*) "Deltas = ", delta
       Interpolant(i) &
         = 10.d0**( &
               (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                

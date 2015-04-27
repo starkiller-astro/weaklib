@@ -103,8 +103,8 @@ PROGRAM wlInterpolationTest
                        z_heavy(i), be_heavy(i) ) 
 
     DirectCall(i,1) = press(i)
-    DirectCall(i,3) = energ(i)
     DirectCall(i,2) = entrop(i)
+    DirectCall(i,3) = energ(i)
     DirectCall(i,4) = chem_n(i)
     DirectCall(i,5) = chem_p(i)
     DirectCall(i,6) = chem_e(i)
@@ -122,14 +122,15 @@ PROGRAM wlInterpolationTest
 
   DO j = 1, EOSTable % DV % nVariables
 
-    CALL LogInterpolateSingleVariable( rho, T, Ye,                                   &
-                                       EOSTable % TS % States(1) % Values,           &
-                                       EOSTable % TS % States(2) % Values,           &
-                                       EOSTable % TS % States(3) % Values,           &
-                                       LogInterp,                                    &
-                                       EOSTable % DV % Offsets(j),                   &
-                                       EOSTable % DV % Variables(j) % Values(:,:,:), & 
-                                       Interpolant )
+    CALL LogInterpolateSingleVariable &
+           ( rho, T, Ye,                                   &
+             EOSTable % TS % States(1) % Values,           &
+             EOSTable % TS % States(2) % Values,           &
+             EOSTable % TS % States(3) % Values,           &
+             LogInterp,                                    &
+             EOSTable % DV % Offsets(j),                   &
+             EOSTable % DV % Variables(j) % Values(:,:,:), & 
+             Interpolant )
 
     WRITE (nout,*) EOSTable % DV % Names(j), " Interpolation Comparison"
 
