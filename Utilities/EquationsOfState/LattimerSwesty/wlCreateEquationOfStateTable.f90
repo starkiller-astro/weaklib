@@ -135,12 +135,13 @@ PRINT*, "Begin Associate"
                        a_heavy(i,j,k), be_heavy(i,j,k) )   
           IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. xn_prot(i,j,k) < 0.   &
                .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
-          WRITE (*, 94 ) Density(i), Temperature(j), Ye(k)
-          WRITE (*, 95 ) press(i,j,k), entrop(i,j,k), energ(i,j,k) 
-          WRITE (*, 96 ) chem_e(i,j,k), chem_p(i,j,k), chem_n(i,j,k) 
-          WRITE (*, 97 ) xn_prot(i,j,k), xn_neut(i,j,k), xn_alpha(i,j,k) 
-          WRITE (*, 98 ) xn_heavy(i,j,k), z_heavy(i,j,k), a_heavy(i,j,k), be_heavy(i,j,k) 
-          WRITE (*,*) "  "
+!          WRITE (*, 94 ) Density(i), Temperature(j), Ye(k)
+!          WRITE (*, 95 ) press(i,j,k), entrop(i,j,k), energ(i,j,k) 
+          WRITE (*, *) energ(i,j,k) 
+!          WRITE (*, 96 ) chem_e(i,j,k), chem_p(i,j,k), chem_n(i,j,k) 
+!          WRITE (*, 97 ) xn_prot(i,j,k), xn_neut(i,j,k), xn_alpha(i,j,k) 
+!          WRITE (*, 98 ) xn_heavy(i,j,k), z_heavy(i,j,k), a_heavy(i,j,k), be_heavy(i,j,k) 
+!          WRITE (*,*) "  "
           count = count + 1
           END IF
           

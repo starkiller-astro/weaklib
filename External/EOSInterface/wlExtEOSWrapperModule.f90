@@ -355,7 +355,7 @@ SELECT CASE ( flag )
 !-----------------------------------------------------------------------
 
   press    = ( PTOT - EPRESS + pe ) * kp
-  energ    = ( UTOT + UTOT0 - EU + ee ) * kp
+  energ    = ( UTOT + UTOT0 - EU + ee ) * ku
   entrop   = ( STOT - ES ) + entrop_e
   chem_n   = ( MUN - dmnp )
   chem_p   =   MUPROT

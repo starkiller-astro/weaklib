@@ -3,6 +3,7 @@ PROGRAM wlChimeraInterpolationTest
   USE wlKindModule, ONLY: dp 
   USE HDF5
   USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
+  USE wlExtPhysicalConstantsModule, ONLY: kfm
   USE wlEquationOfStateTableModule
   USE wlInterpolationModule
   USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF, & 
@@ -36,7 +37,7 @@ PROGRAM wlChimeraInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: z_heavy 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: a_heavy 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: be_heavy 
-  REAL(dp) :: minrho, epsilon
+  REAL(dp) :: minrho, epsilon, factor
   INTEGER, PARAMETER :: NumPoints = 720
   REAL(dp) :: LogT, logrho
   REAL(dp), DIMENSION(13) :: L1norm, Maxnorm, L1norm2, Maxnorm2
@@ -104,6 +105,8 @@ PROGRAM wlChimeraInterpolationTest
   END DO
  
   WRITE (*,*) "P =", ChimeraProfile(1,1)
+
+!  EOSTable % DV % Variables(3) % Values(:,:,:) = EOSTable % DV % Variables(3) % Values(:,:,:) + LOG10(kfm)
 
   DO i = 1, EOSTable % DV % nVariables
 
