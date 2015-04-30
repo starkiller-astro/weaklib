@@ -43,6 +43,7 @@ CONTAINS
     261 FORMAT (1x,i4,14es11.4)
     262 FORMAT (1x,i4,10es11.4)
     263 FORMAT (1x,i4,18es11.4)
+    264 FORMAT (1x,i4,7es11.4)
 
     SkipLines = 0
     IF ( Present ( SkipLinesOption ) ) &
@@ -150,10 +151,23 @@ CONTAINS
         DO i = MaxZone, 1, -1
           READ(FileUnit, 263) j, xn(i), xp(i), xa(i), xhe(i), a_heavy(i), &
                               dum1(i), z_heavy(i), dum2(i), dum3(i), dum4(i), &
-                              dum5(i), dum6(i), dum7(i), be_heavy(i), dum8(i),&
+                              dum5(i), dum6(i), dum7(i), dum12(i), dum8(i),&
                               dum9(i), dum10(i), dum11(i)
         END DO
       END IF
+
+      IF ( TRIM(ADJUSTL(stanza_name)) == 'Hydrodynamic data - Nuclear matter properties' ) THEN
+        PRINT*, TRIM(ADJUSTL(stanza_name))
+        DO i = 1, 4 
+          READ(FileUnit,*)
+        END DO
+
+        DO i = MaxZone, 1, -1
+          READ(FileUnit, 264) j, dum1(i), be_heavy(i), dum2(i), dum3(i), dum4(i), &
+                              dum5(i), dum6(i)
+        END DO
+      END IF
+ 
  
     END DO
 

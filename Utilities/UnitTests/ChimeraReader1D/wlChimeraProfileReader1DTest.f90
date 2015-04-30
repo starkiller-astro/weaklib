@@ -36,11 +36,11 @@ PROGRAM wlChimeraProfileReader1Dtest
               a_heavy( Maxzone ), z_heavy( Maxzone ), be_heavy( Maxzone ), &
               u( Maxzone ), rstmss( Maxzone ), vsound( Maxzone ) ) 
 
-  CALL ReadChimeraProfile1D( "200ms.d", Maxzone, r, rho, T, Ye, p, s, e_internal, &
+  CALL ReadChimeraProfile1D( "10ms.d", Maxzone, r, rho, T, Ye, p, s, e_internal, &
                                xn, xp, xhe, xa, chem_n, chem_p, chem_e, a_heavy,  &
                                z_heavy, be_heavy, u, rstmss, vsound, 6932)
 
-  OPEN(nout, FILE="Output200ms.d")
+  OPEN(nout, FILE="Output10ms.d")
 
   DO i = 1, Maxzone
 !    WRITE (nout,'(20(es12.5,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i), &

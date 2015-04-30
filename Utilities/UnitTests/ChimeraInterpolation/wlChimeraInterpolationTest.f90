@@ -91,15 +91,15 @@ PROGRAM wlChimeraInterpolationTest
     ChimeraProfile(i,1) = p(i)
     ChimeraProfile(i,2) = s(i)
     ChimeraProfile(i,3) = e_internal(i)
-    ChimeraProfile(i,4) = chem_n(i)
+    ChimeraProfile(i,4) = chem_e(i)
     ChimeraProfile(i,5) = chem_p(i)
-    ChimeraProfile(i,6) = chem_e(i)
-    ChimeraProfile(i,7) = xn(i)
-    ChimeraProfile(i,8) = xp(i)
+    ChimeraProfile(i,6) = chem_n(i)
+    ChimeraProfile(i,7) = xp(i)
+    ChimeraProfile(i,8) = xn(i)
     ChimeraProfile(i,9) = xa(i)
     ChimeraProfile(i,10) = xhe(i)
-    ChimeraProfile(i,11) = a_heavy(i)
-    ChimeraProfile(i,12) = z_heavy(i)
+    ChimeraProfile(i,11) = z_heavy(i)
+    ChimeraProfile(i,12) = a_heavy(i)
     ChimeraProfile(i,13) = be_heavy(i)
 
   END DO
@@ -133,7 +133,7 @@ PROGRAM wlChimeraInterpolationTest
 
   END DO
 
-  WRITE ( *, * ) "press        entrop       energy       chem_n       chem_p       chem_e       xn_neut      xn_prot      xn_alpha      xn_heavy      a_heavy     z_heavy      be_heavy"
+  WRITE ( *, * ) "press        entrop       energy       chem_e       chem_p       chem_n       xn_prot      xn_neut      xn_alpha      xn_heavy      z_heavy     a_heavy      be_heavy"
   WRITE ( *, '( 13(es12.5,x) )' ) L1norm(1)/Zonelimit, L1norm(2)/Zonelimit,   &
                                   L1norm(3)/Zonelimit, L1norm(4)/Zonelimit,   &
                                   L1norm(5)/Zonelimit, L1norm(6)/Zonelimit,   &
@@ -152,10 +152,10 @@ PROGRAM wlChimeraInterpolationTest
                                        EOSTable % TS % States(3) % Values,           &
                                        LogInterp,                                    &
                                        EOSTable % DV % Offsets(i),                   &
-                                       EOSTable % DV % Variables(10) % Values(:,:,:), &
+                                       EOSTable % DV % Variables(13) % Values(:,:,:), &
                                        Interpolant(1:ZoneLimit) )
  DO i = 1, ZoneLimit
-    WRITE (unitout,'(4es11.4)') Radius(i), rho(i), Interpolant(i), ChimeraProfile(i,10) 
+    WRITE (unitout,'(4es11.4)') Radius(i), rho(i), Interpolant(i), ChimeraProfile(i,13) 
  END DO
 
   CLOSE(unitout)
