@@ -460,13 +460,18 @@ CONTAINS
   END SUBROUTINE ReadNumberVariablesHDF
 
   SUBROUTINE WriteEquationOfStateTableHDF( EOSTable )
+!  SUBROUTINE WriteEquationOfStateTableHDF( EOSTable, Description  )
 
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
-
+!    CHARACTER(len=*), INTENT(in) :: Description
+    
+!    CHARACTER(len=23), PARAMETER :: BaseFileName = "EquationOfStateTable.h5"  
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
 
+    
     CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
+!    CALL OpenFileHDF( TRIM(ADJUSTL(Description//BaseFileName)), .true., file_id )
 
     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
     CALL WriteThermoStateHDF( EOSTable % TS, group_id )
@@ -479,7 +484,6 @@ CONTAINS
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE WriteEquationOfStateTableHDF
-
   
   SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
 

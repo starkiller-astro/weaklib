@@ -35,9 +35,14 @@ PROGRAM wlCreateEquationOfStateTable
   98 FORMAT ("Heavy Mass Fract=", es12.5,1x, "Heavy Charge # =", es12.5,1x,    &
              "Heavy Mass #=" , es12.5,1x, "Heavy Binding Energy=", es12.5 )
 
-  !nPoints = (/81,28,24/)
-  nPoints = (/161,55,47/)
-  !nPoints = (/321,109,93/)
+!  FOR FUTURE USE OF INPUT FILE
+!  FileName = "input.d" 
+!  OPEN( newunit = InputUnit, file = FileName )
+!  READ( InputUnit, * ) Description, Resolution 
+
+!  nPoints = (/81,28,24/)
+!  nPoints = (/161,55,47/)
+  nPoints = (/321,109,93/)
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -154,6 +159,7 @@ WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3)
   CALL InitializeHDF( )
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
+!  CALL WriteEquationOfStateTableHDF( EOSTable, Description )
 
   CALL FinalizeHDF( )
 

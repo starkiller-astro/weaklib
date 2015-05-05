@@ -11,7 +11,7 @@ PROGRAM wlChimeraInterpolationTest
 
   implicit none
 
-  INTEGER  :: i, j, unitout, ProfileUnit, ZoneLimit
+  INTEGER  :: i, j, unitout, ErrorUnit, ProfileUnit, ZoneLimit
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
@@ -22,6 +22,7 @@ PROGRAM wlChimeraInterpolationTest
   TYPE(EquationOfStateTableType) :: EOSTable
 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE :: TableProfile 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: ChimeraProfile
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Radius 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: p 
@@ -63,17 +64,19 @@ PROGRAM wlChimeraInterpolationTest
 !  minrho = EOSTable % TS % minValues(1) 
   minrho = 1.0e11 
 
-  OPEN( newunit = unitout, FILE="OutputFile")
+  OPEN( newunit = unitout, FILE="HighResInterpolationData10ms.d")
+  OPEN( newunit = ErrorUnit, FILE="HighResInterpolationErrors10ms.d")
 
-  WRITE (unitout,*) "Table Minimums"
-  DO i = 1, EOSTable % DV % nVariables
-    WRITE (unitout,*) EOSTable % DV % Names(i) , MINVAL( EOSTable % DV % Variables(i) % Values) 
-  END DO
+!  WRITE (unitout,*) "Table Minimums"
+!  DO i = 1, EOSTable % DV % nVariables
+!    WRITE (unitout,*) EOSTable % DV % Names(i) , MINVAL( EOSTable % DV % Variables(i) % Values) 
+!  END DO
 
   LogInterp = (/.true.,.true.,.false./)
 
   ALLOCATE( Radius( NumPoints ), rho( NumPoints ), T( NumPoints ), Ye( NumPoints ), &
             Interpolant( NumPoints ), ChimeraProfile( NumPoints, 13), p( NumPoints ), &
+            TableProfile( NumPoints, 13 ), &
             s( NumPoints ), e_internal( NumPoints ), chem_e( NumPoints ),          & 
             chem_p( NumPoints ), chem_n( NumPoints ), xp( NumPoints ),             &
             xn( NumPoints ), xa( NumPoints ), xhe( NumPoints ),                    &
@@ -120,6 +123,8 @@ PROGRAM wlChimeraInterpolationTest
                                        EOSTable % DV % Variables(i) % Values(:,:,:), & 
                                        Interpolant(1:ZoneLimit) )
 
+    TableProfile(1:ZoneLimit,i) = Interpolant(1:ZoneLimit)
+
     L1norm(i) = SUM(ABS( Interpolant(1:ZoneLimit) &
                        -  ChimeraProfile(1:ZoneLimit,i) ) / &
                       ( ABS( ChimeraProfile(1:ZoneLimit,i) ) + epsilon ) )
@@ -142,8 +147,26 @@ PROGRAM wlChimeraInterpolationTest
                                   L1norm(11)/Zonelimit, L1norm(12)/Zonelimit, &
                                   L1norm(13)/Zonelimit
 
-  WRITE ( *,'( 13(es12.5,x) )' ) Maxnorm(1), Maxnorm(2), Maxnorm(3), Maxnorm(4), Maxnorm(5), Maxnorm(6), Maxnorm(7), Maxnorm(8), Maxnorm(9), Maxnorm(10), Maxnorm(11), Maxnorm(12), Maxnorm(13)
+  WRITE ( *,'( 13(es12.5,x) )' ) Maxnorm(1), Maxnorm(2), Maxnorm(3), Maxnorm(4), &
+                                 Maxnorm(5), Maxnorm(6), Maxnorm(7), Maxnorm(8), &
+                                 Maxnorm(9), Maxnorm(10), Maxnorm(11),           &
+                                 Maxnorm(12), Maxnorm(13)
   
+  WRITE ( ErrorUnit, * ) "press        entrop       energy       chem_e       chem_p       chem_n       xn_prot      xn_neut      xn_alpha      xn_heavy      z_heavy     a_heavy      be_heavy"
+  WRITE ( ErrorUnit, '( 13(es12.5,x) )' ) L1norm(1)/Zonelimit, L1norm(2)/Zonelimit,   &
+                                  L1norm(3)/Zonelimit, L1norm(4)/Zonelimit,   &
+                                  L1norm(5)/Zonelimit, L1norm(6)/Zonelimit,   &
+                                  L1norm(7)/Zonelimit, L1norm(8)/Zonelimit,   &
+                                  L1norm(9)/Zonelimit, L1norm(10)/Zonelimit,  &
+                                  L1norm(11)/Zonelimit, L1norm(12)/Zonelimit, &
+                                  L1norm(13)/Zonelimit
+
+  WRITE ( ErrorUnit,'( 13(es12.5,x) )' ) Maxnorm(1), Maxnorm(2), Maxnorm(3), Maxnorm(4), &
+                                 Maxnorm(5), Maxnorm(6), Maxnorm(7), Maxnorm(8), &
+                                 Maxnorm(9), Maxnorm(10), Maxnorm(11),           &
+                                 Maxnorm(12), Maxnorm(13)
+  
+
 
     CALL LogInterpolateSingleVariable( rho(1:ZoneLimit), T(1:ZoneLimit), &
                                        Ye(1:ZoneLimit),                              &
@@ -154,10 +177,17 @@ PROGRAM wlChimeraInterpolationTest
                                        EOSTable % DV % Offsets(i),                   &
                                        EOSTable % DV % Variables(13) % Values(:,:,:), &
                                        Interpolant(1:ZoneLimit) )
+! DO j = 1, 13
  DO i = 1, ZoneLimit
-    WRITE (unitout,'(4es11.4)') Radius(i), rho(i), Interpolant(i), ChimeraProfile(i,13) 
+    WRITE (unitout,'(28es11.4)') Radius(i), rho(i), TableProfile(i,1), ChimeraProfile(i,1), &
+            TableProfile(i,2), ChimeraProfile(i,2), TableProfile(i,3), ChimeraProfile(i,3), &
+            TableProfile(i,4), ChimeraProfile(i,4), TableProfile(i,5), ChimeraProfile(i,5), &
+            TableProfile(i,6), ChimeraProfile(i,6), TableProfile(i,7), ChimeraProfile(i,7), &
+            TableProfile(i,8), ChimeraProfile(i,8), TableProfile(i,9), ChimeraProfile(i,9), &
+            TableProfile(i,10), ChimeraProfile(i,10), TableProfile(i,11), ChimeraProfile(i,11), &
+            TableProfile(i,12), ChimeraProfile(i,12), TableProfile(i,13), ChimeraProfile(i,13)  
  END DO
-
+! END DO
   CLOSE(unitout)
 
 
