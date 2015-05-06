@@ -97,25 +97,6 @@ CONTAINS
         END DO
       END IF
 
-!      IF ( TRIM(ADJUSTL(stanza_name)) == 'Masses and Mass averaged data' ) THEN
-!        PRINT*, TRIM(ADJUSTL(stanza_name))
-!        DO i = 1, 2 
-!          READ(FileUnit,*)
-!        END DO
-!
-!        READ(FileUnit,'(a)',iostat=istate) stanza_name
-!        PRINT*, TRIM(ADJUSTL(stanza_name(11:13)))
-!        IF ( TRIM(ADJUSTL(stanza_name(11:13))) == 'rho' ) THEN 
-!          DO i = 1, 2 
-!            READ(FileUnit,*)
-!          END DO
-!          DO i = MaxZone, 1, -1
-!            READ(FileUnit, 260) j, dum1(i), dum2(i), xn(i), xp(i), xhe(i), xa(i), &
-!                                   dum3(i), dum4(i), dum5(i), dum6(i), dum7(i)
-!          END DO
-!        END IF
-!      END IF
-
       IF ( TRIM(ADJUSTL(stanza_name)) == 'Hydrodynamic data' ) THEN
         PRINT*, TRIM(ADJUSTL(stanza_name))
         DO i = 1, 4 
@@ -156,19 +137,18 @@ CONTAINS
         END DO
       END IF
 
-      IF ( TRIM(ADJUSTL(stanza_name)) == 'Hydrodynamic data - Nuclear matter properties' ) THEN
+      IF ( TRIM(ADJUSTL(stanza_name)) == 'Auxilary Nucleus Comp. Data and Burn Data' ) THEN
         PRINT*, TRIM(ADJUSTL(stanza_name))
-        DO i = 1, 4 
+        DO i = 1, 8 
           READ(FileUnit,*)
         END DO
 
         DO i = MaxZone, 1, -1
-          READ(FileUnit, 264) j, dum1(i), be_heavy(i), dum2(i), dum3(i), dum4(i), &
-                              dum5(i), dum6(i)
+          READ(FileUnit, 262) j, dum1(i), dum2(i), be_heavy(i), dum3(i), dum4(i), &
+                              dum5(i), dum6(i), dum7(i), dum8(i), dum9(i)
         END DO
       END IF
- 
- 
+
     END DO
 
     CLOSE(FileUnit)
