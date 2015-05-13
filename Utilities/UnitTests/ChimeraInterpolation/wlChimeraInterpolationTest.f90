@@ -11,7 +11,7 @@ PROGRAM wlChimeraInterpolationTest
 
   implicit none
 
-  INTEGER  :: i, j, unitout, ErrorUnit, ProfileUnit, ZoneLimit
+  INTEGER  :: i, j, unitout, ErrorUnit, TestUnit, ProfileUnit, ZoneLimit
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
@@ -59,13 +59,14 @@ PROGRAM wlChimeraInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "StandardResEquationOfStateTable.h5" )
   
 !  minrho = EOSTable % TS % minValues(1) 
   minrho = 1.0e11 
 
   OPEN( newunit = unitout, FILE="HighResInterpolationData10ms.d")
   OPEN( newunit = ErrorUnit, FILE="HighResInterpolationErrors10ms.d")
+  OPEN( newunit = TestUnit, FILE="StandardResTableMap.d")
 
 !  WRITE (unitout,*) "Table Minimums"
 !  DO i = 1, EOSTable % DV % nVariables
@@ -178,7 +179,7 @@ PROGRAM wlChimeraInterpolationTest
                                        EOSTable % DV % Variables(13) % Values(:,:,:), &
                                        Interpolant(1:ZoneLimit) )
 ! DO j = 1, 13
- DO i = 1, ZoneLimit
+  DO i = 1, ZoneLimit
     WRITE (unitout,'(28es11.4)') Radius(i), rho(i), TableProfile(i,1), ChimeraProfile(i,1), &
             TableProfile(i,2), ChimeraProfile(i,2), TableProfile(i,3), ChimeraProfile(i,3), &
             TableProfile(i,4), ChimeraProfile(i,4), TableProfile(i,5), ChimeraProfile(i,5), &
@@ -186,10 +187,34 @@ PROGRAM wlChimeraInterpolationTest
             TableProfile(i,8), ChimeraProfile(i,8), TableProfile(i,9), ChimeraProfile(i,9), &
             TableProfile(i,10), ChimeraProfile(i,10), TableProfile(i,11), ChimeraProfile(i,11), &
             TableProfile(i,12), ChimeraProfile(i,12), TableProfile(i,13), ChimeraProfile(i,13)  
- END DO
+  END DO
 ! END DO
   CLOSE(unitout)
 
+  !DO i = 1 , SIZE( EOSTable % TS % States(2) % Values ) 
+   ! WRITE(TestUnit,'(i4,7es12.5)' ) i, EOSTable % TS % States(2) % Values(i),  &
+   !                     10**(EOSTable % DV % Variables(3) % Values(139,i,1)), &
+   !                     10**(EOSTable % DV % Variables(3) % Values(139,i,2)), &
+   !                    10**(EOSTable % DV % Variables(3) % Values(161,i,42)), &
+   !                    10**(EOSTable % DV % Variables(3) % Values(161,i,45)), &
+   !                    !10**(EOSTable % DV % Variables(3) % Values(161,i,46)), &
+   !                    10**(EOSTable % DV % Variables(3) % Values(161,i,46))
+  !END DO
+  DO i = 1 , SIZE( EOSTable % TS % States(1) % Values ) 
+    WRITE(TestUnit,'(i4,7es12.5)' ) i, EOSTable % TS % States(1) % Values(i),  &
+                        EOSTable % TS % States(3) % Values(i),  &
+                        10**(EOSTable % DV % Variables(3) % Values(139,i,1)), &
+                        10**(EOSTable % DV % Variables(3) % Values(139,i,2)), &
+                        10**(EOSTable % DV % Variables(3) % Values(161,i,42)), &
+                        10**(EOSTable % DV % Variables(3) % Values(161,i,45)), &
+                        !10**(EOSTable % DV % Variables(3) % Values(161,i,46)), &
+                        10**(EOSTable % DV % Variables(3) % Values(161,i,46))
+  END DO
+  WRITE (*,*) "Internal Energy Monotonicity Check"
+
+ CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
+                          EOSTable % nPoints(1), EOSTable % nPoints(2), &
+                          EOSTable % nPoints(3), 2 )
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 

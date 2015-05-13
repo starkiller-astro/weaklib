@@ -43,6 +43,7 @@ PROGRAM wlTableFinishingTest
 
   WRITE (*,*) "Logicals Allocated" 
 
+!  ASSOCIATE( Repaired => EOSTable % DV % Repaired(:,:,:) )
   Repaired = .false.
 
   Fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0 
@@ -125,6 +126,11 @@ PROGRAM wlTableFinishingTest
       END DO
     END DO
   END DO
+
+!  END ASSOCIATE
+  CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
+                          EOSTable % nPoints(1), EOSTable % nPoints(2), &
+                          EOSTable % nPoints(3), 2, Repaired )
 
   DO l = 1, EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)

@@ -41,8 +41,8 @@ PROGRAM wlCreateEquationOfStateTable
 !  READ( InputUnit, * ) Description, Resolution 
 
 !  nPoints = (/81,28,24/)
-!  nPoints = (/161,55,47/)
-  nPoints = (/321,109,93/)
+  nPoints = (/161,55,47/)
+!  nPoints = (/321,109,93/)
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -107,6 +107,9 @@ PRINT*, "Allocate Dependent Variable Units "
                                   '                                ', &
                                   'MeV                             '/)
 
+!PRINT*, "Allocate Dependent Variable Logical " 
+!  EOSTable % DV % Repaired(:,:,:) = .false.
+  
 PRINT*, "Begin Associate" 
   ASSOCIATE(&
     Density     => EOSTable % TS % States(1) % Values, &

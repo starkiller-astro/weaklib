@@ -265,9 +265,10 @@ WRITE (*,*) Interpolant
 
   END SUBROUTINE LoneCellLogInterpolateSingleVariable
   
-  SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe, Axis )
+  SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe, Axis, Repaired )
 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
+    LOGICAL, DIMENSION(:,:,:), INTENT(in) :: Repaired
     INTEGER, INTENT(in) :: Nrho 
     INTEGER, INTENT(in) :: NT
     INTEGER, INTENT(in) :: NYe
@@ -291,6 +292,7 @@ WRITE (*,*) Interpolant
             IF ( ( ( Table(i+1, j, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i-1, j, k) ) ) < 0. ) THEN
               WRITE (*,97) i, j, k
+              WRITE (*,*) "Repaired =", Repaired(i,j,k)
               count = count + 1
             END IF
           END DO
@@ -305,6 +307,7 @@ WRITE (*,*) Interpolant
             IF ( ( ( Table(i, j+1, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j-1, k) ) ) < 0.) THEN 
               WRITE (*,98) i, j, k
+              WRITE (*,*) "Repaired =", Repaired(i,j,k)
               count = count + 1
             END IF
           END DO
@@ -318,7 +321,8 @@ WRITE (*,*) Interpolant
 
             IF ( ( ( Table(i, j, k+1) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j, k-1) ) ) < 0. ) &
-            WRITE (*, 99) i, j, k
+              WRITE (*, 99) i, j, k
+              WRITE (*,*) "Repaired =", Repaired(i,j,k)
 
           END DO
         END DO
