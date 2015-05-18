@@ -107,8 +107,8 @@ PRINT*, "Allocate Dependent Variable Units "
                                   '                                ', &
                                   'MeV                             '/)
 
-!PRINT*, "Allocate Dependent Variable Logical " 
-!  EOSTable % DV % Repaired(:,:,:) = .false.
+PRINT*, "Allocate Dependent Variable Logical " 
+  EOSTable % DV % Repaired(:,:,:) = 0
   
 PRINT*, "Begin Associate" 
   ASSOCIATE(&

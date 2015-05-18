@@ -292,7 +292,8 @@ WRITE (*,*) Interpolant
             IF ( ( ( Table(i+1, j, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i-1, j, k) ) ) < 0. ) THEN
               WRITE (*,97) i, j, k
-              WRITE (*,*) "Repaired =", Repaired(i,j,k)
+              WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
+                Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
               count = count + 1
             END IF
           END DO
@@ -307,7 +308,8 @@ WRITE (*,*) Interpolant
             IF ( ( ( Table(i, j+1, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j-1, k) ) ) < 0.) THEN 
               WRITE (*,98) i, j, k
-              WRITE (*,*) "Repaired =", Repaired(i,j,k)
+              WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
+                Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
               count = count + 1
             END IF
           END DO
@@ -322,7 +324,8 @@ WRITE (*,*) Interpolant
             IF ( ( ( Table(i, j, k+1) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j, k-1) ) ) < 0. ) &
               WRITE (*, 99) i, j, k
-              WRITE (*,*) "Repaired =", Repaired(i,j,k)
+              WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
+                Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
 
           END DO
         END DO
