@@ -232,21 +232,27 @@ CONTAINS
       WRITE (*,*) p000
 
       IF ( LogInterp(1) ) THEN 
-      delta(1) = LOG10( Coordinate1(x1) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+2) / Coordinate1(il1) )
+      delta(1) = LOG10( Coordinate1(x1) / Coordinate1(il1) ) &
+                   / LOG10( Coordinate1(il1+2) / Coordinate1(il1) )
       ELSE
-      delta(1) = ( Coordinate1(x1) - Coordinate1(il1) ) / ( Coordinate1(il1+2) - Coordinate1(il1) )
+      delta(1) = ( Coordinate1(x1) - Coordinate1(il1) ) / &
+                   ( Coordinate1(il1+2) - Coordinate1(il1) )
       END IF
 
       IF ( LogInterp(2) ) THEN 
-      delta(2) = LOG10( Coordinate2(x2) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+2) / Coordinate2(il2) )
+      delta(2) = LOG10( Coordinate2(x2) / Coordinate2(il2) ) &
+                   / LOG10( Coordinate2(il2+2) / Coordinate2(il2) )
       ELSE
-      delta(2) = ( Coordinate2(x2) - Coordinate2(il2) ) / ( Coordinate2(il2+2) - Coordinate2(il2) )
+      delta(2) = ( Coordinate2(x2) - Coordinate2(il2) ) &
+                   / ( Coordinate2(il2+2) - Coordinate2(il2) )
       END IF
 
       IF ( LogInterp(3) ) THEN 
-      delta(3) = LOG10( Coordinate3(x3) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+2) / Coordinate3(il3) )
+      delta(3) = LOG10( Coordinate3(x3) / Coordinate3(il3) ) &
+                   / LOG10( Coordinate3(il3+2) / Coordinate3(il3) )
       ELSE
-      delta(3) = ( Coordinate3(x3) - Coordinate3(il3) ) / ( Coordinate3(il3+2) - Coordinate3(il3) )
+      delta(3) = ( Coordinate3(x3) - Coordinate3(il3) ) &
+                   / ( Coordinate3(il3+2) - Coordinate3(il3) )
       END IF
 
 WRITE (*,*) delta
@@ -339,6 +345,36 @@ WRITE (*,*) Interpolant
     WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
 
   END SUBROUTINE MonotonicityCheck 
+  
+  SUBROUTINE TemperatureFinder( E_Internal, Energy_Table, Temp_Table, &
+                                  Offset, Temperature ) 
+
+    !REAL(dp), INTENT(in) :: Rho
+    REAL(dp), INTENT(in) :: E_Internal
+    !REAL(dp), DIMENSION(:), INTENT(in) :: E_Internal
+    !REAL(dp), DIMENSION(:) :: Ye
+    REAL(dp), DIMENSION(:), INTENT(in) :: Temp_Table 
+    !REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Energy_Table
+    REAL(dp), DIMENSION(:), INTENT(in) :: Energy_Table
+    REAL(dp), INTENT(in) :: Offset
+    REAL(dp), INTENT(out) :: Temperature
+    !REAL(dp), DIMENSION(3) :: delta
+    REAL(dp) :: delta, epsilon
+    INTEGER :: i  !, il1, il2, il3
+  
+    epsilon = 1.d-200
+
+    CALL locate( Energy_Table, SIZE(Energy_Table), E_Internal, i ) 
+
+    WRITE (*,*) Energy_Table, i, Temp_Table
+
+    delta = ( Temp_Table(i+1) - Temp_Table(i) ) / ( Energy_Table(i+1) - Energy_Table(i) )
+    WRITE (*,*) "Delta =", delta 
+
+    Temperature = ( (E_Internal) * delta ) - Offset
+    WRITE (*,*) "Temp =",Temperature
+
+  END SUBROUTINE TemperatureFinder
 
 END MODULE wlInterpolationModule
 
