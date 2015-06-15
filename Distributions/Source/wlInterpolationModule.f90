@@ -350,29 +350,34 @@ WRITE (*,*) Interpolant
                                   Offset, Temperature ) 
 
     !REAL(dp), INTENT(in) :: Rho
-    REAL(dp), INTENT(in) :: E_Internal
-    !REAL(dp), DIMENSION(:), INTENT(in) :: E_Internal
+    !REAL(dp), INTENT(in) :: E_Internal
+    REAL(dp), DIMENSION(:), INTENT(in) :: E_Internal
     !REAL(dp), DIMENSION(:) :: Ye
     REAL(dp), DIMENSION(:), INTENT(in) :: Temp_Table 
     !REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Energy_Table
     REAL(dp), DIMENSION(:), INTENT(in) :: Energy_Table
     REAL(dp), INTENT(in) :: Offset
-    REAL(dp), INTENT(out) :: Temperature
+    REAL(dp), DIMENSION(:), INTENT(out) :: Temperature
     !REAL(dp), DIMENSION(3) :: delta
     REAL(dp) :: delta, epsilon
-    INTEGER :: i  !, il1, il2, il3
+    INTEGER :: i, j  !, il1, il2, il3
   
     epsilon = 1.d-200
 
-    CALL locate( Energy_Table, SIZE(Energy_Table), E_Internal, i ) 
+    DO j= 1, SIZE(E_Internal)
+      CALL locate( Energy_Table, SIZE(Energy_Table), E_Internal(j), i ) 
 
-    WRITE (*,*) Energy_Table, i, Temp_Table
+    ! WRITE (*,*) Energy_Table, i, Temp_Table
 
-    delta = ( Temp_Table(i+1) - Temp_Table(i) ) / ( Energy_Table(i+1) - Energy_Table(i) )
-    WRITE (*,*) "Delta =", delta 
+!      delta = ( Temp_Table(i+1) - Temp_Table(i) ) / ( Energy_Table(i+1) - Energy_Table(i) )
+    ! WRITE (*,*) "Delta =", delta 
 
-    Temperature = ( (E_Internal) * delta ) - Offset
-    WRITE (*,*) "Temp =",Temperature
+     ! Temperature(j) = ( (E_Internal(j)) * delta ) - Offset
+      Temperature(j) =  Temp_Table(i) - ( Temp_Table(i+1) - Temp_Table(i) ) &
+                        * ( ( E_internal(j) -Energy_Table(i) ) & 
+                        / (Energy_Table(i+1) - Energy_Table(i) ) ) - Offset
+    ! WRITE (*,*) "Temp =",Temperature
+    END DO
 
   END SUBROUTINE TemperatureFinder
 
