@@ -138,17 +138,24 @@ CONTAINS
 
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
     REAL(dp), DIMENSION(3) :: delta
-    INTEGER :: i, il1, il2, il3
+    INTEGER :: i, j, k, il1, il2, il3
   
     epsilon = 1.d-200
-
-    DO i = 1, SIZE(x1)  
   
-      CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 ) 
+
+    DO i = 1, SIZE(x2) 
+ 
+      CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
+  
+    !  CALL locate( Coordinate3, SIZE(Coordinate3), x3(k), il3 )
+    !  DO j = 1, SIZE(x2)  
+    !    CALL locate( Coordinate2, SIZE(Coordinate2), x2(j), il2 )
+    !    DO i = 1, SIZE(x1)  
+    !      CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 ) 
 
-    !    WRITE (*,*) "Offset=", Offset
+    !  WRITE (*,*) "Offset=", Offset
 
       p000 = ( Table( il1  , il2  , il3   ) )
       p100 = ( Table( il1+1, il2  , il3   ) )
@@ -194,6 +201,80 @@ CONTAINS
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable
+
+  SUBROUTINE LogInterpolateSingleInputSingleVariable &
+               ( il1, x2, il3, Coordinate1, Coordinate2, &
+                 Coordinate3, LogInterp, Offset, Table, Interpolant )
+
+    INTEGER, INTENT(in) :: il1 
+    REAL(dp), DIMENSION(:), INTENT(in) :: x2
+    INTEGER, INTENT(in) :: il3
+    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
+    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
+    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
+    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
+    REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
+    REAL(dp), INTENT(in) :: Offset
+    
+    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
+
+    REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
+    REAL(dp), DIMENSION(3) :: delta
+    INTEGER :: i, j, k, il2
+  
+    epsilon = 1.d-200
+  
+
+    DO i = 1, SIZE(x2) 
+ 
+      CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
+    !  WRITE (*,*) "Offset=", Offset
+
+      p000 = ( Table( il1  , il2  , il3   ) )
+      p100 = ( Table( il1+1, il2  , il3   ) )
+      p010 = ( Table( il1  , il2+1, il3   ) )
+      p110 = ( Table( il1+1, il2+1, il3   ) )
+      p001 = ( Table( il1  , il2  , il3+1 ) )
+      p101 = ( Table( il1+1, il2  , il3+1 ) )
+      p011 = ( Table( il1  , il2+1, il3+1 ) )
+      p111 = ( Table( il1+1, il2+1, il3+1 ) )
+
+     ! WRITE (*,*) "p000 =", p000
+
+      IF ( LogInterp(1) ) THEN 
+      delta(1) = LOG10( Coordinate1(il1) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
+      ELSE
+      delta(1) = ( Coordinate1(il1) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
+      END IF
+
+      IF ( LogInterp(2) ) THEN 
+      delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
+      ELSE
+      delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
+      END IF
+
+      IF ( LogInterp(3) ) THEN 
+      delta(3) = LOG10( Coordinate3(il3) / Coordinate3(il3) ) &
+        / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
+      ELSE
+      delta(3) = ( Coordinate3(il3) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
+      END IF
+     ! WRITE (*,*) "Deltas = ", delta
+      Interpolant(i) &
+        = 10.d0**( &
+              (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
+                                   +            delta(1)  * (1.0_dp - delta(2)) * p100   &
+                                   + ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
+                                   +            delta(1)  *           delta(2)  * p110 ) &
+                      + delta(3)  * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
+                                   +            delta(1)  * (1.0_dp - delta(2)) * p101   &
+                                   +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
+                                   +            delta(1)  *           delta(2)  * p111 ) &
+ 
+                 ) - Offset 
+    END DO 
+
+  END SUBROUTINE LogInterpolateSingleInputSingleVariable
 
   SUBROUTINE LoneCellLogInterpolateSingleVariable( x1, x2, x3, Coordinate1, Coordinate2, &
                                            Coordinate3, LogInterp, Table, Interpolant )
@@ -274,7 +355,7 @@ WRITE (*,*) Interpolant
   SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe, Axis, Repaired )
 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-    LOGICAL, DIMENSION(:,:,:), INTENT(in) :: Repaired
+    INTEGER, DIMENSION(:,:,:), INTENT(in) :: Repaired
     INTEGER, INTENT(in) :: Nrho 
     INTEGER, INTENT(in) :: NT
     INTEGER, INTENT(in) :: NYe
@@ -332,7 +413,7 @@ WRITE (*,*) Interpolant
               WRITE (*, 99) i, j, k
               WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
                 Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
-
+              count = count + 1
           END DO
         END DO
       END DO
@@ -346,11 +427,10 @@ WRITE (*,*) Interpolant
 
   END SUBROUTINE MonotonicityCheck 
   
-  SUBROUTINE TemperatureFinder( E_Internal, Energy_Table, Temp_Table, &
-                                  Offset, Temperature ) 
+  SUBROUTINE ComputeTempFromIntEnergy &
+               ( E_Internal, Energy_Table, Temp_Table, Offset, Temperature ) 
 
     !REAL(dp), INTENT(in) :: Rho
-    !REAL(dp), INTENT(in) :: E_Internal
     REAL(dp), DIMENSION(:), INTENT(in) :: E_Internal
     !REAL(dp), DIMENSION(:) :: Ye
     REAL(dp), DIMENSION(:), INTENT(in) :: Temp_Table 
@@ -360,26 +440,20 @@ WRITE (*,*) Interpolant
     REAL(dp), DIMENSION(:), INTENT(out) :: Temperature
     !REAL(dp), DIMENSION(3) :: delta
     REAL(dp) :: delta, epsilon
-    INTEGER :: i, j  !, il1, il2, il3
+    INTEGER :: i, j 
   
     epsilon = 1.d-200
 
-    DO j= 1, SIZE(E_Internal)
-      CALL locate( Energy_Table, SIZE(Energy_Table), E_Internal(j), i ) 
+    DO j = 1, SIZE( E_Internal )
 
-    ! WRITE (*,*) Energy_Table, i, Temp_Table
+      CALL locate( Energy_Table, SIZE( Energy_Table ), E_Internal(j), i ) 
 
-!      delta = ( Temp_Table(i+1) - Temp_Table(i) ) / ( Energy_Table(i+1) - Energy_Table(i) )
-    ! WRITE (*,*) "Delta =", delta 
-
-     ! Temperature(j) = ( (E_Internal(j)) * delta ) - Offset
-      Temperature(j) =  Temp_Table(i) - ( Temp_Table(i+1) - Temp_Table(i) ) &
-                        * ( ( E_internal(j) -Energy_Table(i) ) & 
-                        / (Energy_Table(i+1) - Energy_Table(i) ) ) - Offset
-    ! WRITE (*,*) "Temp =",Temperature
+      Temperature(j) =  Temp_Table(i) + ( Temp_Table(i+1) - Temp_Table(i) ) &
+                        * ( ( E_internal(j) - Energy_Table(i) )             & 
+                        / ( Energy_Table(i+1) - Energy_Table(i) ) ) 
     END DO
 
-  END SUBROUTINE TemperatureFinder
+  END SUBROUTINE ComputeTempFromIntEnergy
 
 END MODULE wlInterpolationModule
 

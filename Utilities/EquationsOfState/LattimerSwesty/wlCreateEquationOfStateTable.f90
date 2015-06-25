@@ -40,9 +40,10 @@ PROGRAM wlCreateEquationOfStateTable
 !  OPEN( newunit = InputUnit, file = FileName )
 !  READ( InputUnit, * ) Description, Resolution 
 
-!  nPoints = (/81,28,24/)
-  nPoints = (/161,55,47/)
-!  nPoints = (/321,109,93/)
+!  nPoints = (/81,28,24/) ! Low Res
+!  nPoints = (/81,500,24/) ! High Res in T only
+  nPoints = (/161,55,47/) ! Standard Res
+!  nPoints = (/321,109,93/) ! High Res
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
