@@ -40,10 +40,10 @@ PROGRAM wlCreateEquationOfStateTable
 !  OPEN( newunit = InputUnit, file = FileName )
 !  READ( InputUnit, * ) Description, Resolution 
 
-!  nPoints = (/81,28,24/) ! Low Res
+!  nPoints = (/81,24,24/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
-  nPoints = (/161,55,47/) ! Standard Res
-!  nPoints = (/321,109,93/) ! High Res
+  nPoints = (/161,47,47/) ! Standard Res
+!  nPoints = (/321,93,93/) ! High Res
   nVariables = 13
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -63,7 +63,7 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
-  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.3, 0.05d0/)
+  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.7, 0.05d0/)
   EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.51d0/)
 
 !------------------------------------------------------------------------------
@@ -141,7 +141,11 @@ PRINT*, "Begin Associate"
                        press(i,j,k), energ(i,j,k), entrop(i,j,k), chem_n(i,j,k),    &
                        chem_p(i,j,k), chem_e(i,j,k), xn_neut(i,j,k), xn_prot(i,j,k),&
                        xn_alpha(i,j,k), xn_heavy(i,j,k), a_heavy(i,j,k),            &
-                       z_heavy(i,j,k), be_heavy(i,j,k) )   
+                       z_heavy(i,j,k), be_heavy(i,j,k), i, j, k )   
+
+          IF ( i == 139 .and. k == 1 ) THEN 
+            WRITE (*,*) j, Temperature(j), energ(i,j,k)
+          END IF
 
           xn_alpha(i,j,k) = MAX( 1.0d0 - xn_neut(i,j,k) - xn_prot(i,j,k) &
                               - xn_heavy(i,j,k) , 0.0d0 ) 

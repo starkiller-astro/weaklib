@@ -148,6 +148,8 @@ CONTAINS
       CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
+
+    !WRITE (*,*) i, il1, il2, il3
   
     !  CALL locate( Coordinate3, SIZE(Coordinate3), x3(k), il3 )
     !  DO j = 1, SIZE(x2)  
@@ -166,7 +168,7 @@ CONTAINS
       p011 = ( Table( il1  , il2+1, il3+1 ) )
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
-     ! WRITE (*,*) "p000 =", p000
+    !  WRITE (*,*) "p000 =", p000, p100, p010, p110, p001, p101, p011, p111
 
       IF ( LogInterp(1) ) THEN 
       delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
@@ -185,7 +187,7 @@ CONTAINS
       ELSE
       delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
-     ! WRITE (*,*) "Deltas = ", delta
+
       Interpolant(i) &
         = 10.d0**( &
               (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
@@ -447,7 +449,9 @@ WRITE (*,*) Interpolant
     DO j = 1, SIZE( E_Internal )
 
       CALL locate( Energy_Table, SIZE( Energy_Table ), E_Internal(j), i ) 
-
+      IF ( i == SIZE(Energy_Table) ) THEN 
+        STOP
+      END IF
       Temperature(j) =  Temp_Table(i) + ( Temp_Table(i+1) - Temp_Table(i) ) &
                         * ( ( E_internal(j) - Energy_Table(i) )             & 
                         / ( Energy_Table(i+1) - Energy_Table(i) ) ) 

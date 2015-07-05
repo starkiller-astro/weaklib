@@ -64,9 +64,9 @@ PROGRAM wlChimeraInterpolationTest
 !  minrho = EOSTable % TS % minValues(1) 
   minrho = 1.0e11 
 
-  OPEN( newunit = unitout, FILE="HighResInterpolationData10ms.d")
-  OPEN( newunit = ErrorUnit, FILE="HighResInterpolationErrors10ms.d")
-  OPEN( newunit = TestUnit, FILE="HighResTableMap.d")
+  OPEN( newunit = unitout, FILE="StandardResInterpolationData10ms.d")
+  OPEN( newunit = ErrorUnit, FILE="StandardResInterpolationErrors10ms.d")
+  OPEN( newunit = TestUnit, FILE="StandardResTableMap.d")
 
 !  WRITE (unitout,*) "Table Minimums"
 !  DO i = 1, EOSTable % DV % nVariables
@@ -192,13 +192,12 @@ PROGRAM wlChimeraInterpolationTest
   CLOSE(unitout)
 
   DO i = 1 , SIZE( EOSTable % TS % States(2) % Values ) 
-    WRITE(TestUnit,'(i4,7es12.5)' ) i, EOSTable % TS % States(2) % Values(i),  &
-                        10**(EOSTable % DV % Variables(2) % Values(14,i,88)), &
-                        10**(EOSTable % DV % Variables(2) % Values(15,i,82)), &
-                        10**(EOSTable % DV % Variables(2) % Values(277,i,1)), &
-                        10**(EOSTable % DV % Variables(2) % Values(281,i,3)), &
-                        10**(EOSTable % DV % Variables(2) % Values(311,i,46)), &
-                        10**(EOSTable % DV % Variables(2) % Values(320,i,90))
+    WRITE(TestUnit,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
+                        10**(EOSTable % DV % Variables(3) % Values(139,i,1))
+                 !       10**(EOSTable % DV % Variables(3) % Values(277,i,1)), &
+                  !      10**(EOSTable % DV % Variables(3) % Values(281,i,3)), &
+                   !     10**(EOSTable % DV % Variables(3) % Values(311,i,46)), &
+                    !    10**(EOSTable % DV % Variables(3) % Values(320,i,90))
   END DO
 
   WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(14)  

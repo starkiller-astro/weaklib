@@ -141,7 +141,7 @@ END SUBROUTINE wlGetElectronEOS
 
 SUBROUTINE wlGetFullEOS( rho, temp, ye, flag, fail, press, energ,       &
 & entrop, chem_n, chem_p, chem_e, xn_neut, xn_prot, xn_alpha, xn_heavy, &
-& a_heavy, z_heavy, be_heavy )
+& a_heavy, z_heavy, be_heavy, ii, jj, kk )
 !-----------------------------------------------------------------------
 !
 !    Module:       wlGetFullEOS
@@ -197,6 +197,8 @@ CHARACTER(len=1), INTENT(inout) :: flag     ! nuclear eos selection flag
 REAL(double), INTENT(in)     :: rho         ! Density [g/cm3]
 REAL(double), INTENT(in)     :: temp        ! Temperature [K]
 REAL(double), INTENT(in)     :: Ye          ! Electron fraction
+
+INTEGER, INTENT(in) :: ii,jj,kk
 
 !-----------------------------------------------------------------------
 !  Output variables
@@ -366,6 +368,10 @@ SELECT CASE ( flag )
   a_heavy  =   A
   z_heavy  =   X * A
   be_heavy =   BUNUC
+
+  IF ( ii == 139 .and. kk == 1 ) THEN
+WRITE(*,*) jj, temp, energ, UTOT, EU, ee
+END IF
 
 !-----------------------------------------------------------------------
 !  BCK EoS (NSE only!!!)

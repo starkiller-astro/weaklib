@@ -84,7 +84,7 @@ INTEGER                            :: i              ! summation index
 INTEGER                            :: j              ! summation index
 INTEGER                            :: it             ! iteration index
 INTEGER                            :: l              ! iteration index
-INTEGER, PARAMETER                 :: nlag = 48      ! number of points of Gauss-Laguerre quadrature
+INTEGER, PARAMETER                 :: nlag = 72      ! number of points of Gauss-Laguerre quadrature
 INTEGER, PARAMETER                 :: ncnvge = 30    ! number of iterations
 
 REAL(KIND=double), DIMENSION(nlag) :: xa             ! points of Gauss-Lagendre quadrature
@@ -222,10 +222,10 @@ IF ( .not. non_rel ) THEN
 !   rel = 3*pressure/( kinetic energy density ) > relmin = 1.2
 !-----------------------------------------------------------------------
 
-  approx        = ( beta <= beta_max )
-  IF ( approx ) THEN
-    etae        = cube( 1.5d0 * ( ne_x_coef * ye ), DMAX1( pi2 * third - 0.5d0 * beta2, zero ) )
-    approx      = ( beta <= tthird ) .or. ( etae > etabet * beta )
+!  approx        = ( beta <= beta_max )
+!  IF ( approx ) THEN
+!    etae        = cube( 1.5d0 * ( ne_x_coef * ye ), DMAX1( pi2 * third - 0.5d0 * beta2, zero ) )
+!    approx      = ( beta <= tthird ) .or. ( etae > etabet * beta )
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -233,23 +233,23 @@ IF ( .not. non_rel ) THEN
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 
-    IF ( approx ) THEN
-      ped       = ( t_mev/ne_x_coef ) * third * ( g3( etae * etae ) - 1.5d0 * beta2 * g1( etae * etae ) )
-      pe        = brydns * ped
-      se        = ( 4.d0/t_mev ) * ped - ye * etae + beta2 * g1( etae * etae )/ne_x_coef
-      ee        = t_mev * ( se + ye * etae ) - ped
-      yeplus    = 2.0d0 * fexp(-etae) * ( 1.0d0 - fexp(-etae)/8.0d0 )/ne_x_coef
-
-      rel       = 3.0d0 * ped/( ee - me * ( ye + 2.0d0 * yeplus ) )
-      approx = ( rel <= relmin )
-
-    END IF ! beta < beta_max
-  END IF ! beta < tthird  .or.  etae > etabet*beta
-
-  IF ( approx ) THEN
-    ue          = etae * t_mev
-    RETURN! Computation of e-p eos by high T approx was successful
-  END IF ! approx
+!    IF ( approx ) THEN
+!      ped       = ( t_mev/ne_x_coef ) * third * ( g3( etae * etae ) - 1.5d0 * beta2 * g1( etae * etae ) )
+!      pe        = brydns * ped
+!      se        = ( 4.d0/t_mev ) * ped - ye * etae + beta2 * g1( etae * etae )/ne_x_coef
+!      ee        = t_mev * ( se + ye * etae ) - ped
+!      yeplus    = 2.0d0 * fexp(-etae) * ( 1.0d0 - fexp(-etae)/8.0d0 )/ne_x_coef
+!
+!      rel       = 3.0d0 * ped/( ee - me * ( ye + 2.0d0 * yeplus ) )
+!      approx = ( rel <= relmin )
+!
+!    END IF ! beta < beta_max
+!  END IF ! beta < tthird  .or.  etae > etabet*beta
+!
+!  IF ( approx ) THEN
+!    ue          = etae * t_mev
+!    RETURN! Computation of e-p eos by high T approx was successful
+!  END IF ! approx
 
 !-----------------------------------------------------------------------
 !  If high-temperature approximation is inappropriate, then

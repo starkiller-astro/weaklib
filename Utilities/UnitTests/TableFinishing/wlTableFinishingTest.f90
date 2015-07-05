@@ -132,6 +132,8 @@ PROGRAM wlTableFinishingTest
 
       IF ( Repaired(i,j,k) ) THEN
         EOSTable % DV % Repaired(i,j,k) = 1
+      ELSE 
+        EOSTable % DV % Repaired(i,j,k) = 0
       END IF      
 
       END DO 
@@ -140,7 +142,12 @@ PROGRAM wlTableFinishingTest
 
   CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
                           EOSTable % nPoints(1), EOSTable % nPoints(2), &
-                          EOSTable % nPoints(3), 2, Repaired )
+                          EOSTable % nPoints(3), 2, EOSTable % DV % Repaired )
+
+  DO i = 1 , 8
+    WRITE(*,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
+                        (EOSTable % DV % Variables(3) % Values(139,i,1))
+  END DO
 
   DO l = 1, EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)
@@ -152,6 +159,11 @@ PROGRAM wlTableFinishingTest
       = LOG10( EOSTable % DV % Variables(l) % Values &
                + EOSTable % DV % Offsets(l) + epsilon )        
 
+  END DO
+
+  DO i = 1 , 8
+    WRITE(*,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
+                        10**(EOSTable % DV % Variables(3) % Values(139,i,1))
   END DO
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
