@@ -19,7 +19,7 @@ PROGRAM wlTableFinishingTest
   LOGICAL, DIMENSION(3) :: LogInterp
   REAL(dp) :: InterpolantFine, InterpolantCoarse
   REAL(dp) :: DeltaFine, DeltaCoarse
-  REAL(dp) :: minvar
+  REAL(dp) :: minvar, x, y
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Fail 
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired 
   LOGICAL, DIMENSION(:,:,:), ALLOCATABLE   :: LoneCells    
@@ -45,9 +45,16 @@ PROGRAM wlTableFinishingTest
 
   Repaired = .false.
 
-  Fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0 
-  
-  !ASSOCIATE( Pressure => EOSTable % DV % Variables(1) % Values(:,:,:) )
+  Fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0  &
+                .or. ISNAN(EOSTable % DV % Variables(1) % Values(:,:,:))  & 
+                .or. ISNAN(EOSTable % DV % Variables(3) % Values(:,:,:))   
+  DO k = 45, 47
+    DO j = 20, 25
+      DO i = 135, 145
+  WRITE(*,*) "Fail=", Fail(i,j,k), i, j, k
+      END DO
+    END DO
+  END DO
 
   ! Find dimension (iMinGradient) with smallest gradient 
   !   for interpolation across single cell hole 
@@ -144,11 +151,6 @@ PROGRAM wlTableFinishingTest
                           EOSTable % nPoints(1), EOSTable % nPoints(2), &
                           EOSTable % nPoints(3), 2, EOSTable % DV % Repaired )
 
-  DO i = 1 , 8
-    WRITE(*,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
-                        (EOSTable % DV % Variables(3) % Values(139,i,1))
-  END DO
-
   DO l = 1, EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)
     minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
@@ -159,11 +161,6 @@ PROGRAM wlTableFinishingTest
       = LOG10( EOSTable % DV % Variables(l) % Values &
                + EOSTable % DV % Offsets(l) + epsilon )        
 
-  END DO
-
-  DO i = 1 , 8
-    WRITE(*,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
-                        10**(EOSTable % DV % Variables(3) % Values(139,i,1))
   END DO
 
   CALL WriteEquationOfStateTableHDF( EOSTable )

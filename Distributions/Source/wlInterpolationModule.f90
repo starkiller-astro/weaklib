@@ -168,8 +168,6 @@ CONTAINS
       p011 = ( Table( il1  , il2+1, il3+1 ) )
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
-    !  WRITE (*,*) "p000 =", p000, p100, p010, p110, p001, p101, p011, p111
-
       IF ( LogInterp(1) ) THEN 
       delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
@@ -187,7 +185,6 @@ CONTAINS
       ELSE
       delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
-
       Interpolant(i) &
         = 10.d0**( &
               (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
@@ -203,80 +200,6 @@ CONTAINS
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable
-
-  SUBROUTINE LogInterpolateSingleInputSingleVariable &
-               ( il1, x2, il3, Coordinate1, Coordinate2, &
-                 Coordinate3, LogInterp, Offset, Table, Interpolant )
-
-    INTEGER, INTENT(in) :: il1 
-    REAL(dp), DIMENSION(:), INTENT(in) :: x2
-    INTEGER, INTENT(in) :: il3
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
-    REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-    REAL(dp), INTENT(in) :: Offset
-    
-    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
-
-    REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
-    REAL(dp), DIMENSION(3) :: delta
-    INTEGER :: i, j, k, il2
-  
-    epsilon = 1.d-200
-  
-
-    DO i = 1, SIZE(x2) 
- 
-      CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
-    !  WRITE (*,*) "Offset=", Offset
-
-      p000 = ( Table( il1  , il2  , il3   ) )
-      p100 = ( Table( il1+1, il2  , il3   ) )
-      p010 = ( Table( il1  , il2+1, il3   ) )
-      p110 = ( Table( il1+1, il2+1, il3   ) )
-      p001 = ( Table( il1  , il2  , il3+1 ) )
-      p101 = ( Table( il1+1, il2  , il3+1 ) )
-      p011 = ( Table( il1  , il2+1, il3+1 ) )
-      p111 = ( Table( il1+1, il2+1, il3+1 ) )
-
-     ! WRITE (*,*) "p000 =", p000
-
-      IF ( LogInterp(1) ) THEN 
-      delta(1) = LOG10( Coordinate1(il1) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
-      ELSE
-      delta(1) = ( Coordinate1(il1) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
-      END IF
-
-      IF ( LogInterp(2) ) THEN 
-      delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
-      ELSE
-      delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
-      END IF
-
-      IF ( LogInterp(3) ) THEN 
-      delta(3) = LOG10( Coordinate3(il3) / Coordinate3(il3) ) &
-        / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
-      ELSE
-      delta(3) = ( Coordinate3(il3) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
-      END IF
-     ! WRITE (*,*) "Deltas = ", delta
-      Interpolant(i) &
-        = 10.d0**( &
-              (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
-                                   +            delta(1)  * (1.0_dp - delta(2)) * p100   &
-                                   + ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
-                                   +            delta(1)  *           delta(2)  * p110 ) &
-                      + delta(3)  * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
-                                   +            delta(1)  * (1.0_dp - delta(2)) * p101   &
-                                   +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
-                                   +            delta(1)  *           delta(2)  * p111 ) &
- 
-                 ) - Offset 
-    END DO 
-
-  END SUBROUTINE LogInterpolateSingleInputSingleVariable
 
   SUBROUTINE LoneCellLogInterpolateSingleVariable( x1, x2, x3, Coordinate1, Coordinate2, &
                                            Coordinate3, LogInterp, Table, Interpolant )
@@ -338,7 +261,7 @@ CONTAINS
                    / ( Coordinate3(il3+2) - Coordinate3(il3) )
       END IF
 
-WRITE (*,*) delta
+      WRITE (*,*) delta
       Interpolant &
         = 10.d0**( &
            (  (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &          
@@ -350,7 +273,7 @@ WRITE (*,*) delta
                                    +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
                                    +            delta(1)  *           delta(2)  * p111 ) &
                  ) ) 
-WRITE (*,*) Interpolant
+  WRITE (*,*) Interpolant
 
   END SUBROUTINE LoneCellLogInterpolateSingleVariable
   

@@ -238,4 +238,14 @@ MODULE wlExtTableFinishingModule
 
     END SUBROUTINE HoleCharacterizeCoarse
 
+!    ELEMENTAL LOGICAL FUNCTION ISNAN(X)
+    
+!    implicit none
+    
+!    REAL(dp) :: X
+
+!      ISNAN = (X .NE. X)
+
+!    END FUNCTION ISNAN
+
 END MODULE wlExtTableFinishingModule

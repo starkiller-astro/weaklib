@@ -81,8 +81,8 @@ PROGRAM wlInversionTest
                           EOSTable % DV % Offsets(3), Temperature )  
 
       DO j = 1, SIZE(Temperature)
-        Norm(i,j,k) = ABS( Temperature(k) - Test_Temps(k) ) / Test_Temps(k) 
-        WRITE (*,'(i4, 4es12.5, 2i4)') j, E_Internal(j), &
+        Norm(i,j,k) = ABS( Temperature(j) - Test_Temps(j) ) / Test_Temps(j) 
+        WRITE (ErrorUnit,'(i4, 4es12.5, 2i4)') j, E_Internal(j), &
                  Temperature(j), Test_Temps(j), Norm(i,j,k), i, k
         IF ( Norm(i,j,k) > maxnorm) THEN 
           maxnorm = Norm(i,j,k)
@@ -96,7 +96,8 @@ PROGRAM wlInversionTest
 
   END ASSOCIATE
 
-  WRITE (*,*) "L1Norm/N=", L1Norm 
+  WRITE (ErrorUnit,*) "L1Norm/N=", L1Norm 
+  WRITE (ErrorUnit,*) "maxnorm =", maxnorm 
 
   !DO i = 1 , SIZE( EOSTable % TS % States(2) % Values )
   !  WRITE(TestUnit,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
