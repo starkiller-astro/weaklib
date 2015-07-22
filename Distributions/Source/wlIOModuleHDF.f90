@@ -23,6 +23,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadThermoStateHDF
   PUBLIC ReadDependentVariablesHDF
   PUBLIC ReadDimensionsHDF
+  PUBLIC ReadCHIMERAHDF 
   PUBLIC ReadNumberVariablesHDF
   PUBLIC WriteEquationOfStateTableHDF
   PUBLIC ReadEquationOfStateTableHDF
@@ -567,6 +568,53 @@ CONTAINS
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadEquationOfStateTableHDF
+
+  SUBROUTINE ReadCHIMERAHDF( Rho, T, Ye, E_Int, Entropy, NSE, FileName)
+
+    CHARACTER(len=*), INTENT(in)                :: FileName
+    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: Rho
+    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: T 
+    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: Ye
+    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: E_Int
+    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: Entropy
+    INTEGER, DIMENSION(1,240,722), INTENT(out) :: NSE
+
+    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
+    INTEGER(HID_T)                              :: file_id
+    INTEGER(HID_T)                              :: group_id
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+    CALL OpenGroupHDF( "fluid", .false., file_id, group_id )
+
+    datasize3d = SHAPE(Rho)
+    CALL Read3dHDF_double( "rho_c", Rho(:,:,:), &
+                              group_id, datasize3d ) 
+
+    CALL Read3dHDF_double( "t_c", T(:,:,:), &
+                              group_id, datasize3d ) 
+
+    CALL Read3dHDF_double( "ye_c", Ye(:,:,:), &
+                              group_id, datasize3d ) 
+
+    CALL Read3dHDF_double( "e_int", E_Int(:,:,:), &
+                              group_id, datasize3d ) 
+
+    CALL Read3dHDF_double( "entropy", Entropy(:,:,:), &
+                              group_id, datasize3d ) 
+
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "abundance", .false., file_id, group_id )
+
+    datasize3d = SHAPE(NSE)
+    CALL Read3dHDF_integer( "nse_c", NSE(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE ReadCHIMERAHDF
+
 
 END MODULE wlIOModuleHDF
 
