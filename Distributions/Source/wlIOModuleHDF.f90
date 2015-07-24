@@ -572,12 +572,12 @@ CONTAINS
   SUBROUTINE ReadCHIMERAHDF( Rho, T, Ye, E_Int, Entropy, NSE, FileName)
 
     CHARACTER(len=*), INTENT(in)                :: FileName
-    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: Rho
-    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: T 
-    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: Ye
-    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: E_Int
-    REAL(dp), DIMENSION(1,240,722), INTENT(out) :: Entropy
-    INTEGER, DIMENSION(1,240,722), INTENT(out) :: NSE
+    REAL(dp), DIMENSION(722,240,1), INTENT(out) :: Rho
+    REAL(dp), DIMENSION(722,240,1), INTENT(out) :: T 
+    REAL(dp), DIMENSION(722,240,1), INTENT(out) :: Ye
+    REAL(dp), DIMENSION(722,240,1), INTENT(out) :: E_Int
+    REAL(dp), DIMENSION(722,240,1), INTENT(out) :: Entropy
+    INTEGER, DIMENSION(722,240,1), INTENT(out) :: NSE
 
     INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
     INTEGER(HID_T)                              :: file_id

@@ -20,20 +20,20 @@ PROGRAM wlHDFInversionTest
                            ReadCHIMERAHDF
   implicit none
 
-  INTEGER  :: i, j, k, l, TestUnit, ErrorUnit
-  REAL(dp) :: maxnorm, L1Norm !, Temperature
+  INTEGER  :: i, j, k, kk, l, TestUnit, ErrorUnit, ZoneLimit
+  REAL(dp) :: maxnorm, L1Norm
   REAL(dp), DIMENSION(1) :: Temperature, Energy
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Norm
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Energy_Table
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: Energy_Table, TestRho, TestYe
 
-  REAL(dp), DIMENSION(1,240,722) :: Rho
-  REAL(dp), DIMENSION(1,240,722) :: T
-  REAL(dp), DIMENSION(1,240,722) :: Ye
-  REAL(dp), DIMENSION(1,240,722) :: E_Int
-  REAL(dp), DIMENSION(1,240,722) :: Entropy
-  INTEGER, DIMENSION(1,240,722) :: NSE
+  REAL(dp), DIMENSION(722,240,1) :: Rho
+  REAL(dp), DIMENSION(722,240,1) :: T
+  REAL(dp), DIMENSION(722,240,1) :: Ye
+  REAL(dp), DIMENSION(722,240,1) :: E_Int
+  REAL(dp), DIMENSION(722,240,1) :: Entropy
+  INTEGER, DIMENSION(722,240,1) :: NSE
 
 !  nPoints = (/81,24,24/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
@@ -56,8 +56,8 @@ PROGRAM wlHDFInversionTest
              TableYe   => EOSTable % TS % States(3) % Values  )
 
 
-  ALLOCATE( Energy_Table( nPoints(2) ),      &
-            Norm(1, 240, 722) )  
+  ALLOCATE( Energy_Table( nPoints(2) ), TestRho( nPoints(2) ), &
+            Norm(722,240,1), TestYe( nPoints(2) ) )  
 
   WRITE (*,*) "Allocation Complete"
   
@@ -70,54 +70,80 @@ PROGRAM wlHDFInversionTest
   Norm = 0.0d0 
 
   maxnorm = 0.0d0
+  
+  k = 1
+    DO j = 1, 240
+      DO i = 1, 720 
 
-  DO i = 1, 240
-    DO j = 1, 722
-      IF ( NSE(1,i,j) == 0 ) THEN
+      IF ( NSE(i,j,k) == 0 ) THEN
         CYCLE
       END IF 
      
-      CALL locate( TableRho, nPoints(1), Rho(1,i,j), k )
+      CALL locate( TableRho, nPoints(1), Rho(i,j,k), kk )
 
-      CALL locate( TableYe, nPoints(3), Ye(1,i,j), l )
+      IF ( kk  == 0 ) THEN
+        CYCLE
+      END IF 
+
+      CALL locate( TableYe, nPoints(3), Ye(i,j,k), l )
+
+      IF ( l == 0 ) THEN
+        CYCLE
+      END IF 
 
 
-  WRITE (*,*) "Locate Complete", i, j, k, l, Rho(1,i,j)
-!    CALL LogInterpolateSingleVariable &
-!           ( Rho(1,i,j),        &
-!             T(1,i,j),                                   &
-!             Ye(1,i,j),     &
-!             EOSTable % TS % States(1) % Values,           &
-!             EOSTable % TS % States(2) % Values,           &
-!             EOSTable % TS % States(3) % Values,           &
-!             LogInterp,                                    &
-!             EOSTable % DV % Offsets(3),                   &
-!             EOSTable % DV % Variables(3) % Values(:,:,:), &
-!             E_Internal )
+      !WRITE (*,*) "Locate Complete", i, j, kk, l, Rho(i,j,k)
 
-      Energy_Table = 10.d0**( EOSTable % DV % Variables(3) % Values(k,:,l) ) &
-                     - EOSTable % DV % Offsets(3) 
+      TestRho = Rho(i,j,k)
+      TestYe = Ye(i,j,k)
 
-      Energy(1) = E_Int(1,i,j)
+      CALL LogInterpolateSingleVariable &
+             ( TestRho,        &
+               TableTemp,                                   &
+               TestYe,     &
+               EOSTable % TS % States(1) % Values,           &
+               EOSTable % TS % States(2) % Values,           &
+               EOSTable % TS % States(3) % Values,           &
+               LogInterp,                                    &
+               EOSTable % DV % Offsets(3),                   &
+               EOSTable % DV % Variables(3) % Values(:,:,:), &
+               Energy_Table )
 
-  WRITE (*,*) "Energy = ", Energy 
+!      Energy_Table = 10.d0**( EOSTable % DV % Variables(3) % Values(kk,:,l) ) &
+!                     - EOSTable % DV % Offsets(3) 
+
+      Energy(1) = E_Int(i,j,k)
+
+      WRITE (*,*) "Energy = ", Energy 
 
       CALL ComputeTempFromIntEnergy( Energy, Energy_Table, TableTemp, &
                           EOSTable % DV % Offsets(3), Temperature )  
-  WRITE (*,*) "Temp = ", Temperature 
+      WRITE (*,*) "Temp = ", Temperature 
 
-      Norm(1,i,j) = ABS( Temperature(1) - T(1,i,j) ) / T(1,i,j) 
-      WRITE (ErrorUnit,'(2i4, 4es12.5)') i, j, E_Int(1,i,j), &
-               Temperature, T(1,i,j), Norm(1,i,j)
-      IF ( Norm(1,i,j) > maxnorm) THEN 
-        maxnorm = Norm(1,i,j)
+      IF ( Temperature(1) < 1.d0  ) THEN
+        CYCLE
+      END IF
+
+      Norm(i,j,k) = ABS( Temperature(1) - T(i,j,k) ) / T(i,j,k) 
+
+      WRITE (*,*) "Norm = ", Norm(i,j,k) 
+
+      WRITE (ErrorUnit,'(2i4, 6es12.5, 3i4)') i, j, E_Int(i,j,k), &
+               Temperature, T(i,j,k), Norm(i,j,k), &
+               MAXVAL(Energy_Table), MINVAL(Energy_Table), NSE(i,j,k), kk, l
+
+      IF ( Norm(i,j,k) > maxnorm) THEN 
+
+        maxnorm = Norm(i,j,k)
+
       END IF
     END DO
   END DO
 
- ! L1Norm = SUM( ABS( Norm( 1:nPoints(1), 1:( nPoints(2) - 1), 1:nPoints(3) - 1 ) ) ) &
-  !           /( nPoints(1) * (nPoints(2) - 1 ) * ( nPoints(3) - 1 ) ) 
+  !L1Norm = SUM( ABS( Norm( 1:720 , 1:240, 1) ) ) &
+  !           /( 720 * 240 ) 
 
+  !WRITE (ErrorUnit,*) L1Norm, maxnorm 
   END ASSOCIATE
 
   !WRITE (ErrorUnit,*) "L1Norm/N=", L1Norm 

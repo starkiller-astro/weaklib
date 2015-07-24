@@ -375,6 +375,11 @@ CONTAINS
       IF ( i == SIZE(Energy_Table) ) THEN 
         STOP
       END IF
+
+      IF ( i == 0 ) THEN 
+        Temperature(j) = 0.d0
+        CYCLE
+      END IF
       Temperature(j) =  Temp_Table(i) + ( Temp_Table(i+1) - Temp_Table(i) ) &
                         * ( ( E_internal(j) - Energy_Table(i) )             & 
                         / ( Energy_Table(i+1) - Energy_Table(i) ) ) 
