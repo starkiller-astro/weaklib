@@ -20,13 +20,15 @@ PROGRAM wlHDFInversionTest
                            ReadCHIMERAHDF
   implicit none
 
-  INTEGER  :: i, j, k, kk, l, TestUnit, ErrorUnit, ZoneLimit, nx, ny, nz, imax
-  REAL(dp) :: maxnorm, L1Norm
-  REAL(dp), DIMENSION(1) :: Temperature, Energy
+  INTEGER  :: i, j, k, kk, l, TestUnit, ErrorUnit, nx, ny, nz, imax, count, zonelimit
+  REAL(dp) :: maxTnorm, L1TNorm, maxEnorm, L1ENorm
+  REAL(dp), DIMENSION(1) :: Temperature, Energy, SingleTestRho, SingleTestT, &
+                            SingleTestYe, SingleE_Test
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
-  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Norm
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Energy_Table, TestRho, TestT, TestYe
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: TNorm
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: ENorm
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: Energy_Table, TestRho, TestYe
 
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Rho
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: T
@@ -35,6 +37,7 @@ PROGRAM wlHDFInversionTest
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Entropy
   INTEGER, DIMENSION(:,:,:), ALLOCATABLE :: NSE
 
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: E_Test
 !  nPoints = (/81,24,24/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
 !  nPoints = (/161,47,47/) ! Standard Res
@@ -44,10 +47,10 @@ PROGRAM wlHDFInversionTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "LowResEquationOfStateTable7-31-15.h5" )
 
   OPEN( newunit = TestUnit, FILE="HDFInversionTableMap.d")
-  OPEN( newunit = ErrorUnit, FILE="HDFInversionErrors.d")
+  OPEN( newunit = ErrorUnit, FILE="950000HDFInversionErrorsLow.d")
 
   ASSOCIATE( nPoints   => EOSTable % nPoints,                 &
              TableRho  => EOSTable % TS % States(1) % Values, &
@@ -55,23 +58,31 @@ PROGRAM wlHDFInversionTest
              TableYe   => EOSTable % TS % States(3) % Values  )
   
   CALL ReadCHIMERAHDF( Rho, T, Ye, E_Int, Entropy, NSE, imax, nx, ny, nz, &
-                       "chimera_000018000_grid_1_01.h5") 
+                       "chimera_000950000_grid_1_01.h5") 
 
   ALLOCATE( Energy_Table( nPoints(2) ), TestRho( nPoints(2) ), &
-            Norm(nx,ny,nz), TestYe( nPoints(2) ) )  
+            TNorm(imax,ny,nz), TestYe( nPoints(2) ), E_Test(imax,ny,nz), &
+            ENorm(imax,ny,nz) )
 
   WRITE (*,*) "imax, nx, ny, nz =", imax, nx, ny, nz
   WRITE (*,*) "Shape of Rho=", SHAPE(RHO)
 
-  Norm = 0.0d0 
-
-  maxnorm = 0.0d0
+  TNorm = 0.0d0 
+  maxTnorm = 0.0d0
+  ENorm = 0.0d0 
+  maxEnorm = 0.0d0
+  count = 0
+  zonelimit = 0
   
   DO k = 1, nz
     DO j = 1, ny 
       DO i = 1, imax 
 
       IF ( NSE(i,j,k) == 0 ) THEN
+        CYCLE
+      END IF 
+
+      IF ( Rho(i,j,k) < 1.0d11 ) THEN
         CYCLE
       END IF 
      
@@ -91,7 +102,6 @@ PROGRAM wlHDFInversionTest
 
 
       TestRho = Rho(i,j,k)
-      !TestT = T(i,j,k)
       TestYe = Ye(i,j,k)
 
       CALL LogInterpolateSingleVariable &
@@ -106,6 +116,23 @@ PROGRAM wlHDFInversionTest
                EOSTable % DV % Variables(3) % Values(:,:,:), &
                Energy_Table )
 
+      SingleTestRho(1) = Rho(i,j,k)
+      SingleTestT(1)= T(i,j,k)
+      SingleTestYe(1) = Ye(i,j,k)
+
+      CALL LogInterpolateSingleVariable &
+             ( SingleTestRho,        &
+               SingleTestT, &
+               SingleTestYe,     &
+               EOSTable % TS % States(1) % Values,           &
+               EOSTable % TS % States(2) % Values,           &
+               EOSTable % TS % States(3) % Values,           &
+               LogInterp,                                    &
+               EOSTable % DV % Offsets(3),                   &
+               EOSTable % DV % Variables(3) % Values(:,:,:), &
+               SingleE_Test )
+
+      E_Test(i,j,k) = SingleE_Test(1)
       Energy(1) = E_Int(i,j,k)
 
 
@@ -116,32 +143,50 @@ PROGRAM wlHDFInversionTest
         CYCLE
       END IF
 
-      Norm(i,j,k) = ABS( Temperature(1) - T(i,j,k) ) / T(i,j,k) 
+      TNorm(i,j,k) = ABS( Temperature(1) - T(i,j,k) ) / T(i,j,k) 
+      ENorm(i,j,k) = ABS( E_Test(i,j,k) - E_Int(i,j,k) ) / E_Int(i,j,k) 
 
-      WRITE (ErrorUnit,'(2i4, 4es12.5, i4)') i, j, E_Int(i,j,k), &
-               Temperature, T(i,j,k), Norm(i,j,k), &
-               NSE(i,j,k)
+      WRITE (ErrorUnit,'(2i4, 7es12.5, i4)') i, j, Rho(i,j,k), &
+               Temperature, T(i,j,k), TNorm(i,j,k), E_Test(i,j,k), &
+               E_Int(i,j,k), ENorm(i,j,k), NSE(i,j,k)
 
-      IF ( Norm(i,j,k) > maxnorm) THEN 
-
-        maxnorm = Norm(i,j,k)
-
+      IF ( TNorm(i,j,k) > maxTnorm) THEN 
+        maxTnorm = TNorm(i,j,k)
       END IF
+
+      IF ( ENorm(i,j,k) > maxEnorm) THEN 
+        maxEnorm = ENorm(i,j,k)
+      END IF
+
+      IF ( i > zonelimit) THEN 
+        zonelimit = i 
+      END IF
+
+      count = count + 1
+
       END DO
     END DO
   END DO
 
-  !L1Norm = SUM( ABS( Norm( 1:720 , 1:240, 1) ) ) &
-  !           /( 720 * 240 ) 
+  L1TNorm = SUM( ABS( TNorm( 1:zonelimit , 1:ny, 1) ) ) &
+              /( count ) 
 
-  !WRITE (ErrorUnit,*) L1Norm, maxnorm 
+  L1ENorm = SUM( ABS( ENorm( 1:zonelimit , 1:ny, 1) ) ) &
+              /( count ) 
+
+  !WRITE (ErrorUnit,*) L1TNorm, maxTnorm 
   END ASSOCIATE
 
-  !WRITE (ErrorUnit,*) "L1Norm/N=", L1Norm 
-  !WRITE (ErrorUnit,*) "maxnorm =", maxnorm 
+  WRITE (ErrorUnit,*) "Max LS radial zone=", zonelimit 
+  WRITE (ErrorUnit,*) "L1TNorm/N=", L1TNorm 
+  WRITE (ErrorUnit,*) "maxTnorm =", maxTnorm 
+  WRITE (ErrorUnit,*) "L1ENorm/N=", L1ENorm 
+  WRITE (ErrorUnit,*) "maxEnorm =", maxEnorm 
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
   CALL FinalizeHDF( )
 
+  !  For commit: Added rho cutoff loop and zonelimit to omit regions in LS from statistics
+  !  Changed error reporting to be dependent on LS cutoff
 END PROGRAM wlHDFInversionTest

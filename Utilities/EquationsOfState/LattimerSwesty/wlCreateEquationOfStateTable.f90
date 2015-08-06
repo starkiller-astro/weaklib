@@ -70,11 +70,11 @@ PRINT*, "Allocate Independent Variable Units "
 ! Generate rho, T, Ye grid from limits
 !------------------------------------------------------------------------------
 PRINT*, "Make Grids"
-  CALL MakeLogGrid( EOSTable % TS % minValues(1), EOSTable % TS % maxValues(1),&
+  CALL MakeLogGrid( EOSTable % TS % minValues(1), EOSTable % TS % maxValues(1), &
          EOSTable % TS % nPoints(1), EOSTable % TS % States(1) % Values)
-  CALL MakeLogGrid( EOSTable % TS % minValues(2), EOSTable % TS % maxValues(2),&
+  CALL MakeLogGrid( EOSTable % TS % minValues(2), EOSTable % TS % maxValues(2), &
          EOSTable % TS % nPoints(2), EOSTable % TS % States(2) % Values)
-  CALL MakeLinearGrid( EOSTable % TS % minValues(3), EOSTable % TS % maxValues(3),&
+  CALL MakeLinearGrid( EOSTable % TS % minValues(3), EOSTable % TS % maxValues(3), &
          EOSTable % TS % nPoints(3), EOSTable % TS % States(3) % Values)
 
 PRINT*, "Allocate Names " 

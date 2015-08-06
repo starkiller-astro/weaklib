@@ -110,8 +110,6 @@ PROGRAM wlChimeraInterpolationTest
  
   WRITE (*,*) "P =", ChimeraProfile(1,1)
 
-!  EOSTable % DV % Variables(3) % Values(:,:,:) = EOSTable % DV % Variables(3) % Values(:,:,:) + LOG10(kfm)
-
   DO i = 1, EOSTable % DV % nVariables
 
     CALL LogInterpolateSingleVariable( rho(1:ZoneLimit), T(1:ZoneLimit), &
@@ -194,24 +192,7 @@ PROGRAM wlChimeraInterpolationTest
   DO i = 1 , SIZE( EOSTable % TS % States(2) % Values ) 
     WRITE(TestUnit,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
                         10**(EOSTable % DV % Variables(3) % Values(139,i,1))
-                 !       10**(EOSTable % DV % Variables(3) % Values(277,i,1)), &
-                  !      10**(EOSTable % DV % Variables(3) % Values(281,i,3)), &
-                   !     10**(EOSTable % DV % Variables(3) % Values(311,i,46)), &
-                    !    10**(EOSTable % DV % Variables(3) % Values(320,i,90))
   END DO
-
-  WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(14)  
-  WRITE (*,*) "Ye=", EOSTable % TS % States(3) % Values(88)  
-  WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(15)  
-  WRITE (*,*) "Ye=", EOSTable % TS % States(3) % Values(82)  
-  WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(277) 
-  WRITE (*,*) "Ye=", EOSTable % TS % States(3) % Values(1)   
-  WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(281) 
-  WRITE (*,*) "Ye=", EOSTable % TS % States(3) % Values(3)   
-  WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(311) 
-  WRITE (*,*) "Ye=", EOSTable % TS % States(3) % Values(46)  
-  WRITE (*,*) "Rho=", EOSTable % TS % States(1) % Values(320) 
-  WRITE (*,*) "Ye=", EOSTable % TS % States(3) % Values(90)  
 
   WRITE (*,*) "Internal Energy Monotonicity Check"
 
