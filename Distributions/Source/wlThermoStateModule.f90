@@ -38,7 +38,6 @@ CONTAINS
  
   END SUBROUTINE AllocateThermoState
 
-
   SUBROUTINE DeAllocateThermoState( TS )
 
     TYPE(ThermoStateType) :: TS

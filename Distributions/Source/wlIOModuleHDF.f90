@@ -27,6 +27,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadNumberVariablesHDF
   PUBLIC WriteEquationOfStateTableHDF
   PUBLIC ReadEquationOfStateTableHDF
+  PUBLIC ReadEquationOfStateTableParallelHDF
 
 CONTAINS
 
@@ -585,6 +586,89 @@ CONTAINS
 
   END SUBROUTINE ReadEquationOfStateTableHDF
 
+  SUBROUTINE ReadEquationOfStateTableParallelHDF( EOSTable, FileName, rootproc, COMMUNICATOR )
+
+    USE MPI
+    
+    implicit none
+
+    CHARACTER(len=*), INTENT(in)                  :: FileName
+    INTEGER, INTENT(in)                           :: rootproc
+    INTEGER, INTENT(in)                           :: COMMUNICATOR
+    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+    INTEGER, DIMENSION(3)                         :: nPoints
+    INTEGER, DIMENSION(4)                         :: buffer
+    INTEGER                                       :: nVariables, i
+    INTEGER                                       :: i_count
+    INTEGER                                       :: myid, ierr 
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
+
+    CALL MPI_COMM_RANK( COMMUNICATOR, myid , ierr )
+
+    IF ( myid == rootproc ) THEN
+
+      CALL OpenFileHDF( FileName, .false., file_id )
+
+      CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+
+      CALL ReadDimensionsHDF( nPoints, group_id )
+      CALL ReadNumberVariablesHDF( nVariables, group_id )
+      CALL CloseGroupHDF( group_id )
+    
+      buffer(1) = nPoints(1)
+      buffer(2) = nPoints(2)
+      buffer(3) = nPoints(3)
+      buffer(4) = nVariables
+
+  WRITE (*,*) "in: process", myid, "buffer(4)", buffer(4) 
+
+    END IF
+
+    i_count = SIZE(buffer) 
+
+    CALL MPI_BCAST( buffer, i_count, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
+    IF ( myid /= rootproc ) THEN
+      
+      nPoints(1) = buffer(1)
+      nPoints(2) = buffer(2)
+      nPoints(3) = buffer(3)
+      nVariables = buffer(4) 
+
+  WRITE (*,*) "out process", myid, "buffer(4)", nVariables 
+
+    END IF
+
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+
+    IF ( myid == rootproc ) THEN
+
+      CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+
+      CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+
+    i_count = PRODUCT(nPoints) 
+
+    DO i= 1, 3
+      CALL MPI_BCAST(EOSTable % TS % States(i) % Values(:), nPoints(i), &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    END DO
+
+  WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % States(1) % Values(10)
+
+    DO i= 1, nVariables  
+      CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count, &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    END DO
+
+  WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Variables(3) % Values(10,10,10)
+
+  END SUBROUTINE ReadEquationOfStateTableParallelHDF
 
   SUBROUTINE ReadCHIMERAHDF( Rho, T, Ye, E_Int, Entropy, NSE, imax, nx, ny, &
                              nz, FileName)
