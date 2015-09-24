@@ -1,12 +1,14 @@
 MODULE wlInterpolationModule
 
   USE wlKindModule, ONLY: dp
+  USE wlDependentVariablesModule
 
   implicit none
 
   PUBLIC LogInterpolateSingleVariable
   PUBLIC locate 
   PUBLIC MonotonicityCheck
+  PUBLIC TableLimitFail
 
 CONTAINS
 
@@ -148,16 +150,6 @@ CONTAINS
       CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
-
-    !WRITE (*,*) i, il1, il2, il3
-  
-    !  CALL locate( Coordinate3, SIZE(Coordinate3), x3(k), il3 )
-    !  DO j = 1, SIZE(x2)  
-    !    CALL locate( Coordinate2, SIZE(Coordinate2), x2(j), il2 )
-    !    DO i = 1, SIZE(x1)  
-    !      CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 ) 
-
-    !  WRITE (*,*) "Offset=", Offset
 
       p000 = ( Table( il1  , il2  , il3   ) )
       p100 = ( Table( il1+1, il2  , il3   ) )
@@ -355,15 +347,11 @@ CONTAINS
   SUBROUTINE ComputeTempFromIntEnergy &
                ( E_Internal, Energy_Table, Temp_Table, Offset, Temperature ) 
 
-    !REAL(dp), INTENT(in) :: Rho
     REAL(dp), DIMENSION(:), INTENT(in) :: E_Internal
-    !REAL(dp), DIMENSION(:) :: Ye
     REAL(dp), DIMENSION(:), INTENT(in) :: Temp_Table 
-    !REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Energy_Table
     REAL(dp), DIMENSION(:), INTENT(in) :: Energy_Table
     REAL(dp), INTENT(in) :: Offset
     REAL(dp), DIMENSION(:), INTENT(out) :: Temperature
-    !REAL(dp), DIMENSION(3) :: delta
     REAL(dp) :: delta, epsilon
     INTEGER :: i, j 
   

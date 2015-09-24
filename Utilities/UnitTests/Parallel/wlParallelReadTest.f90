@@ -40,8 +40,6 @@ PROGRAM wlParallelReadTest
                                             "StandardResEquationOfStateTable7-31-15.h5", &
                                             0, MPI_COMM_WORLD )
 
-  WRITE (*,*) "process", myid, "test data", EOSTable % DV % Variables(3) % Values(10,10,10)
-
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
   IF ( myid == 0 ) CALL FinalizeHDF( )

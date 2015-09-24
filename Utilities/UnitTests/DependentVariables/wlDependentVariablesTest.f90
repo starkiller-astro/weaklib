@@ -71,15 +71,6 @@ print*,"3"
     DV % Variables(i) % Values = i 
   END DO
 
-
-  !DO j = 1,12
-  !  WRITE(*,*)
-  !  WRITE(*,*) TRIM( DV % Names(j) ) , j
-  !  WRITE(*,*)
-    !WRITE(*,*) DV2 % nValues(j)
-  !  WRITE(*,*) DV % Variables(j) % Values(:,:,:)
-  !END DO
-
 print*,"4"
 
   CALL InitializeHDF( )

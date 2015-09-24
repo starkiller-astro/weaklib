@@ -32,7 +32,7 @@ PROGRAM wlReadEquationOfStateTest
     WRITE(*,*) EOSTable % TS % States(i) % Values(:)
   END DO
 
-  DO i = 1,13
+  DO i = 1, SIZE( EOSTable % DV % Variables )
     WRITE(*,*)
     WRITE(*,*) TRIM( EOSTable % DV % Names(i) ) , i
     WRITE(*,*)

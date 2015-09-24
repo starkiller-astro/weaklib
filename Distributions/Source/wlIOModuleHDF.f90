@@ -598,7 +598,7 @@ CONTAINS
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER, DIMENSION(4)                         :: buffer
-    INTEGER                                       :: nVariables, i
+    INTEGER                                       :: nStates, nVariables, i
     INTEGER                                       :: i_count
     INTEGER                                       :: myid, ierr 
     INTEGER(HID_T)                                :: file_id
@@ -653,20 +653,41 @@ CONTAINS
     END IF
 
     i_count = PRODUCT(nPoints) 
+    
+    nStates = 3
 
-    DO i= 1, 3
+    DO i= 1, nStates
       CALL MPI_BCAST(EOSTable % TS % States(i) % Values(:), nPoints(i), &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     END DO
 
+    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates, &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates, &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates, &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates, &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
   WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % States(1) % Values(10)
+  WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % Names(1) 
+  WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % Units(1) 
 
     DO i= 1, nVariables  
-      CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count, &
+      CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count,  &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     END DO
 
+    CALL MPI_BCAST(EOSTable % DV % Names(:), nVariables,                   &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Units(:), nVariables,                   &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,                     &
+                   MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
   WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Variables(3) % Values(10,10,10)
+  WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Names(3)
 
   END SUBROUTINE ReadEquationOfStateTableParallelHDF
 
