@@ -18,6 +18,8 @@ MODULE wlDependentVariablesModule
   INTEGER, PUBLIC :: ChargeNumberHeavy 
   INTEGER, PUBLIC :: MassNumberHeavy 
   INTEGER, PUBLIC :: BindingEnergyHeavy 
+  INTEGER, PUBLIC :: ThermalEnergy
+  INTEGER, PUBLIC :: Gamma1 
 
   TYPE :: ValueType
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values

@@ -28,13 +28,15 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   REAL(dp)           :: a_heavy     ! A for mean heavy nucleus
   REAL(dp)           :: z_heavy     ! Z for mean heavy nucleus
   REAL(dp)           :: be_heavy    ! Binding energy for mean heavy nucleus
+  REAL(dp)           :: thermalenergy ! Internal energy without rest mass and constant offsets
+  REAL(dp)           :: gamma1 
 
   INTEGER            :: i
 
-  CHARACTER(len=32), DIMENSION(13) :: Names
-  CHARACTER(len=32), DIMENSION(13) :: Units
+  CHARACTER(len=32), DIMENSION(14) :: Names
+  CHARACTER(len=32), DIMENSION(14) :: Units
 
-  REAL(dp), DIMENSION(13)          :: Values
+  REAL(dp), DIMENSION(14)          :: Values
 
  99  FORMAT(a32,'= ', es14.6, ' ', a32)
 
@@ -44,7 +46,7 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   LSFilePath = '../../LS/Data'
   CALL  wlExtInitializeEOS( LSFilePath, LScompress )
 
-  Names(1:13) = (/'Pressure                        ', &
+  Names(1:15) = (/'Pressure                        ', &
                   'Entropy Per Baryon              ', &
                   'Internal Energy Density         ', &
                   'Neutron Chemical Potential      ', &
@@ -56,9 +58,11 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
                   'Heavy Mass Fraction             ', &
                   'Heavy Mass Number               ', &
                   'Heavy Charge Number             ', &
-                  'Heavy Binding Energy            '/)
+                  'Heavy Binding Energy            ', &
+                  'Thermal Energy                  ', &
+                  'Gamma1                          '/)
 
-  Units(1:13) = (/'Dynes per cm^2                  ', &
+  Units(1:15) = (/'Dynes per cm^2                  ', &
                   'k_b per baryon                  ', &
                   'erg per gram                    ', &
                   'MeV                             ', &
@@ -70,7 +74,9 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
                   '                                ', &
                   '                                ', &
                   '                                ', &
-                  'MeV                             '/)
+                  'MeV                             ', &
+                  'MeV                             ', &
+                  '                                '/)
 
 !-- Take user input until interrupted
 
@@ -80,7 +86,7 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
     READ(*,*) EOSFlag, Density, Temperature, Ye
     CALL wlGetFullEOS( Density, Temperature, Ye, EOSFlag, fail, press, energ, &
                        entrop, chem_n, chem_p, chem_e, xn_neut, xn_prot,      &
-                       xn_alpha, xn_heavy, a_heavy, z_heavy, be_heavy )
+                       xn_alpha, xn_heavy, a_heavy, z_heavy, be_heavy, thermalenergy, gamma1 )
 
     Values(1)  = press   
     Values(3)  = energ   
@@ -95,10 +101,12 @@ USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
     Values(11) = a_heavy 
     Values(12) = z_heavy 
     Values(13) = be_heavy
+    Values(14) = thermalenergy
+    Values(15) = gamma1
 
     WRITE(*,*) "EOS ", EOSFlag, " returns dependent variables:"
 
-    DO i = 1,13
+    DO i = 1,15
       WRITE(*,99) Names(i), Values(i), ADJUSTL( Units(i) )
     END DO
 

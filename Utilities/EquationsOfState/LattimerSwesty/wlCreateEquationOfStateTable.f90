@@ -42,9 +42,9 @@ PROGRAM wlCreateEquationOfStateTable
 
 !  nPoints = (/81,24,24/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
-!  nPoints = (/161,47,47/) ! Standard Res
-  nPoints = (/321,93,93/) ! High Res
-  nVariables = 13
+  nPoints = (/161,47,47/) ! Standard Res
+!  nPoints = (/321,93,93/) ! High Res
+  nVariables = 15
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
 
@@ -78,35 +78,39 @@ PRINT*, "Make Grids"
          EOSTable % TS % nPoints(3), EOSTable % TS % States(3) % Values)
 
 PRINT*, "Allocate Names " 
-  EOSTable % DV % Names(1:13) = (/'Pressure                        ', &
-                                  'Entropy Per Baryon              ', &
-                                  'Internal Energy Density         ', &
-                                  'Electron Chemical Potential     ', &
-                                  'Proton Chemical Potential       ', &
-                                  'Neutron Chemical Potential      ', &
-                                  'Proton Mass Fraction            ', &
-                                  'Neutron Mass Fraction           ', &
-                                  'Alpha Mass Fraction             ', &
-                                  'Heavy Mass Fraction             ', &
-                                  'Heavy Charge Number             ', &
-                                  'Heavy Mass Number               ', &
-                                  'Heavy Binding Energy            '/)
+  EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
+                                          'Entropy Per Baryon              ', &
+                                          'Internal Energy Density         ', &
+                                          'Electron Chemical Potential     ', &
+                                          'Proton Chemical Potential       ', &
+                                          'Neutron Chemical Potential      ', &
+                                          'Proton Mass Fraction            ', &
+                                          'Neutron Mass Fraction           ', &
+                                          'Alpha Mass Fraction             ', &
+                                          'Heavy Mass Fraction             ', &
+                                          'Heavy Charge Number             ', &
+                                          'Heavy Mass Number               ', &
+                                          'Heavy Binding Energy            ', &
+                                          'Thermal Energy                  ', &
+                                          'Gamma1                          '/)
 
 
 PRINT*, "Allocate Dependent Variable Units " 
-  EOSTable % DV % Units(1:13) = (/'Dynes per cm^2                  ', &
-                                  'k_b per baryon                  ', &
-                                  'erg per gram                    ', &
-                                  'MeV                             ', &
-                                  'MeV                             ', &
-                                  'MeV                             ', &
-                                  '                                ', &
-                                  '                                ', &
-                                  '                                ', &
-                                  '                                ', &
-                                  '                                ', &
-                                  '                                ', &
-                                  'MeV                             '/)
+  EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
+                                          'k_b per baryon                  ', &
+                                          'erg per gram                    ', &
+                                          'MeV                             ', &
+                                          'MeV                             ', &
+                                          'MeV                             ', &
+                                          '                                ', &
+                                          '                                ', &
+                                          '                                ', &
+                                          '                                ', &
+                                          '                                ', &
+                                          '                                ', &
+                                          'MeV                             ', &
+                                          'MeV                             ', &
+                                          '                                '/)
 
 PRINT*, "Allocate Dependent Variable Logical " 
   EOSTable % DV % Repaired(:,:,:) = 0
@@ -128,7 +132,9 @@ PRINT*, "Begin Associate"
     xn_heavy    => EOSTable % DV % Variables(10) % Values(:,:,:), &
     z_heavy     => EOSTable % DV % Variables(11) % Values(:,:,:), &
     a_heavy     => EOSTable % DV % Variables(12) % Values(:,:,:), &
-    be_heavy    => EOSTable % DV % Variables(13) % Values(:,:,:) ) 
+    be_heavy    => EOSTable % DV % Variables(13) % Values(:,:,:), &
+    thermalenergy    => EOSTable % DV % Variables(14) % Values(:,:,:), &  
+    gamma1    => EOSTable % DV % Variables(15) % Values(:,:,:) ) 
 
   EOSFlag = "L" 
 
@@ -141,11 +147,7 @@ PRINT*, "Begin Associate"
                        press(i,j,k), energ(i,j,k), entrop(i,j,k), chem_n(i,j,k),    &
                        chem_p(i,j,k), chem_e(i,j,k), xn_neut(i,j,k), xn_prot(i,j,k),&
                        xn_alpha(i,j,k), xn_heavy(i,j,k), a_heavy(i,j,k),            &
-                       z_heavy(i,j,k), be_heavy(i,j,k), i, j, k )   
-
-          IF ( i == 139 .and. k == 1 ) THEN 
-            WRITE (*,*) j, Temperature(j), energ(i,j,k)
-          END IF
+                       z_heavy(i,j,k), be_heavy(i,j,k), thermalenergy(i,j,k), gamma1(i,j,k), i, j, k )   
 
           xn_alpha(i,j,k) = MAX( 1.0d0 - xn_neut(i,j,k) - xn_prot(i,j,k) &
                               - xn_heavy(i,j,k) , 0.0d0 ) 
@@ -167,7 +169,6 @@ WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3)
   CALL InitializeHDF( )
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
-!  CALL WriteEquationOfStateTableHDF( EOSTable, Description )
 
   CALL FinalizeHDF( )
 

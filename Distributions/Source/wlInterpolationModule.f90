@@ -1,7 +1,9 @@
 MODULE wlInterpolationModule
 
   USE wlKindModule, ONLY: dp
+  USE wlThermoStateModule
   USE wlDependentVariablesModule
+  USE wlEquationOfStateTableModule 
 
   implicit none
 
@@ -192,6 +194,32 @@ CONTAINS
     END DO 
 
   END SUBROUTINE LogInterpolateSingleVariable
+
+  SUBROUTINE LogInterpolateAllVariables( x1, x2, x3, LogInterp, EOSTable, Interpolant )
+    REAL(dp), DIMENSION(:), INTENT(in) :: x1
+    REAL(dp), DIMENSION(:), INTENT(in) :: x2
+    REAL(dp), DIMENSION(:), INTENT(in) :: x3
+    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
+    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
+    REAL(dp), DIMENSION(:,:), ALLOCATABLE, INTENT(out) :: Interpolant 
+    INTEGER :: i
+
+    ALLOCATE( Interpolant( SIZE(x1), EOSTable % DV % nVariables ) )
+
+    DO i = 1, EOSTable % DV % nVariables
+      CALL LogInterpolateSingleVariable( x1, x2, x3, &
+                                    EOSTable % TS % States(1) % Values(:), &
+                                    EOSTable % TS % States(2) % Values(:), &
+                                    EOSTable % TS % States(3) % Values(:), &
+                                    LogInterp,                             &
+                                    EOSTable % DV % Offsets(i), &
+                                    EOSTable % DV % Variables(i) % Values(:,:,:), &
+                                    Interpolant(:,i) )
+ 
+    END DO
+
+
+  END SUBROUTINE LogInterpolateAllVariables 
 
   SUBROUTINE LoneCellLogInterpolateSingleVariable( x1, x2, x3, Coordinate1, Coordinate2, &
                                            Coordinate3, LogInterp, Table, Interpolant )

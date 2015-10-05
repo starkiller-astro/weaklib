@@ -661,9 +661,9 @@ CONTAINS
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     END DO
 
-    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates, &
+    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates,     &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates, &
+    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates,     &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates, &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
@@ -683,7 +683,9 @@ CONTAINS
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % DV % Units(:), nVariables,                   &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,                     &
+    CALL MPI_BCAST(EOSTable % DV % Offsets(:), nVariables,                 &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,               &
                    MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
 
   WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Variables(3) % Values(10,10,10)

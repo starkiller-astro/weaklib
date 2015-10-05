@@ -48,16 +48,18 @@ PROGRAM wlTableFinishingTest
   Fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0  &
                 .or. ISNAN(EOSTable % DV % Variables(1) % Values(:,:,:))  & 
                 .or. ISNAN(EOSTable % DV % Variables(3) % Values(:,:,:))   
-  DO k = 45, 47
-    DO j = 20, 25
-      DO i = 135, 145
-  WRITE(*,*) "Fail=", Fail(i,j,k), i, j, k
-      END DO
-    END DO
-  END DO
+!  DO k = 45, 47
+!    DO j = 20, 25
+!      DO i = 135, 145
+!  WRITE(*,*) "Fail=", Fail(i,j,k), i, j, k
+!      END DO
+!    END DO
+!  END DO
 
+  !------------------------------------------------------
   ! Find dimension (iMinGradient) with smallest gradient 
   !   for interpolation across single cell hole 
+  !------------------------------------------------------
   
   CALL HoleCharacterizeFine( Fail, EOSTable % DV % Variables(1) % Values, iMinGradient )
 

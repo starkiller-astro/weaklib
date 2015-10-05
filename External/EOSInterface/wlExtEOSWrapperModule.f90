@@ -50,6 +50,7 @@ REAL(double), PARAMETER     :: kfm = cm3fm3/rmu    ! ( # nucleons/gram )( cm3/fm
 REAL(double), PARAMETER     :: kp  = ergmev/cm3fm3 ! ( erg/cm3 ) / ( mev/fm3 )
 REAL(double), PARAMETER     :: ku  = ergmev/rmu    ! ( # nucleons/gram )( erg/mev )
 REAL(double), PARAMETER     :: UTOT0 = 8.9d0       ! change in the zero of energy [MeV]
+REAL(double), PARAMETER     :: me = 0.510998d+00   ! electron mass [MeV]
 
 REAL(double), DIMENSION(4)  :: inpvar_save         ! retained copy of input var for LS retries
 
@@ -141,7 +142,7 @@ END SUBROUTINE wlGetElectronEOS
 
 SUBROUTINE wlGetFullEOS( rho, temp, ye, flag, fail, press, energ,       &
 & entrop, chem_n, chem_p, chem_e, xn_neut, xn_prot, xn_alpha, xn_heavy, &
-& a_heavy, z_heavy, be_heavy, ii, jj, kk )
+& a_heavy, z_heavy, be_heavy, thermalenergy, gamma1, ii, jj, kk )
 !-----------------------------------------------------------------------
 !
 !    Module:       wlGetFullEOS
@@ -177,11 +178,13 @@ SUBROUTINE wlGetFullEOS( rho, temp, ye, flag, fail, press, energ,       &
 !  a_heavy        : A for mean heavy nucleus
 !  z_heavy        : Z for mean heavy nucleus
 !  be_heavy       : binding energy for mean heavy nucleus
+!  thermalenergy  : internal energy minus rest mass and constant offsets
+!  gamma1         : gamma from LS 
 !-----------------------------------------------------------------------
 
 USE el_eos_module, ONLY: EPRESS, EU, ES
 USE eos_m4c_module, ONLY: PTOT, UTOT, STOT, XNUT, XPROT, XH, MUN,      &
-& MUPROT, A, X, BUNUC
+& MUPROT, A, X, GAM_S, BUNUC
 USE eos_bck_module, ONLY: dbck, tbck, yebck, dtran, xnbck,  &
 & xpbck, xhbck, ptotbck, uhat, etot, stotbck, un, zabck, ahbck, theta, &
 & xabck, b_hvy
@@ -219,6 +222,8 @@ REAL(double), INTENT(out)   :: xn_heavy    ! heavy fraction
 REAL(double), INTENT(out)   :: a_heavy     ! A for mean heavy nucleus
 REAL(double), INTENT(out)   :: z_heavy     ! Z for mean heavy nucleus
 REAL(double), INTENT(out)   :: be_heavy    ! Binding energy for mean heavy nucleus
+REAL(double), INTENT(out)   :: thermalenergy ! Internal energy without rest mass and constant offsets
+REAL(double), INTENT(out)   :: gamma1      ! Gamma from LS 
 
 !-----------------------------------------------------------------------
 !  Local variables 
@@ -262,6 +267,8 @@ xn_heavy  = zero
 a_heavy   = zero
 z_heavy   = zero
 be_heavy  = zero
+thermalenergy  = zero
+gamma1    = zero
 brydns    = rho * kfm
 tmev      = temp * kmev
 
@@ -364,14 +371,12 @@ SELECT CASE ( flag )
   xn_neut  =   XNUT
   xn_prot  =   XPROT
   xn_heavy =   XH
-  xn_alpha =   MAX( zero, one - xn_neut - xn_prot -xn_alpha ) 
+  xn_alpha =   MAX( zero, one - xn_neut - xn_prot -xn_heavy ) 
   a_heavy  =   A
   z_heavy  =   X * A
   be_heavy =   BUNUC
-
-  IF ( ii == 139 .and. kk == 1 ) THEN
-WRITE(*,*) jj, temp, energ, UTOT, EU, ee
-END IF
+  thermalenergy = ku * ( UTOT - EU + ee + dmnp * XPROT + 7.075 * xn_alpha - BUNUC + 1.5d0 * tmev * XH/A - yebck * me  )
+  gamma1   =   GAM_S
 
 !-----------------------------------------------------------------------
 !  BCK EoS (NSE only!!!)
@@ -421,10 +426,11 @@ END IF
   xn_neut  = DMAX1( xnbck , zero )
   xn_prot  = DMAX1( xpbck , zero )
   xn_heavy = DMAX1( xhbck , zero )
-  xn_alpha = MAX( zero, one - xn_neut - xn_prot -xn_alpha ) 
+  xn_alpha = MAX( zero, one - xn_neut - xn_prot -xn_heavy ) 
   a_heavy  = ahbck
   z_heavy  = zabck * ahbck
   be_heavy = b_hvy
+  thermalenergy = ku * ( etot + ee - UTOT0 + 7.075 * xn_alpha - xhbck * b_hvy - yebck * me )
 
 !-----------------------------------------------------------------------
 !  Stop if unimplemented EoS is requested
