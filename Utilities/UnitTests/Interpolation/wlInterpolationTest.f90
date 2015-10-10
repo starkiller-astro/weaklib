@@ -10,7 +10,7 @@ PROGRAM wlInterpolationTest
 
   implicit none
 
-  INTEGER  :: i, j, nout
+  INTEGER  :: i, j, nout, TestUnit1, TestUnit2, TestUnit3
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
@@ -22,6 +22,9 @@ PROGRAM wlInterpolationTest
 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: DirectCall 
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE :: Interpolants 
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE :: Derivative
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Derivatives 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: press 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: entrop
   REAL(dp), DIMENSION(:), ALLOCATABLE :: energ
@@ -35,11 +38,13 @@ PROGRAM wlInterpolationTest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: z_heavy 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: a_heavy 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: be_heavy 
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: thermenergy 
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: gammaone
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rand
   REAL(dp) :: Yemin, Yemax, logTmin, logTmax, logrhomin, logrhomax, epsilon
   INTEGER, PARAMETER :: NumPoints = 1000
   REAL(dp) :: LogT, logrho
-  REAL(dp), DIMENSION(13) :: L1norm, Maxnorm, L1norm2, Maxnorm2
+  REAL(dp), DIMENSION(15) :: L1norm, Maxnorm, L1norm2, Maxnorm2
   CHARACTER(len=1)   :: EOSFlag     ! nuclear eos selection flag
   CHARACTER(len=3)   :: LScompress
   CHARACTER(len=128) :: LSFilePath
@@ -50,6 +55,10 @@ PROGRAM wlInterpolationTest
              " DC=", es12.5, " Diff=", es12.5 ) 
   epsilon = 1.d-100
   nout  = 3216
+
+  OPEN( newunit = TestUnit1, FILE="InterpolateAllTest.d")
+  OPEN( newunit = TestUnit2, FILE="SingleDerivativeTest.d")
+  OPEN( newunit = TestUnit3, FILE="AllDerivativesTest.d")
 
   LScompress = '220'
   LSFilePath = '../../../External/LS/Data'
@@ -69,11 +78,15 @@ PROGRAM wlInterpolationTest
   LogInterp = (/.true.,.true.,.false./)
 
   ALLOCATE( rho( NumPoints ), T( NumPoints ), Ye( NumPoints ), rand( NumPoints, 3 ),  &
-            Interpolant( NumPoints ), DirectCall( NumPoints, 13), press( NumPoints ), &
+            Interpolant( NumPoints ), DirectCall( NumPoints, 15), press( NumPoints ), &
             entrop( NumPoints ), energ( NumPoints ), chem_e( NumPoints ),             & 
             chem_p( NumPoints ), chem_n( NumPoints ), xn_prot( NumPoints ),           &
             xn_neut( NumPoints ), xn_alpha( NumPoints ), xn_heavy( NumPoints ),       &
-            z_heavy( NumPoints ), a_heavy( NumPoints ), be_heavy( NumPoints ) ) 
+            z_heavy( NumPoints ), a_heavy( NumPoints ), be_heavy( NumPoints ),        &
+            thermenergy( NumPoints ), gammaone( NumPoints ),                          &
+            Interpolants( NumPoints, EOSTable % DV % nVariables  ),                   & 
+            Derivative( NumPoints, 3 ),                                               & 
+            Derivatives( NumPoints, 3, EOSTable % DV % nVariables  ) )
 
   CALL RANDOM_SEED( )
   CALL RANDOM_NUMBER( rand )
@@ -100,7 +113,7 @@ PROGRAM wlInterpolationTest
     CALL wlGetFullEOS( rho(i), T(i), Ye(i), EOSFlag, fail, press(i), energ(i), &
                        entrop(i), chem_n(i), chem_p(i), chem_e(i), xn_neut(i), &
                        xn_prot(i), xn_alpha(i), xn_heavy(i), a_heavy(i),       &
-                       z_heavy(i), be_heavy(i) ) 
+                       z_heavy(i), be_heavy(i), thermenergy(i), gammaone(i), 1, 1, 1 ) 
 
     DirectCall(i,1) = press(i)
     DirectCall(i,2) = entrop(i)
@@ -115,6 +128,8 @@ PROGRAM wlInterpolationTest
     DirectCall(i,11) = a_heavy(i)
     DirectCall(i,12) = z_heavy(i)
     DirectCall(i,13) = be_heavy(i)
+    DirectCall(i,14) = thermenergy(i)
+    DirectCall(i,15) = gammaone(i)
 
   END DO
   
@@ -161,26 +176,53 @@ PROGRAM wlInterpolationTest
 
 
   END DO
-  WRITE ( *, * ) "press        entropy      energy       chem_n       chem_p       chem_e       xn_neut      xn_prot      xn_alpha      xn_heavy      a_heavy     z_heavy      be_heavy"
-  WRITE ( *, '( 13(es12.5,x) )' ) L1norm(1)/Zonelimit, L1norm(2)/Zonelimit,   &
-                                  L1norm(3)/Zonelimit, L1norm(4)/Zonelimit,   &
-                                  L1norm(5)/Zonelimit, L1norm(6)/Zonelimit,   &
-                                  L1norm(7)/Zonelimit, L1norm(8)/Zonelimit,   &
-                                  L1norm(9)/Zonelimit, L1norm(10)/Zonelimit,  &
-                                  L1norm(11)/Zonelimit, L1norm(12)/Zonelimit, &
-                                  L1norm(13)/Zonelimit
+  !WRITE ( *, * ) "press        entropy      energy       chem_n       chem_p       chem_e       xn_neut      xn_prot      xn_alpha      xn_heavy      a_heavy     z_heavy      be_heavy"
+  !WRITE ( *, '( 13(es12.5,x) )' ) L1norm(1)/Zonelimit, L1norm(2)/Zonelimit,   &
+                                  !L1norm(3)/Zonelimit, L1norm(4)/Zonelimit,   &
+                                  !L1norm(5)/Zonelimit, L1norm(6)/Zonelimit,   &
+                                  !L1norm(7)/Zonelimit, L1norm(8)/Zonelimit,   &
+                                  !L1norm(9)/Zonelimit, L1norm(10)/Zonelimit,  &
+                                  !L1norm(11)/Zonelimit, L1norm(12)/Zonelimit, &
+                                  !L1norm(13)/Zonelimit
 
-  WRITE (*,*) NumGoodPoints
+  !WRITE (*,*) NumGoodPoints
 
   CLOSE(nout)
 
+  
+  CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, EOSTable, Interpolants ) 
+  
+  DO j = 1, EOSTable % DV % nVariables 
+    WRITE (TestUnit1,*) "Interpolant =", Interpolants(:,j), "Direct Call =", DirectCall(:,j)
+  END DO
 
-!  WRITE (*,*) "Internal Energy Monotonicity Check"
+  DO i = 1, EOSTable % DV % nVariables
+    CALL LogInterpolateDifferentiateSingleVariable( rho, T, Ye, &
+                         EOSTable % TS % States(1) % Values(:), &
+                         EOSTable % TS % States(2) % Values(:), &
+                         EOSTable % TS % States(3) % Values(:), &
+                         LogInterp,                             &
+                         EOSTable % DV % Offsets(i), &
+                         EOSTable % DV % Variables(i) % Values(:,:,:), &
+                         Interpolant(:), Derivative(:,:) )
+      Interpolants(:,i) = Interpolant(:)
+      Derivatives(:,:,i) = Derivative(:,:)
+    END DO
 
-!  CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
-!                          EOSTable % nPoints(1), EOSTable % nPoints(2), &
-!                          EOSTable % nPoints(3), 2 )
+  DO j = 1, EOSTable % DV % nVariables 
+    WRITE (TestUnit2,*) "Derivatives =", Derivatives(:,:,j)
+  END DO
 
+
+  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, LogInterp, EOSTable, Interpolants, Derivatives ) 
+
+  DO j = 1, EOSTable % DV % nVariables 
+    WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
+  END DO
+
+  CLOSE(TestUnit1)
+  CLOSE(TestUnit2)
+  CLOSE(TestUnit3)
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 

@@ -13,8 +13,6 @@ PROGRAM wlInversionTest
   implicit none
 
   INTEGER  :: i, j, k, TestUnit, ErrorUnit
-  !INTEGER, PARAMETER :: RhoIndex = 139
-  !INTEGER, PARAMETER :: YeIndex = 1
   REAL(dp) :: maxnorm, L1Norm
   TYPE(EquationOfStateTableType) :: EOSTable
   LOGICAL, DIMENSION(3) :: LogInterp
