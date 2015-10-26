@@ -207,12 +207,10 @@ CONTAINS
     LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
     TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
     REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
-    !REAL(dp), DIMENSION(:,:), ALLOCATABLE, INTENT(out) :: Interpolants 
 
     INTEGER :: i
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant 
 
-    !ALLOCATE( Interpolants( SIZE(x1), EOSTable % DV % nVariables ), &
     ALLOCATE( Interpolant( SIZE(x1) ) )
 
     DO i = 1, EOSTable % DV % nVariables
@@ -307,7 +305,7 @@ CONTAINS
                  ) - Offset
 
       Derivative(i,1) &
-        = ( LOG10( Interpolant(i) ) * alpha(1) &  !10**( & 
+        = ( (Interpolant(i) ) * alpha(1) & 
             * ( (1.0_dp - delta(3)) * ( (delta(2) - 1.0_dp) * p000   &
                                     +  ( 1.0_dp - delta(2)) * p100   &
                                     -             delta(2)  * p010   &
@@ -318,7 +316,7 @@ CONTAINS
                                     +             delta(2)  * p111 ) ) )
 
       Derivative(i,2) &
-        = ( LOG10( Interpolant(i) ) * alpha(2) &!10**( & 
+        = ( ( Interpolant(i) ) * alpha(2) &
               * ( (1.0_dp - delta(3) ) * ( (1.0_dp - delta(1)) * p000   &
                                        +             delta(1)  * p100   &
                                        -  ( 1.0_dp - delta(1)) * p010   &
@@ -329,7 +327,7 @@ CONTAINS
                                        -             delta(1)  * p111 ) ) )
 
       Derivative(i,3) &
-        = ( LOG10( Interpolant(i) ) * alpha(3) &!10.d0**( &
+        = ( ( Interpolant(i) ) * alpha(3) &
                                    * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
                                        -            delta(1)  * (1.0_dp - delta(2)) * p100   &
                                        - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
@@ -409,12 +407,10 @@ CONTAINS
                                     EOSTable % DV % Variables(1) % Values(:,:,:), &
                                     Interpolant(:), Derivative(:,:) )
        
-      Gamma1 = 0.d0
+      DO i = 1, SIZE(x1) 
+        Gamma1(i) =  ( x1(i)/Interpolant(i) ) * Derivative(i, 1 ) 
+      END DO
 
-
-      !Gamma1(/1:SIZE(x1)/) =  ( x1(/1:SIZE(x1)/)/Interpolant(/1:SIZE(x1)/) ) &
-       !                         * Derivative(/1:SIZE(x1)/, 1 ) 
- 
   END SUBROUTINE GetGamma1 
 
 

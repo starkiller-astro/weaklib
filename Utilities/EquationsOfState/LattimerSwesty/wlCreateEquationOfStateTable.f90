@@ -57,6 +57,10 @@ PRINT*, "Allocate EOS"
                                  'Temperature                     ',&
                                  'Electron Fraction               '/)
 
+  EOSTable % TS % iRho = 1
+  EOSTable % TS % iT   = 2
+  EOSTable % TS % iYe  = 3
+
 PRINT*, "Allocate Independent Variable Units " 
 
   EOSTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
@@ -94,6 +98,24 @@ PRINT*, "Allocate Names "
                                           'Thermal Energy                  ', &
                                           'Gamma1                          '/)
 
+PRINT*, "Set Dependent Variable Identifier Indicies " 
+    EOSTable % DV % iPressure = 1
+    EOSTable % DV % iEntropy = 2
+    EOSTable % DV % iInternalEnergy = 3
+    EOSTable % DV % iChemicalPotentialElectron = 4
+    EOSTable % DV % iChemicalPotentialProton = 5
+    EOSTable % DV % iChemicalPotentialNeutron = 6
+    EOSTable % DV % iMassFractionProton = 7
+    EOSTable % DV % iMassFractionNeutron = 8
+    EOSTable % DV % iMassFractionAlpha = 9
+    EOSTable % DV % iMassFractionHeavy = 10
+    EOSTable % DV % iChargeNumberHeavy = 11
+    EOSTable % DV % iMassNumberHeavy = 12
+    EOSTable % DV % iBindingEnergyHeavy = 13
+    EOSTable % DV % iThermalEnergy = 14
+    EOSTable % DV % iGamma1 = 15
+
+      WRITE (*,*) "iRho, iGamma1", EOSTable % TS % iRho, EOSTable % DV % iGamma1
 
 PRINT*, "Allocate Dependent Variable Units " 
   EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
@@ -168,6 +190,7 @@ WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3)
 
   CALL InitializeHDF( )
 
+  WRITE (*,*) "Starting HDF write "
   CALL WriteEquationOfStateTableHDF( EOSTable )
 
   CALL FinalizeHDF( )

@@ -16,6 +16,9 @@ MODULE wlThermoStateModule
     REAL(dp), DIMENSION(3) :: minValues
     REAL(dp), DIMENSION(3) :: maxValues
     TYPE(ValueType), DIMENSION(3) :: States
+    INTEGER, DIMENSION(1) :: iRho
+    INTEGER, DIMENSION(1) :: iT
+    INTEGER, DIMENSION(1) :: iYe
   END TYPE  
 
   PUBLIC AllocateThermoState 

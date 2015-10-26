@@ -387,6 +387,8 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER                                     :: i
 
+  WRITE (*,*) "Starting HDF TS write "
+
     datasize1d(1) = 3
     CALL Write1dHDF_integer( "Dimensions", TS % nPoints(:), &
                              group_id, datasize1d )
@@ -401,6 +403,19 @@ CONTAINS
       CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
                               group_id, datasize1d )
     END DO
+ 
+  WRITE (*,*) "Starting HDF indicies write "
+    datasize1d = 1
+    CALL Write1dHDF_integer( "iRho", TS % iRho, &
+                             group_id, datasize1d )
+    
+    CALL Write1dHDF_integer( "iT", TS % iT, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iYe", TS % iYe, &
+                             group_id, datasize1d )
+
+  WRITE (*,*) "HDF indicies write successful "
 
   END SUBROUTINE WriteThermoStateHDF
 
@@ -438,6 +453,52 @@ CONTAINS
     datasize3d = SHAPE( DV % Repaired )
     CALL Write3dHDF_integer( "Repaired", DV % Repaired(:,:,:), &
                               group_id, datasize3d )
+
+    datasize1d = 1
+    CALL Write1dHDF_integer( "iPressure", DV % iPressure, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iEntropy", DV % iEntropy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iInternalEnergy", DV % iInternalEnergy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iChemicalPotentialElectron", DV % iChemicalPotentialElectron, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iChemicalPotentialProton", DV % iChemicalPotentialProton, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iChemicalPotentialNeutron", DV % iChemicalPotentialNeutron, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iMassFractionProton", DV % iMassFractionProton, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iMassFractionNeutron", DV % iMassFractionNeutron, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iMassFractionAlpha", DV % iMassFractionAlpha, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iMassFractionHeavy", DV % iMassFractionHeavy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iChargeNumberHeavy", DV % iChargeNumberHeavy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iMassNumberHeavy", DV % iMassNumberHeavy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iBindingEnergyHeavy", DV % iBindingEnergyHeavy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iThermalEnergy", DV % iThermalEnergy, &
+                             group_id, datasize1d )
+
+    CALL Write1dHDF_integer( "iGamma1", DV % iGamma1, &
+                             group_id, datasize1d )
 
   END SUBROUTINE WriteDependentVariablesHDF
 
@@ -534,18 +595,13 @@ CONTAINS
   END SUBROUTINE ReadNumberVariablesHDF
 
   SUBROUTINE WriteEquationOfStateTableHDF( EOSTable )
-!  SUBROUTINE WriteEquationOfStateTableHDF( EOSTable, Description  )
 
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
-!    CHARACTER(len=*), INTENT(in) :: Description
     
-!    CHARACTER(len=23), PARAMETER :: BaseFileName = "EquationOfStateTable.h5"  
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
-
     
     CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
-!    CALL OpenFileHDF( TRIM(ADJUSTL(Description//BaseFileName)), .true., file_id )
 
     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
     CALL WriteThermoStateHDF( EOSTable % TS, group_id )
@@ -688,8 +744,8 @@ CONTAINS
     CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,               &
                    MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
 
-  WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Variables(3) % Values(10,10,10)
-  WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Names(3)
+  !WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Variables(3) % Values(10,10,10)
+  !WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Names(3)
 
   END SUBROUTINE ReadEquationOfStateTableParallelHDF
 

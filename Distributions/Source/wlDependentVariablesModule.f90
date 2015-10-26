@@ -33,6 +33,21 @@ MODULE wlDependentVariablesModule
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Offsets
     INTEGER, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
+    INTEGER, DIMENSION(1) :: iPressure
+    INTEGER, DIMENSION(1) :: iEntropy
+    INTEGER, DIMENSION(1) :: iInternalEnergy
+    INTEGER, DIMENSION(1) :: iChemicalPotentialElectron
+    INTEGER, DIMENSION(1) :: iChemicalPotentialProton
+    INTEGER, DIMENSION(1) :: iChemicalPotentialNeutron
+    INTEGER, DIMENSION(1) :: iMassFractionProton
+    INTEGER, DIMENSION(1) :: iMassFractionNeutron
+    INTEGER, DIMENSION(1) :: iMassFractionAlpha
+    INTEGER, DIMENSION(1) :: iMassFractionHeavy
+    INTEGER, DIMENSION(1) :: iChargeNumberHeavy
+    INTEGER, DIMENSION(1) :: iMassNumberHeavy
+    INTEGER, DIMENSION(1) :: iBindingEnergyHeavy
+    INTEGER, DIMENSION(1) :: iThermalEnergy
+    INTEGER, DIMENSION(1) :: iGamma1
   END TYPE
 
   PUBLIC AllocateDependentVariables
