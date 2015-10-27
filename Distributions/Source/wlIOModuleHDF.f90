@@ -527,6 +527,11 @@ CONTAINS
       TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
     END DO
 
+    datasize1d(1) = 1
+    CALL Read1dHDF_integer( "iRho", TS % iRho(:), group_id, datasize1d )
+    CALL Read1dHDF_integer( "iT", TS % iT(:), group_id, datasize1d )
+    CALL Read1dHDF_integer( "iYe", TS % iYe(:), group_id, datasize1d )
+
     CALL CloseGroupHDF( group_id )
 
   END SUBROUTINE ReadThermoStateHDF
@@ -565,6 +570,51 @@ CONTAINS
     datasize3d = SHAPE( DV % Repaired )
     CALL Read3dHDF_integer( "Repaired", DV % Repaired(:,:,:), &
                               group_id, datasize3d )
+
+    CALL Read1dHDF_integer( "iPressure", DV % iPressure, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iEntropy", DV % iEntropy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iInternalEnergy", DV % iInternalEnergy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iChemicalPotentialElectron", DV % iChemicalPotentialElectron, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iChemicalPotentialProton", DV % iChemicalPotentialProton, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iChemicalPotentialNeutron", DV % iChemicalPotentialNeutron, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iMassFractionProton", DV % iMassFractionProton, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iMassFractionNeutron", DV % iMassFractionNeutron, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iMassFractionAlpha", DV % iMassFractionAlpha, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iMassFractionHeavy", DV % iMassFractionHeavy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iChargeNumberHeavy", DV % iChargeNumberHeavy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iMassNumberHeavy", DV % iMassNumberHeavy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iBindingEnergyHeavy", DV % iBindingEnergyHeavy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iThermalEnergy", DV % iThermalEnergy, &
+                             group_id, datasize1d )
+
+    CALL Read1dHDF_integer( "iGamma1", DV % iGamma1, &
+                             group_id, datasize1d )
 
     CALL CloseGroupHDF( group_id )
 
