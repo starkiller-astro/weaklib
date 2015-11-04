@@ -13,12 +13,13 @@ MODULE wlThermoStateModule
     CHARACTER(LEN=32), DIMENSION(3) :: Names
     CHARACTER(LEN=32), DIMENSION(3) :: Units
     INTEGER, DIMENSION(3) :: nPoints
+    INTEGER, DIMENSION(3) :: LogInterp
     REAL(dp), DIMENSION(3) :: minValues
     REAL(dp), DIMENSION(3) :: maxValues
     TYPE(ValueType), DIMENSION(3) :: States
-    INTEGER, DIMENSION(1) :: iRho
-    INTEGER, DIMENSION(1) :: iT
-    INTEGER, DIMENSION(1) :: iYe
+    INTEGER :: iRho
+    INTEGER :: iT
+    INTEGER :: iYe
   END TYPE  
 
   PUBLIC AllocateThermoState 

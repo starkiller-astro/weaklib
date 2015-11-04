@@ -81,6 +81,9 @@ PRINT*, "Make Grids"
   CALL MakeLinearGrid( EOSTable % TS % minValues(3), EOSTable % TS % maxValues(3), &
          EOSTable % TS % nPoints(3), EOSTable % TS % States(3) % Values)
 
+PRINT*, "Label Grid Type"
+  EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
+  
 PRINT*, "Allocate Names " 
   EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
                                           'Entropy Per Baryon              ', &
