@@ -411,15 +411,15 @@ CONTAINS
  
   WRITE (*,*) "Starting HDF indicies write "
     datasize1d = 1
-    buffer(1) = TS % iRho
+    buffer(1) = TS % Indices % iRho
     CALL Write1dHDF_integer( "iRho", buffer, &
                              group_id, datasize1d )
     
-    buffer(1) = TS % iT
+    buffer(1) = TS % Indices % iT
     CALL Write1dHDF_integer( "iT", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = TS % iYe
+    buffer(1) = TS % Indices % iYe
     CALL Write1dHDF_integer( "iYe", buffer, &
                              group_id, datasize1d )
 
@@ -464,63 +464,63 @@ CONTAINS
                               group_id, datasize3d )
 
     datasize1d = 1
-    buffer(1) = DV % iPressure 
+    buffer(1) = DV % Indices % iPressure 
     CALL Write1dHDF_integer( "iPressure", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iEntropy 
-    CALL Write1dHDF_integer( "iEntropy", buffer, &
+    buffer(1) = DV % Indices % iEntropyPerBaryon 
+    CALL Write1dHDF_integer( "iEntropyPerBaryon", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iInternalEnergy 
-    CALL Write1dHDF_integer( "iInternalEnergy", buffer, &
+    buffer(1) = DV % Indices % iInternalEnergyDensity 
+    CALL Write1dHDF_integer( "iInternalEnergyDensity", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iChemicalPotentialElectron 
-    CALL Write1dHDF_integer( "iChemicalPotentialElectron", buffer, &
+    buffer(1) = DV % Indices % iElectronChemicalPotential 
+    CALL Write1dHDF_integer( "iElectronChemicalPotential", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iChemicalPotentialProton 
-    CALL Write1dHDF_integer( "iChemicalPotentialProton", buffer, & 
+    buffer(1) = DV % Indices % iProtonChemicalPotential 
+    CALL Write1dHDF_integer( "iProtonChemicalPotential", buffer, & 
                              group_id, datasize1d )
 
-    buffer(1) = DV % iChemicalPotentialNeutron 
-    CALL Write1dHDF_integer( "iChemicalPotentialNeutron", buffer, &
+    buffer(1) = DV % Indices % iNeutronChemicalPotential 
+    CALL Write1dHDF_integer( "iNeutronChemicalPotential", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iMassFractionProton 
-    CALL Write1dHDF_integer( "iMassFractionProton", buffer, & 
+    buffer(1) = DV % Indices % iProtonMassFraction 
+    CALL Write1dHDF_integer( "iProtonMassFraction", buffer, & 
                              group_id, datasize1d )
 
-    buffer(1) = DV % iMassFractionNeutron 
-    CALL Write1dHDF_integer( "iMassFractionNeutron", buffer, &
+    buffer(1) = DV % Indices % iNeutronMassFraction 
+    CALL Write1dHDF_integer( "iNeutronMassFraction", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iMassFractionAlpha 
-    CALL Write1dHDF_integer( "iMassFractionAlpha", buffer, &
+    buffer(1) = DV % Indices % iAlphaMassFraction 
+    CALL Write1dHDF_integer( "iAlphaMassFraction", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iMassFractionHeavy 
-    CALL Write1dHDF_integer( "iMassFractionHeavy", buffer, &
+    buffer(1) = DV % Indices % iHeavyMassFraction 
+    CALL Write1dHDF_integer( "iHeavyMassFraction", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iChargeNumberHeavy 
-    CALL Write1dHDF_integer( "iChargeNumberHeavy", buffer, &
+    buffer(1) = DV % Indices % iHeavyChargeNumber 
+    CALL Write1dHDF_integer( "iHeavyChargeNumber", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iMassNumberHeavy 
-    CALL Write1dHDF_integer( "iMassNumberHeavy", buffer, &
+    buffer(1) = DV % Indices % iHeavyMassNumber 
+    CALL Write1dHDF_integer( "iHeavyMassNumber", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iBindingEnergyHeavy 
-    CALL Write1dHDF_integer( "iBindingEnergyHeavy", buffer, &
+    buffer(1) = DV % Indices % iHeavyBindingEnergy 
+    CALL Write1dHDF_integer( "iHeavyBindingEnergy", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iThermalEnergy 
+    buffer(1) = DV % Indices % iThermalEnergy 
     CALL Write1dHDF_integer( "iThermalEnergy", buffer, &
                              group_id, datasize1d )
 
-    buffer(1) = DV % iGamma1 
+    buffer(1) = DV % Indices % iGamma1 
     CALL Write1dHDF_integer( "iGamma1", buffer, &
                              group_id, datasize1d )
 
@@ -554,13 +554,13 @@ CONTAINS
 
     datasize1d(1) = 1
     CALL Read1dHDF_integer( "iRho", buffer, group_id, datasize1d )
-    TS % iRho = buffer(1)
+    TS % Indices % iRho = buffer(1)
 
     CALL Read1dHDF_integer( "iT", buffer, group_id, datasize1d )
-    TS % iT = buffer(1)
+    TS % Indices % iT = buffer(1)
 
     CALL Read1dHDF_integer( "iYe", buffer, group_id, datasize1d )
-    TS % iYe = buffer(1)
+    TS % Indices % iYe = buffer(1)
 
     datasize1d(1) = SIZE( TS % LogInterp )
     CALL Read1dHDF_integer( "LogInterp", TS % LogInterp(:), group_id, datasize1d )
@@ -608,63 +608,63 @@ CONTAINS
     datasize1d(1) = 1
     CALL Read1dHDF_integer( "iPressure", buffer, &
                              group_id, datasize1d )
-    DV % iPressure = buffer(1)
+    DV % Indices % iPressure = buffer(1)
 
-    CALL Read1dHDF_integer( "iEntropy", buffer, &
+    CALL Read1dHDF_integer( "iEntropyPerBaryon", buffer, &
                              group_id, datasize1d )
-    DV % iEntropy = buffer(1)
+    DV % Indices % iEntropyPerBaryon = buffer(1)
 
-    CALL Read1dHDF_integer( "iInternalEnergy", buffer, &
+    CALL Read1dHDF_integer( "iInternalEnergyDensity", buffer, &
                              group_id, datasize1d )
-    DV % iInternalEnergy = buffer(1)
+    DV % Indices % iInternalEnergyDensity = buffer(1)
 
-    CALL Read1dHDF_integer( "iChemicalPotentialElectron", buffer, &
+    CALL Read1dHDF_integer( "iElectronChemicalPotential", buffer, &
                              group_id, datasize1d )
-    DV % iChemicalPotentialElectron = buffer(1)
+    DV % Indices % iElectronChemicalPotential = buffer(1)
 
-    CALL Read1dHDF_integer( "iChemicalPotentialProton", buffer, &
+    CALL Read1dHDF_integer( "iProtonChemicalPotential", buffer, &
                              group_id, datasize1d )
-    DV % iChemicalPotentialProton = buffer(1)
+    DV % Indices % iProtonChemicalPotential = buffer(1)
 
-    CALL Read1dHDF_integer( "iChemicalPotentialNeutron", buffer, &
+    CALL Read1dHDF_integer( "iNeutronChemicalPotential", buffer, &
                              group_id, datasize1d )
-    DV % iChemicalPotentialNeutron = buffer(1)
+    DV % Indices % iNeutronChemicalPotential = buffer(1)
 
-    CALL Read1dHDF_integer( "iMassFractionProton", buffer, &
+    CALL Read1dHDF_integer( "iProtonMassFraction", buffer, &
                              group_id, datasize1d )
-    DV % iMassFractionProton = buffer(1)
+    DV % Indices % iProtonMassFraction = buffer(1)
 
-    CALL Read1dHDF_integer( "iMassFractionNeutron", buffer, &
+    CALL Read1dHDF_integer( "iNeutronMassFraction", buffer, &
                              group_id, datasize1d )
-    DV % iMassFractionNeutron = buffer(1)
+    DV % Indices % iNeutronMassFraction = buffer(1)
 
-    CALL Read1dHDF_integer( "iMassFractionAlpha", buffer, &
+    CALL Read1dHDF_integer( "iAlphaMassFraction", buffer, &
                              group_id, datasize1d )
-    DV % iMassFractionAlpha = buffer(1)
+    DV % Indices % iAlphaMassFraction = buffer(1)
 
-    CALL Read1dHDF_integer( "iMassFractionHeavy", buffer, &
+    CALL Read1dHDF_integer( "iHeavyMassFraction", buffer, &
                              group_id, datasize1d )
-    DV % iMassFractionHeavy = buffer(1)
+    DV % Indices % iHeavyMassFraction = buffer(1)
 
-    CALL Read1dHDF_integer( "iChargeNumberHeavy", buffer, &
+    CALL Read1dHDF_integer( "iHeavyChargeNumber", buffer, &
                              group_id, datasize1d )
-    DV % iChargeNumberHeavy = buffer(1)
+    DV % Indices % iHeavyChargeNumber = buffer(1)
 
-    CALL Read1dHDF_integer( "iMassNumberHeavy", buffer, &
+    CALL Read1dHDF_integer( "iHeavyMassNumber", buffer, &
                              group_id, datasize1d )
-    DV % iMassNumberHeavy = buffer(1)
+    DV % Indices % iHeavyMassNumber = buffer(1)
 
-    CALL Read1dHDF_integer( "iBindingEnergyHeavy", buffer, &
+    CALL Read1dHDF_integer( "iHeavyBindingEnergy", buffer, &
                              group_id, datasize1d )
-    DV % iBindingEnergyHeavy = buffer(1)
+    DV % Indices % iHeavyBindingEnergy = buffer(1)
 
     CALL Read1dHDF_integer( "iThermalEnergy", buffer, &
                              group_id, datasize1d )
-    DV % iThermalEnergy = buffer(1)
+    DV % Indices % iThermalEnergy = buffer(1)
 
     CALL Read1dHDF_integer( "iGamma1", buffer, &
                              group_id, datasize1d )
-    DV % iGamma1 = buffer(1)
+    DV % Indices % iGamma1 = buffer(1)
 
     CALL CloseGroupHDF( group_id )
 

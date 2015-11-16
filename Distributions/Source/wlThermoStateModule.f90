@@ -8,6 +8,12 @@ MODULE wlThermoStateModule
   TYPE :: ValueType
     REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
   END TYPE
+
+  TYPE :: TSIDType
+    INTEGER :: iRho
+    INTEGER :: iT
+    INTEGER :: iYe
+  END TYPE
   
   TYPE, PUBLIC :: ThermoStateType
     CHARACTER(LEN=32), DIMENSION(3) :: Names
@@ -17,9 +23,7 @@ MODULE wlThermoStateModule
     REAL(dp), DIMENSION(3) :: minValues
     REAL(dp), DIMENSION(3) :: maxValues
     TYPE(ValueType), DIMENSION(3) :: States
-    INTEGER :: iRho
-    INTEGER :: iT
-    INTEGER :: iYe
+    TYPE(TSIDType) :: Indices
   END TYPE  
 
   PUBLIC AllocateThermoState 

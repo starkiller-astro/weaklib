@@ -97,14 +97,6 @@ PROGRAM wlInversionTest
   WRITE (ErrorUnit,*) "L1Norm/N=", L1Norm 
   WRITE (ErrorUnit,*) "maxnorm =", maxnorm 
 
-  !DO i = 1 , SIZE( EOSTable % TS % States(2) % Values )
-  !  WRITE(TestUnit,'(i4,7es22.15)' ) i, EOSTable % TS % States(2) % Values(i),  &
-  !                      10**(EOSTable % DV % Variables(3) % Values(140,i,2)), &
-  !                      10**(EOSTable % DV % Variables(3) % Values(144,i,46)), &
-  !                      10**(EOSTable % DV % Variables(3) % Values(145,i,46))
-  !END DO
-
-
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
   CALL FinalizeHDF( )

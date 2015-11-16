@@ -1,4 +1,4 @@
-PROGRAM wlTableFinishingTest
+PROGRAM wlTableFinisher
 
   USE wlKindModule, ONLY: dp 
   USE HDF5
@@ -171,4 +171,4 @@ PROGRAM wlTableFinishingTest
 
   CALL FinalizeHDF( )
 
-END PROGRAM wlTableFinishingTest
+END PROGRAM wlTableFinisher

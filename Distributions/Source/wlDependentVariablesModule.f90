@@ -5,25 +5,29 @@ MODULE wlDependentVariablesModule
   implicit none
   PRIVATE
 
-  INTEGER, PUBLIC :: Pressure
-  INTEGER, PUBLIC :: Entropy  
-  INTEGER, PUBLIC :: InternalEnergy 
-  INTEGER, PUBLIC :: ChemicalPotentialElectron 
-  INTEGER, PUBLIC :: ChemicalPotentialProton 
-  INTEGER, PUBLIC :: ChemicalPotentialNeutron 
-  INTEGER, PUBLIC :: MassFractionProton 
-  INTEGER, PUBLIC :: MassFractionNeutron 
-  INTEGER, PUBLIC :: MassFractionAlpha 
-  INTEGER, PUBLIC :: MassFractionHeavy 
-  INTEGER, PUBLIC :: ChargeNumberHeavy 
-  INTEGER, PUBLIC :: MassNumberHeavy 
-  INTEGER, PUBLIC :: BindingEnergyHeavy 
-  INTEGER, PUBLIC :: ThermalEnergy
-  INTEGER, PUBLIC :: Gamma1 
 
   TYPE :: ValueType
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values
   END TYPE
+
+  TYPE, PUBLIC :: DVIDType
+    INTEGER :: iPressure
+    INTEGER :: iEntropyPerBaryon
+    INTEGER :: iInternalEnergyDensity
+    INTEGER :: iElectronChemicalPotential
+    INTEGER :: iProtonChemicalPotential
+    INTEGER :: iNeutronChemicalPotential
+    INTEGER :: iProtonMassFraction
+    INTEGER :: iNeutronMassFraction
+    INTEGER :: iAlphaMassFraction
+    INTEGER :: iHeavyMassFraction
+    INTEGER :: iHeavyChargeNumber
+    INTEGER :: iHeavyMassNumber
+    INTEGER :: iHeavyBindingEnergy
+    INTEGER :: iThermalEnergy
+    INTEGER :: iGamma1
+  END TYPE
+
 
   TYPE, PUBLIC :: DependentVariablesType
     INTEGER :: nVariables
@@ -33,21 +37,7 @@ MODULE wlDependentVariablesModule
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Offsets
     INTEGER, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
-    INTEGER :: iPressure
-    INTEGER :: iEntropy
-    INTEGER :: iInternalEnergy
-    INTEGER :: iChemicalPotentialElectron
-    INTEGER :: iChemicalPotentialProton
-    INTEGER :: iChemicalPotentialNeutron
-    INTEGER :: iMassFractionProton
-    INTEGER :: iMassFractionNeutron
-    INTEGER :: iMassFractionAlpha
-    INTEGER :: iMassFractionHeavy
-    INTEGER :: iChargeNumberHeavy
-    INTEGER :: iMassNumberHeavy
-    INTEGER :: iBindingEnergyHeavy
-    INTEGER :: iThermalEnergy
-    INTEGER :: iGamma1
+    TYPE(DVIDType) :: Indices
   END TYPE
 
   PUBLIC AllocateDependentVariables

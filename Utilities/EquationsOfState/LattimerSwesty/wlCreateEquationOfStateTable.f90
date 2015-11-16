@@ -57,9 +57,9 @@ PRINT*, "Allocate EOS"
                                  'Temperature                     ',&
                                  'Electron Fraction               '/)
 
-  EOSTable % TS % iRho = 1
-  EOSTable % TS % iT   = 2
-  EOSTable % TS % iYe  = 3
+  EOSTable % TS % Indices % iRho = 1
+  EOSTable % TS % Indices % iT   = 2
+  EOSTable % TS % Indices % iYe  = 3
 
 PRINT*, "Allocate Independent Variable Units " 
 
@@ -86,39 +86,40 @@ PRINT*, "Label Grid Type"
   
 PRINT*, "Allocate Names " 
   EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
-                                          'Entropy Per Baryon              ', &
-                                          'Internal Energy Density         ', &
-                                          'Electron Chemical Potential     ', &
-                                          'Proton Chemical Potential       ', &
-                                          'Neutron Chemical Potential      ', &
-                                          'Proton Mass Fraction            ', &
-                                          'Neutron Mass Fraction           ', &
-                                          'Alpha Mass Fraction             ', &
-                                          'Heavy Mass Fraction             ', &
-                                          'Heavy Charge Number             ', &
-                                          'Heavy Mass Number               ', &
-                                          'Heavy Binding Energy            ', &
-                                          'Thermal Energy                  ', &
-                                          'Gamma1                          '/)
+                                  'Entropy Per Baryon              ', &
+                                  'Internal Energy Density         ', &
+                                  'Electron Chemical Potential     ', &
+                                  'Proton Chemical Potential       ', &
+                                  'Neutron Chemical Potential      ', &
+                                  'Proton Mass Fraction            ', &
+                                  'Neutron Mass Fraction           ', &
+                                  'Alpha Mass Fraction             ', &
+                                  'Heavy Mass Fraction             ', &
+                                  'Heavy Charge Number             ', &
+                                  'Heavy Mass Number               ', &
+                                  'Heavy Binding Energy            ', &
+                                  'Thermal Energy                  ', &
+                                  'Gamma1                          '/)
 
 PRINT*, "Set Dependent Variable Identifier Indicies " 
-    EOSTable % DV % iPressure = 1
-    EOSTable % DV % iEntropy = 2
-    EOSTable % DV % iInternalEnergy = 3
-    EOSTable % DV % iChemicalPotentialElectron = 4
-    EOSTable % DV % iChemicalPotentialProton = 5
-    EOSTable % DV % iChemicalPotentialNeutron = 6
-    EOSTable % DV % iMassFractionProton = 7
-    EOSTable % DV % iMassFractionNeutron = 8
-    EOSTable % DV % iMassFractionAlpha = 9
-    EOSTable % DV % iMassFractionHeavy = 10
-    EOSTable % DV % iChargeNumberHeavy = 11
-    EOSTable % DV % iMassNumberHeavy = 12
-    EOSTable % DV % iBindingEnergyHeavy = 13
-    EOSTable % DV % iThermalEnergy = 14
-    EOSTable % DV % iGamma1 = 15
 
-      WRITE (*,*) "iRho, iGamma1", EOSTable % TS % iRho, EOSTable % DV % iGamma1
+    EOSTable % DV % Indices % iPressure = 1
+    EOSTable % DV % Indices % iEntropyPerBaryon = 2
+    EOSTable % DV % Indices % iInternalEnergyDensity = 3
+    EOSTable % DV % Indices % iElectronChemicalPotential = 4
+    EOSTable % DV % Indices % iProtonChemicalPotential = 5
+    EOSTable % DV % Indices % iNeutronChemicalPotential = 6
+    EOSTable % DV % Indices % iProtonMassFraction = 7
+    EOSTable % DV % Indices % iNeutronMassFraction = 8
+    EOSTable % DV % Indices % iAlphaMassFraction = 9
+    EOSTable % DV % Indices % iHeavyMassFraction = 10
+    EOSTable % DV % Indices % iHeavyChargeNumber = 11
+    EOSTable % DV % Indices % iHeavyMassNumber = 12
+    EOSTable % DV % Indices % iHeavyBindingEnergy = 13
+    EOSTable % DV % Indices % iThermalEnergy = 14
+    EOSTable % DV % Indices % iGamma1 = 15
+
+      WRITE (*,*) "iRho, iGamma1", EOSTable % TS % Indices % iRho, EOSTable % DV % Indices % iGamma1
 
 PRINT*, "Allocate Dependent Variable Units " 
   EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
