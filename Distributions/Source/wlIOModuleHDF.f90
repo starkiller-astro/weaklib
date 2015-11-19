@@ -770,6 +770,7 @@ CONTAINS
   END SUBROUTINE ReadEquationOfStateTableHDF
 
   SUBROUTINE ReadEquationOfStateTableParallelHDF( EOSTable, FileName, rootproc, COMMUNICATOR )
+  !SUBROUTINE ReadEquationOfStateTableParallelHDF( EOSTable, NewDVID, NewnVariables, FileName, rootproc, COMMUNICATOR )
 
     USE MPI
     
@@ -779,6 +780,8 @@ CONTAINS
     INTEGER, INTENT(in)                           :: rootproc
     INTEGER, INTENT(in)                           :: COMMUNICATOR
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+    !TYPE(DVIDType), INTENT(in)                    :: NewDVID
+    !INTEGER, INTENT(in)                           :: NewnVariables
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER, DIMENSION(4)                         :: buffer
     INTEGER                                       :: nStates, nVariables, i
