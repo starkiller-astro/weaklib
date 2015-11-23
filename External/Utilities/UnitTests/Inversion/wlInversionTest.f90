@@ -35,17 +35,6 @@ PROGRAM wlInversionTest
             Test_Temps( nPoints(2) - 1 ) , Test_Rho ( nPoints(2) -1 ),    &
             Test_Ye( nPoints(2) - 1 ), &
             Norm(nPoints(1), nPoints(2)-1, nPoints(3) - 1 ) )  
-  
-
-!  nPoints = (/81,24,24/) ! Low Res
-!  nPoints = (/81,500,24/) ! High Res in T only
-!  nPoints = (/161,47,47/) ! Standard Res
-!  nPoints = (/321,93,93/) ! High Res
-  !DO i = 1, 55
-  !WRITE (*,'(i4, 3es22.15)') i, EOSTable % TS % States(2) % Values(i), &
-  !        10**(EOSTable % DV % Variables(3) % Values(RhoIndex,i,YeIndex)) &
-  !        - EOSTable % DV % Offsets(3)
-  !END DO
 
   Temp_Table = ( EOSTable % TS % States(2) % Values ) 
 

@@ -1,5 +1,4 @@
-vpath %.f90 ../../../External/LS:../../../External/BCK:../../../External/SharedModules:../../../Distributions/Source:../../../External/EOSInterface:.
-vpath %.f ../../../External/LS:../../../External/BCK
+vpath %.f90 ../../../../Distributions/Source:.
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
 CMODE = DEBUG
@@ -77,24 +76,7 @@ else
   endif
 endif
 
-#  Groups of objects
-
-BASE_MODS = wlKindModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o fexp.o
-
-EOSInit_OBJ = initferm.o loadmx.o wlExtInitializeEOS.o
-
-TABLE_MODS  = wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o
-EOS_MODS  = EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o
-EOS_OBJ  = LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o
-
-Interface_OBJ = wlExtEOSWrapperModule.o
-
-Interrogator_OBJ = $(BASE_MODS) $(EOS_MODS) $(EOS_OBJ) $(EOSInit_OBJ) $(Interface_OBJ) wlInterrogateEOS.o
-
-TableBuild_OBJ = $(BASE_MODS) $(EOS_MODS) $(EOS_OBJ) $(EOSInit_OBJ) $(Interface_OBJ) $(TABLE_MODS) wlCreateEquationOfStateTable.o
-
 FCL    = $(FC)
-FCL77  = $(FC77)
 CCL    = $(CC)
 CXXL   = $(CXX)
 LDRL   = $(LDR)
@@ -118,29 +100,11 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-#interrogate: $(Interrogator_OBJ)
-#	$(LDRL) $(LDRFLAGS) -o interrogator $(LIBS) $(Interrogator_OBJ)
+writetest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlWriteEquationOfStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wlwritetest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o  wlWriteEquationOfStateTest.o 
 
-#wlExtNumericalModule.o: wlKindModule.o
-#wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
-#$(EOSInit_OBJ): $(EOS_MODS) $(BASE_MODS)
-#$(EOS_OBJ): $(EOS_MODS) $(BASE_MODS)
-#$(Interface_OBJ): $(EOS_OBJ) $(EOS_MODS) $(BASE_MODS)
-#wlInterrogateEOS.o: $(Interface_OBJ) $(EOS_OBJ) $(EOS_MODS) $(BASE_MODS)
-#wlInterrogateEOS.o: $(Interface_OBJ) $(EOS_OBJ) $(EOS_MODS) $(BASE_MODS)
-
-buildtable: $(TableBuild_OBJ)
-	$(LDRL) $(LDRFLAGS) -o buildtable $(LIBS) $(TableBuild_OBJ)
-
-wlExtNumericalModule.o: wlKindModule.o
-wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
-#wlExtEOSWrapperModule.o: 
-$(EOSInit_OBJ): $(EOS_MODS) $(BASE_MODS)
-$(EOS_OBJ): $(EOS_MODS) $(BASE_MODS)
-$(Interface_OBJ): $(EOS_OBJ) $(EOS_MODS) $(BASE_MODS)
-#wlInterrogateEOS.o: $(Interface_OBJ) $(EOS_OBJ) $(EOS_MODS) $(BASE_MODS)
-wlCreateEquationOfStateTable.o: $(TableBuild_OBJ) $(Interface_OBJ) $(EOS_OBJ) $(EOS_MODS) $(BASE_MODS)
-
+readtest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o  wlReadEquationOfStateTest.o 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
 

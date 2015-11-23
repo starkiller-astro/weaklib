@@ -46,7 +46,7 @@ PROGRAM wlCreateEquationOfStateTable
 !  nPoints = (/321,93,93/) ! High Res
   nVariables = 15
   LScompress = '220'
-  LSFilePath = '../../../External/LS/Data'
+  LSFilePath = '../../../LS/Data'
 
   CALL wlExtInitializeEOS( LSFilePath, LScompress )
 
