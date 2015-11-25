@@ -1,4 +1,4 @@
-vpath %.f90 ../../../LS:../../../BCK:../../../SharedModules:../../../../Distributions/Source:../../../EOSInterface:
+vpath %.f90 ../../../LS:../../../BCK:../../../SharedModules:../../../../Distributions/EOSSource:../../../EOSInterface:
 vpath %.f ../../../LS:../../../BCK
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE

@@ -770,7 +770,6 @@ CONTAINS
   END SUBROUTINE ReadEquationOfStateTableHDF
 
   SUBROUTINE ReadEquationOfStateTableParallelHDF( EOSTable, FileName, rootproc, COMMUNICATOR )
-  !SUBROUTINE ReadEquationOfStateTableParallelHDF( EOSTable, NewDVID, NewnVariables, FileName, rootproc, COMMUNICATOR )
 
     USE MPI
     
@@ -780,8 +779,6 @@ CONTAINS
     INTEGER, INTENT(in)                           :: rootproc
     INTEGER, INTENT(in)                           :: COMMUNICATOR
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
-    !TYPE(DVIDType), INTENT(in)                    :: NewDVID
-    !INTEGER, INTENT(in)                           :: NewnVariables
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER, DIMENSION(4)                         :: buffer
     INTEGER                                       :: nStates, nVariables, i
@@ -873,9 +870,6 @@ CONTAINS
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,               &
                    MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
-
-  !WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Variables(3) % Values(10,10,10)
-  !WRITE (*,*) "process", myid, "test DV data", EOSTable % DV % Names(3)
 
   END SUBROUTINE ReadEquationOfStateTableParallelHDF
 

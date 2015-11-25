@@ -4,6 +4,7 @@ MODULE wlEquationOfStateTableModule
   USE HDF5
   USE wlThermoStateModule
   USE wlDependentVariablesModule
+  USE wlIOModuleHDF
 
   implicit none
   PRIVATE
@@ -64,12 +65,15 @@ CONTAINS
 
   END FUNCTION TableLimitFail
 
-  SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
+  SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables, filename )
   
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTableIn
-    TYPE(EquationOfStateTableType), INTENT(out) :: EOSTableOut
-    TYPE(DVIDType), INTENT(in)                 :: NewDVID
-    INTEGER, INTENT(in)                        :: NewnVariables
+    TYPE(EquationOfStateTableType), INTENT(out)   :: EOSTableOut
+    TYPE(DVIDType), INTENT(in)                    :: NewDVID
+    INTEGER, INTENT(in)                           :: NewnVariables
+    CHARACTER(len=*), INTENT(in)                  :: FileName
+    INTEGER(HID_T)                 :: file_id
+    INTEGER(HID_T)                 :: group_id
 
 
     CALL AllocateEquationOfStateTable( EOSTableOut, EOSTableIn % nPoints, &
@@ -144,6 +148,18 @@ CONTAINS
                                      NewiThermEnergy, OldiThermEnergy )
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiGamma1, OldiGamma1 )
+
+    CALL OpenFileHDF( filename, .true., file_id )
+
+    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+    CALL WriteThermoStateHDF( EOSTableOut % TS, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
+    CALL WriteDependentVariablesHDF( EOSTableOut % DV, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL CloseFileHDF( file_id )
 
     END ASSOCIATE
 

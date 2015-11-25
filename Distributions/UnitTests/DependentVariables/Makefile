@@ -1,4 +1,4 @@
-vpath %.f90 ../../../Distributions/Source:.
+vpath %.f90 ../../EOSSource:.
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
 CMODE = DEBUG

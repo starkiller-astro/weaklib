@@ -38,7 +38,8 @@ PROGRAM wlTableOrganizationTest
 
   CALL ReadEquationOfStateTableHDF( OldEOSTable, "EquationOfStateTable.h5" )
 
-  CALL MatchTableStructure( OldEOSTable, NewEOSTable, NewDVID, NewnVariables )
+  CALL MatchTableStructure( OldEOSTable, NewEOSTable, NewDVID, NewnVariables, &
+                            "NewEquationOfStateTable.h5" )
 
   CALL DescribeEquationOfStateTable( NewEOSTable )
   WRITE (*,*) "P=", NewEOSTable % DV % Indices % iPressure
