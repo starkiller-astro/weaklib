@@ -1,13 +1,15 @@
 MODULE wlIOModuleCHIMERA
 
   USE wlKindModule, ONLY: dp
-  !USE wlThermoStateModule
-  !USE wlDependentVariablesModule
-  !USE wlEquationOfStateTableModule
+  USE HDF5
+  USE wlThermoStateModule
+  USE wlDependentVariablesModule
+  USE wlEquationOfStateTableModule
 
   implicit none
 
   PUBLIC ReadChimeraProfile1D 
+  PUBLIC ReadCHIMERAHDF
 
 CONTAINS
 
@@ -154,5 +156,76 @@ CONTAINS
     CLOSE(FileUnit)
 
   END SUBROUTINE ReadChimeraProfile1D
+
+  SUBROUTINE ReadCHIMERAHDF( Rho, T, Ye, E_Int, Entropy, NSE, imax, nx, ny, &
+                             nz, FileName)
+
+    CHARACTER(len=*), INTENT(in)                :: FileName
+    INTEGER, INTENT(out) :: imax, nx, ny, nz
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE, INTENT(out) :: Rho
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE, INTENT(out) :: T
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE, INTENT(out) :: Ye
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE, INTENT(out) :: E_Int
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE, INTENT(out) :: Entropy
+    INTEGER, DIMENSION(:,:,:), ALLOCATABLE, INTENT(out) :: NSE
+    INTEGER, DIMENSION(2) :: indices
+
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d
+    INTEGER(HID_T)                              :: file_id
+    INTEGER(HID_T)                              :: group_id
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+    CALL OpenGroupHDF( "mesh", .false., file_id, group_id )
+
+    datasize1d(1) = 2
+    CALL read_1d_slab_int('radial_index_bound', indices, group_id, &
+           datasize1d)
+    imax = indices(2)
+    nx = imax + 2
+
+    CALL read_1d_slab_int('theta_index_bound', indices, group_id, &
+           datasize1d)
+    ny = indices(2)
+
+    CALL read_1d_slab_int('phi_index_bound', indices, group_id, &
+           datasize1d)
+    nz = indices(2)
+
+    CALL CloseGroupHDF( group_id )
+
+    ALLOCATE( Rho( nx, ny, nz ), T( nx, ny, nz ), Ye( nx, ny, nz ),           &
+              E_Int( nx, ny, nz ), Entropy( nx, ny, nz ), NSE( nx + 1, ny, nz ) )
+
+    CALL OpenGroupHDF( "fluid", .false., file_id, group_id )
+
+    datasize3d = (/nx,ny,nz/)
+    CALL Read3dHDF_double( "rho_c", Rho(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL Read3dHDF_double( "t_c", T(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL Read3dHDF_double( "ye_c", Ye(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL Read3dHDF_double( "e_int", E_Int(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL Read3dHDF_double( "entropy", Entropy(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "abundance", .false., file_id, group_id )
+
+    datasize3d = SHAPE(NSE)
+    CALL Read3dHDF_integer( "nse_c", NSE(:,:,:), &
+                              group_id, datasize3d )
+
+    CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE ReadCHIMERAHDF
 
 END MODULE wlIOModuleCHIMERA
