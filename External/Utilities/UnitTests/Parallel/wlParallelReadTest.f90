@@ -16,7 +16,6 @@ PROGRAM wlParallelReadTest
   USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF,          & 
                            ReadEquationOfStateTableHDF,         & 
                            WriteEquationOfStateTableHDF,        &
-                           ReadCHIMERAHDF,                      &
                            ReadEquationOfStateTableParallelHDF 
 
   USE MPI

@@ -4,7 +4,6 @@ MODULE wlEquationOfStateTableModule
   USE HDF5
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-  USE wlIOModuleHDF
 
   implicit none
   PRIVATE
@@ -21,7 +20,7 @@ MODULE wlEquationOfStateTableModule
   PUBLIC AllocateEquationOfStateTable
   PUBLIC DeAllocateEquationOfStateTable
   PUBLIC TableLimitFail
-  PUBLIC MatchTableStructure
+  PUBLIC SwapDependentVariables
 
 CONTAINS 
 
@@ -65,106 +64,6 @@ CONTAINS
 
   END FUNCTION TableLimitFail
 
-  SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables, filename )
-  
-    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTableIn
-    TYPE(EquationOfStateTableType), INTENT(out)   :: EOSTableOut
-    TYPE(DVIDType), INTENT(in)                    :: NewDVID
-    INTEGER, INTENT(in)                           :: NewnVariables
-    CHARACTER(len=*), INTENT(in)                  :: FileName
-    INTEGER(HID_T)                 :: file_id
-    INTEGER(HID_T)                 :: group_id
-
-
-    CALL AllocateEquationOfStateTable( EOSTableOut, EOSTableIn % nPoints, &
-                                     NewnVariables )
-
-    EOSTableOut % DV % Indices = NewDVID
-    EOSTableOut % DV % Repaired(:,:,:) = EOSTableIn % DV % Repaired(:,:,:)
-
-    EOSTableOut % TS = EOSTableIn % TS
-
-    ASSOCIATE( &
-    
-    NewiPressure => NewDVID % iPressure, &
-    NewiEntropy => NewDVID % iEntropyPerBaryon, &
-    NewiIntEnergy => NewDVID % iInternalEnergyDensity, &
-    NewiEChemPot => NewDVID % iElectronChemicalPotential, &
-    NewiPChemPot => NewDVID % iProtonChemicalPotential, &
-    NewiNChemPot => NewDVID % iNeutronChemicalPotential, &
-    NewiPMassFrac => NewDVID % iProtonMassFraction, &
-    NewiNMassFrac => NewDVID % iNeutronMassFraction, &
-    NewiAMassFrac => NewDVID % iAlphaMassFraction, &
-    NewiHMassFrac => NewDVID % iHeavyMassFraction, &
-    NewiHCharNum => NewDVID % iHeavyChargeNumber, &
-    NewiHMassNum => NewDVID % iHeavyMassNumber, &
-    NewiHeavyBE => NewDVID % iHeavyBindingEnergy, &
-    NewiThermEnergy => NewDVID % iThermalEnergy, &
-    NewiGamma1 => NewDVID % iGamma1, &
-
-    OldiPressure => EOSTableIn % DV % Indices % iPressure , &
-    OldiEntropy => EOSTableIn % DV % Indices % iEntropyPerBaryon, &
-    OldiIntEnergy => EOSTableIn % DV % Indices % iInternalEnergyDensity, &
-    OldiEChemPot => EOSTableIn % DV % Indices % iElectronChemicalPotential, &
-    OldiPChemPot => EOSTableIn % DV % Indices % iProtonChemicalPotential, &
-    OldiNChemPot => EOSTableIn % DV % Indices % iNeutronChemicalPotential, &
-    OldiPMassFrac => EOSTableIn % DV % Indices % iProtonMassFraction, &
-    OldiNMassFrac => EOSTableIn % DV % Indices % iNeutronMassFraction, &
-    OldiAMassFrac => EOSTableIn % DV % Indices % iAlphaMassFraction, &
-    OldiHMassFrac => EOSTableIn % DV % Indices % iHeavyMassFraction, &
-    OldiHCharNum => EOSTableIn % DV % Indices % iHeavyChargeNumber, &
-    OldiHMassNum => EOSTableIn % DV % Indices % iHeavyMassNumber, &
-    OldiHeavyBE => EOSTableIn % DV % Indices % iHeavyBindingEnergy, &
-    OldiThermEnergy => EOSTableIn % DV % Indices % iThermalEnergy, &
-    OldiGamma1 => EOSTableIn % DV % Indices % iGamma1 )
-
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiPressure, OldiPressure )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiEntropy, OldiEntropy )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiIntEnergy, OldiIntEnergy )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiEChemPot, OldiEChemPot )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiPChemPot, OldiPChemPot )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiNChemPot, OldiNChemPot )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiPMassFrac, OldiPMassFrac )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiNMassFrac, OldiNMassFrac )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiAMassFrac, OldiAMassFrac )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiHMassFrac, OldiHMassFrac )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiHCharNum, OldiHCharNum )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiHMassNum, OldiHMassNum )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiHeavyBE, OldiHeavyBE )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiThermEnergy, OldiThermEnergy )
-    CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
-                                     NewiGamma1, OldiGamma1 )
-
-    CALL OpenFileHDF( filename, .true., file_id )
-
-    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-    CALL WriteThermoStateHDF( EOSTableOut % TS, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-    CALL WriteDependentVariablesHDF( EOSTableOut % DV, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL CloseFileHDF( file_id )
-
-    END ASSOCIATE
-
-  END SUBROUTINE MatchTableStructure
-
   SUBROUTINE SwapDependentVariables( EOSTable, TargetBuffer, IndexBuffer )
 
     TYPE(EquationOfStateTableType), INTENT(inout)  :: EOSTable
@@ -195,26 +94,6 @@ CONTAINS
                        EOSTable % DV % Indices )
 
   END SUBROUTINE SwapDependentVariables
-
-  SUBROUTINE TransferDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
-
-    TYPE(DependentVariablesType), INTENT(inout)  :: OldDV 
-    TYPE(DependentVariablesType), INTENT(inout)  :: NewDV 
-    INTEGER, INTENT(in)                          :: OldLocation
-    INTEGER, INTENT(in)                          :: NewLocation
-
-     IF ( NewLocation == 0 ) THEN
-       WRITE (*,*) "Dependent Variable", OldDV % Names( OldLocation ), "omitted" 
-       RETURN
-     END IF
-
-     NewDV % Variables( NewLocation ) % Values(:,:,:) &
-               = OldDV % Variables( OldLocation ) % Values(:,:,:)
-     NewDV % Names( NewLocation ) = OldDV % Names( OldLocation )
-     NewDV % Units( NewLocation ) = OldDV % Units( OldLocation )
-     NewDV % Offsets( NewLocation ) = OldDV % OffSets( OldLocation )
-
-  END SUBROUTINE TransferDependentVariables
 
   SUBROUTINE IndexMatch( TargetBuffer, IndexBuffer, Indices )
 

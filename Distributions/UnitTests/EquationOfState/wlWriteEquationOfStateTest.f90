@@ -5,12 +5,7 @@ PROGRAM wlWriteEquationOfStateTest
   USE wlThermoStateModule
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
   USE wlEquationOfStateTableModule
-  USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,          &
-                           WriteDependentVariablesHDF, CloseGroupHDF,         & 
-                           ReadDependentVariablesHDF, CloseFileHDF,           &
-                           FinalizeHDF, ReadDimensionsHDF,                    &
-                           ReadDependentVariablesHDF, ReadNumberVariablesHDF, &
-                           WriteThermoStateHDF, WriteEquationOfStateTableHDF
+  USE wlIOModuleHDF
 
   implicit none
 

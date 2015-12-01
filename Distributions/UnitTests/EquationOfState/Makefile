@@ -1,4 +1,4 @@
-vpath %.f90 ../../EOSSource:.
+vpath %.f90 ../../Library:../../EOSSource:.
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
 CMODE = DEBUG
@@ -101,10 +101,10 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 writetest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlWriteEquationOfStateTest.o 
-	$(LDRL) $(LDRFLAGS) -o wlwritetest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o  wlWriteEquationOfStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wlwritetest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlWriteEquationOfStateTest.o 
 
 readtest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
-	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o  wlReadEquationOfStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
 

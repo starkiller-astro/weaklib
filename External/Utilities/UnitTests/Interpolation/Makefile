@@ -1,5 +1,5 @@
-vpath %.f90 ../../../Distributions/Source:../../../External/LS:../../../External/BCK:../../../External/SharedModules:../../../External/EOSInterface:.
-vpath %.f ../../../External/LS:../../../External/BCK
+vpath %.f90 ../../../../Distributions/Library:../../../../Distributions/EOSSource:../../../LS:../../../BCK:../../../SharedModules:../../../EOSInterface:.
+vpath %.f ../../../LS:../../../BCK
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
 CMODE = DEBUG

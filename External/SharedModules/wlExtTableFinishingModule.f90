@@ -6,7 +6,7 @@ MODULE wlExtTableFinishingModule
   implicit none
 
   PUBLIC LogInterpolateFine1D
-  PUBLIC LogInterpolateCoarseFine1D
+  PUBLIC LogInterpolateCoarse1D
   PUBLIC LoneCellLogInterpolateSingleVariable
 
   CONTAINS
