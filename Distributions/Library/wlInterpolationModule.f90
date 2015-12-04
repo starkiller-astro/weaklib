@@ -3,7 +3,6 @@ MODULE wlInterpolationModule
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-  USE wlEquationOfStateTableModule 
 
   implicit none
 
@@ -13,7 +12,6 @@ MODULE wlInterpolationModule
   PUBLIC LogInterpolateDifferentiateAllVariables
   PUBLIC locate 
   PUBLIC MonotonicityCheck
-  PUBLIC TableLimitFail
   PUBLIC GetGamma1
 
 CONTAINS
@@ -120,16 +118,14 @@ CONTAINS
 
   END SUBROUTINE LogInterpolateSingleVariable
 
-  SUBROUTINE LogInterpolateAllVariables( x1, x2, x3, LogInterp, EOSTable, Interpolants )
-  !SUBROUTINE LogInterpolateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants )
+  SUBROUTINE LogInterpolateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
     REAL(dp), DIMENSION(:), INTENT(in) :: x3
     LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
-    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
-    !TYPE(ThermoStateType), INTENT(in) :: TS
-    !TYPE(DependentVariablesType), INTENT(in) :: TS
+    TYPE(ThermoStateType), INTENT(in) :: TS
+    TYPE(DependentVariablesType), INTENT(in) :: DV
 
     REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
 
@@ -141,9 +137,9 @@ CONTAINS
 
     DO i = 1, SIZE(x2)
 
-      ASSOCIATE( Coordinate1 => EOSTable % TS % States(1) % Values, &    
-                 Coordinate2 => EOSTable % TS % States(2) % Values, &    
-                 Coordinate3 => EOSTable % TS % States(3) % Values )   
+      ASSOCIATE( Coordinate1 => TS % States(1) % Values, &    
+                 Coordinate2 => TS % States(2) % Values, &    
+                 Coordinate3 => TS % States(3) % Values )   
 
       CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
@@ -170,10 +166,11 @@ CONTAINS
 
       END ASSOCIATE
 
-      DO j = 1, EOSTable % DV % nVariables
+      DO j = 1, DV % nVariables
 
-        ASSOCIATE( Table => EOSTable % DV % Variables(j) % Values(:,:,:), &
-                   Offset => EOSTable % DV % Offsets(j) )
+      
+        ASSOCIATE( Table => DV % Variables(j) % Values(:,:,:), &
+                   Offset => DV % Offsets(j) )
       
         p000 = ( Table( il1  , il2  , il3   ) )
         p100 = ( Table( il1+1, il2  , il3   ) )
@@ -318,16 +315,14 @@ CONTAINS
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable
 
-  SUBROUTINE LogInterpolateDifferentiateAllVariables( x1, x2, x3, LogInterp, EOSTable, Interpolants, Derivatives )
-  !SUBROUTINE LogInterpolateDifferentiateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives )
+  SUBROUTINE LogInterpolateDifferentiateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
     REAL(dp), DIMENSION(:), INTENT(in) :: x3
     LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
-    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
-    !TYPE(ThermoStateType), INTENT(in) :: TS
-    !TYPE(DependentVariablesType), INTENT(in) :: TS
+    TYPE(ThermoStateType), INTENT(in) :: TS
+    TYPE(DependentVariablesType), INTENT(in) :: DV
 
     REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
 
@@ -340,9 +335,9 @@ CONTAINS
 
     DO i = 1, SIZE(x2)
 
-      ASSOCIATE( Coordinate1 => EOSTable % TS % States(1) % Values, &
-                 Coordinate2 => EOSTable % TS % States(2) % Values, &
-                 Coordinate3 => EOSTable % TS % States(3) % Values )
+      ASSOCIATE( Coordinate1 => TS % States(1) % Values, &
+                 Coordinate2 => TS % States(2) % Values, &
+                 Coordinate3 => TS % States(3) % Values )
 
       CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
@@ -374,10 +369,10 @@ CONTAINS
 
       END ASSOCIATE
 
-      DO j = 1, EOSTable % DV % nVariables
+      DO j = 1, DV % nVariables
 
-        ASSOCIATE( Table => EOSTable % DV % Variables(j) % Values(:,:,:), &
-                   Offset => EOSTable % DV % Offsets(j) )
+        ASSOCIATE( Table => DV % Variables(j) % Values(:,:,:), &
+                   Offset => DV % Offsets(j) )
 
         p000 = ( Table( il1  , il2  , il3   ) )
         p100 = ( Table( il1+1, il2  , il3   ) )
@@ -443,9 +438,7 @@ CONTAINS
   END SUBROUTINE LogInterpolateDifferentiateAllVariables 
 
   SUBROUTINE GetGamma1( x1, x2, x3, Coordinate1, Coordinate2, &
-                Coordinate3, LogInterp, EOSTable, Gamma1 ) 
-  !SUBROUTINE GetGamma1( x1, x2, x3, Coordinate1, Coordinate2, &
-  !              Coordinate3, LogInterp, TS, DV, Gamma1 ) 
+                Coordinate3, LogInterp, TS, DV, Gamma1 ) 
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -454,9 +447,8 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
     LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp
-    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
-    !TYPE(ThermoStateType), INTENT(in) :: TS
-    !TYPE(DependentVariablesType), INTENT(in) :: DV
+    TYPE(ThermoStateType), INTENT(in) :: TS
+    TYPE(DependentVariablesType), INTENT(in) :: DV
 
     REAL(dp), DIMENSION(:), ALLOCATABLE, INTENT(out) :: Gamma1
 
@@ -469,11 +461,11 @@ CONTAINS
     ALLOCATE( Derivative( SIZE(x1), 3 ) )
 
       CALL LogInterpolateDifferentiateSingleVariable( x1, x2, x3,                 &
-                                    EOSTable % TS % States(1) % Values(:),        &
-                                    EOSTable % TS % States(2) % Values(:),        &
-                                    EOSTable % TS % States(3) % Values(:),        &
-                                    LogInterp, EOSTable % DV % Offsets(1),        &
-                                    EOSTable % DV % Variables(1) % Values(:,:,:), &
+                                    TS % States(1) % Values(:),        &
+                                    TS % States(2) % Values(:),        &
+                                    TS % States(3) % Values(:),        &
+                                    LogInterp, DV % Offsets(1),        &
+                                    DV % Variables(1) % Values(:,:,:), &
                                     Interpolant(:), Derivative(:,:) )
        
       DO i = 1, SIZE(x1) 

@@ -190,7 +190,7 @@ PROGRAM wlInterpolationTest
   CLOSE(nout)
 
   
-  CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, EOSTable, Interpolants ) 
+  CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, EOSTable % TS, EOSTable % DV, Interpolants ) 
   DO i = 1, SIZE(rho)
     DO j = 1, EOSTable % DV % nVariables 
       WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
@@ -215,7 +215,7 @@ PROGRAM wlInterpolationTest
   END DO
 
 
-  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, LogInterp, EOSTable, Interpolants, Derivatives ) 
+  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
 
   DO j = 1, EOSTable % DV % nVariables 
     WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
