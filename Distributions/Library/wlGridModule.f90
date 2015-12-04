@@ -1,7 +1,6 @@
 MODULE wlGridModule
 
   USE wlKindModule, ONLY: dp
-  USE wlThermoStateModule
 
   implicit none
   PRIVATE

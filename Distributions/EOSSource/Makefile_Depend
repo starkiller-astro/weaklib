@@ -1,0 +1,4 @@
+wlDependentVariablesModule.o: wlKindModule.o 
+wlEquationOfStateTableModule.o: wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o 
+
+$(WL_EOSMODULES): $(WL_LIBRARYMODULES)

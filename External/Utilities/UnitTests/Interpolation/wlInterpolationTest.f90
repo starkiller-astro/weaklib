@@ -61,7 +61,7 @@ PROGRAM wlInterpolationTest
   OPEN( newunit = TestUnit3, FILE="AllDerivativesTest.d")
 
   LScompress = '220'
-  LSFilePath = '../../../External/LS/Data'
+  LSFilePath = '../../../LS/Data'
   EOSFlag = "L"
 
   CALL InitializeHDF( )
@@ -191,9 +191,10 @@ PROGRAM wlInterpolationTest
 
   
   CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, EOSTable, Interpolants ) 
-  
-  DO j = 1, EOSTable % DV % nVariables 
-    WRITE (TestUnit1,*) "Interpolant =", Interpolants(:,j), "Direct Call =", DirectCall(:,j)
+  DO i = 1, SIZE(rho)
+    DO j = 1, EOSTable % DV % nVariables 
+      WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
+    END DO
   END DO
 
   DO i = 1, EOSTable % DV % nVariables
