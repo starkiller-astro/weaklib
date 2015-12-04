@@ -5,11 +5,10 @@ PROGRAM wlCreateEquationOfStateTable
   USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
   USE wlEquationOfStateTableModule
-  USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,          &
-                           WriteDependentVariablesHDF, CloseGroupHDF,         & 
-                           CloseFileHDF, FinalizeHDF, WriteThermoStateHDF,    &
-                           WriteEquationOfStateTableHDF
-                           !Replace all of the above with WriteEquationOfStateTableHDF
+  USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
+                  
+                 
 
   implicit none
 

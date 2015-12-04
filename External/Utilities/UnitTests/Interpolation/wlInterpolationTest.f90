@@ -5,8 +5,9 @@ PROGRAM wlInterpolationTest
   USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   USE wlEquationOfStateTableModule
   USE wlInterpolationModule
-  USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF, & 
-                           ReadEquationOfStateTableHDF 
+  USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
+                  
 
   implicit none
 

@@ -1,7 +1,8 @@
 # MODULES in dependency order
 
 WL_EOSMODULES = \
-wlEquationOfStateTableModule.o 
+wlEquationOfStateTableModule.o \
+wlEOSIOModuleHDF.o
 
 
 

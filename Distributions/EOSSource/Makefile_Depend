@@ -1,3 +1,4 @@
 wlEquationOfStateTableModule.o: wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o 
+wlEOSIOModuleHDF.o: wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o
 
 $(WL_EOSMODULES): $(WL_LIBRARYMODULES)

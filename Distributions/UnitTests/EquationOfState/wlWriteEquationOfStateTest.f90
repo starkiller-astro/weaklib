@@ -6,6 +6,7 @@ PROGRAM wlWriteEquationOfStateTest
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
 
   implicit none
 

@@ -7,9 +7,10 @@ PROGRAM wlInversionTest
   USE wlInterpolationModule
   USE wlExtTableFinishingModule
   USE wlExtNumericalModule, ONLY: epsilon, zero
-  USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF,  & 
-                           ReadEquationOfStateTableHDF, & 
-                           WriteEquationOfStateTableHDF
+  USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
+                      
+                     
   implicit none
 
   INTEGER  :: i, j, k, TestUnit, ErrorUnit

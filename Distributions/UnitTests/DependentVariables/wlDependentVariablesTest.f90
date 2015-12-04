@@ -3,7 +3,6 @@ PROGRAM wlDependentVariablesTest
   USE wlDependentVariablesModule
   USE HDF5
   USE wlThermoStateModule
-  USE wlEquationOfStateTableModule
   USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
                            WriteDependentVariablesHDF, CloseGroupHDF,        & 
                            ReadDependentVariablesHDF, CloseFileHDF,          &

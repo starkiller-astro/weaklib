@@ -2,7 +2,6 @@ PROGRAM wlThermoStateTest
 
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-  USE wlEquationOfStateTableModule
   USE wlKindModule, ONLY: dp
   USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
   USE HDF5
