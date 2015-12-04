@@ -1,12 +1,8 @@
 # MODULES in dependency order
 
-WL_LIBRARYMODULES = \
-wlKindModule.o \
-wlThermoStateModule.o \
-wlGridModule.o \
-wlIOModuleHDF.o \
-wlInterpolationModule.o 
-#wlDependentVariablesModule.o \
+WL_EOSMODULES = \
+wlEquationOfStateTableModule.o 
+
 
 
 

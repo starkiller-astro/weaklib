@@ -1,6 +1,6 @@
 wlThermoStateModule.o: wlKindModule.o
-#wlDependentVariablesModule.o: wlKindModule.o 
+wlDependentVariablesModule.o: wlKindModule.o 
 wlGridModule.o: wlKindModule.o
 wlIOModuleHDF.o: wlKindModule.o wlThermoStateModule.o wlDependentVariables.o wlEquationOfStateTableModule.o
-wlInterpolationModule.o: wlKindModule.o wlThermoStateModule.o wlDependentVariables.o wlEquationOfStateTableModule.o
+wlInterpolationModule.o: wlKindModule.o wlThermoStateModule.o wlDependentVariables.o 
 
