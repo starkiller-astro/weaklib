@@ -4,7 +4,6 @@ MODULE wlIOModuleHDF
   USE HDF5 
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-  USE wlEquationOfStateTableModule
 
   implicit none
   PRIVATE
