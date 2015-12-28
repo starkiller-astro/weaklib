@@ -6,6 +6,7 @@ PROGRAM wlTableOrganizationTest
   USE wlEquationOfStateTableModule
   USE wlInterpolationModule
   USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
 
   implicit none
 
@@ -38,8 +39,7 @@ PROGRAM wlTableOrganizationTest
 
   CALL ReadEquationOfStateTableHDF( OldEOSTable, "EquationOfStateTable.h5" )
 
-  CALL MatchTableStructure( OldEOSTable, NewEOSTable, NewDVID, NewnVariables, &
-                            "NewEquationOfStateTable.h5" )
+  CALL MatchTableStructure( OldEOSTable, NewEOSTable, NewDVID, NewnVariables )
 
   CALL DescribeEquationOfStateTable( NewEOSTable )
   WRITE (*,*) "P=", NewEOSTable % DV % Indices % iPressure

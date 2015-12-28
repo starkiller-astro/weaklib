@@ -53,7 +53,7 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
+    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     REAL(dp), INTENT(in) :: Offset
     
@@ -85,19 +85,19 @@ CONTAINS
       p011 = ( Table( il1  , il2+1, il3+1 ) )
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
-      IF ( LogInterp(1) ) THEN 
+      IF ( LogInterp(1) == 1 ) THEN 
         delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
         delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
-      IF ( LogInterp(2) ) THEN 
+      IF ( LogInterp(2) == 1 ) THEN 
         delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
         delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
-      IF ( LogInterp(3) ) THEN 
+      IF ( LogInterp(3) == 1 ) THEN 
         delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
         delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
@@ -123,7 +123,7 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
     REAL(dp), DIMENSION(:), INTENT(in) :: x3
-    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
+    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     TYPE(ThermoStateType), INTENT(in) :: TS
     TYPE(DependentVariablesType), INTENT(in) :: DV
 
@@ -146,19 +146,19 @@ CONTAINS
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
 
 
-      IF ( LogInterp(1) ) THEN
+      IF ( LogInterp(1) == 1 ) THEN
         delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
         delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
-      IF ( LogInterp(2) ) THEN
+      IF ( LogInterp(2) == 1 ) THEN
         delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
         delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
-      IF ( LogInterp(3) ) THEN
+      IF ( LogInterp(3) == 1 ) THEN
         delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
         delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
@@ -211,7 +211,8 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp
+    !LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp
+    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     REAL(dp), INTENT(in) :: Offset
 
@@ -240,7 +241,7 @@ CONTAINS
       p011 = ( Table( il1  , il2+1, il3+1 ) )
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
-      IF ( LogInterp(1) ) THEN
+      IF ( LogInterp(1) == 1 ) THEN
       alpha(1) = ( 1.0d0 ) / ( x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
       delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
@@ -248,7 +249,7 @@ CONTAINS
       delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
-      IF ( LogInterp(2) ) THEN
+      IF ( LogInterp(2) == 1 ) THEN
       alpha(2) = ( 1.0d0 ) / ( x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
       delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
@@ -256,7 +257,7 @@ CONTAINS
       delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
-      IF ( LogInterp(3) ) THEN
+      IF ( LogInterp(3) == 1 ) THEN
       alpha(3) = ( 1.0d0 ) / ( x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
       delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
@@ -320,7 +321,7 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
     REAL(dp), DIMENSION(:), INTENT(in) :: x3
-    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp 
+    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     TYPE(ThermoStateType), INTENT(in) :: TS
     TYPE(DependentVariablesType), INTENT(in) :: DV
 
@@ -343,7 +344,7 @@ CONTAINS
       CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
       CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
 
-      IF ( LogInterp(1) ) THEN
+      IF ( LogInterp(1) == 1 ) THEN
       alpha(1) = ( 1.0d0 ) / ( x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
       delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
@@ -351,7 +352,7 @@ CONTAINS
       delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
-      IF ( LogInterp(2) ) THEN
+      IF ( LogInterp(2) == 1 ) THEN
       alpha(2) = ( 1.0d0 ) / ( x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
       delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
@@ -359,7 +360,7 @@ CONTAINS
       delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
-      IF ( LogInterp(3) ) THEN
+      IF ( LogInterp(3) == 1 ) THEN
       alpha(3) = ( 1.0d0 ) / ( x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
       delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
@@ -446,7 +447,7 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp
+    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp
     TYPE(ThermoStateType), INTENT(in) :: TS
     TYPE(DependentVariablesType), INTENT(in) :: DV
 

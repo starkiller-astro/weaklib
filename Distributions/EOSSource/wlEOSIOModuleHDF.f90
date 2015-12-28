@@ -14,7 +14,7 @@ MODULE wlEOSIOModuleHDF
   PUBLIC WriteEquationOfStateTableHDF
   PUBLIC ReadEquationOfStateTableHDF
   PUBLIC DescribeEquationOfStateTable
-  PUBLIC ReadEquationOfStateTableParallelHDF
+  PUBLIC BroadcastEquationOfStateTableParallel
   PUBLIC MatchTableStructure
   PUBLIC TransferDependentVariables
 
@@ -67,6 +67,7 @@ CONTAINS
   END SUBROUTINE DescribeEquationOfStateTable
   
   SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
+    
 
     CHARACTER(len=*), INTENT(in)                  :: FileName
     INTEGER, DIMENSION(3)                         :: nPoints
@@ -95,113 +96,99 @@ CONTAINS
 
   END SUBROUTINE ReadEquationOfStateTableHDF
 
-  SUBROUTINE ReadEquationOfStateTableParallelHDF( EOSTable, FileName, rootproc, COMMUNICATOR )
+  SUBROUTINE BroadcastEquationOfStateTableParallel( EOSTable, rootproc, COMMUNICATOR )
 
     USE MPI
+    USE wlParallelModule, ONLY: myidi => myid, ierri => ierr
     
     implicit none
 
-    CHARACTER(len=*), INTENT(in)                  :: FileName
     INTEGER, INTENT(in)                           :: rootproc
     INTEGER, INTENT(in)                           :: COMMUNICATOR
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER, DIMENSION(4)                         :: buffer
     INTEGER                                       :: nStates, nVariables, i
-    INTEGER                                       :: i_count
-    INTEGER                                       :: myid, ierr 
-    INTEGER(HID_T)                                :: file_id
-    INTEGER(HID_T)                                :: group_id
+    INTEGER                                       :: i_count, num_procs
+    INTEGER                                       :: ntest
 
-    CALL MPI_COMM_RANK( COMMUNICATOR, myid , ierr )
+    OPEN( newunit = ntest, FILE="NewBroadcastTest.d")
 
-    IF ( myid == rootproc ) THEN
-
-      CALL OpenFileHDF( FileName, .false., file_id )
-
-      CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
-
-      CALL ReadDimensionsHDF( nPoints, group_id )
-      CALL ReadNumberVariablesHDF( nVariables, group_id )
-      CALL CloseGroupHDF( group_id )
+    IF ( myidi == rootproc ) THEN
     
-      buffer(1) = nPoints(1)
-      buffer(2) = nPoints(2)
-      buffer(3) = nPoints(3)
-      buffer(4) = nVariables
+      buffer(1) = EOSTable % nPoints(1)
+      buffer(2) = EOSTable % nPoints(2)
+      buffer(3) = EOSTable % nPoints(3)
+      buffer(4) = EOSTable % nVariables
 
-  WRITE (*,*) "in: process", myid, "buffer(4)", buffer(4) 
+      WRITE (ntest,*) "in: process", myidi, "buffer(4)", buffer(4) 
+      WRITE (*,*) "rootproc buffer written"
 
     END IF
 
     i_count = SIZE(buffer) 
 
-    CALL MPI_BCAST( buffer, i_count, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( buffer, i_count, MPI_INTEGER, rootproc, COMMUNICATOR, ierri )
+      
+      WRITE (*,*) "rootproc buffer broadcast"
 
-    IF ( myid /= rootproc ) THEN
+    IF ( myidi /= rootproc ) THEN
       
       nPoints(1) = buffer(1)
       nPoints(2) = buffer(2)
       nPoints(3) = buffer(3)
       nVariables = buffer(4) 
 
-  WRITE (*,*) "out process", myid, "buffer(4)", nVariables 
+      WRITE (ntest,*) "out process", myidi, "buffer(4)", nVariables 
+
+      CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
     END IF
 
-    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
-
-    IF ( myid == rootproc ) THEN
-
-      CALL ReadThermoStateHDF( EOSTable % TS, file_id )
-
-      CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
-
-      CALL CloseFileHDF( file_id )
-
-    END IF
-
-    i_count = PRODUCT(nPoints) 
+    i_count = PRODUCT(EOSTable % nPoints) 
     
     nStates = 3
 
     DO i= 1, nStates
-      CALL MPI_BCAST(EOSTable % TS % States(i) % Values(:), nPoints(i), &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+      CALL MPI_BCAST(EOSTable % TS % States(i) % Values(:), EOSTable % nPoints(i), &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
+
     END DO
 
     CALL MPI_BCAST(EOSTable % TS % Names(:), nStates,     &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
     CALL MPI_BCAST(EOSTable % TS % Units(:), nStates,     &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
     CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates, &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
     CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates, &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
 
-  WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % States(1) % Values(10)
-  WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % Names(1) 
-  WRITE (*,*) "process", myid, "test TS data", EOSTable % TS % Units(1) 
+    WRITE (ntest,*) "process", myidi, "test TS data", EOSTable % TS % States(1) % Values(10)
+    WRITE (ntest,*) "process", myidi, "test TS data", EOSTable % TS % Names(1) 
+    WRITE (ntest,*) "process", myidi, "test TS data", EOSTable % TS % Units(1) 
 
-    DO i= 1, nVariables  
+    DO i= 1, EOSTable % nVariables  
       CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count,  &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
     END DO
 
-    CALL MPI_BCAST(EOSTable % DV % Names(:), nVariables,                   &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Units(:), nVariables,                   &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Offsets(:), nVariables,                 &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables,                   &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
+    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables,                   &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
+    CALL MPI_BCAST(EOSTable % DV % Offsets(:), EOSTable % nVariables,                 &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierri )
     CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,               &
-                   MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+                   MPI_INTEGER, rootproc, COMMUNICATOR, ierri )
 
-  END SUBROUTINE ReadEquationOfStateTableParallelHDF
+  CLOSE(ntest)
+
+  END SUBROUTINE BroadcastEquationOfStateTableParallel
 
   SUBROUTINE TransferDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
 
-    TYPE(DependentVariablesType), INTENT(inout)  :: OldDV
+    TYPE(DependentVariablesType), INTENT(in)     :: OldDV
     TYPE(DependentVariablesType), INTENT(inout)  :: NewDV
     INTEGER, INTENT(in)                          :: OldLocation
     INTEGER, INTENT(in)                          :: NewLocation
@@ -219,16 +206,12 @@ CONTAINS
 
   END SUBROUTINE TransferDependentVariables
 
-  SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables, filename )
+  SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
 
-    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTableIn
+    TYPE(EquationOfStateTableType), INTENT(in)    :: EOSTableIn
     TYPE(EquationOfStateTableType), INTENT(out)   :: EOSTableOut
     TYPE(DVIDType), INTENT(in)                    :: NewDVID
     INTEGER, INTENT(in)                           :: NewnVariables
-    CHARACTER(len=*), INTENT(in)                  :: FileName
-    INTEGER(HID_T)                 :: file_id
-    INTEGER(HID_T)                 :: group_id
-
 
     CALL AllocateEquationOfStateTable( EOSTableOut, EOSTableIn % nPoints, &
                                      NewnVariables )
@@ -271,6 +254,7 @@ CONTAINS
     OldiHeavyBE => EOSTableIn % DV % Indices % iHeavyBindingEnergy, &
     OldiThermEnergy => EOSTableIn % DV % Indices % iThermalEnergy, &
     OldiGamma1 => EOSTableIn % DV % Indices % iGamma1 )
+
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPressure, OldiPressure )
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
@@ -301,18 +285,6 @@ CONTAINS
                                      NewiThermEnergy, OldiThermEnergy )
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiGamma1, OldiGamma1 )
-
-    CALL OpenFileHDF( filename, .true., file_id )
-
-    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-    CALL WriteThermoStateHDF( EOSTableOut % TS, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-    CALL WriteDependentVariablesHDF( EOSTableOut % DV, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL CloseFileHDF( file_id )
 
     END ASSOCIATE
 

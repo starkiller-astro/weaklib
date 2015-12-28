@@ -18,7 +18,6 @@ PROGRAM wlInterpolationTest
   INTEGER :: RhoLocation, TLocation, YeLocation
   INTEGER :: NumGoodPoints
   INTEGER, DIMENSION(1) :: LocMax
-  LOGICAL, DIMENSION(3) :: LogInterp
   TYPE(EquationOfStateTableType) :: EOSTable
 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant
@@ -75,8 +74,6 @@ PROGRAM wlInterpolationTest
   DO i = 1, EOSTable % DV % nVariables
     WRITE (nout,*) EOSTable % DV % Names(i) , MINVAL( EOSTable % DV % Variables(i) % Values) 
   END DO
-
-  LogInterp = (/.true.,.true.,.false./)
 
   ALLOCATE( rho( NumPoints ), T( NumPoints ), Ye( NumPoints ), rand( NumPoints, 3 ),  &
             Interpolant( NumPoints ), DirectCall( NumPoints, 15), press( NumPoints ), &
@@ -143,7 +140,7 @@ PROGRAM wlInterpolationTest
              EOSTable % TS % States(1) % Values,           &
              EOSTable % TS % States(2) % Values,           &
              EOSTable % TS % States(3) % Values,           &
-             LogInterp,                                    &
+             EOSTable % TS % LogInterp,                                    &
              EOSTable % DV % Offsets(j),                   &
              EOSTable % DV % Variables(j) % Values(:,:,:), & 
              Interpolant )
@@ -191,7 +188,7 @@ PROGRAM wlInterpolationTest
   CLOSE(nout)
 
   
-  CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, EOSTable % TS, EOSTable % DV, Interpolants ) 
+  CALL LogInterpolateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants ) 
   DO i = 1, SIZE(rho)
     DO j = 1, EOSTable % DV % nVariables 
       WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
@@ -203,7 +200,7 @@ PROGRAM wlInterpolationTest
                          EOSTable % TS % States(1) % Values(:), &
                          EOSTable % TS % States(2) % Values(:), &
                          EOSTable % TS % States(3) % Values(:), &
-                         LogInterp,                             &
+                         EOSTable % TS % LogInterp,                             &
                          EOSTable % DV % Offsets(i), &
                          EOSTable % DV % Variables(i) % Values(:,:,:), &
                          Interpolant(:), Derivative(:,:) )
@@ -216,7 +213,7 @@ PROGRAM wlInterpolationTest
   END DO
 
 
-  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
+  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
 
   DO j = 1, EOSTable % DV % nVariables 
     WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)

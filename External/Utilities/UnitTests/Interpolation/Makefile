@@ -102,8 +102,8 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 
-test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o wlInterpolationModule.o EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o fexp.o initferm.o loadmx.o wlExtInitializeEOS.o wlExtEOSWrapperModule.o wlInterpolationTest.o
-	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o wlInterpolationModule.o EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o fexp.o initferm.o loadmx.o wlExtInitializeEOS.o wlExtEOSWrapperModule.o wlInterpolationTest.o 
+test: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlParallelModule.o wlEOSIOModuleHDF.o wlInterpolationModule.o EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o fexp.o initferm.o loadmx.o wlExtInitializeEOS.o wlExtEOSWrapperModule.o wlInterpolationTest.o
+	$(LDRL) $(LDRFLAGS) -o wltest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlParallelModule.o wlEOSIOModuleHDF.o wlInterpolationModule.o EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o fexp.o initferm.o loadmx.o wlExtInitializeEOS.o wlExtEOSWrapperModule.o wlInterpolationTest.o 
 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
