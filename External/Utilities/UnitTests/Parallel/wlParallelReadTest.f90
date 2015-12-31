@@ -34,7 +34,7 @@ PROGRAM wlParallelReadTest
 !-----------------------------------------------------------------------
 
   CALL MPI_INIT( ierr )
-  CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid , ierr )
+  CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
   CALL MPI_COMM_SIZE( MPI_COMM_WORLD, num_procs, ierr )
 
 IF ( myid == 0 ) THEN
@@ -66,7 +66,7 @@ IF ( myid == 0 ) THEN
   
 END IF
 
-  CALL BroadcastEquationOfStateTableParallel( EOSTable, 0, MPI_COMM_WORLD )
+  CALL BroadcastEquationOfStateTableParallel( EOSTable, 0, myid, ierr, MPI_COMM_WORLD )
 
 IF ( myid == 0 ) THEN
   CALL DeAllocateEquationOfStateTable( OldEOSTable )
