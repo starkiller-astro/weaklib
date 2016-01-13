@@ -13,6 +13,7 @@ MODULE wlInterpolationModule
   PUBLIC locate 
   PUBLIC MonotonicityCheck
   PUBLIC GetGamma1
+  PUBLIC ComputeTempFromIntEnergy
 
 CONTAINS
 
