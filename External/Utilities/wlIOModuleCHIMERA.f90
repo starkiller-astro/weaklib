@@ -5,6 +5,11 @@ MODULE wlIOModuleCHIMERA
   USE wlThermoStateModule
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
+  USE wlInterpolationModule
+  USE wlExtTableFinishingModule
+  USE wlExtNumericalModule, ONLY: epsilon, zero
+  USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
 
   implicit none
 

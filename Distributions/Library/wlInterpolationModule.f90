@@ -14,6 +14,7 @@ MODULE wlInterpolationModule
   PUBLIC MonotonicityCheck
   PUBLIC GetGamma1
   PUBLIC ComputeTempFromIntEnergy
+  PUBLIC ComputeTempFromEntropy
 
 CONTAINS
 
@@ -69,6 +70,8 @@ CONTAINS
     ! Check the usage of x2
     ! x2 is used to size the run of the do loop because the input is expected 
     ! to be a series of 3-tuple rho, T, Ye points; so SIZE(x1) = SIZE(x2) = SIZE(x3) 
+    ! So, if this subroutine is being used to make an array, make sure the other 
+    ! inputs are the same size (i.e. x1(1) = x(2) = x(3) etc.)
     !-------------------------------
 
     DO i = 1, SIZE(x2) 
@@ -212,7 +215,6 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    !LOGICAL, DIMENSION(3), INTENT(in)  :: LogInterp
     INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     REAL(dp), INTENT(in) :: Offset
@@ -550,23 +552,111 @@ CONTAINS
     WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
 
   END SUBROUTINE MonotonicityCheck 
-  
+
   SUBROUTINE ComputeTempFromIntEnergy &
-               ( E_Internal, Energy_Table, Temp_Table, Offset, Temperature ) 
+               ( rho, e_int, ye, density_table, temp_table, ye_table, &
+                 LogInterp, energy_table, Offset, Temperature )
 
-    REAL(dp), DIMENSION(:), INTENT(in) :: E_Internal
-    REAL(dp), DIMENSION(:), INTENT(in) :: Temp_Table 
-    REAL(dp), DIMENSION(:), INTENT(in) :: Energy_Table
+    REAL(dp), INTENT(in)                    :: rho
+    REAL(dp), INTENT(in)                    :: e_int
+    REAL(dp), INTENT(in)                    :: ye
+    REAL(dp), DIMENSION(:), INTENT(in)      :: density_table
+    REAL(dp), DIMENSION(:), INTENT(in)      :: ye_table
+    REAL(dp), DIMENSION(:), INTENT(in)      :: temp_table
+    INTEGER, DIMENSION(3), INTENT(in)       :: LogInterp 
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: energy_table
     REAL(dp), INTENT(in) :: Offset
-    REAL(dp), DIMENSION(:), INTENT(out) :: Temperature
-    REAL(dp) :: delta, epsilon
-    INTEGER :: i, j
- 
-    epsilon = 1.d-200
-    DO j = 1, SIZE( E_Internal )
 
-      CALL locate( Energy_Table, SIZE( Energy_Table ), E_Internal(j), i )
-      IF ( i == SIZE(Energy_Table) ) THEN
+    REAL(dp), DIMENSION(1)                  :: eibuff         ! internal energy buffer
+    INTEGER                                 :: nPoints
+    INTEGER                                 :: i, j
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: rhobuff 
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: energy_array
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: yebuff
+
+    REAL(dp), DIMENSION(1), INTENT(out)     :: Temperature
+
+  nPoints = SIZE(temp_table)
+
+  ALLOCATE( energy_array( nPoints ), rhobuff( nPoints ), yebuff( nPoints) )
+
+  rhobuff(1:nPoints) = rho
+  eibuff(1) = e_int
+  yebuff(1:nPoints) = ye
+
+  CALL LogInterpolateSingleVariable                                     &
+         ( rhobuff, temp_table, yebuff,                                 &
+           density_table,                                               &
+           temp_table,                                                  &
+           ye_table,                                                    &
+           LogInterp,                                                   &
+           Offset,                                                      &
+           energy_table(:,:,:), energy_array )
+
+    DO j = 1, SIZE( eibuff )
+
+      CALL locate( energy_array, SIZE( energy_array ), eibuff(j), i )
+      IF ( i == SIZE(energy_array) ) THEN
+        STOP 'energy too high'
+      END IF
+
+      IF ( i == 0 ) THEN
+        Temperature(j) = 0.d0
+        CYCLE
+      END IF
+      Temperature(j) =  temp_table(i) + ( temp_table(i+1) - temp_table(i) ) &
+                        * ( ( eibuff(j) - energy_array(i) )             &
+                        / ( energy_array(i+1) - energy_array(i) ) )
+    END DO
+
+  DEALLOCATE( energy_array, rhobuff, yebuff )
+
+  END SUBROUTINE ComputeTempFromIntEnergy
+
+  SUBROUTINE ComputeTempFromEntropy &
+               ( rho, s, ye, density_table, temp_table, ye_table, &
+                 LogInterp, entropy_table, Offset, Temperature )
+
+    REAL(dp), INTENT(in)                    :: rho
+    REAL(dp), INTENT(in)                    :: s
+    REAL(dp), INTENT(in)                    :: ye
+    REAL(dp), DIMENSION(:), INTENT(in)      :: density_table
+    REAL(dp), DIMENSION(:), INTENT(in)      :: ye_table
+    REAL(dp), DIMENSION(:), INTENT(in)      :: temp_table
+    INTEGER, DIMENSION(3), INTENT(in)       :: LogInterp
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: entropy_table
+    REAL(dp), INTENT(in) :: Offset
+
+    REAL(dp), DIMENSION(1)                  :: sbuff         ! internal entropy buffer
+    INTEGER                                 :: nPoints
+    INTEGER                                 :: i, j
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: rhobuff
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: entropy_array
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: yebuff
+
+    REAL(dp), DIMENSION(1), INTENT(out)     :: Temperature
+
+  nPoints = SIZE(temp_table)
+
+  ALLOCATE( entropy_array( nPoints ), rhobuff( nPoints ), yebuff( nPoints) )
+
+  rhobuff(1:nPoints) = rho
+  sbuff(1) = s
+  yebuff(1:nPoints) = ye
+
+  CALL LogInterpolateSingleVariable                                     &
+         ( rhobuff, temp_table, yebuff,                                 &
+           density_table,                                               &
+           temp_table,                                                  &
+           ye_table,                                                    &
+           LogInterp,                                                   &
+           Offset,                                                      &
+           entropy_table(:,:,:), entropy_array )
+
+    DO j = 1, SIZE( sbuff )
+
+      CALL locate( entropy_array, SIZE( entropy_array ), sbuff(j), i )
+      IF ( i == SIZE(entropy_array) ) THEN
         STOP
       END IF
 
@@ -574,11 +664,13 @@ CONTAINS
         Temperature(j) = 0.d0
         CYCLE
       END IF
-      Temperature(j) =  Temp_Table(i) + ( Temp_Table(i+1) - Temp_Table(i) ) &
-                        * ( ( E_internal(j) - Energy_Table(i) )             &
-                        / ( Energy_Table(i+1) - Energy_Table(i) ) )
+      Temperature(j) =  temp_table(i) + ( temp_table(i+1) - temp_table(i) ) &
+                        * ( ( sbuff(j) - entropy_array(i) )             &
+                        / ( entropy_array(i+1) - entropy_array(i) ) )
     END DO
 
-  END SUBROUTINE ComputeTempFromIntEnergy
+  DEALLOCATE( entropy_array, rhobuff, yebuff )
+
+  END SUBROUTINE ComputeTempFromEntropy
 
 END MODULE wlInterpolationModule
