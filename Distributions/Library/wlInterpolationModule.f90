@@ -294,14 +294,14 @@ CONTAINS
 
       Derivative(i,2) &
         = ( ( Interpolant(i) ) * alpha(2) &
-              * ( (1.0_dp - delta(3) ) * ( (1.0_dp - delta(1)) * p000   &
-                                       +             delta(1)  * p100   &
-                                       -  ( 1.0_dp - delta(1)) * p010   &
-                                       -             delta(1)  * p110 ) &
-                            + delta(3) * ( (1.0_dp - delta(1)) * p001   &
-                                       +             delta(1)  * p101   &
-                                       -   (1.0_dp - delta(1)) * p011   &
-                                       -             delta(1)  * p111 ) ) )
+              * ( (1.0_dp - delta(3) ) * ( (delta(1) - 1.0_dp) * p000   &
+                                       -             delta(1)  * p100   &
+                                       +  ( 1.0_dp - delta(1)) * p010   &
+                                       +             delta(1)  * p110 ) &
+                            + delta(3) * ( (delta(1) - 1.0_dp) * p001   &
+                                       -             delta(1)  * p101   &
+                                       +   (1.0_dp - delta(1)) * p011   &
+                                       +             delta(1)  * p111 ) ) )
 
       Derivative(i,3) &
         = ( ( Interpolant(i) ) * alpha(3) &
@@ -413,14 +413,14 @@ CONTAINS
   
         Derivatives(i,2,j) &
           = ( ( Interpolants(i,j) ) * alpha(2) &
-                * ( (1.0_dp - delta(3) ) * ( (1.0_dp - delta(1)) * p000   &
-                                         +             delta(1)  * p100   &
-                                         -  ( 1.0_dp - delta(1)) * p010   &
-                                         -             delta(1)  * p110 ) &
-                              + delta(3) * ( (1.0_dp - delta(1)) * p001   &
-                                         +             delta(1)  * p101   &
-                                         -   (1.0_dp - delta(1)) * p011   &
-                                         -             delta(1)  * p111 ) ) )
+              * ( (1.0_dp - delta(3) ) * ( (delta(1) - 1.0_dp) * p000   &
+                                       -             delta(1)  * p100   & 
+                                       +  ( 1.0_dp - delta(1)) * p010   & 
+                                       +             delta(1)  * p110 ) & 
+                            + delta(3) * ( (delta(1) - 1.0_dp) * p001   & 
+                                       -             delta(1)  * p101   & 
+                                       +   (1.0_dp - delta(1)) * p011   & 
+                                       +             delta(1)  * p111 ) ) )
 
         Derivatives(i,3,j) &
           = ( ( Interpolants(i,j) ) * alpha(3) &
