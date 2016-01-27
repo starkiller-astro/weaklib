@@ -104,7 +104,7 @@ CONTAINS
 
     INTEGER, INTENT(in)                           :: rootproc
     INTEGER, INTENT(in)                           :: COMMUNICATOR
-    INTEGER, INTENT(in)                           :: ierr !initialization variable for MPI
+    INTEGER, INTENT(out)                          :: ierr !initialization variable for MPI
     INTEGER, INTENT(in)                           :: myid ! rank of each processor (MPI)   
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(3)                         :: nPoints
