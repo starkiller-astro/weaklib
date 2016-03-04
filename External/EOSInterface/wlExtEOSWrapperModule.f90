@@ -40,6 +40,7 @@ USE wlKindModule, ONLY: double => dp
 USE wlExtNumericalModule, ONLY: zero, one
 USE wlExtPhysicalConstantsModule, ONLY: dmnp, kmev, rmu, cm3fm3, ergmev, &
 & asig
+USE e_p_eos_module
 
 PUBLIC wlGetElectronEOS
 PUBLIC wlGetFullEOS
@@ -126,6 +127,7 @@ tmev      = temp * kmev
 !  Compute electron equation of state
 !-----------------------------------------------------------------------
 
+CALL initialize_e_p_eos( )
 CALL e_p_eos( brydns, tmev, ye, pe, ee, entrop_e, chem_e, yeplus, rel )
 
 !-----------------------------------------------------------------------
@@ -280,6 +282,7 @@ sf        = 1
 !  Compute electron equation of state
 !-----------------------------------------------------------------------
 
+CALL initialize_e_p_eos( )
 CALL e_p_eos( brydns, tmev, ye, pe, ee, entrop_e, chem_e, yeplus, rel )
 
 SELECT CASE ( flag )
@@ -375,7 +378,7 @@ SELECT CASE ( flag )
   a_heavy  =   A
   z_heavy  =   X * A
   be_heavy =   BUNUC
-  thermalenergy = ku * ( UTOT - EU + ee + dmnp * XPROT + 7.075 * xn_alpha - BUNUC + 1.5d0 * tmev * XH/A - yebck * me  )
+  thermalenergy = ku * ( UTOT - EU + ee + dmnp * XPROT + 7.075 * xn_alpha - BUNUC + 1.5d0 * tmev * XH/A - Ye * me  )
   gamma1   =   GAM_S
 
 !-----------------------------------------------------------------------

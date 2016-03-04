@@ -1,3 +1,51 @@
+MODULE e_p_eos_module
+
+USE wlKindModule, ONLY: dp
+USE wlExtNumericalModule, ONLY: zero, third, half, pi, pi2
+
+! This module contains e_p_eos and associated data structures
+
+INTEGER, PARAMETER            :: nlag = 48      ! number of points of Gauss-Laguerre quadrature
+
+REAL(dp), PARAMETER       :: pi4 = pi2 * pi2
+
+REAL(dp), DIMENSION(nlag) :: xa             ! points of Gauss-Lagendre quadrature
+REAL(dp), DIMENSION(nlag) :: wt0            ! unscaled weights of Gauss-Lagendre quadrature
+REAL(dp), DIMENSION(nlag) :: wta            ! weights of Gauss-Lagendre quadrature
+
+!$OMP THREADPRIVATE ( xa, wt0, wta )
+
+PRIVATE
+
+PUBLIC e_p_eos
+PUBLIC initialize_e_p_eos
+
+CONTAINS
+
+SUBROUTINE initialize_e_p_eos
+
+IMPLICIT NONE
+
+INTEGER :: i
+
+!-----------------------------------------------------------------------
+!  Get quadrature points and weights
+!-----------------------------------------------------------------------
+
+!$OMP PARALLEL PRIVATE( i )
+
+CALL glaquad(nlag, xa, wt0, nlag)
+DO i = 1,nlag
+  wta(i) = fexp( xa(i) ) * wt0(i)
+END DO
+
+!$OMP END PARALLEL
+
+END SUBROUTINE initialize_e_p_eos
+
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+
 SUBROUTINE e_p_eos( brydns, t_mev, ye, pe, ee, se, ue, yeplus, rel )
 !-----------------------------------------------------------------------
 !
@@ -22,7 +70,7 @@ SUBROUTINE e_p_eos( brydns, t_mev, ye, pe, ee, se, ue, yeplus, rel )
 !        none
 !
 !    Subprograms called:
-!        glaquad
+!        none
 !
 !    Input arguments:
 !  brydns :  density (baryons/fm**3)
@@ -38,105 +86,97 @@ SUBROUTINE e_p_eos( brydns, t_mev, ye, pe, ee, se, ue, yeplus, rel )
 !  rel    : relativity parameter
 !
 !    Include files:
-!  wlKindModule
-!  wlExtNumericalModule
-!  wlExtPhysicalConstantsModule
+!  numerical_module
+!  physcnst_module
+!
+!  edit_module
 !
 !-----------------------------------------------------------------------
 
-USE wlKindModule, ONLY: double => dp
-USE wlExtNumericalModule, ONLY: zero, third, half, pi
 USE wlExtPhysicalConstantsModule, ONLY: hbarc, me, rmu, cm3fm3
 
+!USE edit_module, ONLY: nlog
+
 IMPLICIT NONE
-SAVE
 
 !-----------------------------------------------------------------------
 !        Input variables
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(in)      :: brydns         ! density (number of baryons fm^{-3})
-REAL(KIND=double), INTENT(in)      :: t_mev          ! temperature [MeV]
-REAL(KIND=double), INTENT(in)      :: ye             ! electron fraction
+REAL(dp), INTENT(in)      :: brydns         ! density (number of baryons fm^{-3})
+REAL(dp), INTENT(in)      :: t_mev          ! temperature [MeV]
+REAL(dp), INTENT(in)      :: ye             ! electron fraction
 
 !-----------------------------------------------------------------------
 !        Input variables
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(out)     :: pe            ! electron-positron pressure [dynes cm^{-2}]
-REAL(KIND=double), INTENT(out)     :: ee            ! electron-positron energy [ergs cm^{-3}]
-REAL(KIND=double), INTENT(out)     :: se            ! electron-positron entropy
-REAL(KIND=double), INTENT(out)     :: ue            ! electron chemical potential [MeV]
-REAL(KIND=double), INTENT(out)     :: yeplus        ! positron fraction
-REAL(KIND=double), INTENT(out)     :: rel           ! relativity parameter
+REAL(dp), INTENT(out)     :: pe            ! electron-positron pressure [dynes cm^{-2}]
+REAL(dp), INTENT(out)     :: ee            ! electron-positron energy [ergs cm^{-3}]
+REAL(dp), INTENT(out)     :: se            ! electron-positron entropy
+REAL(dp), INTENT(out)     :: ue            ! electron chemical potential [MeV]
+REAL(dp), INTENT(out)     :: yeplus        ! positron fraction
+REAL(dp), INTENT(out)     :: rel           ! relativity parameter
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-LOGICAL                            :: first = .true.
-LOGICAL                            :: non_rel        ! nonrelativistic flag
-LOGICAL                            :: approx
-LOGICAL                            :: Sommerfeld
-LOGICAL                            :: Failure
+LOGICAL                       :: non_rel        ! nonrelativistic flag
+LOGICAL                       :: approx
+LOGICAL                       :: Sommerfeld
+LOGICAL                       :: Failure
 
-INTEGER                            :: i              ! summation index
-INTEGER                            :: j              ! summation index
-INTEGER                            :: it             ! iteration index
-INTEGER                            :: l              ! iteration index
-INTEGER, PARAMETER                 :: nlag = 72      ! number of points of Gauss-Laguerre quadrature
-INTEGER, PARAMETER                 :: ncnvge = 30    ! number of iterations
+INTEGER                       :: j              ! summation index
+INTEGER                       :: it             ! iteration index
+INTEGER                       :: l              ! iteration index
+INTEGER, PARAMETER            :: ncnvge = 30    ! number of iterations
 
-REAL(KIND=double), DIMENSION(nlag) :: xa             ! points of Gauss-Lagendre quadrature
-REAL(KIND=double), DIMENSION(nlag) :: wt0            ! unscaled weights of Gauss-Lagendre quadrature
-REAL(KIND=double), DIMENSION(nlag) :: wta            ! weights of Gauss-Lagendre quadrature
-REAL(KIND=double), DIMENSION(nlag) :: fn_a           ! electron occupation number
-REAL(KIND=double), DIMENSION(nlag) :: fp_a           ! positron occupation number
+REAL(dp), DIMENSION(nlag) :: fn_a           ! electron occupation number
+REAL(dp), DIMENSION(nlag) :: fp_a           ! positron occupation number
 
-REAL(KIND=double), PARAMETER       :: eps1 = 1.d-4   ! tolerance
-REAL(KIND=double), PARAMETER       :: eps2 = 1.d-6   ! tolerance
-REAL(KIND=double), PARAMETER       :: beta_max = 2.d0  ! high temperature approximation criterion
-REAL(KIND=double), PARAMETER       :: relmin = 1.2d0
-REAL(KIND=double), PARAMETER       :: etabet = 2.d0
-REAL(KIND=double), PARAMETER       :: tthird = 2.d0/3.d0
-REAL(KIND=double)                  :: pi2            ! pi^{2}
-REAL(KIND=double)                  :: pi4            ! pi^{4}
+REAL(dp), PARAMETER       :: eps1 = 1.d-4   ! tolerance
+REAL(dp), PARAMETER       :: eps2 = 1.d-6   ! tolerance
+REAL(dp), PARAMETER       :: beta_max = 2.d0  ! high temperature approximation criterion
+REAL(dp), PARAMETER       :: relmin = 1.2d0
+REAL(dp), PARAMETER       :: etabet = 2.d0
+REAL(dp), PARAMETER       :: tthird = 2.d0/3.d0
 
-REAL(KIND=double)                  :: const          ! coef used in the high temperature approx
-REAL(KIND=double)                  :: cnstnr         ! coef for the nr expression for n(electron) - n(positron)
-REAL(KIND=double)                  :: coef_e_fermi_nr ! coef for nr electron Fermi energy
-REAL(KIND=double)                  :: rmuec          ! coef for nr, nondegenerate electron chemical potential
+REAL(dp), PARAMETER       :: const = hbarc**3 * pi2 ! coef used in the high temperature approx
+REAL(dp), PARAMETER       :: cnstnr = hbarc**3 * 3.d0 * pi2/DSQRT( 2.d0 * me**3 ) ! coef for the nr expression for n(electron) - n(positron)
+REAL(dp), PARAMETER       :: coef_e_fermi_nr = ( hbarc**2/( 2.d0 * me ) ) * ( 3.d0 * pi2 )**tthird ! coef for nr electron Fermi energy
+REAL(dp), PARAMETER       :: rmuec = 0.5d0 * ( 2.d0 * pi * hbarc**2/me )**1.5d0 ! coef for nr, nondegenerate electron chemical potential
 
-REAL(KIND=double)                  :: e_fermi_nr     ! nonrelativistic Fermi energy
+REAL(dp)                  :: e_fermi_nr     ! nonrelativistic Fermi energy
 
-REAL(KIND=double)                  :: ne_x_coef      ! ne x coefficient, ye * ne_x_coef = integral for ne sans coefficient
-REAL(KIND=double)                  :: beta           ! me c^{2}/kT
-REAL(KIND=double)                  :: beta2          ! beta^{2}
-REAL(KIND=double)                  :: etae           ! ( electron chemical potential - mec2 )/kT  
-REAL(KIND=double)                  :: wwchk          ! ne_x_coef calculated by Gause-Leguerre integration
-REAL(KIND=double)                  :: deriv          ! d(ne_x_coef)/d(etae)
-REAL(KIND=double)                  :: tol            ! tolerance
-REAL(KIND=double)                  :: tolp           ! tolerance
-REAL(KIND=double)                  :: fact           ! integrand
+REAL(dp)                  :: ne_x_coef      ! ne x coefficient, ye * ne_x_coef = integral for ne sans coefficient
+REAL(dp)                  :: beta           ! me c^{2}/kT
+REAL(dp)                  :: beta2          ! beta^{2}
+REAL(dp)                  :: etae           ! ( electron chemical potential - mec2 )/kT  
+REAL(dp)                  :: wwchk          ! ne_x_coef calculated by Gause-Leguerre integration
+REAL(dp)                  :: deriv          ! d(ne_x_coef)/d(etae)
+REAL(dp)                  :: tol            ! tolerance
+REAL(dp)                  :: tolp           ! tolerance
+REAL(dp)                  :: fact           ! integrand
 
-REAL(KIND=double)                  :: pfc            ! Fermi momentum * c
-REAL(KIND=double)                  :: rb2            ! pi^{2}/beta^{2}
-REAL(KIND=double)                  :: xans           ! (pfc/me)^{3}
-REAL(KIND=double)                  :: xx             ! pfc/me
-REAL(KIND=double)                  :: dxx            ! correction to xx
-REAL(KIND=double)                  :: dxxp           ! correction to xx
-REAL(KIND=double)                  :: ped            ! pe/brydns
-REAL(KIND=double)                  :: deta           ! change in eta
-REAL(KIND=double)                  :: detap          ! change in eta
-REAL(KIND=double)                  :: ek             ! electron kinetic energy/baryon [MeV]
-REAL(KIND=double)                  :: etad           ! degenerate approximation for eta
-REAL(KIND=double)                  :: rmuend         ! nondegenerate approximation for eta * t_mev
-REAL(KIND=double)                  :: etand          ! nondegenerate approximation for eta
-REAL(KIND=double)                  :: rintrp         ! interpolant between etad and etand
-REAL(KIND=double)                  :: yans           ! nonrelativistic Sommerfeld variable
-REAL(KIND=double)                  :: y              ! nonrelativistic Sommerfeld variable
-REAL(KIND=double)                  :: dy             ! change in y
-REAL(KIND=double)                  :: dyp            ! change in y
+REAL(dp)                  :: pfc            ! Fermi momentum * c
+REAL(dp)                  :: rb2            ! pi^{2}/beta^{2}
+REAL(dp)                  :: xans           ! (pfc/me)^{3}
+REAL(dp)                  :: xx             ! pfc/me
+REAL(dp)                  :: dxx            ! correction to xx
+REAL(dp)                  :: dxxp           ! correction to xx
+REAL(dp)                  :: ped            ! pe/brydns
+REAL(dp)                  :: deta           ! change in eta
+REAL(dp)                  :: detap          ! change in eta
+REAL(dp)                  :: ek             ! electron kinetic energy/baryon [MeV]
+REAL(dp)                  :: etad           ! degenerate approximation for eta
+REAL(dp)                  :: rmuend         ! nondegenerate approximation for eta * t_mev
+REAL(dp)                  :: etand          ! nondegenerate approximation for eta
+REAL(dp)                  :: rintrp         ! interpolant between etad and etand
+REAL(dp)                  :: yans           ! nonrelativistic Sommerfeld variable
+REAL(dp)                  :: y              ! nonrelativistic Sommerfeld variable
+REAL(dp)                  :: dy             ! change in y
+REAL(dp)                  :: dyp            ! change in y
 
 !-----------------------------------------------------------------------
 !        Formats
@@ -157,35 +197,6 @@ REAL(KIND=double)                  :: dyp            ! change in y
 !-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
-!  Initialize
-!-----------------------------------------------------------------------
-
-IF ( first ) THEN
-
-!-----------------------------------------------------------------------
-!  Get quadrature points and weights
-!-----------------------------------------------------------------------
-
-  first         = .false.
-  CALL glaquad(nlag, xa, wt0, nlag)
-  DO i = 1,nlag
-    wta(i) = fexp(xa(i)) * wt0(i)
-  END DO
-
-!-----------------------------------------------------------------------
-!  Initialize coefficients
-!-----------------------------------------------------------------------
-
-  pi2           = pi * pi
-  pi4           = pi2 * pi2
-  const         = hbarc**3 * pi**2
-  cnstnr        = hbarc**3 * 3.d0 * pi2/DSQRT( 2.d0 * me**3 )
-  coef_e_fermi_nr = ( hbarc**2/( 2.d0 * me ) ) * ( 3.d0 * pi2 )**tthird
-  rmuec         = 0.5d0 * ( 2.d0 * pi * hbarc**2/me )**1.5d0
-
-END IF ! first
-
-!-----------------------------------------------------------------------
 !  Relativistic or Nonrelativistic?
 !   e_fermi_nr:     nonrelativistic Fermi energy.
 !
@@ -195,6 +206,7 @@ END IF ! first
 !   tbck      < 0.01
 !-----------------------------------------------------------------------
 
+  !WRITE (*,1003) brydns * rmu/cm3fm3, t_mev, ye
 e_fermi_nr       = coef_e_fermi_nr * ( brydns * ye )**tthird
 non_rel          = .false.
 IF ( e_fermi_nr < 0.01 * me  .and.  t_mev < 0.01 * me ) non_rel = .true.
@@ -222,10 +234,10 @@ IF ( .not. non_rel ) THEN
 !   rel = 3*pressure/( kinetic energy density ) > relmin = 1.2
 !-----------------------------------------------------------------------
 
-!  approx        = ( beta <= beta_max )
-!  IF ( approx ) THEN
-!    etae        = cube( 1.5d0 * ( ne_x_coef * ye ), DMAX1( pi2 * third - 0.5d0 * beta2, zero ) )
-!    approx      = ( beta <= tthird ) .or. ( etae > etabet * beta )
+  approx        = ( beta <= beta_max )
+  IF ( approx ) THEN
+    etae        = cube( 1.5d0 * ( ne_x_coef * ye ), DMAX1( pi2 * third - 0.5d0 * beta2, zero ) )
+    approx      = ( beta <= tthird ) .or. ( etae > etabet * beta )
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -233,23 +245,23 @@ IF ( .not. non_rel ) THEN
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 
-!    IF ( approx ) THEN
-!      ped       = ( t_mev/ne_x_coef ) * third * ( g3( etae * etae ) - 1.5d0 * beta2 * g1( etae * etae ) )
-!      pe        = brydns * ped
-!      se        = ( 4.d0/t_mev ) * ped - ye * etae + beta2 * g1( etae * etae )/ne_x_coef
-!      ee        = t_mev * ( se + ye * etae ) - ped
-!      yeplus    = 2.0d0 * fexp(-etae) * ( 1.0d0 - fexp(-etae)/8.0d0 )/ne_x_coef
-!
-!      rel       = 3.0d0 * ped/( ee - me * ( ye + 2.0d0 * yeplus ) )
-!      approx = ( rel <= relmin )
-!
-!    END IF ! beta < beta_max
-!  END IF ! beta < tthird  .or.  etae > etabet*beta
-!
-!  IF ( approx ) THEN
-!    ue          = etae * t_mev
-!    RETURN! Computation of e-p eos by high T approx was successful
-!  END IF ! approx
+    IF ( approx ) THEN
+      ped       = ( t_mev/ne_x_coef ) * third * ( g3( etae * etae ) - 1.5d0 * beta2 * g1( etae * etae ) )
+      pe        = brydns * ped
+      se        = ( 4.d0/t_mev ) * ped - ye * etae + beta2 * g1( etae * etae )/ne_x_coef
+      ee        = t_mev * ( se + ye * etae ) - ped
+      yeplus    = 2.0d0 * fexp(-etae) * ( 1.0d0 - fexp(-etae)/8.0d0 )/ne_x_coef
+
+      rel       = 3.0d0 * ped/( ee - me * ( ye + 2.0d0 * yeplus ) )
+      approx = ( rel <= relmin )
+
+    END IF ! beta < beta_max
+  END IF ! beta < tthird  .or.  etae > etabet*beta
+
+  IF ( approx ) THEN
+    ue          = etae * t_mev
+    RETURN! Computation of e-p eos by high T approx was successful
+  END IF ! approx
 
 !-----------------------------------------------------------------------
 !  If high-temperature approximation is inappropriate, then
@@ -383,9 +395,9 @@ IF ( .not. non_rel ) THEN
 
   Failure       = .false.
   DO l = 1,50
-    tol         = ( ffn(xx) - xans )/xans
+    tol         = ( ffn(xx,beta2) - xans )/xans
     IF ( DABS(tol) <= 1.d-7 ) EXIT
-    dxx         = -tol * xans/dfndx(xx)
+    dxx         = -tol * xans/dfndx(xx,beta2)
     IF( dxx * dxxp < zero ) dxx = dxx/2.d0
     dxxp        = dxx
     xx          = xx + dxx
@@ -425,7 +437,10 @@ IF ( .not. non_rel ) THEN
 
   WRITE (*,1001)
   WRITE (*,1003) brydns * rmu/cm3fm3, t_mev, ye
-  WRITE (*,1005) tol, xx, xans**third, ffn(xx), xans
+  WRITE (*,1005) tol, xx, xans**third, ffn(xx,beta2), xans
+  WRITE (6,1001)
+  WRITE (6,1003) brydns * rmu/cm3fm3, t_mev, ye
+  WRITE (6,1005) tol, xx, xans**third, ffn(xx,beta2), xans
   STOP
 
 END IF ! .not. non_rel
@@ -516,6 +531,9 @@ IF ( non_rel ) THEN
 !-----------------------------------------------------------------------
 
     IF ( Failure ) THEN
+      WRITE (*,2001)
+      WRITE (*,2003) brydns * rmu/cm3fm3, t_mev, ye
+      WRITE (*,2005) etae,deta,tol,ne_x_coef*ye,wwchk
       WRITE (6,2001)
       WRITE (6,2003) brydns * rmu/cm3fm3, t_mev, ye
       WRITE (6,2005) etae,deta,tol,ne_x_coef*ye,wwchk
@@ -589,6 +607,9 @@ IF ( non_rel ) THEN
       WRITE (*,3001)
       WRITE (*,3003) brydns * rmu/cm3fm3, t_mev, ye
       WRITE (*,3005) tol,y,yans**(tthird)
+      WRITE (6,3001)
+      WRITE (6,3003) brydns * rmu/cm3fm3, t_mev, ye
+      WRITE (6,3005) tol,y,yans**(tthird)
     END IF ! Failure
     
     IF ( .not. Failure ) THEN
@@ -618,69 +639,81 @@ END IF ! non_rel
 
 RETURN
 
-CONTAINS
+END SUBROUTINE e_p_eos
 
-REAL (KIND=double) FUNCTION sq(aa,bb)
-REAL (KIND=double) :: aa, bb
+REAL(dp) FUNCTION sq(aa,bb)
+IMPLICIT NONE
+REAL(dp) :: aa, bb
 sq              = DSQRT( aa * aa + bb * bb * bb )
 END FUNCTION sq
 
-REAL (KIND=double) FUNCTION cube(aa,bb)
-REAL (KIND=double) :: aa, bb
+REAL(dp) FUNCTION cube(aa,bb)
+IMPLICIT NONE
+REAL(dp) :: aa, bb
 cube            = ( sq(aa,bb) + aa )**third - ( DMAX1(sq(aa,bb) - aa , zero ) )**third
 END FUNCTION cube
 
-REAL (KIND=double) FUNCTION g1(x2)
-REAL (KIND=double) :: x2
+REAL(dp) FUNCTION g1(x2)
+IMPLICIT NONE
+REAL(dp) :: x2
 g1              = half * x2 + 1.644934067d0
 END FUNCTION g1
 
-REAL (KIND=double) FUNCTION g3(x2)
-REAL (KIND=double) :: x2
+REAL(dp) FUNCTION g3(x2)
+IMPLICIT NONE
+REAL(dp) :: x2
 g3              = 11.36439395 + x2 * ( 4.9934802201d0 + 0.25d0 * x2 )
 END FUNCTION g3
 
-REAL (KIND=double) FUNCTION fexp(xx)
-REAL (KIND=double) :: xx
-REAL (KIND=double), PARAMETER :: expmax = 300.d0
+REAL(dp) FUNCTION fexp(xx)
+IMPLICIT NONE
+REAL(dp) :: xx
+REAL(dp), PARAMETER :: expmax = 300.d0
 fexp            = DEXP( DMIN1( expmax, DMAX1( - expmax, xx ) ) )
 END FUNCTION fexp
 
-REAL (KIND=double) FUNCTION ffn(xx)
-REAL (KIND=double) :: xx
+REAL(dp) FUNCTION ffn(xx,beta2)
+IMPLICIT NONE
+REAL(dp) :: xx, beta2
 ffn             = xx**3 * ( 1.d0 + pi2/beta2 * (2.d0 * xx * xx + 1.d0 )/( 2.d0 * xx**4 ) &
 &               + 7.d0/40.d0 * ( pi2/beta2 )**2/xx**8)
 END FUNCTION ffn
 
-REAL (KIND=double) FUNCTION dfndx(xx)
-REAL (KIND=double) :: xx
-dfndx           = 3.d0 * ffn(xx)/xx + pi2/beta2 * ( 2.d0 - 4.d0 * (2.d0 * xx * xx + 1.d0 )/xx**2)
+REAL(dp) FUNCTION dfndx(xx,beta2)
+IMPLICIT NONE
+REAL(dp) :: xx,beta2
+dfndx           = 3.d0 * ffn(xx,beta2)/xx + pi2/beta2 * ( 2.d0 - 4.d0 * (2.d0 * xx * xx + 1.d0 )/xx**2)
 END FUNCTION dfndx
 
-REAL (KIND=double) FUNCTION ffnr(yy)
-REAL (KIND=double) :: yy
+REAL(dp) FUNCTION ffnr(yy)
+IMPLICIT NONE
+REAL(dp) :: yy
 ffnr            = yy**1.5d0 * (1.d0 + pi2/(8.d0 * yy**2 ) + 7.d0 * pi4/( 640.d0 * yy**4 ) )
 END FUNCTION ffnr
 
-REAL (KIND=double) FUNCTION dfnrdy(yy)
-REAL (KIND=double) :: yy
+REAL(dp) FUNCTION dfnrdy(yy)
+IMPLICIT NONE
+REAL(dp) :: yy
 dfnrdy          = DSQRT(yy) * ( 1.d0 - pi2/( 24.d0 * yy**2 ) - 7.d0 * pi4/( 384.d0 * yy**4 ) )
 END FUNCTION dfnrdy
 
-REAL (KIND=double) FUNCTION pnr(yy)
-REAL (KIND=double) :: yy
+REAL(dp) FUNCTION pnr(yy)
+IMPLICIT NONE
+REAL(dp) :: yy
 pnr             = yy**2.5d0 * ( 1.d0 + 5.d0 * pi2/( 8.d0 * yy**2 ) - 7.d0 * pi4/( 384.d0 * yy**4 ) )
 END FUNCTION pnr
 
-REAL (KIND=double) FUNCTION f(xx)
-REAL (KIND=double) :: xx
+REAL(dp) FUNCTION f(xx)
+IMPLICIT NONE
+REAL(dp) :: xx
 f               = xx * ( 2.d0 * xx * xx - 3.d0 ) * DSQRT( xx * xx + 1.d0 ) &
 &               + 3.d0 * DLOG( xx + DSQRT( 1.d0 + xx * xx ) )
 END FUNCTION f
 
-REAL (KIND=double) FUNCTION gg(xx)
-REAL (KIND=double) :: xx
+REAL(dp) FUNCTION gg(xx)
+IMPLICIT NONE
+REAL(dp) :: xx
 gg              = 8.d0 * xx**3 * ( DSQRT( xx * xx + 1.d0 ) -1.d0 ) - f(xx)
 END FUNCTION gg
 
-END SUBROUTINE e_p_eos
+END MODULE e_p_eos_module

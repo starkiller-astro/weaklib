@@ -53,6 +53,7 @@ PROGRAM wlInterpolationTest
 
   99 FORMAT ("rho=", es12.5, " T=", es12.5, " Ye=" , es12.5, " Int=", es12.5, &
              " DC=", es12.5, " Diff=", es12.5 ) 
+ 4018 FORMAT (i4,3(es12.5))
   epsilon = 1.d-100
   nout  = 3216
 
@@ -133,7 +134,7 @@ PROGRAM wlInterpolationTest
   
   NumGoodPoints = 0
 
-  DO j = 1, EOSTable % DV % nVariables
+  DO j = 1,1 !EOSTable % DV % nVariables
 
     CALL LogInterpolateSingleVariable &
            ( rho, T, Ye,                                   &
@@ -142,35 +143,35 @@ PROGRAM wlInterpolationTest
              EOSTable % TS % States(3) % Values,           &
              EOSTable % TS % LogInterp,                                    &
              EOSTable % DV % Offsets(j),                   &
-             EOSTable % DV % Variables(j) % Values(:,:,:), & 
+             EOSTable % DV % Variables(1) % Values(:,:,:), & 
              Interpolant )
 
-    WRITE (nout,*) EOSTable % DV % Names(j), " Interpolation Comparison"
+!    WRITE (nout,*) EOSTable % DV % Names(j), " Interpolation Comparison"
 
-    WRITE (nout,*) "Interpolant =", Interpolant, "Direct Call =", DirectCall(:,j) 
+    WRITE (TestUnit2,*) "Interpolant =", Interpolant, "Direct Call =", DirectCall(:,1) 
 
-    L1norm(j) = SUM( ABS( Interpolant - DirectCall(:,j) )  & 
-                  / ( ABS( DirectCall(:,j) ) + epsilon ),  &
-                  MASK = DirectCall(:,1).gt.0.0d0 )
-
-    NumGoodPoints = COUNT( DirectCall(:,1).gt.0.0d0 )
-
-    Maxnorm(j) = MAXVAL( ABS( Interpolant - DirectCall(:,j) ) &
-                   / ( ABS( DirectCall(:,j) ) + epsilon ) ,   &
-                   MASK = DirectCall(:,1).gt.0.0d0 )
-
-    LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) )     &
-               / ( ABS( DirectCall(:,j) ) + epsilon ) ,       &
-               MASK = DirectCall(:,1).gt.0.0d0 )
-
-    L1norm2(j) = SUM( ABS( Interpolant - DirectCall(:,j) ),  & 
-                   MASK = DirectCall(:,1).gt.0.0d0 )
-
-    Maxnorm2(j) = MAXVAL( ABS( Interpolant - DirectCall(:,j) ),  &
-                    MASK = DirectCall(:,1).gt.0.0d0 )
-    
-    L1norm(j) = MIN( L1norm(j), L1norm2(j) )/NumPoints
-    Maxnorm(j) = MIN( Maxnorm(j), Maxnorm2(j) )
+!    L1norm(j) = SUM( ABS( Interpolant - DirectCall(:,j) )  & 
+!                  / ( ABS( DirectCall(:,j) ) + epsilon ),  &
+!                  MASK = DirectCall(:,1).gt.0.0d0 )
+!
+!    NumGoodPoints = COUNT( DirectCall(:,1).gt.0.0d0 )
+!
+!    Maxnorm(j) = MAXVAL( ABS( Interpolant - DirectCall(:,j) ) &
+!                   / ( ABS( DirectCall(:,j) ) + epsilon ) ,   &
+!                   MASK = DirectCall(:,1).gt.0.0d0 )
+!
+!    LocMax = MAXLOC( ABS( Interpolant - DirectCall(:,j) )     &
+!               / ( ABS( DirectCall(:,j) ) + epsilon ) ,       &
+!               MASK = DirectCall(:,1).gt.0.0d0 )
+!
+!    L1norm2(j) = SUM( ABS( Interpolant - DirectCall(:,j) ),  & 
+!                   MASK = DirectCall(:,1).gt.0.0d0 )
+!
+!    Maxnorm2(j) = MAXVAL( ABS( Interpolant - DirectCall(:,j) ),  &
+!                    MASK = DirectCall(:,1).gt.0.0d0 )
+!    
+!    L1norm(j) = MIN( L1norm(j), L1norm2(j) )/NumPoints
+!    Maxnorm(j) = MIN( Maxnorm(j), Maxnorm2(j) )
 
 
   END DO
@@ -190,9 +191,10 @@ PROGRAM wlInterpolationTest
   
   CALL LogInterpolateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants ) 
   DO i = 1, SIZE(rho)
-    DO j = 1, EOSTable % DV % nVariables 
-      WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
-    END DO
+    !DO j = 1, EOSTable % DV % nVariables 
+      !WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
+    !END DO
+      WRITE (TestUnit1,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
   END DO
 
   DO i = 1, EOSTable % DV % nVariables
@@ -215,8 +217,14 @@ PROGRAM wlInterpolationTest
 
   CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
 
-  DO j = 1, EOSTable % DV % nVariables 
-    WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
+  !DO j = 1, EOSTable % DV % nVariables 
+  !  WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
+  !END DO
+  DO i = 1, SIZE(rho)
+    !DO j = 1, EOSTable % DV % nVariables 
+      !WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
+    !END DO
+      WRITE (TestUnit3,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
   END DO
 
   CLOSE(TestUnit1)
