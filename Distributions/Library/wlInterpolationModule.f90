@@ -665,9 +665,10 @@ CONTAINS
         Temperature(j) = 0.d0
         CYCLE
       END IF
-      Temperature(j) =  temp_table(i) + ( temp_table(i+1) - temp_table(i) ) &
-                        * ( ( sbuff(j) - entropy_array(i) )             &
-                        / ( entropy_array(i+1) - entropy_array(i) ) )
+      Temperature(j) = 10.d0**( &
+             LOG10( temp_table(i) ) + LOG10( temp_table(i+1) / temp_table(i) ) &
+                        * LOG10( ( sbuff(j) / entropy_array(i) ) )             &
+                        / LOG10( entropy_array(i+1) / entropy_array(i) ) )
     END DO
 
   DEALLOCATE( entropy_array, rhobuff, yebuff )
