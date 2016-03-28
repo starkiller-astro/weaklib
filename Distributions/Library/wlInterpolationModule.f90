@@ -16,6 +16,8 @@ MODULE wlInterpolationModule
   PUBLIC ComputeTempFromIntEnergy
   PUBLIC ComputeTempFromEntropy
 
+  REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
+
 CONTAINS
 
   SUBROUTINE locate( xx, n, x, j )
@@ -304,7 +306,7 @@ CONTAINS
                                        +             delta(1)  * p111 ) ) )
 
       Derivative(i,3) &
-        = ( ( Interpolant(i) ) * alpha(3) &
+        = ln10 * ( ( Interpolant(i) ) * alpha(3) &
                                    * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
                                        -            delta(1)  * (1.0_dp - delta(2)) * p100   &
                                        - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
@@ -423,7 +425,7 @@ CONTAINS
                                        +             delta(1)  * p111 ) ) )
 
         Derivatives(i,3,j) &
-          = ( ( Interpolants(i,j) ) * alpha(3) &
+          = ln10 * ( ( Interpolants(i,j) ) * alpha(3) &
                                      * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
                                          -            delta(1)  * (1.0_dp - delta(2)) * p100   &
                                          - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &

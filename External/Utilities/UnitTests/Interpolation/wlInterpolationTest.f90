@@ -11,7 +11,7 @@ PROGRAM wlInterpolationTest
 
   implicit none
 
-  INTEGER  :: i, j, nout, TestUnit1, TestUnit2, TestUnit3
+  INTEGER  :: i, j, k, nout, TestUnit1, TestUnit2, TestUnit3, TestUnit4
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rho
   REAL(dp), DIMENSION(:), ALLOCATABLE :: T
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Ye 
@@ -60,6 +60,7 @@ PROGRAM wlInterpolationTest
   OPEN( newunit = TestUnit1, FILE="InterpolateAllTest.d")
   OPEN( newunit = TestUnit2, FILE="SingleDerivativeTest.d")
   OPEN( newunit = TestUnit3, FILE="AllDerivativesTest.d")
+  OPEN( newunit = TestUnit4, FILE="dUdt.d")
 
   LScompress = '220'
   LSFilePath = '../../../LS/Data'
@@ -134,6 +135,26 @@ PROGRAM wlInterpolationTest
   
   NumGoodPoints = 0
 
+
+
+  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
+  
+  WRITE(TestUnit4,*) 'Test Unit 4 initialized' 
+  DO k= 1, EOSTable % TS % nPoints(3)
+    DO j= 1, EOSTable % TS % nPoints(2)
+      DO i= 1, EOSTable % TS % nPoints(1)
+        IF ( ( EOSTable % TS % States(1) % Values(i) .ge. 1.0d8 ) .and. &
+             ( EOSTable % TS % States(1) % Values(i) .le. 3.0d8 ) .and. &
+             ( EOSTable % TS % States(2) % Values(j) .ge. 6.0d9 ) .and. &
+             ( EOSTable % TS % States(2) % Values(j) .le. 6.8d9 ) .and. &
+             ( EOSTable % TS % States(3) % Values(k) .ge. 4.8d-1 ) .and. &
+             ( EOSTable % TS % States(3) % Values(k) .le. 5.0d-1 ) ) THEN
+          WRITE(TestUnit4,*) rho(i), T(j), Ye(k), Derivatives
+        END IF
+      END DO
+    END DO
+  END DO
+
   DO j = 1,1 !EOSTable % DV % nVariables
 
     CALL LogInterpolateSingleVariable &
@@ -190,12 +211,12 @@ PROGRAM wlInterpolationTest
 
   
   CALL LogInterpolateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants ) 
-  DO i = 1, SIZE(rho)
+  !DO i = 1, SIZE(rho)
     !DO j = 1, EOSTable % DV % nVariables 
       !WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
     !END DO
-      WRITE (TestUnit1,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
-  END DO
+  !    WRITE (TestUnit1,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
+  !END DO
 
   DO i = 1, EOSTable % DV % nVariables
     CALL LogInterpolateDifferentiateSingleVariable( rho, T, Ye, &
@@ -208,28 +229,54 @@ PROGRAM wlInterpolationTest
                          Interpolant(:), Derivative(:,:) )
       Interpolants(:,i) = Interpolant(:)
       Derivatives(:,:,i) = Derivative(:,:)
-    END DO
-
-  DO j = 1, EOSTable % DV % nVariables 
-    WRITE (TestUnit2,*) "Derivatives =", Derivatives(:,:,j)
   END DO
 
+  !DO j = 1, EOSTable % DV % nVariables 
+  !  WRITE (TestUnit2,*) "Derivatives =", Derivatives(:,:,j)
+  !END DO
 
-  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
+
 
   !DO j = 1, EOSTable % DV % nVariables 
   !  WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
   !END DO
-  DO i = 1, SIZE(rho)
+  !DO i = 1, SIZE(rho)
     !DO j = 1, EOSTable % DV % nVariables 
       !WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
     !END DO
-      WRITE (TestUnit3,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
-  END DO
+  !    WRITE (TestUnit3,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
+  !END DO
+
+!    CALL LogInterpolateDifferentiateSingleVariable( &
+!                         EOSTable % TS % States(1) % Values(:), &
+!                         EOSTable % TS % States(2) % Values(:), &
+!                         EOSTable % TS % States(3) % Values(:), &
+!                         EOSTable % TS % States(1) % Values(:), &
+!                         EOSTable % TS % States(2) % Values(:), &
+!                         EOSTable % TS % States(3) % Values(:), &
+!                         EOSTable % TS % LogInterp,                             &
+!                         EOSTable % DV % Offsets(3), &
+!                         EOSTable % DV % Variables(3) % Values(:,:,:), &
+!                         Interpolant(:), Derivative(:,:) )
+!  DO j= 1, 25 !EOSTable % TS % nPoints(3)
+!    DO k= 1, EOSTable % TS % nPoints(2)
+!      DO i= 1, EOSTable % TS % nPoints(1)
+!        IF ( ( EOSTable % TS % States(1) % Values(i) .ge. 1.0d8 ) .and. &
+!             ( EOSTable % TS % States(1) % Values(i) .le. 3.0d8 ) .and. & 
+!             ( EOSTable % TS % States(2) % Values(j) .ge. 6.4d9 ) .and. & 
+!             ( EOSTable % TS % States(2) % Values(j) .le. 6.8d9 ) .and. & 
+!             ( EOSTable % TS % States(3) % Values(k) .ge. 4.8d-1 ) .and. & 
+!             ( EOSTable % TS % States(3) % Values(k) .le. 5.d-1 ) ) THEN
+!          WRITE(TestUnit4,*) i, j, k 
+!        END IF 
+!      END DO 
+!    END DO 
+!  END DO 
 
   CLOSE(TestUnit1)
   CLOSE(TestUnit2)
   CLOSE(TestUnit3)
+  CLOSE(TestUnit4)
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
