@@ -8,6 +8,18 @@ MODULE wlGridModule
   PUBLIC MakeLinearGrid
   PUBLIC MakeLogGrid
 
+  TYPE, PUBLIC :: EnergyGridType
+    CHARACTER(LEN=32) :: Names='Energy'
+    CHARACTER(LEN=32) :: Units='MeV'
+    INTEGER  :: nPointsE
+    REAL(dp) :: minValue
+    REAL(dp) :: maxValue
+!    REAL(dp) :: minWidth
+!    REAL(dp) :: alpha  ! constant in geometric series
+    REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
+  END TYPE
+
+
 CONTAINS 
 
   SUBROUTINE MakeLinearGrid( LowerBound, UpperBound, nPoints, Grid )

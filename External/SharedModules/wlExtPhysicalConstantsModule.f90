@@ -147,5 +147,16 @@ REAL(dp), PARAMETER  ::  ncoef    = 4.d+00 * pi/( h * cvel )**3
 REAL(dp), PARAMETER  ::  ecoef    = 4.d+00 * pi * ergmev/( h * cvel )**3
 REAL(dp), PARAMETER  ::  csqinv   = 1.d0/cvel**2
 
+
+!-----------------------------------------------------------------------
+! Constant combinations for BoltzTran
+!-----------------------------------------------------------------------
+REAL(dp), PARAMETER  :: gf      = 8.957d-44   ! Fermi's constant [MeV cm3].
+REAL(dp), PARAMETER  :: hbarc_MeV   = 1.97326946d-11 ! [MeV cm]
+REAL(dp), PARAMETER  :: stherm  = 1.0d0/(pi*hbarc_MeV**4)
+REAL(dp), PARAMETER  :: therm1  = gf*gf*(gv*gv+3.d0*ga*ga)*stherm
+REAL(dp), PARAMETER  :: therm2  = 2.d0*gf*gf*ga*ga*stherm/7.0d0
+
+
 END MODULE wlExtPhysicalConstantsModule
 
