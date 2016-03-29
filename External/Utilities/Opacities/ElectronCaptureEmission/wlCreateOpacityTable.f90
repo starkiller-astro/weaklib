@@ -67,7 +67,6 @@ implicit none
     
 
    TYPE(OpacityTableType)  :: OpacityTable
-   REAL                    :: totalECapEm ! Functions 
 !-------------------------------------------------------------------------
 ! Set E grid limits
 !-------------------------------------------------------------------------
@@ -78,7 +77,7 @@ implicit none
    
 
    INTEGER                 :: i_r, i_e, j_rho, k_t, l_ye 
-   REAL(dp)                :: energy, rho, T, Z, A, mue, mun, mup, xh, xn, xp
+   REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp 
 
 
 PRINT*, "Allocate OpacityTable"   
@@ -135,18 +134,17 @@ PRINT*, "Print The OpacityTable"
            DO i_e = 1, OpacityTable % EnergyGrid % nPointsE
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
-              mue = OpacityTable % EOSTable % DV % Variables (4) % Values (j_rho, k_t, l_ye)  !4 =Electron Chemical Potential             
-              mup = OpacityTable % EOSTable % DV % Variables (5) % Values (j_rho, k_t, l_ye)  !5 =Proton Chemical Potential 
-              mun = OpacityTable % EOSTable % DV % Variables (6) % Values (j_rho, k_t, l_ye)  !6 =Neutron Chemical Potential 
+              chem_e = OpacityTable % EOSTable % DV % Variables (4) % Values (j_rho, k_t, l_ye)  !4 =Electron Chemical Potential             
+              chem_p = OpacityTable % EOSTable % DV % Variables (5) % Values (j_rho, k_t, l_ye)  !5 =Proton Chemical Potential 
+              chem_n = OpacityTable % EOSTable % DV % Variables (6) % Values (j_rho, k_t, l_ye)  !6 =Neutron Chemical Potential 
               xp  = OpacityTable % EOSTable % DV % Variables (7) % Values (j_rho, k_t, l_ye)  !7 =Proton Mass Fraction 
               xn  = OpacityTable % EOSTable % DV % Variables (8) % Values (j_rho, k_t, l_ye)  !8 =Neutron Mass Fraction 
-              xh  = OpacityTable % EOSTable % DV % Variables (10) % Values (j_rho, k_t, l_ye) !10 =Heavy Mass Fraction
+              xheavy  = OpacityTable % EOSTable % DV % Variables (10) % Values (j_rho, k_t, l_ye) !10 =Heavy Mass Fraction
               Z   = OpacityTable % EOSTable % DV % Variables (11) % Values (j_rho, k_t, l_ye) !11 =Heavy Charge Number
               A   = OpacityTable % EOSTable % DV % Variables (12) % Values (j_rho, k_t, l_ye) !12 =Heavy Mass Number 
 
               OpacityTable % ECAPEM(i_r) % Values (i_e, j_rho, k_t, l_ye) &
-                  = totalECapEm(energy, rho, T, Z, A, mue, mun, mup, xh, xn, xp )
-          
+                  = totalECapEm(energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 
            END DO
          END DO
@@ -172,8 +170,3 @@ PRINT*, "Print The OpacityTable"
 !=============================================================
 
 END PROGRAM wlCreateOpacityTable
-
-
-
-
-
