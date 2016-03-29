@@ -20,6 +20,7 @@ MODULE wlInterpolationModule
 
 CONTAINS
 
+
   SUBROUTINE locate( xx, n, x, j )
 
     INTEGER, INTENT(in)      :: n
@@ -48,8 +49,10 @@ CONTAINS
 
   END SUBROUTINE locate
 
-  SUBROUTINE LogInterpolateSingleVariable( x1, x2, x3, Coordinate1, Coordinate2, &
-                                           Coordinate3, LogInterp, Offset, Table, Interpolant )
+
+  SUBROUTINE LogInterpolateSingleVariable &
+               ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, &
+                 LogInterp, Offset, Table, Interpolant )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -60,7 +63,6 @@ CONTAINS
     INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     REAL(dp), INTENT(in) :: Offset
-    
     REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
 
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
@@ -68,19 +70,20 @@ CONTAINS
     INTEGER :: i, j, k, il1, il2, il3
   
     epsilon = 1.d-200
-  
+
     ! Check the usage of x2
     ! x2 is used to size the run of the do loop because the input is expected 
-    ! to be a series of 3-tuple rho, T, Ye points; so SIZE(x1) = SIZE(x2) = SIZE(x3) 
-    ! So, if this subroutine is being used to make an array, make sure the other 
+    ! to be a series of 3-tuple rho, T, Ye points; 
+    !     so SIZE(x1) = SIZE(x2) = SIZE(x3) 
+    ! If this subroutine is being used to make an array, make sure the other 
     ! inputs are the same size (i.e. x1(1) = x(2) = x(3) etc.)
     !-------------------------------
 
-    DO i = 1, SIZE(x2) 
+    DO i = 1, SIZE( x2 )
  
-      CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
-      CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
-      CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
+      CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(i), il1 )
+      CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
+      CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(i), il3 )
 
       p000 = ( Table( il1  , il2  , il3   ) )
       p100 = ( Table( il1+1, il2  , il3   ) )
@@ -92,39 +95,50 @@ CONTAINS
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
       IF ( LogInterp(1) == 1 ) THEN 
-        delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
+        delta(1) = LOG10( x1(i) / Coordinate1(il1) ) &
+                     / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
-        delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
+        delta(1) = ( x1(i) - Coordinate1(il1) ) &
+                     / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
       IF ( LogInterp(2) == 1 ) THEN 
-        delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
+        delta(2) = LOG10( x2(i) / Coordinate2(il2) ) &
+                     / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
-        delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
+        delta(2) = ( x2(i) - Coordinate2(il2) ) &
+                     / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
       IF ( LogInterp(3) == 1 ) THEN 
-        delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
+        delta(3) = LOG10( x3(i) / Coordinate3(il3) ) &
+                     / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
-        delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
+        delta(3) = ( x3(i) - Coordinate3(il3) ) &
+                     / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
+
       Interpolant(i) &
         = 10.d0**( &
-              (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &                
-                                   +            delta(1)  * (1.0_dp - delta(2)) * p100   &
-                                   + ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
-                                   +            delta(1)  *           delta(2)  * p110 ) &
-                      + delta(3)  * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
-                                   +            delta(1)  * (1.0_dp - delta(2)) * p101   &
-                                   +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
-                                   +            delta(1)  *           delta(2)  * p111 ) &
- 
-                 ) - Offset 
-    END DO 
+            (1.0_dp - delta(3)) &
+              * (   (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &
+                  +           delta(1)  * (1.0_dp - delta(2)) * p100   &
+                  + (1.0_dp - delta(1)) *           delta(2)  * p010   &
+                  +           delta(1)  *           delta(2)  * p110 ) &
+            +         delta(3) &
+              * (   (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
+                  +           delta(1)  * (1.0_dp - delta(2)) * p101   &
+                  + (1.0_dp - delta(1)) *           delta(2)  * p011   &
+                  +           delta(1)  *           delta(2)  * p111 ) ) &
+          - Offset
+
+    END DO
 
   END SUBROUTINE LogInterpolateSingleVariable
 
-  SUBROUTINE LogInterpolateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants )
+
+  SUBROUTINE LogInterpolateAllVariables &
+               ( x1, x2, x3, LogInterp, TS, DV, Interpolants )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -207,22 +221,22 @@ CONTAINS
 
   END SUBROUTINE LogInterpolateAllVariables 
 
-  SUBROUTINE LogInterpolateDifferentiateSingleVariable( x1, x2, x3, Coordinate1, Coordinate2, &
-                                           Coordinate3, LogInterp, Offset, Table,        &
-                                           Interpolant, Derivative )     
 
-    REAL(dp), DIMENSION(:), INTENT(in) :: x1
-    REAL(dp), DIMENSION(:), INTENT(in) :: x2
-    REAL(dp), DIMENSION(:), INTENT(in) :: x3
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable &
+               ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, &
+                 LogInterp, Offset, Table, Interpolant, Derivative )     
+
+    REAL(dp), DIMENSION(:), INTENT(in)     :: x1
+    REAL(dp), DIMENSION(:), INTENT(in)     :: x2
+    REAL(dp), DIMENSION(:), INTENT(in)     :: x3
+    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate1
+    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate2
+    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate3
+    INTEGER, DIMENSION(3), INTENT(in)      :: LogInterp 
+    REAL(dp), INTENT(in)                   :: Offset
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-    REAL(dp), INTENT(in) :: Offset
-
-    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant
-    REAL(dp), DIMENSION(:,:), INTENT(out) :: Derivative 
+    REAL(dp), DIMENSION(:), INTENT(out)    :: Interpolant
+    REAL(dp), DIMENSION(:,:), INTENT(out)  :: Derivative 
     
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
     REAL(dp), DIMENSION(3) :: alpha, delta
@@ -230,12 +244,11 @@ CONTAINS
 
     epsilon = 1.d-200
 
+    DO i = 1, SIZE( x2 )
 
-    DO i = 1, SIZE(x2)
-
-      CALL locate( Coordinate1, SIZE(Coordinate1), x1(i), il1 )
-      CALL locate( Coordinate2, SIZE(Coordinate2), x2(i), il2 )
-      CALL locate( Coordinate3, SIZE(Coordinate3), x3(i), il3 )
+      CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(i), il1 )
+      CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
+      CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(i), il3 )
 
       p000 = ( Table( il1  , il2  , il3   ) )
       p100 = ( Table( il1+1, il2  , il3   ) )
@@ -247,41 +260,60 @@ CONTAINS
       p111 = ( Table( il1+1, il2+1, il3+1 ) )
 
       IF ( LogInterp(1) == 1 ) THEN
-      alpha(1) = ( 1.0d0 ) / ( x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
-      delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
+        alpha(1) &
+          = 1.0d0 / ( x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
+        delta(1) &
+          = LOG10( x1(i) / Coordinate1(il1) ) &
+              / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
-      alpha(1) = ( 1.0d0 ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
-      delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
+        alpha(1) &
+          = 1.0d0 / ( Coordinate1(il1+1) - Coordinate1(il1) )
+        delta(1) &
+          = ( x1(i) - Coordinate1(il1) ) &
+              / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
       IF ( LogInterp(2) == 1 ) THEN
-      alpha(2) = ( 1.0d0 ) / ( x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
-      delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
+        alpha(2) &
+          = 1.0d0 / ( x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
+        delta(2) &
+          = LOG10( x2(i) / Coordinate2(il2) ) &
+              / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
-      alpha(2) = ( 1.0d0 ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
-      delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
+        alpha(2) &
+          = 1.0d0 / ( Coordinate2(il2+1) - Coordinate2(il2) )
+        delta(2) &
+          = ( x2(i) - Coordinate2(il2) ) &
+              / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
       IF ( LogInterp(3) == 1 ) THEN
-      alpha(3) = ( 1.0d0 ) / ( x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
-      delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
+        alpha(3) &
+          = 1.0d0 / ( x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
+        delta(3) &
+          = LOG10( x3(i) / Coordinate3(il3) ) &
+              / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
-      alpha(3) = ( 1.0d0 ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
-      delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
+        alpha(3) &
+          = 1.0d0 / ( Coordinate3(il3+1) - Coordinate3(il3) )
+        delta(3) &
+          = ( x3(i) - Coordinate3(il3) ) &
+              / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
 
       Interpolant(i) &
         = 10.d0**( &
-              (1.0_dp - delta(3)) * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &
-                                   +            delta(1)  * (1.0_dp - delta(2)) * p100   &
-                                   + ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
-                                   +            delta(1)  *           delta(2)  * p110 ) &
-                      + delta(3)  * ( (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
-                                   +            delta(1)  * (1.0_dp - delta(2)) * p101   &
-                                   +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
-                                   +            delta(1)  *           delta(2)  * p111 ) &
-
-                 ) - Offset
+            (1.0_dp - delta(3)) &
+              * (   (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &
+                  +           delta(1)  * (1.0_dp - delta(2)) * p100   &
+                  + (1.0_dp - delta(1)) *           delta(2)  * p010   &
+                  +           delta(1)  *           delta(2)  * p110 ) &
+            +         delta(3) &
+              * (   (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
+                  +           delta(1)  * (1.0_dp - delta(2)) * p101   &
+                  + (1.0_dp - delta(1)) *           delta(2)  * p011   &
+                  +           delta(1)  *           delta(2)  * p111 ) ) &
+          - Offset
 
       Derivative(i,1) &
         = ( (Interpolant(i) ) * alpha(1) & 
@@ -306,20 +338,21 @@ CONTAINS
                                        +             delta(1)  * p111 ) ) )
 
       Derivative(i,3) &
-        = ln10 * ( ( Interpolant(i) ) * alpha(3) &
-                                   * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
-                                       -            delta(1)  * (1.0_dp - delta(2)) * p100   &
-                                       - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
-                                       -            delta(1)  *           delta(2)  * p110   &
-                                       +  (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
-                                       +            delta(1)  * (1.0_dp - delta(2)) * p101   &
-                                       +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
-                                       +            delta(1)  *           delta(2)  * p111 ) )
+        = ln10 * &
+          ( ( Interpolant(i) ) * alpha(3) &
+            * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
+                -            delta(1)  * (1.0_dp - delta(2)) * p100   &
+                - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
+                -            delta(1)  *           delta(2)  * p110   &
+                +  (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
+                +            delta(1)  * (1.0_dp - delta(2)) * p101   &
+                +  (1.0_dp - delta(1)) *           delta(2)  * p011   &
+                +            delta(1)  *           delta(2)  * p111 ) )
 
-      
     END DO
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable
+
 
   SUBROUTINE LogInterpolateDifferentiateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives )
 
@@ -554,6 +587,7 @@ CONTAINS
     WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
 
   END SUBROUTINE MonotonicityCheck 
+
 
   SUBROUTINE ComputeTempFromIntEnergy &
                ( rho, e_int, ye, density_table, temp_table, ye_table, &
