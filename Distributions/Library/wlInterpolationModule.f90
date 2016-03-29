@@ -267,7 +267,7 @@ CONTAINS
               / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
         alpha(1) &
-          = 1.0d0 / ( Coordinate1(il1+1) - Coordinate1(il1) )
+          = ln10 / ( Coordinate1(il1+1) - Coordinate1(il1) )
         delta(1) &
           = ( x1(i) - Coordinate1(il1) ) &
               / ( Coordinate1(il1+1) - Coordinate1(il1) )
@@ -281,7 +281,7 @@ CONTAINS
               / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
         alpha(2) &
-          = 1.0d0 / ( Coordinate2(il2+1) - Coordinate2(il2) )
+          = ln10 / ( Coordinate2(il2+1) - Coordinate2(il2) )
         delta(2) &
           = ( x2(i) - Coordinate2(il2) ) &
               / ( Coordinate2(il2+1) - Coordinate2(il2) )
@@ -295,7 +295,7 @@ CONTAINS
               / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
         alpha(3) &
-          = 1.0d0 / ( Coordinate3(il3+1) - Coordinate3(il3) )
+          = ln10 / ( Coordinate3(il3+1) - Coordinate3(il3) )
         delta(3) &
           = ( x3(i) - Coordinate3(il3) ) &
               / ( Coordinate3(il3+1) - Coordinate3(il3) )
@@ -338,8 +338,7 @@ CONTAINS
                                        +             delta(1)  * p111 ) ) )
 
       Derivative(i,3) &
-        = ln10 * &
-          ( ( Interpolant(i) ) * alpha(3) &
+        = ( ( Interpolant(i) ) * alpha(3) &
             * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
                 -            delta(1)  * (1.0_dp - delta(2)) * p100   &
                 - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
@@ -386,7 +385,7 @@ CONTAINS
       alpha(1) = ( 1.0d0 ) / ( x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
       delta(1) = LOG10( x1(i) / Coordinate1(il1) ) / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
-      alpha(1) = ( 1.0d0 ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
+      alpha(1) = ( ln10 ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
       delta(1) = ( x1(i) - Coordinate1(il1) ) / ( Coordinate1(il1+1) - Coordinate1(il1) )
       END IF
 
@@ -394,7 +393,7 @@ CONTAINS
       alpha(2) = ( 1.0d0 ) / ( x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
       delta(2) = LOG10( x2(i) / Coordinate2(il2) ) / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
-      alpha(2) = ( 1.0d0 ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
+      alpha(2) = ( ln10 ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
       delta(2) = ( x2(i) - Coordinate2(il2) ) / ( Coordinate2(il2+1) - Coordinate2(il2) )
       END IF
 
@@ -402,7 +401,7 @@ CONTAINS
       alpha(3) = ( 1.0d0 ) / ( x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
       delta(3) = LOG10( x3(i) / Coordinate3(il3) ) / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
-      alpha(3) = ( 1.0d0 ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
+      alpha(3) = ( ln10 ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
       delta(3) = ( x3(i) - Coordinate3(il3) ) / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
 
@@ -458,7 +457,7 @@ CONTAINS
                                        +             delta(1)  * p111 ) ) )
 
         Derivatives(i,3,j) &
-          = ln10 * ( ( Interpolants(i,j) ) * alpha(3) &
+          = ( ( Interpolants(i,j) ) * alpha(3) &
                                      * ( ( (delta(1) - 1.0_dp)) * (1.0_dp - delta(2)) * p000   &
                                          -            delta(1)  * (1.0_dp - delta(2)) * p100   &
                                          - ( 1.0_dp - delta(1)) *           delta(2)  * p010   &
