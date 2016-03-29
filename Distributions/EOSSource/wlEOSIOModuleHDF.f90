@@ -9,7 +9,8 @@ MODULE wlEOSIOModuleHDF
 
   implicit none
   PRIVATE
-  INTEGER                                     :: hdferr
+
+  INTEGER :: hdferr
 
   PUBLIC WriteEquationOfStateTableHDF
   PUBLIC ReadEquationOfStateTableHDF
@@ -19,6 +20,7 @@ MODULE wlEOSIOModuleHDF
   PUBLIC TransferDependentVariables
 
 CONTAINS
+
 
   SUBROUTINE WriteEquationOfStateTableHDF( EOSTable )
 
@@ -41,38 +43,66 @@ CONTAINS
 
   END SUBROUTINE WriteEquationOfStateTableHDF
 
+
   SUBROUTINE DescribeEquationOfStateTable( EOSTable )
 
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+
     INTEGER :: i
 
+    ASSOCIATE( TS => EOSTable % TS )
+
+    WRITE(*,*)
+    WRITE(*,*) '  DescribeEquationOfStateTable'
     DO i = 1, 3
-      WRITE (*,*) "Independent Variable", i, "=", &
-                  EOSTable % TS % Names(i), "Units:", EOSTable % TS % Units(i)
-      WRITE (*,*) "Independent Variable", i, " Minimum = " , EOSTable % TS % minValues(i)
-      WRITE (*,*) "Independent Variable", i, "Maximum =" , EOSTable % TS % maxValues(i)
-      WRITE (*,*) "Number of Independent Variable", i, "Points =" , EOSTable % TS % nPoints(i) 
-      IF ( EOSTable % TS % LogInterp(i) == 1 ) THEN
-         WRITE (*,*) "Independent Variable ", i, "Grid Logarithmically Spaced" 
-         ELSE
-         WRITE (*,*) "Independent Variable", i, "Grid Linearly Spaced" 
-      END IF  
+
+      WRITE(*,*)
+      WRITE(*,'(A5,A21,I1.1,A3,A32)') &
+        '', 'Independent Variable ', i, ' = ', TRIM( TS % Names(i) )
+      WRITE(*,'(A7,A7,A20)') &
+        '', 'Units: ', TRIM( TS % Units(i) )
+      WRITE(*,'(A7,A12,ES12.6E2)') &
+        '', 'Min Value = ', TS % minValues(i)
+      WRITE(*,'(A7,A12,ES12.6E2)') &
+        '', 'Max Value = ', TS % maxValues(i)
+      WRITE(*,'(A7,A12,I4.4)') &
+        '', 'nPoints   = ', TS % nPoints(i)
+
+      IF ( TS % LogInterp(i) == 1 ) THEN
+        WRITE (*,'(A7,A27)') &
+          '', 'Grid Logarithmically Spaced'
+      ELSE
+        WRITE (*,'(A7,A20)') &
+          '', 'Grid Linearly Spaced'
+      END IF
+
     END DO
 
+    END ASSOCIATE ! TS
+
+    ASSOCIATE( DV => EOSTable % DV )
+
+    WRITE(*,*)
     DO i = 1, EOSTable % nVariables
-      WRITE (*,*) "Dependent Variable", i, "=", &
-                  EOSTable % DV % Names(i), "Units:", EOSTable % DV % Units(i)
+
+      WRITE (*,'(A5,A19,I3.3,A3,A32,A9,A20)') &
+        '', 'Dependent Variable ', i, ' = ', TRIM( DV % Names(i) ), &
+        '  Units: ', TRIM( DV % Units(i) )
     END DO
+    WRITE(*,*)
+
+    END ASSOCIATE ! DV
 
   END SUBROUTINE DescribeEquationOfStateTable
   
-  SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
-    
 
+  SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
+
+    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     CHARACTER(len=*), INTENT(in)                  :: FileName
+
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER                                       :: nVariables
-    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
 
@@ -96,7 +126,9 @@ CONTAINS
 
   END SUBROUTINE ReadEquationOfStateTableHDF
 
-  SUBROUTINE BroadcastEquationOfStateTableParallel( EOSTable, rootproc, myid, ierr,  COMMUNICATOR )
+
+  SUBROUTINE BroadcastEquationOfStateTableParallel &
+               ( EOSTable, rootproc, myid, ierr,  COMMUNICATOR )
 
     USE MPI
     
@@ -190,6 +222,7 @@ CONTAINS
 
   END SUBROUTINE BroadcastEquationOfStateTableParallel
 
+
   SUBROUTINE TransferDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
 
     TYPE(DependentVariablesType), INTENT(in)     :: OldDV
@@ -209,6 +242,7 @@ CONTAINS
      NewDV % Offsets( NewLocation ) = OldDV % OffSets( OldLocation )
 
   END SUBROUTINE TransferDependentVariables
+
 
   SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
 
@@ -293,6 +327,7 @@ CONTAINS
     END ASSOCIATE
 
   END SUBROUTINE MatchTableStructure
+
 
 END MODULE wlEOSIOModuleHDF
 
