@@ -62,7 +62,7 @@ REAL(dp), PARAMETER  :: cm3fm3    = 1.d-39        ! cm**3/fm**3
 
 REAL(dp), PARAMETER  :: avn       = 6.022141d+23  ! avogadro's number
 
-REAL(dp), PARAMETER  :: rmu       = 1.0d0/avn     ! mean baryon mass [g]
+REAL(dp), PARAMETER  :: rmu       = 1.0d0/avn     ! atomic mass unit
 
 REAL(dp), PARAMETER  :: me        = 0.510998d+00  ! electron mass [MeV]
 
@@ -153,6 +153,7 @@ REAL(dp), PARAMETER  ::  csqinv   = 1.d0/cvel**2
 !-----------------------------------------------------------------------
 REAL(dp), PARAMETER  :: gf      = 8.957d-44   ! Fermi's constant [MeV cm3].
 REAL(dp), PARAMETER  :: hbarc_MeV   = 1.97326946d-11 ! [MeV cm]
+REAL(dp), PARAMETER  :: mbg         = mb*ergmev*cvel_inv*cvel_inv ! baryon mass [g]
 REAL(dp), PARAMETER  :: stherm  = 1.0d0/(pi*hbarc_MeV**4)
 REAL(dp), PARAMETER  :: therm1  = gf*gf*(gv*gv+3.d0*ga*ga)*stherm
 REAL(dp), PARAMETER  :: therm2  = 2.d0*gf*gf*ga*ga*stherm/7.0d0
