@@ -21,10 +21,11 @@ MODULE wlOpacityTableModule
 !    Modules used:
 !       wlKindModule
 !       HDF5
-!       wlThermoStateModule
-!       wlDependentVariablesModule
-!       wlGridModule, ONLY: makeEnergyGrid EnergyGridType 
-!  
+!       wlGridModule, ONLY: EnergyGridType 
+!       wlEquationOfStateTableModule
+!       wlIOModuleHDF
+!       wlEOSIOModuleHDF, ONLY: ReadEquationOfStateTableHDF
+!
 !-----------------------------------------------------------------------
 !  NOTE: Only Type A interaction applied. Type B and Type C interaction 
 !        needs to be added for future use.
@@ -47,8 +48,7 @@ MODULE wlOpacityTableModule
 !                 
 !-----------------------------------------------------------------------
  
-  USE wlKindModule, ONLY: dp
-  
+  USE wlKindModule, ONLY: dp 
   USE wlGridModule, ONLY: EnergyGridType 
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF

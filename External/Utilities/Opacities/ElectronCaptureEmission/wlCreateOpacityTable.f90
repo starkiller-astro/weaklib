@@ -21,14 +21,17 @@ PROGRAM wlCreateOpacityTable
 !    
 !
 !    Modules used:
-!       wlKindModule
-!       HDF5
-!       wlThermoStateModule
-!       wlEOSIOModuleHDF
-!       wlOpacityTableModule
-!       wlDependentVariablesModule
-!       wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
-!  
+!      wlKindModule, ONLY: dp
+!      HDF5
+!      wlGridModule, ONLY: MakeLogGrid
+!      wlThermoStateModule
+!      wlDependentVariablesModule
+!      wlIOModuleHDF
+!      wlOpacityTableModule
+!      wlOpacityTableIOModuleHDF
+!      wlExtPhysicalConstantsModule
+!      B85
+!
 !-----------------------------------------------------------------------
 !  NOTE: Only Type A interaction applied. Type B and Type C interaction 
 !        needs to be added for future use.
@@ -62,6 +65,7 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityTableModule
   USE wlOpacityTableIOModuleHDF
   USE wlExtPhysicalConstantsModule
+  USE B85
 
 implicit none
     
@@ -134,18 +138,37 @@ PRINT*, "Print The OpacityTable"
            DO i_e = 1, OpacityTable % EnergyGrid % nPointsE
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
-              chem_e = OpacityTable % EOSTable % DV % Variables (4) % Values (j_rho, k_t, l_ye)  !4 =Electron Chemical Potential             
-              chem_p = OpacityTable % EOSTable % DV % Variables (5) % Values (j_rho, k_t, l_ye)  !5 =Proton Chemical Potential 
-              chem_n = OpacityTable % EOSTable % DV % Variables (6) % Values (j_rho, k_t, l_ye)  !6 =Neutron Chemical Potential 
-              xp  = OpacityTable % EOSTable % DV % Variables (7) % Values (j_rho, k_t, l_ye)  !7 =Proton Mass Fraction 
-              xn  = OpacityTable % EOSTable % DV % Variables (8) % Values (j_rho, k_t, l_ye)  !8 =Neutron Mass Fraction 
-              xheavy  = OpacityTable % EOSTable % DV % Variables (10) % Values (j_rho, k_t, l_ye) !10 =Heavy Mass Fraction
-              Z   = OpacityTable % EOSTable % DV % Variables (11) % Values (j_rho, k_t, l_ye) !11 =Heavy Charge Number
-              A   = OpacityTable % EOSTable % DV % Variables (12) % Values (j_rho, k_t, l_ye) !12 =Heavy Mass Number 
+
+              chem_e = OpacityTable % EOSTable % DV % Variables (4) %&
+                       Values (j_rho, k_t, l_ye)  !4 =Electron Chemical Potential             
+
+              chem_p = OpacityTable % EOSTable % DV % Variables (5) %&
+                       Values (j_rho, k_t, l_ye)  !5 =Proton Chemical Potential 
+
+              chem_n = OpacityTable % EOSTable % DV % Variables (6) %&
+                       Values (j_rho, k_t, l_ye)  !6 =Neutron Chemical Potential
+
+                 xp  = OpacityTable % EOSTable % DV % Variables (7) %&
+                       Values (j_rho, k_t, l_ye)  !7 =Proton Mass Fraction
+
+                 xn  = OpacityTable % EOSTable % DV % Variables (8) %&
+                       Values (j_rho, k_t, l_ye)  !8 =Neutron Mass Fraction
+
+             xheavy  = OpacityTable % EOSTable % DV % Variables (10) %&
+                       Values (j_rho, k_t, l_ye)  !10 =Heavy Mass Fraction
+
+                 Z   = OpacityTable % EOSTable % DV % Variables (11) %&
+                       Values (j_rho, k_t, l_ye)  !11 =Heavy Charge Number
+
+                 A   = OpacityTable % EOSTable % DV % Variables (12) %&
+                       Values (j_rho, k_t, l_ye)  !12 =Heavy Mass Number 
 
               OpacityTable % ECAPEM(i_r) % Values (i_e, j_rho, k_t, l_ye) &
-                  = totalECapEm(energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
-
+               = totalECapEm(energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
+                if((j_rho ==81) .and. (k_t ==11) .and. (l_ye == 18) ) then
+                   WRITE (*,*) "xn = ", xn
+                   WRITE (*,*) "xp = ", xp
+                end if
            END DO
          END DO
        END DO
@@ -155,18 +178,21 @@ PRINT*, "Print The OpacityTable"
 
 PRINT*, "Print The OpacityTable"
 
-   CALL DescribeOpacityTable( OpacityTable )
+CALL DescribeOpacityTable( OpacityTable )
 
 
 !==================== Below Necessary ? ======================
 
-!  CALL WriteEquationOfStateTableHDF( EOSTable )
-!  CALL WriteEquationOfStateTableHDF( EOSTable, Description )
+  CALL WriteOpacityTableHDF( OpacityTable )
+  CALL FinalizeHDF( )
 
-!  CALL FinalizeHDF( )
-
-!  WRITE (*,*) "HDF write successful"
+  WRITE (*,*) "HDF write successful"
 
 !=============================================================
 
 END PROGRAM wlCreateOpacityTable
+
+
+
+
+

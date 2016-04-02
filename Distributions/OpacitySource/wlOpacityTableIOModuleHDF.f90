@@ -17,18 +17,22 @@ MODULE wlOpacityTableIOModuleHDF
 !       DescribeOpacityTable
 !
 !    Modules used:
-!       wlKindModule
-!       wlOpacityTableModule
-!       wlEOSIOModuleHDF
-!       wlGridModule
+!       wlOpacityTableModule, ONLY: OpacityTableType, OpacityTypeA
+!       wlEOSIOModuleHDF, ONLY: DescribeEquationOfStateTable
+!       wlGridModule, ONLY: EnergyGridType
+!       wlKindModule, ONLY:dp
+!       HDF5
+!       wlIOModuleHDF
+!       wlEquationOfStateTableModule
+!
 !-----------------------------------------------------------------------
 !  NOTE: Only Type A interaction applied. Type B and Type C interaction 
 !        needs to be added for future use.
 !-----------------------------------------------------------------------
 
-  USE wlOpacityTableModule !, ONLY: OpacityTableType
-  USE wlEOSIOModuleHDF!, ONLY: DescribeEquationOfStateTable
-  USE wlGridModule!, ONLY: EnergyGridType 
+  USE wlOpacityTableModule, ONLY: OpacityTableType, OpacityTypeA
+  USE wlEOSIOModuleHDF, ONLY: DescribeEquationOfStateTable
+  USE wlGridModule, ONLY: EnergyGridType 
   USE wlKindModule, ONLY:dp
   USE HDF5
   USE wlIOModuleHDF
@@ -122,10 +126,10 @@ CONTAINS
       l=SIZE(ECAPEM(iii) % Values,4)  ! Ye
   
       WRITE (*,*) "ECAPEM % SIZE",i, j, k, l
-      DO ii = 1, 5
-         DO jj = 1, 1
-            DO kk = 1, 1
-               DO ll = 1, 5
+      DO ii = 1, i
+         DO jj = 81, 81
+            DO kk = 11, 12
+               DO ll = 18, 18
                   WRITE (*,*) "ECAPEM(", iii, ") % Values",ii, jj,&
                   kk, ll, "=",  ECAPEM(iii) % Values(ii,jj,kk,ll),&
                    "Units:", ECAPEM(iii) % Units
@@ -160,7 +164,8 @@ CONTAINS
 
     CALL Write1HDF_string( "Units", EnergyGrid % Units, &
                              group_id, datasize1d )
-
+   
+    datasize1d(1) = EnergyGrid % nPointsE
     CALL Write1dHDF_double( "Values", EnergyGrid % Values(:), &
                               group_id, datasize1d )
   
