@@ -18,6 +18,7 @@ MODULE wlEOSIOModuleHDF
   PUBLIC BroadcastEquationOfStateTableParallel
   PUBLIC MatchTableStructure
   PUBLIC TransferDependentVariables
+  PUBLIC EOSVertexQuery
 
 CONTAINS
 
@@ -327,6 +328,27 @@ CONTAINS
     END ASSOCIATE
 
   END SUBROUTINE MatchTableStructure
+
+
+  SUBROUTINE EOSVertexQuery( irho, iT, iYe, EOSTable, Values )
+
+    INTEGER                                    :: i, j
+    INTEGER, DIMENSION(:), INTENT(in)          :: irho
+    INTEGER, DIMENSION(:), INTENT(in)          :: iT
+    INTEGER, DIMENSION(:), INTENT(in)          :: iYe
+    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
+    REAL(dp), DIMENSION(:,:), INTENT(out)      :: Values
+
+    DO i = 1, SIZE(irho)
+      DO j = 1, EOSTable % DV % nVariables
+        Values(i,j) &
+          = 10**( EOSTable % DV % Variables(j) % Values&
+          ( irho(i), iT(i), iYe(i) ) ) -               &
+          EOSTable % DV % Offsets(j)
+      END DO
+    END DO
+
+  END SUBROUTINE EOSVertexQuery
 
 
 END MODULE wlEOSIOModuleHDF

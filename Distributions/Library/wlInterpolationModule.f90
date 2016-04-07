@@ -15,6 +15,7 @@ MODULE wlInterpolationModule
   PUBLIC GetGamma1
   PUBLIC ComputeTempFromIntEnergy
   PUBLIC ComputeTempFromEntropy
+  PUBLIC EOSTableQuery
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -709,5 +710,32 @@ CONTAINS
   DEALLOCATE( entropy_array, rhobuff, yebuff )
 
   END SUBROUTINE ComputeTempFromEntropy
+
+  SUBROUTINE EOSTableQuery&
+               ( rho, T, Ye, LogInterp, TS, DV, Interpolants )
+
+    INTEGER                                    :: i, j
+    REAL(dp), DIMENSION(:), INTENT(in)         :: rho
+    REAL(dp), DIMENSION(:), INTENT(in)         :: T
+    REAL(dp), DIMENSION(:), INTENT(in)         :: Ye
+    INTEGER, DIMENSION(3), INTENT(in)          :: LogInterp
+    TYPE(ThermoStateType), INTENT(in)          :: TS
+    TYPE(DependentVariablesType), INTENT(in)   :: DV
+    REAL(dp), DIMENSION(:,:), INTENT(out)      :: Interpolants
+
+!    CALL InitializeHDF( )
+
+!    CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
+
+    CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, &
+                                     TS, DV, Interpolants )
+    DO i = 1, SIZE(rho)
+      WRITE(*,*) 'Rho=', rho(i), 'T=', T(i), 'Ye=', Ye(i)
+      DO j = 1, DV % nVariables
+        WRITE(*,*) DV % Names(j), Interpolants(i,j)
+      END DO
+    END DO
+
+  END SUBROUTINE EOSTableQuery
 
 END MODULE wlInterpolationModule

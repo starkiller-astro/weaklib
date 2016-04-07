@@ -19,6 +19,7 @@ MODULE wlEquationOfStateTableModule
   PUBLIC DeAllocateEquationOfStateTable
   PUBLIC TableLimitFail
   PUBLIC SwapDependentVariables
+  PUBLIC IndexMatch
 
 CONTAINS 
 

@@ -12,7 +12,7 @@ PROGRAM wlCreateEquationOfStateTable
 
   implicit none
 
-  INTEGER                        :: i, j, k, l, count
+  INTEGER                        :: i, j, k, l, kmax, count
   INTEGER, DIMENSION(3)          :: nPoints
   INTEGER                        :: nVariables
   TYPE(EquationOfStateTableType) :: EOSTable
@@ -24,6 +24,9 @@ PROGRAM wlCreateEquationOfStateTable
   CHARACTER(len=128) :: LSFilePath
 
   LOGICAL            :: fail        ! did EoS fail to converge
+
+  REAL(8)                                       :: Ye_tmp
+  REAL(8), DIMENSION(:), ALLOCATABLE            :: Ye_save
 
   94 FORMAT ("rho=", es12.5,1x, "T=", es12.5,1x, "Ye=" , es12.5 )
   95 FORMAT ("Press=", es12.5,1x, "Entropy=", es12.5,1x, "Energy=" , es12.5 )
@@ -166,9 +169,23 @@ PRINT*, "Begin Associate"
 
   count = 0
 
+
   DO k = 1, EOSTable % nPoints(3) 
+    IF ( Ye(k) .gt. .505d0 ) THEN
+      kmax = k 
+      EXIT
+    END IF
+  END DO
+
+  ALLOCATE( Ye_save( EOSTable % nPoints(3) ) ) 
+
+write(*,*) "Ye grid",Ye
+  DO k = 1, EOSTable % nPoints(3) 
+  Ye_save(k) = Ye(k)
+  !DO k = 1, kmax
     DO j = 1, EOSTable % nPoints(2)
       DO i = 1, EOSTable % nPoints(1) 
+!          Ye_tmp = Ye(k)
           CALL wlGetFullEOS( Density(i), Temperature(j), Ye(k), EOSFlag, fail,      &
                        press(i,j,k), energ(i,j,k), entrop(i,j,k), chem_n(i,j,k),    &
                        chem_p(i,j,k), chem_e(i,j,k), xn_neut(i,j,k), xn_prot(i,j,k),&
@@ -180,14 +197,41 @@ PRINT*, "Begin Associate"
 
           IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. xn_prot(i,j,k) < 0.   &
                .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
+          write(*,*) "Fail at:",i,j,k
+          write(*,*) "Fail at:",density(i),temperature(j),ye(k)
           count = count + 1
           END IF
           
                
       END DO
+      write(*,*) "temp",j,"finished"
     END DO
   END DO
 
+  DO k = kmax, EOSTable % nPoints(3) 
+    Ye(k) = Ye_save(k)
+  END DO
+
+!DO k = kmax+1, EOSTable % nPoints(3) 
+!  DO j = 1, EOSTable % nPoints(2)
+!    DO i = 1, EOSTable % nPoints(1) 
+!      press(i,j,k) = press(i,j,kmax)
+!      energ(i,j,k) = energ(i,j,kmax)
+!      entrop(i,j,k) = entrop(i,j,kmax) 
+!      chem_n(i,j,k) = chem_n(i,j,kmax)
+!      chem_p(i,j,k) = chem_p(i,j,kmax) 
+!      chem_e(i,j,k) = chem_e(i,j,kmax) 
+!      xn_neut(i,j,k) = xn_neut(i,j,kmax) 
+!      xn_prot(i,j,k) = xn_prot(i,j,kmax) 
+!      xn_alpha(i,j,k) = xn_alpha(i,j,kmax)
+!      xn_heavy(i,j,k) = xn_heavy(i,j,kmax)
+!      a_heavy(i,j,k) = a_heavy(i,j,kmax) 
+!      z_heavy(i,j,k) = z_heavy(i,j,kmax)
+!      be_heavy(i,j,k) = be_heavy(i,j,kmax)
+!      thermalenergy(i,j,k) = thermalenergy(i,j,kmax)
+!      gamma1(i,j,k) = gamma1(i,j,kmax)
+
+write(*,*) "Ye grid post",Ye
 WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3) 
 
   END ASSOCIATE
