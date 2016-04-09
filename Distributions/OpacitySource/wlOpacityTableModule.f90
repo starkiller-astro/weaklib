@@ -115,7 +115,6 @@ CONTAINS
     CALL InitializeHDF( )
     CALL ReadEquationOfStateTableHDF &
            ( OpacityTable % EOSTable, "EquationOfStateTable.h5" )
-
     WRITE(*,*) 'Allocating OpacityTypeA' 
     CALL AllocateOpacityTypeA &
            ( OpacityTable % ECAPEM, nSpeciesA, &

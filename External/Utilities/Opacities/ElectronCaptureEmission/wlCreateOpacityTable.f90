@@ -88,6 +88,10 @@ PRINT*, "Allocate OpacityTable"
  
    CALL AllocateOpacityTable( OpacityTable, nSpeciesA, nPointsE ) 
 
+       WRITE(*,*) "EOS xheavy % Values(81,11,18) = ",&
+              OpacityTable % EOSTable % DV % Variables(10) % Values(81,11,18)
+   
+
    OpacityTable % ECAPEM     % Names = &
                                 &(/'Neutrino Emissivity '/)  
 
@@ -113,9 +117,9 @@ PRINT*, "Make Energy Grid"
 !-------------------------------------------------------------------------
 !            Printe The OpacityTable
 !-------------------------------------------------------------------------
-PRINT*, "Print The OpacityTable"
+!PRINT*, "Print The OpacityTable"
 
-   CALL DescribeOpacityTable( OpacityTable )
+  ! CALL DescribeOpacityTable( OpacityTable )
 
 
 !-------------------------------------------------------------------------
@@ -142,19 +146,21 @@ PRINT*, "Print The OpacityTable"
               chem_e = OpacityTable % EOSTable % DV % Variables (4) %&
                        Values (j_rho, k_t, l_ye)  !4 =Electron Chemical Potential             
 
-              chem_p = OpacityTable % EOSTable % DV % Variables (5) %&
-                       Values (j_rho, k_t, l_ye)  !5 =Proton Chemical Potential 
+              chem_p = 10**OpacityTable % EOSTable % DV % Variables (5) %&
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(5)            !5 =Proton Chemical Potential 
 
-              chem_n = OpacityTable % EOSTable % DV % Variables (6) %&
-                       Values (j_rho, k_t, l_ye)  !6 =Neutron Chemical Potential
+              chem_n = 10**OpacityTable % EOSTable % DV % Variables (6) %&
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % & 
+                       DV % Offsets(6)            !6 =Neutron Chemical Potential
 
-                 xp  = OpacityTable % EOSTable % DV % Variables (7) %&
+                 xp  = 10**OpacityTable % EOSTable % DV % Variables (7) %&
                        Values (j_rho, k_t, l_ye)  !7 =Proton Mass Fraction
 
-                 xn  = OpacityTable % EOSTable % DV % Variables (8) %&
+                 xn  = 10**OpacityTable % EOSTable % DV % Variables (8) %&
                        Values (j_rho, k_t, l_ye)  !8 =Neutron Mass Fraction
 
-             xheavy  = OpacityTable % EOSTable % DV % Variables (10) %&
+             xheavy  = 10**OpacityTable % EOSTable % DV % Variables (10) %&
                        Values (j_rho, k_t, l_ye)  !10 =Heavy Mass Fraction
 
                  Z   = OpacityTable % EOSTable % DV % Variables (11) %&
@@ -164,10 +170,24 @@ PRINT*, "Print The OpacityTable"
                        Values (j_rho, k_t, l_ye)  !12 =Heavy Mass Number 
 
               OpacityTable % ECAPEM(i_r) % Values (i_e, j_rho, k_t, l_ye) &
-               = totalECapEm(energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
-                if((j_rho ==81) .and. (k_t ==11) .and. (l_ye == 18) ) then
+               = totalECapEm(energy, rho, T, Z, A,&
+                      chem_e, chem_n, chem_p, &
+                      xheavy, xn, xp )
+                                !             xheavy    xn      xp
+                if((i_e == 20) .and.(j_rho ==81) .and. (k_t ==11) .and. (l_ye == 18) ) then
+                   WRITE (*,*) "energy = ", energy
+                   WRITE (*,*) "rho = ", rho
+                   WRITE (*,*) "T = ", T
+                   WRITE (*,*) "Z = ", Z
+                   WRITE (*,*) "A = ", A
+                   WRITE (*,*) "chem_e = ", chem_e
+                   WRITE (*,*) "chem_n = ", chem_n
+                   WRITE (*,*) "chem_p = ", chem_p
+                   WRITE (*,*) "xheavy = ", xheavy
                    WRITE (*,*) "xn = ", xn
                    WRITE (*,*) "xp = ", xp
+                   WRITE (*,*) "Ye = ",&
+                       OpacityTable % EOSTable % TS % States (3) % Values (l_ye)
                 end if
            END DO
          END DO
@@ -178,7 +198,7 @@ PRINT*, "Print The OpacityTable"
 
 PRINT*, "Print The OpacityTable"
 
-CALL DescribeOpacityTable( OpacityTable )
+  CALL DescribeOpacityTable( OpacityTable )
 
 
 !==================== Below Necessary ? ======================
@@ -191,8 +211,3 @@ CALL DescribeOpacityTable( OpacityTable )
 !=============================================================
 
 END PROGRAM wlCreateOpacityTable
-
-
-
-
-

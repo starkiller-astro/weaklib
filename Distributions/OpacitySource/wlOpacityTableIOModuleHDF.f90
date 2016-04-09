@@ -126,7 +126,7 @@ CONTAINS
       l=SIZE(ECAPEM(iii) % Values,4)  ! Ye
   
       WRITE (*,*) "ECAPEM % SIZE",i, j, k, l
-      DO ii = 1, i
+      DO ii = 12, 37
          DO jj = 81, 81
             DO kk = 11, 12
                DO ll = 18, 18
