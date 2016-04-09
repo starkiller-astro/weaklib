@@ -45,6 +45,7 @@ MODULE wlDependentVariablesModule
 
 CONTAINS
 
+
   SUBROUTINE AllocateDependentVariables( DV, nPoints, nVariables )
    
     TYPE(DependentVariablesType) :: DV 
@@ -62,13 +63,16 @@ CONTAINS
     DV % nVariables = nVariables
 
     DO i = 1, nVariables
-      ALLOCATE( DV % Variables(i) &
-                   % Values( 1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3) ) ) 
+      ALLOCATE &
+        ( DV % Variables(i) % Values &
+            (1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3)) ) 
     END DO
    
-    ALLOCATE( DV % Repaired( 1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3) ) ) 
+    ALLOCATE( DV % Repaired &
+                (1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3)) )
 
   END SUBROUTINE AllocateDependentVariables
+
 
   SUBROUTINE DeAllocateDependentVariables( DV )
   
@@ -86,6 +90,7 @@ CONTAINS
     DEALLOCATE( DV % Repaired )
 
   END SUBROUTINE DeAllocateDependentVariables
+
 
 END MODULE wlDependentVariablesModule
 

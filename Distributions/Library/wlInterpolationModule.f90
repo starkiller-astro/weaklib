@@ -603,7 +603,7 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: energy_table
     REAL(dp), INTENT(in) :: Offset
 
-    REAL(dp), DIMENSION(1)                  :: eibuff         ! internal energy buffer
+    REAL(dp), DIMENSION(1)                  :: eibuff ! internal energy buffer
     INTEGER                                 :: nPoints
     INTEGER                                 :: i, j
     REAL(dp), DIMENSION(:), ALLOCATABLE :: rhobuff 
@@ -646,9 +646,10 @@ CONTAINS
                         / LOG10( energy_array(i+1) / energy_array(i) ) )
     END DO
 
-  DEALLOCATE( energy_array, rhobuff, yebuff )
+    DEALLOCATE( energy_array, rhobuff, yebuff )
 
   END SUBROUTINE ComputeTempFromIntEnergy
+
 
   SUBROUTINE ComputeTempFromEntropy &
                ( rho, s, ye, density_table, temp_table, ye_table, &
@@ -664,7 +665,7 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: entropy_table
     REAL(dp), INTENT(in) :: Offset
 
-    REAL(dp), DIMENSION(1)                  :: sbuff         ! internal entropy buffer
+    REAL(dp), DIMENSION(1)                  :: sbuff ! entropy buffer
     INTEGER                                 :: nPoints
     INTEGER                                 :: i, j
     REAL(dp), DIMENSION(:), ALLOCATABLE :: rhobuff
@@ -711,7 +712,8 @@ CONTAINS
 
   END SUBROUTINE ComputeTempFromEntropy
 
-  SUBROUTINE EOSTableQuery&
+
+  SUBROUTINE EOSTableQuery &
                ( rho, T, Ye, LogInterp, TS, DV, Interpolants )
 
     INTEGER                                    :: i, j
