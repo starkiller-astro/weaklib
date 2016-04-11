@@ -47,8 +47,13 @@ PROGRAM wlTableFinisher
   Repaired = .false.
 
   Fail(:,:,:) = EOSTable % DV % Variables(1) % Values(:,:,:) <= 0.0d0  &
+                .or. EOSTable % DV % Variables(2) % Values(:,:,:) <= 0.0d0 &
+                .or. EOSTable % DV % Variables(3) % Values(:,:,:) <= 0.0d0 &
+                .or. EOSTable % DV % Variables(15) % Values(:,:,:) <= 0.0d0 &
                 .or. ISNAN(EOSTable % DV % Variables(1) % Values(:,:,:))  & 
-                .or. ISNAN(EOSTable % DV % Variables(3) % Values(:,:,:))   
+                .or. ISNAN(EOSTable % DV % Variables(2) % Values(:,:,:))  & 
+                .or. ISNAN(EOSTable % DV % Variables(3) % Values(:,:,:))  & 
+                .or. ISNAN(EOSTable % DV % Variables(15) % Values(:,:,:))   
 
   !------------------------------------------------------
   ! Find dimension (iMinGradient) with smallest gradient 
