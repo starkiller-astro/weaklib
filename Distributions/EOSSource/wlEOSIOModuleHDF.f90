@@ -144,9 +144,6 @@ CONTAINS
     INTEGER, DIMENSION(4)                         :: buffer
     INTEGER                                       :: nStates, nVariables, i
     INTEGER                                       :: i_count, num_procs
-    INTEGER                                       :: ntest
-
-    OPEN( newunit = ntest, FILE="NewBroadcastTest.d")
 
     IF ( myid == rootproc ) THEN
     
@@ -155,25 +152,18 @@ CONTAINS
       buffer(3) = EOSTable % nPoints(3)
       buffer(4) = EOSTable % nVariables
 
-      WRITE (ntest,*) "in: process", myid, "buffer(4)", buffer(4) 
-      WRITE (*,*) "rootproc buffer written"
-
     END IF
 
     i_count = SIZE(buffer) 
 
     CALL MPI_BCAST( buffer, i_count, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
       
-      WRITE (*,*) "rootproc buffer broadcast"
-
     IF ( myid /= rootproc ) THEN
       
       nPoints(1) = buffer(1)
       nPoints(2) = buffer(2)
       nPoints(3) = buffer(3)
       nVariables = buffer(4) 
-
-      WRITE (ntest,*) "out process", myid, "buffer(4)", nVariables 
 
       CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
@@ -189,37 +179,28 @@ CONTAINS
 
     END DO
 
-    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates,     &
+    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates,                          &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates,     &
+    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates,                          &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates, &
+    CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates,                      &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates, &
+    CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates,                      &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-
-    WRITE (ntest,*) "process", myid, "test TS data", EOSTable % TS % States(1) % Values(10)
-    WRITE (ntest,*) "process", myid, "test TS data", EOSTable % TS % Names(1) 
-    WRITE (ntest,*) "process", myid, "test TS data", EOSTable % TS % Units(1) 
 
     DO i= 1, EOSTable % nVariables  
-      CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count,  &
+      CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count,    &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     END DO
 
-    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables,                   &
+    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables,            &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables,                   &
+    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables,            &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Offsets(:), EOSTable % nVariables,                 &
+    CALL MPI_BCAST(EOSTable % DV % Offsets(:), EOSTable % nVariables,          &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,               &
+    CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,                   &
                    MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
-
-    WRITE (ntest,*) "process", myid, "test DV data", EOSTable % DV % Variables(1) % Values(10,10,10)
-    WRITE (ntest,*) "process", myid, "test DV data", EOSTable % DV % Names(1) 
-
-  CLOSE(ntest)
 
   END SUBROUTINE BroadcastEquationOfStateTableParallel
 
