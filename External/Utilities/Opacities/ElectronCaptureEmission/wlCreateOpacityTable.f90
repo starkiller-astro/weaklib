@@ -93,12 +93,12 @@ PRINT*, "Allocate OpacityTable"
    
 
    OpacityTable % ECAPEM     % Names = &
-                                &(/'Neutrino Emissivity '/)  
+                                &(/'Neutrino Opacity   '/)  
 
 PRINT*, "Allocate OpacityTable Units "
  
    OpacityTable % ECAPEM     % Units = &
-                                &(/'NEEDED   '/)  ! == 0229 == the Unit?
+                                &(/'cm-1               '/) 
 PRINT*, "Set E grid limits "
 
    OpacityTable % EnergyGrid % minValue = Emin  
@@ -143,8 +143,9 @@ PRINT*, "Make Energy Grid"
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
 
-              chem_e = OpacityTable % EOSTable % DV % Variables (4) %&
-                       Values (j_rho, k_t, l_ye)  !4 =Electron Chemical Potential             
+              chem_e = 10**OpacityTable % EOSTable % DV % Variables (4) %&
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(4)            !4 =Electron Chemical Potential             
 
               chem_p = 10**OpacityTable % EOSTable % DV % Variables (5) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
