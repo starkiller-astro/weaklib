@@ -70,8 +70,8 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
-  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.7, 0.06d0/)
-  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.7, 0.062d0/)
+  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.542d0/)
 
 !------------------------------------------------------------------------------
 ! Generate rho, T, Ye grid from limits
@@ -197,14 +197,11 @@ write(*,*) "Ye grid",Ye
 
           IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. xn_prot(i,j,k) < 0.   &
                .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
-          write(*,*) "Fail at:",i,j,k
-          write(*,*) "Fail at:",density(i),temperature(j),ye(k)
           count = count + 1
           END IF
           
                
       END DO
-      write(*,*) "temp",j,"finished"
     END DO
   END DO
 
