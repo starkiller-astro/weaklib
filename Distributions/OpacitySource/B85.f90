@@ -23,7 +23,7 @@ MODULE B85
 !-----------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
-    kMeV, therm1, therm2, dmnp, me, mbG
+    kMeV, therm1, therm2, dmnp, me, mbG, mp
 
 
   implicit none
@@ -57,7 +57,8 @@ CONTAINS
     if(z.gt.28.0)               npz = 8.0
     
 
-    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
+    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p+dmnp)/TMeV ) - 1.0_dp ) )
+ !   etapn = rho * xp  / mp                  ! Approxiation in the nondegenerate regime
 
     midFe = 1.0_dp / ( EXP( (energy+dmnp-chem_e) / TMeV ) + 1.0_dp )
 
