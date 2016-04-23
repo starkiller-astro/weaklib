@@ -15,69 +15,88 @@ PROGRAM wlThermoStateTest
 
   IMPLICIT NONE
 
-  INTEGER :: i
-  INTEGER, DIMENSION(3) :: npts
-  INTEGER, DIMENSION(3) :: npts2
-  TYPE(ThermoStateType) :: ThermoState
-  TYPE(ThermoStateType) :: ThermoState2
-  INTEGER(HID_T) :: file_id
-  INTEGER(HID_T) :: group_id
+  INTEGER               :: iTS, iPt
+  INTEGER,    PARAMETER :: iD = 1, iT = 2, iY = 3
+  INTEGER, DIMENSION(3) :: nPoints
+  TYPE(ThermoStateType) :: TS
+  INTEGER(HID_T)        :: file_id, group_id
 
-  npts = (/10,31,61/)
+  ! --- Create Grid of Thermodynamic States ---
 
-  CALL AllocateThermoState( ThermoState, npts )
+  nPoints = (/ 7, 8, 9 /)
 
-  ThermoState % nPoints(1:3) = npts(1:3)
-  ThermoState % Names(1:3) = (/ 'Density                         ',&
-                                'Temperature                     ',&
-                                'Electron Fraction               ' /)
+  CALL AllocateThermoState( TS, nPoints )
 
-  ThermoState % Units(1:3) = (/ 'Grams per cm^3                  ', &
-                                'K                               ', &
-                                '                                ' /)
-    
-  ThermoState % minValues(1:3) =  (/1.0d06,0.1d00,1.0d-02/)
-  ThermoState % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
+  TS % nPoints(1:3) = nPoints(1:3)
 
-  CALL MakeLogGrid( ThermoState % minValues(1), ThermoState % maxValues(1),&
-         ThermoState % nPoints(1), ThermoState % States(1) % Values)
-  CALL MakeLogGrid( ThermoState % minValues(2), ThermoState % maxValues(2),&
-         ThermoState % nPoints(2), ThermoState % States(2) % Values)
-  CALL MakeLinearGrid( ThermoState % minValues(3), ThermoState % maxValues(3),&
-         ThermoState % nPoints(3), ThermoState % States(3) % Values)
+  TS % Names(1:3) &
+    = (/ 'Density                         ',&
+         'Temperature                     ',&
+         'Electron Fraction               ' /)
+
+  TS % Units(1:3) &
+    = (/ 'Grams per cm^3                  ', &
+         'K                               ', &
+         '                                ' /)
+
+  TS % minValues(1:3) &
+    =  (/ 1.0d06, 0.1d00, 1.0d-02 /)
+  TS % maxValues(1:3) &
+    =  (/ 1.0d15, 1.0d02, 6.1d-01 /)
+
+  CALL MakeLogGrid &
+         ( TS % minValues(iD), TS % maxValues(iD), TS % nPoints(iD), &
+           TS % States(iD) % Values )
+  CALL MakeLogGrid &
+         ( TS % minValues(iT), TS % maxValues(iT), TS % nPoints(iT), &
+           TS % States(iT) % Values )
+  CALL MakeLinearGrid &
+         ( TS % minValues(iY), TS % maxValues(iY), TS % nPoints(iY), &
+           TS % States(iY) % Values )
+
+  ! --- Write Thermodynamic States to HDF5 File ---
 
   CALL InitializeHDF( )
   CALL OpenFileHDF( "ThermoStateFile.h5", .true., file_id )
   CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-  CALL WriteThermoStateHDF( ThermoState, group_id )
+  CALL WriteThermoStateHDF( TS, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
  
-  CALL DeAllocateThermoState( ThermoState )
+  CALL DeAllocateThermoState( TS )
+
+  ! --- Read Thermodynamics States from File ---
+
+  nPoints = 0
 
   CALL OpenFileHDF( "ThermoStateFile.h5", .false., file_id )
   CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
-  CALL ReadDimensionsHDF( npts2, group_id )
-  CALL AllocateThermoState( ThermoState2, npts2 )
-  ThermoState2 % nPoints(1:3) = npts(1:3)
-  ThermoState2 % Names(1:3) = (/'Density                         ',&
-                               'Temperature                     ',&
-                               'Electron Fraction               '/)
-    
-  ThermoState2 % minValues(1:3) =  (/1.0d06,0.1d00,1.0d-02/)
-  ThermoState2 % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
-  ThermoState2 % nPoints(1:3) = npts2(1:3)
-  CALL ReadThermoStateHDF( ThermoState2, file_id )
+  CALL ReadDimensionsHDF( nPoints, group_id )
+
+  CALL AllocateThermoState( TS, nPoints )
+  CALL ReadThermoStateHDF( TS, file_id )
+
   CALL CloseFileHDF( file_id )
 
-  DO i = 1,3
-    WRITE(*,*) TRIM( ThermoState2 % Names(i) )
-    WRITE(*,*) ThermoState2 % nPoints(i)
-    WRITE(*,*) ThermoState2 % minValues(i), ThermoState2 % maxValues(i)
-    WRITE(*,*) ThermoState2 % States(i) % Values(:)
-  END DO
+  ! --- Write Contents of Thermodynamic States ---
 
-  CALL DeAllocateThermoState( ThermoState2 )
+  DO iTS = 1, 3
+    WRITE(*,*)
+    WRITE(*,'(A4,A21,I1,A3,A)') &
+      ' ', 'Independent Variable ', iTS, ' = ', TRIM( TS % Names(iTS) )
+    WRITE(*,'(A6,A8,I1,A4,I4.4)') &
+      ' ', 'nPoints(', iTS, ') = ', TS % nPoints(iTS)
+    WRITE(*,'(A6,A12,ES10.4E2,A3,ES10.4E2)') &
+      ' ', 'Min / Max = ', TS % minValues(iTS),' / ', TS % maxValues(iTS)
+    WRITE(*,'(A6,A7)') ' ', 'Values:'
+    DO iPt = 1, nPoints(iTS)
+      WRITE(*,'(A8,A6,I1,A4,ES10.4E2,A1,A)') &
+        ' ', 'Value(', iPt,') = ', TS % States(iTS) % Values(iPt), ' ', TRIM( TS % Units(iTS) )
+    END DO
+  END DO
+  WRITE(*,*)
+
+  CALL DeAllocateThermoState( TS )
 
   CALL FinalizeHDF( )
 
