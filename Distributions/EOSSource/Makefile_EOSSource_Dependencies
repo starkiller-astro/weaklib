@@ -1,0 +1,13 @@
+wlEquationOfStateTableModule.o: \
+  wlKindModule.o \
+  wlThermoStateModule.o \
+  wlDependentVariablesModule.o \
+  wlEquationOfStateTableModule.f90
+
+wlEOSIOModuleHDF.o: \
+  wlKindModule.o \
+  wlThermoStateModule.o \
+  wlDependentVariablesModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.f90

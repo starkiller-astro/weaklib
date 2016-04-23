@@ -1,0 +1,3 @@
+EOSSOURCE = \
+  wlEquationOfStateTableModule.o \
+  wlEOSIOModuleHDF.o

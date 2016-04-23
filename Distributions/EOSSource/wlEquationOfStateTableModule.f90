@@ -3,9 +3,10 @@ MODULE wlEquationOfStateTableModule
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
+
   USE HDF5
 
-  implicit none
+  IMPLICIT NONE
   PRIVATE
 
   TYPE, PUBLIC :: EquationOfStateTableType
@@ -52,17 +53,16 @@ CONTAINS
 
   LOGICAL FUNCTION TableLimitFail( rho, t, ye, EOSTable )
 
-    !LOGICAL                                    :: TableLimitFail
     REAL(dp), INTENT(in)                       :: rho, t, ye
     TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
 
-      TableLimitFail = .false.
-      IF ( rho < EOSTable % TS % minValues(1) ) TableLimitFail = .true.
-      IF ( rho > EOSTable % TS % maxValues(1) ) TableLimitFail = .true.
-      IF (   t < EOSTable % TS % minValues(2) ) TableLimitFail = .true.
-      IF (   t > EOSTable % TS % maxValues(2) ) TableLimitFail = .true.
-      IF (  ye < EOSTable % TS % minValues(3) ) TableLimitFail = .true.
-      IF (  ye > EOSTable % TS % maxValues(3) ) TableLimitFail = .true.
+    TableLimitFail = .false.
+    IF ( rho < EOSTable % TS % minValues(1) ) TableLimitFail = .true.
+    IF ( rho > EOSTable % TS % maxValues(1) ) TableLimitFail = .true.
+    IF (   t < EOSTable % TS % minValues(2) ) TableLimitFail = .true.
+    IF (   t > EOSTable % TS % maxValues(2) ) TableLimitFail = .true.
+    IF (  ye < EOSTable % TS % minValues(3) ) TableLimitFail = .true.
+    IF (  ye > EOSTable % TS % maxValues(3) ) TableLimitFail = .true.
 
   END FUNCTION TableLimitFail
 

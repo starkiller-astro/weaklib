@@ -1,13 +1,14 @@
 MODULE wlEOSIOModuleHDF
 
   USE wlKindModule, ONLY: dp
-  USE HDF5 
   USE wlThermoStateModule
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
 
-  implicit none
+  USE HDF5 
+
+  IMPLICIT NONE
   PRIVATE
 
   INTEGER :: hdferr
