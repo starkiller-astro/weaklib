@@ -1,0 +1,23 @@
+include ../../../Build/Makefile_Build
+
+all: wlThermoStateTest
+
+wlThermoStateTest: \
+	$(weaklib) wlThermoStateTest.o
+	$(FLINKER) $(FLAGS) -o wlThermoStateTest_$(MACHINE) \
+	$(weaklib) wlThermoStateTest.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f wlThermoStateTest_$(MACHINE)
+
+wlThermoStateTest.o: \
+  wlKindModule.o \
+  wlGridModule.o \
+  wlThermoStateModule.o \
+  wlDependentVariablesModule.o \
+  wlIOModuleHDF.o \
+  wlThermoStateTest.f90
