@@ -1,76 +1,74 @@
 PROGRAM wlDependentVariablesTest
  
-  USE wlDependentVariablesModule
+  USE wlDependentVariablesModule, ONLY: &
+    DependentVariablesType, &
+    AllocateDependentVariables, &
+    DeAllocateDependentVariables
+  USE wlIOModuleHDF, ONLY: &
+    InitializeHDF, OpenFileHDF, OpenGroupHDF, &
+    WriteDependentVariablesHDF, CloseGroupHDF, & 
+    ReadDependentVariablesHDF, CloseFileHDF, &
+    FinalizeHDF, ReadDimensionsHDF, &
+    ReadDependentVariablesHDF, ReadNumberVariablesHDF
+
   USE HDF5
-  USE wlThermoStateModule
-  USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
-                           WriteDependentVariablesHDF, CloseGroupHDF,        & 
-                           ReadDependentVariablesHDF, CloseFileHDF,          &
-                           FinalizeHDF, ReadDimensionsHDF,                   &
-                           ReadDependentVariablesHDF, ReadNumberVariablesHDF
-  implicit none
 
-  INTEGER :: i
-  INTEGER, DIMENSION(3) :: nPoints
-  INTEGER, DIMENSION(3) :: nPoints2
-  INTEGER :: nVariables
-  INTEGER :: nVariables2
-  INTEGER :: j
+  IMPLICIT NONE
+
+  INTEGER                      :: iVar, nVariables
+  INTEGER, DIMENSION(3)        :: nPoints
   TYPE(DependentVariablesType) :: DV
-  TYPE(DependentVariablesType) :: DV2
-  INTEGER(HID_T) :: file_id
-  INTEGER(HID_T) :: group_id
+  INTEGER(HID_T)               :: file_id, group_id
 
-print*,"1"
+  ! --- Create Table Structures for Dependent Variables ---
 
-  nPoints = (/10,10,10/)
-  nVariables = 13
-  CALL AllocateDependentVariables( DV, nPoints , nVariables )
+  CALL AllocateDependentVariables &
+         ( DV, nPoints = (/ 10, 10, 10 /) , nVariables = 13 )
 
-  DV % nPoints(1:3) = nPoints(1:3)
-  DV % nVariables = nVariables
+  DV % Names(1:DV % nVariables) &
+    = (/ 'Pressure                        ', &
+         'Entropy Per Baryon              ', &
+         'Internal Energy Density         ', &
+         'Electron Chemical Potential     ', &
+         'Proton Chemical Potential       ', &
+         'Neutron Chemical Potential      ', &
+         'Proton Mass Fraction            ', &
+         'Neutron Mass Fraction           ', &
+         'Alpha Mass Fraction             ', &
+         'Heavy Mass Fraction             ', &
+         'Heavy Charge Number             ', &
+         'Heavy Mass Number               ', &
+         'Heavy Binding Energy            ' /)
 
-print*,"2"
+  DV % Units(1:DV % nVariables) &
+    = (/ 'Dynes per cm^2                  ', &
+         'k_b per baryon                  ', &
+         'erg per gram                    ', &
+         'MeV                             ', &
+         'MeV                             ', &
+         'MeV                             ', &
+         '                                ', &
+         '                                ', &
+         '                                ', &
+         '                                ', &
+         '                                ', &
+         '                                ', &
+         'MeV                             ' /)
 
-  DV % Names(1:13) = (/'Pressure                        ', &
-                       'Entropy Per Baryon              ', &
-                       'Internal Energy Density         ', &
-                       'Electron Chemical Potential     ', &
-                       'Proton Chemical Potential       ', &
-                       'Neutron Chemical Potential      ', &
-                       'Proton Mass Fraction            ', &
-                       'Neutron Mass Fraction           ', &
-                       'Alpha Mass Fraction             ', &
-                       'Heavy Mass Fraction             ', &
-                       'Heavy Charge Number             ', &
-                       'Heavy Mass Number               ', &
-                       'Heavy Binding Energy            '/)               
+  WRITE(*,*)
+  DO iVar = 1, SIZE( DV % Variables )
+    WRITE (*,'(A4,A32,A10,3I5.3)') &
+      ' ', TRIM( DV % Names(iVar) ), ', Shape = ', SHAPE( DV % Variables(iVar) % Values )
+  END DO
+  WRITE(*,*)
 
-  DV % Units(1:13) = (/'Dynes per cm^2                  ', &
-                       'k_b per baryon                  ', &
-                       'erg per gram                    ', &
-                       'MeV                             ', &
-                       'MeV                             ', &
-                       'MeV                             ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       'MeV                             '/)
+  ! --- Initialize Table Entries with Mock Values --- 
 
-print*,"3"
-
-  DO i = 1, SIZE( DV % Variables )
-    WRITE (*,*) SHAPE( DV % Variables(i) % Values )
+  DO iVar = 1, SIZE( DV % Variables )
+    DV % Variables(iVar) % Values = REAL( iVar )
   END DO
 
-  DO i = 1, SIZE( DV % Variables )
-    DV % Variables(i) % Values = i 
-  END DO
-
-print*,"4"
+  ! --- Write Table to HDF5 File --- 
 
   CALL InitializeHDF( )
   CALL OpenFileHDF( "DependentVariablesFile.h5", .true., file_id )
@@ -78,50 +76,50 @@ print*,"4"
   CALL WriteDependentVariablesHDF( DV, group_id )
   CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
+
   CALL DeAllocateDependentVariables( DV )
 
-print*,"5"
+  IF( ALLOCATED( DV % Variables ) )THEN
+    WRITE(*,*)
+    WRITE(*,'(A4,A)') &
+      ' ', 'ERROR: Dependent Variables Allocated After Deallocation'
+    WRITE(*,*)
+    STOP
+  END IF
+
+  nPoints = 0; nVariables = 0
+
+  ! --- Read Dependent Variables from HDF5 File ---
 
   CALL OpenFileHDF( "DependentVariablesFile.h5", .false., file_id )
   CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
-  CALL ReadDimensionsHDF( nPoints2, group_id )
-  CALL ReadNumberVariablesHDF( nVariables2, group_id )
-  CALL AllocateDependentVariables( DV2, nPoints2, nVariables2 )
 
-print*, "6"
+  CALL ReadDimensionsHDF( nPoints, group_id )
+  CALL ReadNumberVariablesHDF( nVariables, group_id )
 
-  DV2 % nPoints(1:3) = nPoints2(1:3)
-  DV2 % nVariables = nVariables2
-  DV2 % Units(1:13) = (/'Dynes per cm^2                  ', &
-                       'k_b per baryon                  ', &
-                       'erg per gram                    ', &
-                       'MeV                             ', &
-                       'MeV                             ', &
-                       'MeV                             ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       '                                ', &
-                       'MeV                             '/)
-  CALL ReadDependentVariablesHDF( DV2, file_id )
-  !CALL ReadDimensionsHDF( nPoints2, group_id )
+  CALL AllocateDependentVariables &
+         ( DV, nPoints = nPoints, nVariables = nVariables )
+  CALL ReadDependentVariablesHDF( DV, file_id )
 
-
-  !CALL ReadDependentVariablesHDF( DV2, group_id )
-  !CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
 
-  DO j = 1,12
-    WRITE(*,*)
-    WRITE(*,*) TRIM( DV2 % Names(j) ) , j
-    WRITE(*,*)
-    WRITE(*,*) DV2 % Variables(j) % Values(:,:,:)
-    WRITE(*,*)
-  END DO
+  ! --- Write Contents of Dependent Variables ---
 
-  CALL DeAllocateDependentVariables( DV2 )
+  DO iVar = 1, DV % nVariables
+    WRITE(*,*)
+    WRITE(*,'(A4,A19,I2.2,A3,A)') &
+      ' ', 'Dependent Variable ', iVar, ' = ', TRIM( DV % Names(iVar) )
+    WRITE(*,'(A6,A9,A)') &
+      ' ', 'Units  = ', TRIM( DV % Units(iVar) )
+    WRITE(*,'(A6,A8,3I4.3)') &
+      ' ', 'Shape  =', SHAPE( DV % Variables(iVar) % Values )
+    WRITE(*,'(A6,A19,ES10.4,A3,ES10.4)') &
+      ' ', 'Min / Max Values = ', MINVAL( DV % Variables(iVar) % Values ), &
+                           ' / ', MAXVAL( DV % Variables(iVar) % Values )
+  END DO
+  WRITE(*,*)
+
+  CALL DeAllocateDependentVariables( DV )
 
   CALL FinalizeHDF( )
  

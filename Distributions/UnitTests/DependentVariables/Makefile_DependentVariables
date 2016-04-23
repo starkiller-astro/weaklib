@@ -1,0 +1,20 @@
+include ../../../Build/Makefile_Build
+
+all: wlDependentVariablesTest
+
+wlDependentVariablesTest: \
+	$(weaklib) wlDependentVariablesTest.o
+	$(FLINKER) $(FLAGS) -o wlDependentVariablesTest_$(MACHINE) \
+	$(weaklib) wlDependentVariablesTest.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f wlDependentVariablesTest_$(MACHINE)
+
+wlDependentVariablesTest.o: \
+  wlDependentVariablesModule.o \
+  wlIOModuleHDF.o \
+  wlDependentVariablesTest.f90
