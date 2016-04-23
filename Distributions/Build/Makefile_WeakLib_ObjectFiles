@@ -1,0 +1,6 @@
+include ../../../Library/Makefile_Library_ObjectFiles
+include ../../../EOSSource/Makefile_EOSSource_ObjectFiles
+include ../../../OpacitySource/Makefile_OpacitySource_ObjectFiles
+
+weaklib = \
+  $(LIBRARY) $(EOSSOURCE) $(OPACITYSOURCE)
