@@ -65,7 +65,7 @@ PROGRAM wlThermoStateTest
  
   CALL DeAllocateThermoState( TS )
 
-  ! --- Read Thermodynamics States from File ---
+  ! --- Read Thermodynamic States from File ---
 
   nPoints = 0
 
