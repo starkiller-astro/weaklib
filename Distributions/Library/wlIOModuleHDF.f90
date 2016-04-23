@@ -378,8 +378,6 @@ CONTAINS
     INTEGER                                     :: i
     INTEGER, DIMENSION(1)                       :: buffer
 
-  WRITE (*,*) "Starting HDF TS write "
-
     datasize1d(1) = 3
     CALL Write1dHDF_integer( "Dimensions", TS % nPoints(:), &
                              group_id, datasize1d )
@@ -398,7 +396,6 @@ CONTAINS
                               group_id, datasize1d )
     END DO
  
-  WRITE (*,*) "Starting HDF indicies write "
     datasize1d = 1
     buffer(1) = TS % Indices % iRho
     CALL Write1dHDF_integer( "iRho", buffer, &
@@ -411,8 +408,6 @@ CONTAINS
     buffer(1) = TS % Indices % iYe
     CALL Write1dHDF_integer( "iYe", buffer, &
                              group_id, datasize1d )
-
-  WRITE (*,*) "HDF indicies write successful "
 
   END SUBROUTINE WriteThermoStateHDF
 
