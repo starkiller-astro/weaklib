@@ -379,35 +379,33 @@ CONTAINS
     INTEGER, DIMENSION(1)                       :: buffer
 
     datasize1d(1) = 3
-    CALL Write1dHDF_integer( "Dimensions", TS % nPoints(:), &
-                             group_id, datasize1d )
+    CALL Write1dHDF_integer &
+           ( "Dimensions", TS % nPoints(:), group_id, datasize1d )
     
-    CALL Write1dHDF_integer( "LogInterp", TS % LogInterp(:), &
-                             group_id, datasize1d )
+    CALL Write1dHDF_integer &
+           ( "LogInterp", TS % LogInterp(:), group_id, datasize1d )
     
-    CALL Write1dHDF_string( "Names", TS % Names(:), &
-                             group_id, datasize1d )
+    CALL Write1dHDF_string &
+           ( "Names", TS % Names(:), group_id, datasize1d )
 
-    CALL Write1dHDF_string( "Units", TS % Units(:), &
-                             group_id, datasize1d )
+    CALL Write1dHDF_string &
+           ( "Units", TS % Units(:), group_id, datasize1d )
+
     DO i = 1, 3
       datasize1d(1) = TS % nPoints(i)
-      CALL Write1dHDF_double( TS % Names(i), TS % States(i) % Values(:), &
-                              group_id, datasize1d )
+      CALL Write1dHDF_double &
+             ( TS % Names(i), TS % States(i) % Values(:), group_id, datasize1d )
     END DO
  
     datasize1d = 1
     buffer(1) = TS % Indices % iRho
-    CALL Write1dHDF_integer( "iRho", buffer, &
-                             group_id, datasize1d )
+    CALL Write1dHDF_integer( "iRho", buffer, group_id, datasize1d )
     
     buffer(1) = TS % Indices % iT
-    CALL Write1dHDF_integer( "iT", buffer, &
-                             group_id, datasize1d )
+    CALL Write1dHDF_integer( "iT",   buffer, group_id, datasize1d )
 
     buffer(1) = TS % Indices % iYe
-    CALL Write1dHDF_integer( "iYe", buffer, &
-                             group_id, datasize1d )
+    CALL Write1dHDF_integer( "iYe",  buffer, group_id, datasize1d )
 
   END SUBROUTINE WriteThermoStateHDF
 

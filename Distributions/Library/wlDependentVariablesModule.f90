@@ -48,28 +48,27 @@ CONTAINS
 
   SUBROUTINE AllocateDependentVariables( DV, nPoints, nVariables )
    
-    TYPE(DependentVariablesType) :: DV 
-    INTEGER, INTENT(in) :: nVariables
+    TYPE(DependentVariablesType)      :: DV 
+    INTEGER,               INTENT(in) :: nVariables
     INTEGER, DIMENSION(3), INTENT(in) :: nPoints
 
     INTEGER :: i
+
+    DV % nPoints    = nPoints
+    DV % nVariables = nVariables
 
     ALLOCATE( DV % Names( nVariables ) )
     ALLOCATE( DV % Units( nVariables ) )
     ALLOCATE( DV % Offsets( nVariables ) ) 
     ALLOCATE( DV % Variables( nVariables ) ) 
-    
-    DV % nPoints = nPoints
-    DV % nVariables = nVariables
+
+    ALLOCATE( DV % Repaired(1:nPoints(1), 1:nPoints(2), 1:nPoints(3)) )
 
     DO i = 1, nVariables
       ALLOCATE &
-        ( DV % Variables(i) % Values &
-            (1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3)) ) 
+        ( DV % Variables(i) &
+             % Values(1:nPoints(1), 1:nPoints(2), 1:nPoints(3)) )
     END DO
-   
-    ALLOCATE( DV % Repaired &
-                (1:DV % nPoints(1), 1:DV % nPoints(2), 1:DV % nPoints(3)) )
 
   END SUBROUTINE AllocateDependentVariables
 
@@ -80,14 +79,16 @@ CONTAINS
 
     INTEGER :: i
 
-    DO i = 1, SIZE( DV % Variables )
+    DO i = 1, DV % nVariables
       DEALLOCATE( DV % Variables(i) % Values )
     END DO
    
-    DEALLOCATE( DV % Variables )
-    DEALLOCATE( DV % Names )
-    DEALLOCATE( DV % Units )
     DEALLOCATE( DV % Repaired )
+
+    DEALLOCATE( DV % Variables )
+    DEALLOCATE( DV % Offsets )
+    DEALLOCATE( DV % Units )
+    DEALLOCATE( DV % Names )
 
   END SUBROUTINE DeAllocateDependentVariables
 
