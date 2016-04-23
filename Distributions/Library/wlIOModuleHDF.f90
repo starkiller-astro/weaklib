@@ -6,7 +6,7 @@ MODULE wlIOModuleHDF
 
   USE HDF5 
 
-  implicit none
+  IMPLICIT NONE
   PRIVATE
 
   INTEGER :: hdferr

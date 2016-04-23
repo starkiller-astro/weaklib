@@ -1,0 +1,7 @@
+LIBRARY = \
+  wlKindModule.o \
+  wlGridModule.o \
+  wlThermoStateModule.o \
+  wlDependentVariablesModule.o \
+  wlInterpolationModule.o \
+  wlIOModuleHDF.o
