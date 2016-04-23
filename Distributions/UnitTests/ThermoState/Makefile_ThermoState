@@ -18,6 +18,5 @@ wlThermoStateTest.o: \
   wlKindModule.o \
   wlGridModule.o \
   wlThermoStateModule.o \
-  wlDependentVariablesModule.o \
   wlIOModuleHDF.o \
   wlThermoStateTest.f90

@@ -1,22 +1,23 @@
 PROGRAM wlThermoStateTest
 
-  USE wlThermoStateModule
-  USE wlDependentVariablesModule
   USE wlKindModule, ONLY: dp
-  USE wlGridModule, ONLY: MakeLinearGrid, MakeLogGrid
+  USE wlGridModule, ONLY: &
+    MakeLinearGrid, MakeLogGrid
+  USE wlThermoStateModule, ONLY: &
+    ThermoStateType, AllocateThermoState, DeAllocateThermoState
+  USE wlIOModuleHDF, ONLY: &
+    InitializeHDF, OpenFileHDF, OpenGroupHDF, &
+    WriteThermoStateHDF, ReadThermoStateHDF, &
+    CloseGroupHDF, CloseFileHDF, FinalizeHDF, &
+    ReadDimensionsHDF, ReadThermoStateHDF
+
   USE HDF5
-  USE wlIOModuleHDF, ONLY: InitializeHDF, OpenFileHDF, OpenGroupHDF,         &
-                           WriteThermoStateHDF, ReadThermoStateHDF,          & 
-                           CloseGroupHDF, CloseFileHDF, FinalizeHDF,         &
-                           ReadDimensionsHDF, ReadThermoStateHDF
 
-  implicit none
+  IMPLICIT NONE
 
-
+  INTEGER :: i
   INTEGER, DIMENSION(3) :: npts
   INTEGER, DIMENSION(3) :: npts2
-  INTEGER :: nvar
-  INTEGER :: j   
   TYPE(ThermoStateType) :: ThermoState
   TYPE(ThermoStateType) :: ThermoState2
   INTEGER(HID_T) :: file_id
@@ -24,17 +25,16 @@ PROGRAM wlThermoStateTest
 
   npts = (/10,31,61/)
 
-
   CALL AllocateThermoState( ThermoState, npts )
 
   ThermoState % nPoints(1:3) = npts(1:3)
-  ThermoState % Names(1:3) = (/'Density                         ',&
-                               'Temperature                     ',&
-                               'Electron Fraction               '/)
+  ThermoState % Names(1:3) = (/ 'Density                         ',&
+                                'Temperature                     ',&
+                                'Electron Fraction               ' /)
 
-  ThermoState % Units(1:3) = (/'Grams per cm^3                  ', &
-                               'K                               ', &
-                               '                                '/)
+  ThermoState % Units(1:3) = (/ 'Grams per cm^3                  ', &
+                                'K                               ', &
+                                '                                ' /)
     
   ThermoState % minValues(1:3) =  (/1.0d06,0.1d00,1.0d-02/)
   ThermoState % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
@@ -68,18 +68,13 @@ PROGRAM wlThermoStateTest
   ThermoState2 % maxValues(1:3) =  (/1.0d15,1.0d02,6.1d-01/)
   ThermoState2 % nPoints(1:3) = npts2(1:3)
   CALL ReadThermoStateHDF( ThermoState2, file_id )
-  !CALL AllocateThermoState( ThermoState2, npts )
-
-
-  !CALL ReadThermoStateHDF( ThermoState2, group_id )
-  !CALL CloseGroupHDF( group_id )
   CALL CloseFileHDF( file_id )
 
-  DO j = 1,3
-    WRITE(*,*) TRIM( ThermoState2 % Names(j) )
-    WRITE(*,*) ThermoState2 % nPoints(j)
-    WRITE(*,*) ThermoState2 % minValues(j), ThermoState2 % maxValues(j)
-    WRITE(*,*) ThermoState2 % States(j) % Values(:)
+  DO i = 1,3
+    WRITE(*,*) TRIM( ThermoState2 % Names(i) )
+    WRITE(*,*) ThermoState2 % nPoints(i)
+    WRITE(*,*) ThermoState2 % minValues(i), ThermoState2 % maxValues(i)
+    WRITE(*,*) ThermoState2 % States(i) % Values(:)
   END DO
 
   CALL DeAllocateThermoState( ThermoState2 )
