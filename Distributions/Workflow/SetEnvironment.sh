@@ -11,7 +11,7 @@ if [[ $WEAKLIB_MACHINE == titan* ]]; then
 
   module unload fftw cray-hdf5 cray-petsc silo subversion
   module unload pgi gcc cce pathscale
-  module unload PrgEnv-pgi PrgEnv-gnu PrgEnv-cray PrgEnv-pathscale
+  module unload PrgEnv-pgi PrgEnv-gnu PrgEnv-cray PrgEnv-pathscale PrgEnv-intel
 
 elif [[ $WEAKLIB_MACHINE == sn1987b* ]]; then
 
