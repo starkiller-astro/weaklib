@@ -98,7 +98,7 @@ MODULE wlOpacityTableModule
 
   PUBLIC AllocateOpacityTable 
   PUBLIC DeAllocateOpacityTable
-
+  PUBLIC AllocateEmptyOpacityTable
 CONTAINS
 
 
@@ -137,6 +137,31 @@ CONTAINS
     CALL DeAllocateEnergyGrid( OpacityTable % EnergyGrid ) 
  
   END SUBROUTINE DeAllocateOpacityTable
+
+  SUBROUTINE AllocateEmptyOpacityTable&
+            ( OpacityTable, nSpeciesA, nPointsE, nPoints, nVariables )
+
+    TYPE(OpacityTableType), INTENT(inout)  :: OpacityTable
+    INTEGER, DIMENSION(3), INTENT(in)      :: nPoints
+    INTEGER, INTENT(in)                    :: nPointsE
+    INTEGER, INTENT(in)                    :: nSpeciesA
+    INTEGER, INTENT(in)                    :: nVariables
+
+    WRITE(*,*)'Allocating EOSTable'
+    CALL AllocateEquationOfStateTable( OpacityTable % EOSTable, nPoints, nVariables )    
+   
+    WRITE(*,*) 'Allocating OpacityTypeA'
+    CALL AllocateOpacityTypeA &
+           ( OpacityTable % ECAPEM, nSpeciesA, &
+             OpacityTable % EOSTable % nPoints, nPointsE )  ! just for TypeA
+
+    WRITE(*,*) 'Allocating EnergyGrid'
+    CALL AllocateEnergyGrid( OpacityTable % EnergyGrid, nPointsE )
+
+    WRITE(*,*) 'Allocation Complete'
+
+  END SUBROUTINE AllocateEmptyOpacityTable
+
 
 
 !==========================================================================
