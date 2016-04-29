@@ -6,7 +6,6 @@ MODULE wlIOModuleCHIMERA
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
   USE wlInterpolationModule
-  USE wlExtTableFinishingModule
   USE wlExtNumericalModule, ONLY: epsilon, zero
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
@@ -43,7 +42,7 @@ CONTAINS
                                       dum8, dum9, dum10, dum11,   &
                                       dum12, dum13
 
-    257 FORMAT (1x,i4,6es11.3,a1,es11.3,L3,es11.3,es14.6,4(es11.3),es10.2,a1,es11.3,2x,a1)
+    257 FORMAT (1x,i4,6es11.3,a1,es11.3,L3,es11.3,es14.6,4(es11.3),es10.2,a1,es11.3,1x,a1)
     258 FORMAT (1x,i4,10es12.4)
     259 FORMAT (1x,i4,8es11.4)
     260 FORMAT (1x,i4,11es11.4)
@@ -56,7 +55,7 @@ CONTAINS
     IF ( Present ( SkipLinesOption ) ) &
       SkipLines = SkipLinesOption
 
-    OPEN(unit = FileUnit, file = FileName, status ="old", iostat=istate )
+    OPEN( newunit = FileUnit, FILE = FileName, status ="old", iostat=istate )
 
     DO i = 1, SkipLines
       READ(FileUnit,*)

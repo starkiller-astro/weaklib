@@ -53,10 +53,10 @@ PROGRAM wlInterpolationTest
  4018 FORMAT (i4,3(es12.5))
   epsilon = 1.d-100
 
-  OPEN( newunit = TestUnit1, FILE="InterpolateAllTest.d")
-  OPEN( newunit = TestUnit2, FILE="SingleDerivativeTest.d")
-  OPEN( newunit = TestUnit3, FILE="AllDerivativesTest.d")
-  OPEN( newunit = TestUnit4, FILE="SingleInterpolateTest.d")
+  OPEN( newunit = TestUnit1, FILE="SingleInterpolateTest.d")
+  OPEN( newunit = TestUnit2, FILE="InterpolateAllTest.d")
+  OPEN( newunit = TestUnit3, FILE="SingleDerivativeTest.d")
+  OPEN( newunit = TestUnit4, FILE="AllDerivativesTest.d")
 
   LScompress = '220'
   LSFilePath = '../../../LS/Data'
@@ -124,29 +124,36 @@ PROGRAM wlInterpolationTest
   
   NumGoodPoints = 0
 
-  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
+  DO i = 1, SIZE(rho)
+    DO j = 1, EOSTable % DV % nVariables
+      CALL LogInterpolateSingleVariable &
+             ( rho, T, Ye,                                   &
+               EOSTable % TS % States(1) % Values,           &
+               EOSTable % TS % States(2) % Values,           &
+               EOSTable % TS % States(3) % Values,           &
+               EOSTable % TS % LogInterp,                    &
+               EOSTable % DV % Offsets(j),                   &
+               EOSTable % DV % Variables(j) % Values(:,:,:), & 
+               Interpolant )
 
-  DO j = 1, EOSTable % DV % nVariables
-    CALL LogInterpolateSingleVariable &
-           ( rho, T, Ye,                                   &
-             EOSTable % TS % States(1) % Values,           &
-             EOSTable % TS % States(2) % Values,           &
-             EOSTable % TS % States(3) % Values,           &
-             EOSTable % TS % LogInterp,                    &
-             EOSTable % DV % Offsets(j),                   &
-             EOSTable % DV % Variables(1) % Values(:,:,:), & 
-             Interpolant )
-
-    WRITE (TestUnit2,*) "Interpolant =", Interpolant, "Direct Call =", DirectCall(:,1) 
+      WRITE (TestUnit1,*) "Interpolant=", Interpolanti(i),   &
+                          "Direct Call=", DirectCall(i,j),   & 
+                            "L1Norm=", ( DirectCall(i,j) -   & 
+                          Interpolants(i,j) )/ DirectCall(i,j)
+  
+    END DO
   END DO
   
-  CALL LogInterpolateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants ) 
-    DO i = 1, SIZE(rho)
-      DO j = 1, EOSTable % DV % nVariables 
-        WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
-      END DO
-      WRITE (TestUnit1,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
+  CALL LogInterpolateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, &
+                               EOSTable % TS, EOSTable % DV, Interpolants ) 
+  DO i = 1, SIZE(rho)
+    DO j = 1, EOSTable % DV % nVariables 
+      WRITE (TestUnit2,*) "Interpolant =", Interpolants(i,j), &
+                          "Direct Call =", DirectCall(i,j),   &
+                          "L1Norm=", ( DirectCall(i,j) -      & 
+                          Interpolants(i,j) )/ DirectCall(i,j)
     END DO
+  END DO
 
   DO i = 1, EOSTable % DV % nVariables
     CALL LogInterpolateDifferentiateSingleVariable( rho, T, Ye,        &
@@ -162,17 +169,35 @@ PROGRAM wlInterpolationTest
     END DO
 
     DO j = 1, EOSTable % DV % nVariables 
-      WRITE (TestUnit2,*) "Derivatives =", Derivatives(:,:,j)
+      WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
     END DO
 
     DO j = 1, EOSTable % DV % nVariables 
       WRITE (TestUnit3,*) "Derivatives =", Derivatives(:,:,j)
     END DO
+
     DO i = 1, SIZE(rho)
       DO j = 1, EOSTable % DV % nVariables 
         WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
       END DO
       WRITE (TestUnit3,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
+    END DO
+
+  CALL LogInterpolateDifferentiateAllVariables( rho, T, Ye, EOSTable % TS % LogInterp, EOSTable % TS, EOSTable % DV, Interpolants, Derivatives ) 
+
+    DO j = 1, EOSTable % DV % nVariables 
+      WRITE (TestUnit4,*) "Derivatives =", Derivatives(:,:,j)
+    END DO
+
+    DO j = 1, EOSTable % DV % nVariables 
+      WRITE (TestUnit4,*) "Derivatives =", Derivatives(:,:,j)
+    END DO
+
+    DO i = 1, SIZE(rho)
+      DO j = 1, EOSTable % DV % nVariables 
+        WRITE (TestUnit1,*) "Interpolant =", Interpolants(i,j), "Direct Call =", DirectCall(i,j)
+      END DO
+      WRITE (TestUnit4,4018) i, Interpolants(i,1), DirectCall(i,1), ( DirectCall(i,1) - Interpolants(i,1) )/ DirectCall(i,1)
     END DO
 
   CLOSE(TestUnit1)

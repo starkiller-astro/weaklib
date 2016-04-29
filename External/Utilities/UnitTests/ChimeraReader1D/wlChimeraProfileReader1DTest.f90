@@ -26,7 +26,7 @@ PROGRAM wlChimeraProfileReader1Dtest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: rstmss 
   REAL(dp), DIMENSION(:), ALLOCATABLE :: vsound 
 
-  nout = 3216
+  !nout = 3216
   Maxzone = 720
 
   ALLOCATE( r( Maxzone ), rho( Maxzone ), T( Maxzone ), Ye( Maxzone ),     &
@@ -36,24 +36,28 @@ PROGRAM wlChimeraProfileReader1Dtest
               a_heavy( Maxzone ), z_heavy( Maxzone ), be_heavy( Maxzone ), &
               u( Maxzone ), rstmss( Maxzone ), vsound( Maxzone ) ) 
 
-  CALL ReadChimeraProfile1D( "0ms.d", Maxzone, r, rho, T, Ye, p, s, e_internal, &
+  CALL ReadChimeraProfile1D( "100ms.d", Maxzone, r, rho, T, Ye, p, s, e_internal, &
                                xn, xp, xhe, xa, chem_n, chem_p, chem_e, a_heavy,  &
-                               z_heavy, be_heavy, u, rstmss, vsound, 6932)
+                               z_heavy, be_heavy, u, rstmss, vsound )
 
-  OPEN(nout, FILE="Output0ms.d")
+  OPEN( newunit = nout, FILE="Output100ms.d")
 
-  DO i = 1, Maxzone
+      WRITE (nout,*) '     r          rho          T          Ye         e_int'
+
+  DO i = Maxzone, 1, -1
+    IF ( rho(i) .lt. 1.0d8 ) CYCLE
 !    WRITE (nout,'(20(es12.5,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i), &
 !                                    xn(i), xp(i), xhe(i), xa(i), chem_n(i), chem_p(i),  &
 !                                    chem_e(i), a_heavy(i), z_heavy(i), be_heavy(i),     &
 !                                    u(i), rstmss(i), vsound(i) 
 
-    WRITE (nout,'(17(es11.3,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i),   &
-                                    chem_n(i), chem_p(i), chem_e(i), xn(i), xp(i),  &
-                                    xa(i), xhe(i), z_heavy(i), a_heavy(i), be_heavy(i)
+!    WRITE (nout,'(17(es11.3,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i),   &
+!                                    chem_n(i), chem_p(i), chem_e(i), xn(i), xp(i),  &
+!                                    xa(i), xhe(i), z_heavy(i), a_heavy(i), be_heavy(i)
                                      
-
-
+      WRITE (nout,'(5(es11.3,x))') r(i), rho(i), T(i), Ye(i), e_internal(i) !, p(i), s(i), &
+!                                    chem_n(i), chem_p(i), chem_e(i), xn(i), xp(i),  &
+!                                    xa(i), xhe(i), z_heavy(i), a_heavy(i), be_heavy(i)
   END DO
   CLOSE(nout)
 
