@@ -12,17 +12,17 @@ MODULE wlEquationOfStateTableModule
   TYPE, PUBLIC :: EquationOfStateTableType
     INTEGER                      :: nVariables
     INTEGER, DIMENSION(3)        :: nPoints
-    TYPE(ThermoStateType)        :: TS 
+    TYPE(ThermoStateType)        :: TS
     TYPE(DependentVariablesType) :: DV
   END TYPE
 
-  PUBLIC AllocateEquationOfStateTable
-  PUBLIC DeAllocateEquationOfStateTable
-  PUBLIC TableLimitFail
-  PUBLIC SwapDependentVariables
-  PUBLIC IndexMatch
+  PUBLIC :: AllocateEquationOfStateTable
+  PUBLIC :: DeAllocateEquationOfStateTable
+  PUBLIC :: TableLimitFail
+  PUBLIC :: SwapDependentVariables
+  PUBLIC :: IndexMatch
 
-CONTAINS 
+CONTAINS
 
 
   SUBROUTINE AllocateEquationOfStateTable( EOSTable, nPoints, nVariables )

@@ -55,7 +55,7 @@ CONTAINS
     ASSOCIATE( TS => EOSTable % TS )
 
     WRITE(*,*)
-    WRITE(*,*) '  DescribeEquationOfStateTable'
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
     DO i = 1, 3
 
       WRITE(*,*)
