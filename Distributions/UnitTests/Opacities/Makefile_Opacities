@@ -15,6 +15,7 @@ clobber: clean
 	rm -f wlOpacityFieldsTest_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
+  wlKindModule.o \
   wlOpacityTableModule.o \
   wlOpacityFieldsModule.o \
   wlGridModule.o \

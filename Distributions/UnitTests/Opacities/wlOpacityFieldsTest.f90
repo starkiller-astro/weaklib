@@ -1,5 +1,7 @@
 PROGRAM wlOpacityFieldsTest
 
+  USE wlKindModule, ONLY: &
+    dp
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     AllocateOpacityTable, &
@@ -12,11 +14,14 @@ PROGRAM wlOpacityFieldsTest
 
   IMPLICIT NONE
 
+  INTEGER :: iE, iD, iT, iY
   TYPE(OpacityTableType) :: OpacityTable
 
   CALL AllocateOpacityTable &
          ( OpacityTable, nOpacA = 4, nOpacB = 1, nMomB = 1, &
            nOpacC = 1, nMomC = 1, nPointsE = 10 )
+
+  ! -- Energy Grid -- 
 
   ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid )
 
@@ -34,6 +39,8 @@ PROGRAM wlOpacityFieldsTest
            EnergyGrid % nPoints, EnergyGrid % Values )
 
   END ASSOCIATE ! EnergyGrid
+
+  ! -- Absorptivity -- 
 
   ASSOCIATE( ecap => OpacityTable % ecap )
 
@@ -54,6 +61,22 @@ PROGRAM wlOpacityFieldsTest
         'Per Centimeter                  ', &
         'Per Centimeter                  ', &
         'Per Centimeter                  ' ]
+
+  ASSOCIATE( Chi_Nu_e => ecap % Absorptivity(iNu_e) % Values )
+
+  DO iY = 1, ecap % nPoints(4)
+    DO iT = 1, ecap % nPoints(3)
+      DO iD = 1, ecap % nPoints(2)
+        DO iE = 1, ecap % nPoints(1)
+
+          Chi_Nu_e(iE,iD,iT,iY) = 1.0_dp
+
+        END DO
+      END DO
+    END DO
+  END DO
+
+  END ASSOCIATE ! Chi_Nu_e
 
   END ASSOCIATE ! ecap
 
