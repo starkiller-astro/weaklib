@@ -1,16 +1,25 @@
-wlOpacityTableIOModuleHDF.o: \
-  wlOpacityTableModule.o \
-  wlEOSIOModuleHDF.o \
-  wlGridModule.o \
+wlEnergyGridModule.o: \
   wlKindModule.o \
-  wlIOModuleHDF.o \
-  wlEquationOfStateTableModule.o \
-  wlOpacityTableIOModuleHDF.f90
+  wlEnergyGridModule.f90
+
+wlOpacityFieldsModule.o: \
+  wlKindModule.o \
+  wlOpacityFieldsModule.f90
 
 wlOpacityTableModule.o: \
   wlKindModule.o \
-  wlGridModule.o \
+  wlEnergyGridModule.o \
+  wlOpacityFieldsModule.o \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlOpacityTableModule.f90
+
+wlOpacityTableIOModuleHDF.o: \
+  wlKindModule.o \
+  wlOpacityTableModule.o \
+  wlOpacityFieldsModule.o \
+  wlEOSIOModuleHDF.o \
+  wlIOModuleHDF.o \
+  wlEquationOfStateTableModule.o \
+  wlOpacityTableIOModuleHDF.f90

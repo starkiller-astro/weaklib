@@ -1,3 +1,5 @@
 OPACITYSOURCE = \
+  wlEnergyGridModule.o \
+  wlOpacityFieldsModule.o \
   wlOpacityTableModule.o \
   wlOpacityTableIOModuleHDF.o
