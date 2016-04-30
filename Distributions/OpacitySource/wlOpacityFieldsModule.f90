@@ -84,6 +84,7 @@ MODULE wlOpacityFieldsModule
 
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
+  PUBLIC :: DescribeOpacity
 
   INTERFACE AllocateOpacity
     MODULE PROCEDURE AllocateOpacityTypeA
@@ -96,6 +97,12 @@ MODULE wlOpacityFieldsModule
     MODULE PROCEDURE DeallocateOpacityTypeB
     MODULE PROCEDURE DeallocateOpacityTypeC
   END INTERFACE DeallocateOpacity
+
+  INTERFACE DescribeOpacity
+    MODULE PROCEDURE DescribeOpacityTypeA
+    MODULE PROCEDURE DescribeOpacityTypeB
+    MODULE PROCEDURE DescribeOpacityTypeC
+  END INTERFACE DescribeOpacity
 
 CONTAINS
 
@@ -143,6 +150,35 @@ CONTAINS
     DEALLOCATE( Opacity % Names )
 
   END SUBROUTINE DeallocateOpacityTypeA
+
+
+  SUBROUTINE DescribeOpacityTypeA( Opacity )
+
+    TYPE(OpacityTypeA), INTENT(in) :: Opacity
+
+    INTEGER :: i
+
+    WRITE(*,*)
+    WRITE(*,'(A4,A)') ' ', 'Opacity Type A'
+    WRITE(*,'(A6,A13,I3.3)') &
+      ' ', 'nOpacities = ', Opacity % nOpacities
+    WRITE(*,'(A6,A13,4I5.4)') &
+      ' ', 'nPoints    = ', Opacity % nPoints
+    DO i = 1, Opacity % nOpacities
+      WRITE(*,*)
+      WRITE(*,'(A6,A8,I3.3,A3,A)') &
+        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
+      WRITE(*,'(A8,A12,ES10.4E2)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % Absorptivity(i) % Values )
+      WRITE(*,'(A8,A12,ES10.4E2)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
+    END DO
+
+  END SUBROUTINE DescribeOpacityTypeA
 
 
   SUBROUTINE AllocateOpacityTypeB( Opacity, nPoints, nMoments, nOpacities )
@@ -193,6 +229,16 @@ CONTAINS
   END SUBROUTINE DeallocateOpacityTypeB
 
 
+  SUBROUTINE DescribeOpacityTypeB( Opacity )
+
+    TYPE(OpacityTypeB), INTENT(in) :: Opacity
+
+    WRITE(*,*)
+    WRITE(*,'(A4,A)') ' ', 'Opacity Type B'
+
+  END SUBROUTINE DescribeOpacityTypeB
+
+
   SUBROUTINE AllocateOpacityTypeC( Opacity, nPoints, nMoments, nOpacities )
 
     TYPE(OpacityTypeC), INTENT(inout) :: &
@@ -239,6 +285,16 @@ CONTAINS
     DEALLOCATE( Opacity % Names )
 
   END SUBROUTINE DeallocateOpacityTypeC
+
+
+  SUBROUTINE DescribeOpacityTypeC( Opacity )
+
+    TYPE(OpacityTypeC), INTENT(in) :: Opacity
+
+    WRITE(*,*)
+    WRITE(*,'(A4,A)') ' ', 'Opacity Type C'
+
+  END SUBROUTINE DescribeOpacityTypeC
 
 
 END MODULE wlOpacityFieldsModule

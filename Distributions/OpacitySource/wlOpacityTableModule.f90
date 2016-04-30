@@ -59,7 +59,8 @@ MODULE wlOpacityTableModule
     OpacityTypeB, &
     OpacityTypeC, &
     AllocateOpacity, &
-    DeallocateOpacity
+    DeallocateOpacity, &
+    DescribeOpacity
   USE wlIOModuleHDF, ONLY: &
     InitializeHDF, &
     FinalizeHDF
@@ -99,11 +100,6 @@ MODULE wlOpacityTableModule
   PUBLIC :: DescribeOpacityTable
 
 CONTAINS
-
-
-!==========================================================================
-! Public Subroutine for OpacityTable
-!==========================================================================
 
 
   SUBROUTINE AllocateOpacityTable &
@@ -163,6 +159,9 @@ CONTAINS
     WRITE(*,'(A2,A)') ' ', 'DescribeOpacityTable'
 
     CALL DescribeEnergyGrid( OpTab % EnergyGrid )
+    CALL DescribeOpacity( OpTab % ecap )
+    CALL DescribeOpacity( OpTab % scatt_Iso )
+    CALL DescribeOpacity( OpTab % scatt_nIso )
 
   END SUBROUTINE DescribeOpacityTable
 
