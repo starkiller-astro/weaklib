@@ -1,0 +1,21 @@
+include ../../../Build/Makefile_Build
+
+all: wlOpacityFieldsTest
+
+wlOpacityFieldsTest: \
+	$(weaklib) wlOpacityFieldsTest.o
+	$(FLINKER) $(FLAGS) -o wlOpacityFieldsTest_$(MACHINE) \
+	$(weaklib) wlOpacityFieldsTest.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f wlOpacityFieldsTest_$(MACHINE)
+
+wlOpacityFieldsTest.o: \
+  wlOpacityTableModule.o \
+  wlOpacityFieldsModule.o \
+  wlGridModule.o \
+  wlOpacityFieldsTest.f90
