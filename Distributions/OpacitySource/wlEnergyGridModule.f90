@@ -9,6 +9,7 @@ MODULE wlEnergyGridModule
     CHARACTER(LEN=32) :: Name
     CHARACTER(LEN=32) :: Unit
     INTEGER  :: nPoints
+    INTEGER  :: LogInterp
     REAL(dp) :: minValue
     REAL(dp) :: maxValue
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Values
@@ -62,6 +63,13 @@ CONTAINS
       ' ', 'Max Value = ', EnergyGrid % maxValue
     WRITE(*,'(A6,A12,I4.4)') &
       ' ', 'nPoints   = ', EnergyGrid % nPoints
+    IF ( EnergyGrid % LogInterp == 1 ) THEN
+      WRITE (*,'(A6,A27)') &
+          ' ', 'Grid Logarithmically Spaced'
+    ELSE
+      WRITE (*,'(A6,A20)') &
+          ' ', 'Grid Linearly Spaced'
+    END IF
     WRITE(*,*)
 
     DO i = 1, EnergyGrid % nPoints

@@ -160,10 +160,15 @@ CONTAINS
 
     WRITE(*,*)
     WRITE(*,'(A4,A)') ' ', 'Opacity Type A'
+    WRITE(*,'(A4,A)') ' ', '--------------'
     WRITE(*,'(A6,A13,I3.3)') &
       ' ', 'nOpacities = ', Opacity % nOpacities
     WRITE(*,'(A6,A13,4I5.4)') &
       ' ', 'nPoints    = ', Opacity % nPoints
+    WRITE(*,'(A6,A13,I10.10)') &
+      ' ', 'DOFs       = ', &
+      Opacity % nOpacities * PRODUCT( Opacity % nPoints )
+
     DO i = 1, Opacity % nOpacities
       WRITE(*,*)
       WRITE(*,'(A6,A8,I3.3,A3,A)') &
@@ -177,6 +182,7 @@ CONTAINS
       WRITE(*,'(A8,A12,ES10.4E2)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
     END DO
+    WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeA
 
@@ -233,8 +239,36 @@ CONTAINS
 
     TYPE(OpacityTypeB), INTENT(in) :: Opacity
 
+    INTEGER :: i
+
     WRITE(*,*)
     WRITE(*,'(A4,A)') ' ', 'Opacity Type B'
+    WRITE(*,'(A4,A)') ' ', '--------------'
+    WRITE(*,'(A6,A13,I3.3)') &
+      ' ', 'nOpacities = ', Opacity % nOpacities
+    WRITE(*,'(A6,A13,I3.3)') &
+      ' ', 'nMoments   = ', Opacity % nMoments
+    WRITE(*,'(A6,A13,4I5.4)') &
+      ' ', 'nPoints    = ', Opacity % nPoints
+    WRITE(*,'(A6,A13,I10.10)') &
+      ' ', 'DOFs       = ', &
+      Opacity % nOpacities * Opacity % nMoments &
+        * PRODUCT( Opacity % nPoints )
+
+    DO i = 1, Opacity % nOpacities
+      WRITE(*,*)
+      WRITE(*,'(A6,A8,I3.3,A3,A)') &
+        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
+      WRITE(*,'(A8,A12,ES10.4E2)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
+      WRITE(*,'(A8,A12,ES10.4E2)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
+    END DO
+    WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeB
 
@@ -291,8 +325,36 @@ CONTAINS
 
     TYPE(OpacityTypeC), INTENT(in) :: Opacity
 
+    INTEGER :: i
+
     WRITE(*,*)
     WRITE(*,'(A4,A)') ' ', 'Opacity Type C'
+    WRITE(*,'(A4,A)') ' ', '--------------'
+    WRITE(*,'(A6,A13,I3.3)') &
+      ' ', 'nOpacities = ', Opacity % nOpacities
+    WRITE(*,'(A6,A13,I3.3)') &
+      ' ', 'nMoments   = ', Opacity % nMoments
+    WRITE(*,'(A6,A13,4I5.4)') &
+      ' ', 'nPoints    = ', Opacity % nPoints
+    WRITE(*,'(A6,A13,I10.10)') &
+      ' ', 'DOFs       = ', &
+      Opacity % nOpacities * Opacity % nMoments &
+        * Opacity % nPoints(1) * PRODUCT( Opacity % nPoints )
+
+    DO i = 1, Opacity % nOpacities
+      WRITE(*,*)
+      WRITE(*,'(A6,A8,I3.3,A3,A)') &
+        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
+      WRITE(*,'(A8,A12,ES10.4E2)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
+      WRITE(*,'(A8,A12,ES10.4E2)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
+    END DO
+    WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeC
 

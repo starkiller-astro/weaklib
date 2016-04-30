@@ -35,21 +35,19 @@ MODULE wlOpacityTableIOModuleHDF
     EnergyGridType
   USE wlOpacityTableModule, ONLY: OpacityTableType
   USE wlOpacityFieldsModule, ONLY: OpacityTypeA
-  USE wlEOSIOModuleHDF, ONLY: DescribeEquationOfStateTable
   USE wlIOModuleHDF
   USE wlEquationOfStateTableModule
 
   USE HDF5
 
-  implicit none
+  IMPLICIT NONE
   PRIVATE
-  INTEGER                                     :: hdferr
+
+  INTEGER :: hdferr
 
   PUBLIC WriteOpacityTableHDF
   PUBLIC ReadOpacityTableHDF
-  PUBLIC DescribeOpacityTable
  ! PUBLIC BroadcastOpacityTableParallel
-  PUBLIC DescribeOpacityTypeA
   PUBLIC WriteOpacityTableTypeAHDF
   PUBLIC WriteEnergyGridHDF
 
@@ -81,50 +79,6 @@ CONTAINS
   END SUBROUTINE WriteOpacityTableHDF
 
 
-  SUBROUTINE DescribeOpacityTable( OpacityTable )
-  
-    TYPE(OpacityTableType), INTENT(inout) :: OpacityTable
-
-!!$    CALL DescribeEquationOfStateTable( OpacityTable % EOSTable )
-!!$    CALL DescribeEnergyGrid( OpacityTable % EnergyGrid )
-!!$    CALL DescribeOpacityTypeA( OpacityTable % ECAPEM )
-
-  END SUBROUTINE DescribeOpacityTable
-
-
-  SUBROUTINE DescribeOpacityTypeA( ECAPEM )
-
-    TYPE(OpacityTypeA), DIMENSION(:), INTENT(inout) :: ECAPEM
-
-!!$    INTEGER :: i, j, k, l, ii, jj, kk, ll, iii
-!!$    
-!!$    DO iii = 1, SIZE(ECAPEM)
-!!$
-!!$      WRITE (UNIT=6,FMT=*) "EcapEm Names =", ECAPEM(iii) % Names
-!!$      WRITE (UNIT=6,FMT=*) "EcapEm SIZE =", SIZE(ECAPEM)
-!!$
-!!$      i=SIZE(ECAPEM(iii) % Values,1)  ! E
-!!$      j=SIZE(ECAPEM(iii) % Values,2)  ! rho
-!!$      k=SIZE(ECAPEM(iii) % Values,3)  ! T
-!!$      l=SIZE(ECAPEM(iii) % Values,4)  ! Ye
-!!$  
-!!$      WRITE (*,*) "EcapEm % SIZE",i, j, k, l
-!!$      DO ii = 20,20
-!!$         DO jj = 81, 81
-!!$            DO kk = 11, 12
-!!$               DO ll = 1, l
-!!$                  WRITE (*,*) "EcapEm(", iii, ") % Values",ii, jj,&
-!!$                  kk, ll, "=",  ECAPEM(iii) % Values(ii,jj,kk,ll),&
-!!$                   "Units:", ECAPEM(iii) % Units
-!!$               END DO
-!!$            END DO
-!!$         END DO
-!!$      END DO
-!!$
-!!$    END DO
-
-  END SUBROUTINE DescribeOpacityTypeA
-
   SUBROUTINE WriteEnergyGridHDF( EnergyGrid, group_id )
 
     TYPE(EnergyGridType), INTENT(in)           :: EnergyGrid
@@ -153,6 +107,7 @@ CONTAINS
   
   END SUBROUTINE WriteEnergyGridHDF
 
+
   SUBROUTINE WriteOpacityTableTypeAHDF( ECAPEM, group_id )
 
     TYPE(OpacityTypeA), DIMENSION(:), INTENT(in)           :: ECAPEM
@@ -172,6 +127,7 @@ CONTAINS
 !!$    END DO
   
   END SUBROUTINE WriteOpacityTableTypeAHDF
+
 
   SUBROUTINE Write4dHDF_double &
               ( name, values, group_id, datasize, desc_option, unit_option )

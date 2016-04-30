@@ -10,16 +10,16 @@ wlOpacityTableModule.o: \
   wlKindModule.o \
   wlEnergyGridModule.o \
   wlOpacityFieldsModule.o \
-  wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
+  wlEquationOfStateTableModule.o \
   wlOpacityTableModule.f90
 
 wlOpacityTableIOModuleHDF.o: \
   wlKindModule.o \
+  wlEnergyGridModule.o \
   wlOpacityTableModule.o \
   wlOpacityFieldsModule.o \
   wlEOSIOModuleHDF.o \
   wlIOModuleHDF.o \
-  wlEquationOfStateTableModule.o \
   wlOpacityTableIOModuleHDF.f90
