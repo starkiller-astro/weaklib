@@ -1,7 +1,7 @@
 # The directories containing the source files, separated by ':'
 # When GNU Make cannot find a prerequisite it will search the directories in the VPATH list (from first to last) and stop at the first directory in which it finds the missing prerequisite.
 #-------------------------
-vpath %.f90 $(WEAKLIB_DIR)/Distributions/UnitTests/Opacities:$(WEAKLIB_DIR)/Distributions/OpacitySource:$(WEAKLIB_DIR)/Distributions/Library:$(WEAKLIB_DIR)/Distributions/EOSSource:$(WEAKLIB_DIR)/External/SharedModules
+vpath %.f90 $(WEAKLIB_DIR)/External/Utilities/Opacities/ElectronCaptureEmission:$(WEAKLIB_DIR)/Distributions/OpacitySource:$(WEAKLIB_DIR)/Distributions/Library:$(WEAKLIB_DIR)/Distributions/EOSSource:$(WEAKLIB_DIR)/External/SharedModules
 #========================= 
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
@@ -85,22 +85,24 @@ endif
 # VPATH will locate them...
 #---------------------------------------------------
 
-BASE_MODS = wlKindModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o
+BASE_MODS = wlKindModule.o wlEnergyGridModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o
 
 EOS_MODS = wlEquationOfStateTableModule.o
+
+PHY_MODS = B85.o
 
 BaseIO_MODS = wlIOModuleHDF.o
 
 EOSIO_MODS = wlEOSIOModuleHDF.o
 
-Opacity_MODS = $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) wlOpacityTableModule.o 
+Opacity_MODS = $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) wlOpacityTableModule.o  
 
 ##Interface_OBJ = wlExtEOSWrapperModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o
 
 ##OpacityIO_MODS = $(Opacity_MODS) wlOpacityTableIOModuleHDF.o
 OpacityIO_MODS = wlOpacityTableIOModuleHDF.o
 
-Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlReadOpacityTableTest.o
+Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlOpacityFieldsTest.o
 #Opacity_OBJ = $(BASE_MODS)
 #===================================================
 # Build a Dependency list and an Object list, by replacing the .cpp
@@ -133,23 +135,25 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 #-------------------
 #test: $(Opacity_MODS)
 test: $(Opacity_OBJ)
-	$(LDRL) $(LDRFLAGS) -o wlReadTEST $(LIBS) $(Opacity_OBJ)
+	$(LDRL) $(LDRFLAGS) -o wlTEST $(LIBS) $(Opacity_OBJ)
 
 #===================
 
-#----------------------------------
+#---------------------------------
+wlEnergyGridModule.0: wlKindModule.o
 wlGridModule.o: wlKindModule.o
 wlThermoStateModule.o: wlKindModule.o
 wlDependentVariablesModule.o: wlKindModule.o
 wlExtNumericalModule.o: wlKindModule.o
 wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
-
+B85.o: wlKindModule.o wlExtPhysicalConstantsModule.o
+wlOpacityFieldsModule.o: wlKindModule.o
 $(EOS_MODS): $(BASE_MODS)
 $(BaseIO_MODS): $(EOS_MODS) $(BASE_MODS)
 $(EOSIO_MODS): $(EOS_MODS) $(BaseIO_MODS) $(BASE_MODS)
 $(Opacity_MODS): $(EOSIO_MODS) $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) $(BASE_MODS) 
 $(OpacityIO_MODS): $(Opacity_MODS) $(EOSIO_MODS) $(BASE_MODS)
-wlReadOpacityTableTest.o: $(OpacityIO_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(BASE_MODS)
+wlCreateOpacityTable.o: $(OpacityIO_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(BASE_MODS)
 
 #==================================
 scrub:
