@@ -148,6 +148,7 @@ wlExtNumericalModule.o: wlKindModule.o
 wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
 B85.o: wlKindModule.o wlExtPhysicalConstantsModule.o
 wlOpacityFieldsModule.o: wlKindModule.o
+
 $(EOS_MODS): $(BASE_MODS)
 $(BaseIO_MODS): $(EOS_MODS) $(BASE_MODS)
 $(EOSIO_MODS): $(EOS_MODS) $(BaseIO_MODS) $(BASE_MODS)

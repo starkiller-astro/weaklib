@@ -88,7 +88,7 @@ MODULE wlOpacityTableModule
     TYPE(EnergyGridType)           :: EnergyGrid
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(OpacityTypeA)             :: &
-      ecap       ! -- Electron Capture
+      thermEmAb  ! -- Thermal Emission and Absorption
     TYPE(OpacityTypeB)             :: &
       scatt_Iso  ! -- Isoenergenic Scattering
     TYPE(OpacityTypeC)             :: &
@@ -118,13 +118,18 @@ CONTAINS
            ( OpTab % EOSTable, "EquationOfStateTable.h5" )
     CALL FinalizeHDF( )
 
+    OpTab % nOpacitiesA = nOpacA
+    OpTab % nOpacitiesB = nOpacB
+    OpTab % nMomentsB = nMomB
+    OpTab % nOpacitiesC = nOpacC
+    OpTab % nMomentsC = nMomC
     OpTab % nPointsE  = nPointsE
     OpTab % nPointsTS = OpTab % EOSTable % TS % nPoints
 
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
     CALL AllocateOpacity &
-           ( OpTab % ecap,       [ nPointsE, nPoints ], &
+           ( OpTab % thermEmAb,       [ nPointsE, nPoints ], &
              nOpacities = nOpacA )
 
     CALL AllocateOpacity &
@@ -144,7 +149,7 @@ CONTAINS
 
     TYPE(OpacityTableType) :: OpTab
 
-    CALL DeAllocateOpacity( OpTab % ecap )
+    CALL DeAllocateOpacity( OpTab % thermEmAb )
     CALL DeAllocateEquationOfStateTable( OpTab % EOSTable )
     CALL DeAllocateEnergyGrid( OpTab % EnergyGrid ) 
  
@@ -159,7 +164,7 @@ CONTAINS
     WRITE(*,'(A2,A)') ' ', 'DescribeOpacityTable'
 
     CALL DescribeEnergyGrid( OpTab % EnergyGrid )
-    CALL DescribeOpacity( OpTab % ecap )
+    CALL DescribeOpacity( OpTab % thermEmAb )
     CALL DescribeOpacity( OpTab % scatt_Iso )
     CALL DescribeOpacity( OpTab % scatt_nIso )
 

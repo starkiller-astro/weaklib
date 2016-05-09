@@ -47,7 +47,6 @@ MODULE wlOpacityTableIOModuleHDF
 
   PUBLIC WriteOpacityTableHDF
   PUBLIC ReadOpacityTableHDF
- ! PUBLIC BroadcastOpacityTableParallel
   PUBLIC WriteOpacityTableTypeAHDF
   PUBLIC WriteEnergyGridHDF
 
@@ -57,26 +56,78 @@ CONTAINS
  
     TYPE(OpacityTableType), INTENT(inout) :: OpacityTable
 
-!!$    INTEGER(HID_T)                                :: file_id
-!!$    INTEGER(HID_T)                                :: group_id
-!!$    
-!!$    CALL OpenFileHDF( "OpacityTable.h5", .true., file_id )
-!!$
-!!$    CALL OpenGroupHDF( "EcapEm", .true., file_id, group_id )
-!!$    CALL WriteOpacityTableTypeAHDF( OpacityTable % ECAPEM, group_id )
-!!$    CALL CloseGroupHDF( group_id )
-!!$
-!!$    CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
-!!$    CALL WriteEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
-!!$    CALL CloseGroupHDF( group_id )
-!!$
-!!$    CALL OpenGroupHDF( "EOSTable", .true., file_id, group_id )
-!!$    CALL WriteEOSTableHDF( OpacityTable % EOSTable, file_id, group_id )
-!!$    CALL CloseGroupHDF( group_id )
-!!$     
-!!$    CALL CloseFileHDF( file_id )
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
+
+    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+    INTEGER, DIMENSION(1)                       :: tempInteger
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+   
+    CALL OpenFileHDF( "OpacityTable_NS.h5", .true., file_id )
+
+    datasize1d(1) = 1
+    tempInteger(1) = OpacityTable % nOpacitiesA
+    CALL Write1dHDF_integer&
+         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
+
+    tempInteger(1) = OpacityTable % nOpacitiesB 
+    CALL Write1dHDF_integer&
+         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
+  
+    tempInteger(1) = OpacityTable % nMomentsB     
+    CALL Write1dHDF_integer&
+         ( "nMomentsB", tempInteger, file_id, datasize1d )
+
+    tempInteger(1) = OpacityTable % nOpacitiesC     
+    CALL Write1dHDF_integer&
+         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
+
+    tempInteger(1) = OpacityTable % nMomentsC   
+    CALL Write1dHDF_integer&
+         ( "nMomentsC", tempInteger, file_id, datasize1d )
+
+    tempInteger(1) = OpacityTable % nPointsE  
+    CALL Write1dHDF_integer&
+         ( "nPointsE", tempInteger, file_id, datasize1d )
+
+    datasize1d = 3
+    CALL Write1dHDF_integer&
+         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
+
+    CALL OpenGroupHDF( "thermEmAb", .true., file_id, group_id )
+    CALL WriteOpacityTableTypeAHDF( OpacityTable % thermEmAb, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
+    CALL WriteEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "EOSTable", .true., file_id, group_id )
+    CALL WriteEOSTableHDF( OpacityTable % EOSTable, file_id, group_id )
+    CALL CloseGroupHDF( group_id )
+     
+    CALL CloseFileHDF( file_id )
 
   END SUBROUTINE WriteOpacityTableHDF
+
+
+  SUBROUTINE WriteEOSTableHDF( EOSTable, file_id, group_id )
+
+    TYPE(EquationOfStateTableType), INTENT(in)    :: EOSTable
+    INTEGER(HID_T), INTENT(in)                    :: file_id
+    INTEGER(HID_T), INTENT(in)                    :: group_id
+
+    INTEGER(HID_T)                                :: subgroup_id
+
+    CALL OpenGroupHDF( "ThermoState", .true., group_id, subgroup_id )
+    CALL WriteThermoStateHDF( EOSTable % TS, subgroup_id )
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "DependentVariables", .true., group_id, subgroup_id )
+    CALL WriteDependentVariablesHDF( EOSTable % DV, subgroup_id )
+    CALL CloseGroupHDF( subgroup_id )
+
+  END SUBROUTINE WriteEOSTableHDF
 
 
   SUBROUTINE WriteEnergyGridHDF( EnergyGrid, group_id )
@@ -84,48 +135,76 @@ CONTAINS
     TYPE(EnergyGridType), INTENT(in)           :: EnergyGrid
     INTEGER(HID_T), INTENT(in)                 :: group_id
 
-!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-!!$    INTEGER                                     :: i
-!!$    INTEGER, DIMENSION(1)                       :: buffer
-!!$
-!!$  WRITE (*,*) "Starting HDF EnergyGrid write "
-!!$
-!!$    datasize1d(1) = 1
-!!$
-!!$    CALL Write1HDF_integer( "nPointsE", EnergyGrid % nPointsE, &
-!!$                             group_id, datasize1d )
-!!$    
-!!$    CALL Write1HDF_string( "Names", EnergyGrid % Names, &
-!!$                             group_id, datasize1d )
-!!$
-!!$    CALL Write1HDF_string( "Units", EnergyGrid % Units, &
-!!$                             group_id, datasize1d )
-!!$   
-!!$    datasize1d(1) = EnergyGrid % nPointsE
-!!$    CALL Write1dHDF_double( "Values", EnergyGrid % Values(:), &
-!!$                              group_id, datasize1d )
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+    INTEGER, DIMENSION(1)                       :: tempInteger          
+
+    datasize1d(1) = 1
+
+    tempString(1) = EnergyGrid % Name
+    CALL Write1dHDF_string( "Name", tempString, &
+                             group_id, datasize1d )
+    
+    tempString(1) = EnergyGrid % Unit
+    CALL Write1dHDF_string( "Unit", tempString, &
+                            group_id, datasize1d )
+
+    tempInteger(1) = EnergyGrid % nPoints  
+    CALL Write1dHDF_integer( "nPoints", tempInteger, &
+                            group_id, datasize1d )
+   
+    tempInteger(1) = EnergyGrid % LogInterp 
+    CALL Write1dHDF_integer( "LogInterp", tempInteger, &
+                             group_id, datasize1d )
+   
+    datasize1d(1) = EnergyGrid % nPoints
+    CALL Write1dHDF_double( "Values", EnergyGrid % Values(:), &
+                              group_id, datasize1d )
   
   END SUBROUTINE WriteEnergyGridHDF
 
 
-  SUBROUTINE WriteOpacityTableTypeAHDF( ECAPEM, group_id )
+  SUBROUTINE WriteOpacityTableTypeAHDF( thermEmAb, group_id )
 
-    TYPE(OpacityTypeA), DIMENSION(:), INTENT(in)           :: ECAPEM
-    INTEGER(HID_T), INTENT(in)                 :: group_id
+    TYPE(OpacityTypeA), INTENT(in)              :: thermEmAb
+    INTEGER(HID_T), INTENT(in)                  :: group_id
 
-!!$    INTEGER(HSIZE_T)                            :: datasize1d
-!!$    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
-!!$    INTEGER                                     :: i
-!!$    INTEGER, DIMENSION(1)                       :: buffer
-!!$
-!!$  WRITE (*,*) "Starting HDF OpacityTypeA write "
-!!$    datasize1d = SIZE( ECAPEM )
-!!$    DO i = 1, datasize1d
-!!$     datasize4d = SHAPE( ECAPEM(i) % Values )
-!!$     CALL Write4dHDF_double( "Values", ECAPEM(i) % Values(:,:,:,:), &
-!!$                              group_id, datasize4d )
-!!$    END DO
-  
+    INTEGER(HSIZE_T)                            :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+
+    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+    INTEGER, DIMENSION(1)                       :: tempInteger
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
+
+    INTEGER(HID_T)                                :: subgroup_id
+
+
+    datasize1dtemp(1) = 1
+    tempInteger(1) = thermEmAb % nOpacities
+    CALL Write1dHDF_integer&
+         ( "nOpacities", tempInteger, group_id, datasize1dtemp )
+
+!   datasize1d = 4
+!    CALL Write1dHDF_integer&
+!         ( "nPointsTS", thermEmAb % nPoints, group_id, datasize1d )
+
+
+    datasize1d = thermEmAb % nOpacities 
+
+    CALL OpenGroupHDF( "Absorptivity", .true., group_id, subgroup_id )
+      DO i = 1, datasize1d
+        datasize4d = SHAPE( thermEmAb % Absorptivity(i) % Values )
+        CALL Write4dHDF_double( "Values", thermEmAb % Absorptivity(i) % Values(:,:,:,:), &
+                              group_id, datasize4d )
+      END DO
+    CALL CloseGroupHDF( subgroup_id )
+ 
   END SUBROUTINE WriteOpacityTableTypeAHDF
 
 
@@ -139,116 +218,28 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(4), INTENT(in)  :: datasize
     REAL(dp), DIMENSION(:,:,:,:), INTENT(in)      :: values
    
-!!$    INTEGER(HID_T)                              :: dataset_id
-!!$    INTEGER(HID_T)                              :: dataspace_id
-!!$    INTEGER(HID_T)                              :: atype_id
-!!$    INTEGER(HID_T)                              :: attr_id
-!!$    INTEGER(SIZE_T)                             :: attr_len
-!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
-!!$  
-!!$    
-!!$    CALL h5screate_simple_f( 4, datasize, dataspace_id, hdferr )
-!!$
-!!$    CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
-!!$           dataspace_id, dataset_id, hdferr )
-!!$
-!!$    CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
-!!$           values, datasize, hdferr )
-!!$
-!!$    CALL h5sclose_f( dataspace_id, hdferr ) 
-!!$
-!!$    CALL h5dclose_f( dataset_id, hdferr )
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+  
+    
+    CALL h5screate_simple_f( 4, datasize, dataspace_id, hdferr )
+
+    CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
+           dataspace_id, dataset_id, hdferr )
+
+    CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
+           values, datasize, hdferr )
+
+    CALL h5sclose_f( dataspace_id, hdferr ) 
+
+    CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Write4dHDF_double
 
-
-  SUBROUTINE Write1HDF_integer &
-               ( name, values, group_id, datasize, desc_option, unit_option)
-
-    CHARACTER(*), INTENT(in)                    :: name
-    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
-    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
-    INTEGER, INTENT(in)                         :: values
-   
-!!$    INTEGER(HID_T)                              :: dataset_id
-!!$    INTEGER(HID_T)                              :: dataspace_id
-!!$    INTEGER(HID_T)                              :: atype_id
-!!$    INTEGER(HID_T)                              :: attr_id
-!!$    INTEGER(SIZE_T)                             :: attr_len
-!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
-!!$  
-!!$    
-!!$    CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
-!!$
-!!$    CALL h5dcreate_f( group_id, name, H5T_NATIVE_INTEGER, &
-!!$           dataspace_id, dataset_id, hdferr )
-!!$
-!!$    CALL h5dwrite_f( dataset_id, H5T_NATIVE_INTEGER, &
-!!$           values, datasize, hdferr )
-!!$
-!!$    CALL h5sclose_f( dataspace_id, hdferr ) 
-!!$
-!!$    CALL h5dclose_f( dataset_id, hdferr )
-
-  END SUBROUTINE Write1HDF_integer
-
-
-  SUBROUTINE Write1HDF_string &
-               ( name, values, group_id, datasize, desc_option, unit_option )
-
-    CHARACTER(*), INTENT(in)                    :: name
-    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
-    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)  :: datasize
-    CHARACTER(len=*), INTENT(in)                :: values
-   
-!!$    INTEGER(HSIZE_T)                            :: sizechar
-!!$    INTEGER(HID_T)                              :: dataset_id
-!!$    INTEGER(HID_T)                              :: dataspace_id
-!!$    INTEGER(HID_T)                              :: atype_id
-!!$    INTEGER(HID_T)                              :: attr_id
-!!$    INTEGER(SIZE_T)                             :: attr_len
-!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
-!!$  
-!!$    
-!!$    CALL h5screate_simple_f( 1, datasize, dataspace_id, hdferr )
-!!$    sizechar = LEN( values )
-!!$
-!!$    CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
-!!$    CALL h5dcreate_f( group_id, name, H5T_NATIVE_CHARACTER, &
-!!$           dataspace_id, dataset_id, hdferr )
-!!$
-!!$    CALL h5dwrite_f( dataset_id, H5T_NATIVE_CHARACTER, &
-!!$           values, datasize, hdferr )
-!!$
-!!$    CALL h5sclose_f( dataspace_id, hdferr ) 
-!!$
-!!$    CALL h5dclose_f( dataset_id, hdferr )
-
-  END SUBROUTINE Write1HDF_string
-
-
-  SUBROUTINE WriteEOSTableHDF( EOSTable, file_id, group_id )
-
-    TYPE(EquationOfStateTableType), INTENT(in)    :: EOSTable
-    INTEGER(HID_T), INTENT(in)                    :: file_id
-    INTEGER(HID_T), INTENT(in)                    :: group_id
-
-!!$    INTEGER(HID_T)                                :: subgroup_id
-!!$
-!!$    CALL OpenGroupHDF( "ThermoState", .true., group_id, subgroup_id )
-!!$    CALL WriteThermoStateHDF( EOSTable % TS, subgroup_id )
-!!$    CALL CloseGroupHDF( subgroup_id )
-!!$
-!!$    CALL OpenGroupHDF( "DependentVariables", .true., group_id, subgroup_id )
-!!$    CALL WriteDependentVariablesHDF( EOSTable % DV, subgroup_id )
-!!$    CALL CloseGroupHDF( subgroup_id )
-
-  END SUBROUTINE WriteEOSTableHDF
-  
 
   SUBROUTINE ReadOpacityTableHDF( OpacityTable, FileName )
  

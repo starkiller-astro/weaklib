@@ -93,12 +93,17 @@ PRINT*, "Allocating OpacityTable"
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpacA, nOpacB, nMomB, &
               nOpacC, nMomC, nPointsE ) 
+  
+   OpacityTable % thermEmAb % nOpacities = nOpacA
 
-   OpacityTable % ecap     % Names = &
+   OpacityTable % thermEmAb % nPoints(1) = nPointsE
+   OpacityTable % thermEmAb % nPoints(2:4) = OpacityTable % nPointsTS
+
+   OpacityTable % thermEmAb     % Names = &
                                 (/'Electron Capture Absorbility'/)  
-   OpacityTable % ecap     % Species = &
+   OpacityTable % thermEmAb     % Species = &
                                 (/'Electron Neutrino           '/)
-   OpacityTable % ecap     % Units = &
+   OpacityTable % thermEmAb     % Units = &
                                 (/'Per Centimeter               '/) 
 
 !-----------------------------   
@@ -128,7 +133,7 @@ PRINT*, "Making Energy Grid"
 !            Print The OpacityTable
 !-------------------------------------------------------------------------
 
-  CALL DescribeOpacityTable( OpacityTable )
+!  CALL DescribeOpacityTable( OpacityTable )
 
 
 !-------------------------------------------------------------------------
@@ -179,7 +184,7 @@ PRINT*, "Making Energy Grid"
                  A   = OpacityTable % EOSTable % DV % Variables (12) %&
                        Values (j_rho, k_t, l_ye)  !12 =Heavy Mass Number 
 
-              OpacityTable % ecap % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
+              OpacityTable % thermEmAb % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
                = totalECapEm(energy, rho, T, Z, A,&
                       chem_e, chem_n, chem_p, &
                       xheavy, xn, xp )
@@ -192,7 +197,7 @@ PRINT*, "Making Energy Grid"
 
   CALL DescribeOpacityTable( OpacityTable )
 
-
+  CALL InitializeHDF( )
   CALL WriteOpacityTableHDF( OpacityTable )
   CALL FinalizeHDF( )
 
