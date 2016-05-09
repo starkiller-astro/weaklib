@@ -1,5 +1,4 @@
 PROGRAM wlCreateOpacityTable
-
 !-----------------------------------------------------------------------
 !
 !    File:         wlCreateOpacityTable.f90
@@ -14,9 +13,7 @@ PROGRAM wlCreateOpacityTable
 !      Create table for opacity containing EoS table with BoltzTran.
 !      Existing EoS table is readin. 
 !      Function were created to fill OpacityTable
-!
-!   
-!
+!!   
 !    CONTAINS:
 !    
 !
@@ -60,9 +57,11 @@ PROGRAM wlCreateOpacityTable
   USE wlGridModule, ONLY: MakeLogGrid  
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-
+  
   USE wlIOModuleHDF
+  USE wlEnergyGridModule
   USE wlOpacityTableModule
+  USE wlOpacityFieldsModule
   USE wlOpacityTableIOModuleHDF
   USE wlExtPhysicalConstantsModule
   USE B85
@@ -71,6 +70,11 @@ implicit none
     
 
    TYPE(OpacityTableType)  :: OpacityTable
+   INTEGER                 :: nOpacA = 1
+   INTEGER                 :: nOpacB = 0
+   INTEGER                 :: nMomB  = 0
+   INTEGER                 :: nOpacC = 0
+   INTEGER                 :: nMomC  = 0
 !-------------------------------------------------------------------------
 ! Set E grid limits
 !-------------------------------------------------------------------------
@@ -84,42 +88,47 @@ implicit none
    REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp 
 
 
-PRINT*, "Allocate OpacityTable"   
+PRINT*, "Allocating OpacityTable"   
  
-   CALL AllocateOpacityTable( OpacityTable, nSpeciesA, nPointsE ) 
+   CALL AllocateOpacityTable &
+            ( OpacityTable, nOpacA, nOpacB, nMomB, &
+              nOpacC, nMomC, nPointsE ) 
 
-       WRITE(*,*) "EOS xheavy % Values(81,11,18) = ",&
-              OpacityTable % EOSTable % DV % Variables(10) % Values(81,11,18)
-   
+   OpacityTable % ecap     % Names = &
+                                (/'Electron Capture Absorbility'/)  
+   OpacityTable % ecap     % Species = &
+                                (/'Electron Neutrino           '/)
+   OpacityTable % ecap     % Units = &
+                                (/'Per Centimeter               '/) 
 
-   OpacityTable % ECAPEM     % Names = &
-                                &(/'Neutrino Opacity   '/)  
-
-PRINT*, "Allocate OpacityTable Units "
- 
-   OpacityTable % ECAPEM     % Units = &
-                                &(/'cm-1               '/) 
-PRINT*, "Set E grid limits "
-
-   OpacityTable % EnergyGrid % minValue = Emin  
-   OpacityTable % EnergyGrid % maxValue = Emax 
-   OpacityTable % EnergyGrid % nPointsE = nPointsE
-
-   
-!-------------------------------------------------------------------------
+!-----------------------------   
 ! Generate E grid from limits
-!-------------------------------------------------------------------------
-PRINT*, "Make Energy Grid"
+!-----------------------------
+PRINT*, "Making Energy Grid"
 
-   CALL MakeLogGrid( Emin, Emax, nPointsE, &
-                           & OpacityTable % EnergyGrid % Values)
+   ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid )
+
+   EnergyGrid % Name &
+     = 'Comoving Frame Neutrino Energy  '
+
+   EnergyGrid % Unit &
+     = 'MeV                             '
+
+   EnergyGrid % MinValue = Emin
+   EnergyGrid % MaxValue = Emax
+   EnergyGrid % LogInterp = 1
+
+   CALL MakeLogGrid &
+          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+            EnergyGrid % nPoints, EnergyGrid % Values )
+ 
+   END ASSOCIATE ! EnergyGrid
 
 !-------------------------------------------------------------------------
-!            Printe The OpacityTable
+!            Print The OpacityTable
 !-------------------------------------------------------------------------
-!PRINT*, "Print The OpacityTable"
 
-  ! CALL DescribeOpacityTable( OpacityTable )
+  CALL DescribeOpacityTable( OpacityTable )
 
 
 !-------------------------------------------------------------------------
@@ -127,19 +136,19 @@ PRINT*, "Make Energy Grid"
 !-------------------------------------------------------------------------
 
 !-----------------  ECAPEM ----------------------- 
- !  DO i_r = 1, SIZE(ECAPEM)
-     i_r = 1;  ! i_r can be 1,2,3,4 
-     DO l_ye = 1, OpacityTable % EOSTable % TS % nPoints(3)
+   DO i_r = 1, nOpacA
+ 
+     DO l_ye = 1, OpacityTable % nPointsTS(3)
 
-       DO k_t = 1, OpacityTable % EOSTable % TS % nPoints(2)
+       DO k_t = 1, OpacityTable % nPointsTS(2)
 
-              T = OpacityTable % EOSTable % TS % States (2) % Values (k_t)
+             T = OpacityTable % EOSTable % TS % States (2) % Values (k_t)
 
-         DO j_rho = 1, OpacityTable % EOSTable % TS % nPoints(1)
+         DO j_rho = 1, OpacityTable % nPointsTS(1)
 
               rho = OpacityTable % EOSTable % TS % States (1) % Values (j_rho)
 
-           DO i_e = 1, OpacityTable % EnergyGrid % nPointsE
+           DO i_e = 1, OpacityTable % nPointsE
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
 
@@ -170,39 +179,19 @@ PRINT*, "Make Energy Grid"
                  A   = OpacityTable % EOSTable % DV % Variables (12) %&
                        Values (j_rho, k_t, l_ye)  !12 =Heavy Mass Number 
 
-              OpacityTable % ECAPEM(i_r) % Values (i_e, j_rho, k_t, l_ye) &
+              OpacityTable % ecap % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
                = totalECapEm(energy, rho, T, Z, A,&
                       chem_e, chem_n, chem_p, &
                       xheavy, xn, xp )
-                                !             xheavy    xn      xp
-                if((i_e == 20) .and.(j_rho ==81) .and. (k_t ==11) .and. (l_ye == 18) ) then
-                   WRITE (*,*) "energy = ", energy
-                   WRITE (*,*) "rho = ", rho
-                   WRITE (*,*) "T = ", T
-                   WRITE (*,*) "Z = ", Z
-                   WRITE (*,*) "A = ", A
-                   WRITE (*,*) "chem_e = ", chem_e
-                   WRITE (*,*) "chem_n = ", chem_n
-                   WRITE (*,*) "chem_p = ", chem_p
-                   WRITE (*,*) "xheavy = ", xheavy
-                   WRITE (*,*) "xn = ", xn
-                   WRITE (*,*) "xp = ", xp
-                   WRITE (*,*) "Ye = ",&
-                       OpacityTable % EOSTable % TS % States (3) % Values (l_ye)
-                end if
-           END DO
-         END DO
-       END DO
-     END DO
-  ! END DO
+           END DO  !i_e
+         END DO  !j_rho
+       END DO  !k_t
+     END DO  !l_ye
+   END DO  !i_r
 
-
-PRINT*, "Print The OpacityTable"
 
   CALL DescribeOpacityTable( OpacityTable )
 
-
-!==================== Below Necessary ? ======================
 
   CALL WriteOpacityTableHDF( OpacityTable )
   CALL FinalizeHDF( )
