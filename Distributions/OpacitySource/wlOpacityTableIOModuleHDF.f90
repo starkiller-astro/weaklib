@@ -53,18 +53,19 @@ MODULE wlOpacityTableIOModuleHDF
 
 CONTAINS
  
-  SUBROUTINE WriteOpacityTableHDF( OpacityTable )
+  SUBROUTINE WriteOpacityTableHDF( OpacityTable, FileName )
  
-    TYPE(OpacityTableType), INTENT(inout) :: OpacityTable
+    TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
+    CHARACTER(len=*), INTENT(in)                :: FileName
 
-    INTEGER(HID_T)                                :: file_id
-    INTEGER(HID_T)                                :: group_id
+    INTEGER(HID_T)                              :: file_id
+    INTEGER(HID_T)                              :: group_id
 
     CHARACTER(LEN=32), DIMENSION(1)             :: tempString
     INTEGER, DIMENSION(1)                       :: tempInteger
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
    
-    CALL OpenFileHDF( "OpacityTable_NS.h5", .true., file_id )
+    CALL OpenFileHDF( FileName, .true., file_id )
 
     datasize1d(1) = 1
     tempInteger(1) = OpacityTable % nOpacitiesA
@@ -110,33 +111,9 @@ CONTAINS
     CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
     CALL WriteEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
     CALL CloseGroupHDF( group_id )
-
-!    CALL OpenGroupHDF( "EOSTable", .true., file_id, group_id )
-!    CALL WriteEOSTableHDF( OpacityTable % EOSTable, file_id, group_id )
-!    CALL CloseGroupHDF( group_id )
-     
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE WriteOpacityTableHDF
-
-
-  SUBROUTINE WriteEOSTableHDF( EOSTable, file_id, group_id )
-
-    TYPE(EquationOfStateTableType), INTENT(in)    :: EOSTable
-    INTEGER(HID_T), INTENT(in)                    :: file_id
-    INTEGER(HID_T), INTENT(in)                    :: group_id
-
-    INTEGER(HID_T)                                :: subgroup_id
-
-    CALL OpenGroupHDF( "ThermoState", .true., group_id, subgroup_id )
-    CALL WriteThermoStateHDF( EOSTable % TS, subgroup_id )
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "DependentVariables", .true., group_id, subgroup_id )
-    CALL WriteDependentVariablesHDF( EOSTable % DV, subgroup_id )
-    CALL CloseGroupHDF( subgroup_id )
-
-  END SUBROUTINE WriteEOSTableHDF
 
 
   SUBROUTINE WriteEnergyGridHDF( EnergyGrid, group_id )
