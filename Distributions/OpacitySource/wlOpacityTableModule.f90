@@ -68,8 +68,8 @@ MODULE wlOpacityTableModule
     ReadEquationOfStateTableHDF
   USE wlEquationOfStateTableModule, ONLY: &
     EquationOfStateTableType, &
-    DeAllocateEquationOfStateTable
-
+    DeAllocateEquationOfStateTable, &
+    AllocateEquationOfStateTable
   IMPLICIT NONE
   PRIVATE
 
@@ -113,10 +113,13 @@ CONTAINS
 
     CALL AllocateEnergyGrid( OpTab % EnergyGrid, nPointsE )
 
-    CALL InitializeHDF( )
+!    CALL InitializeHDF( )
+    WRITE(*,*)
+    WRITE(*,'(A2,A)') ' ', 'Reading EquationOfStateTable.h5 '
+
     CALL ReadEquationOfStateTableHDF &
            ( OpTab % EOSTable, "EquationOfStateTable.h5" )
-    CALL FinalizeHDF( )
+!    CALL FinalizeHDF( )
 
     OpTab % nOpacitiesA = nOpacA
     OpTab % nOpacitiesB = nOpacB
@@ -169,6 +172,5 @@ CONTAINS
     CALL DescribeOpacity( OpTab % scatt_nIso )
 
   END SUBROUTINE DescribeOpacityTable
-
 
 END MODULE wlOpacityTableModule

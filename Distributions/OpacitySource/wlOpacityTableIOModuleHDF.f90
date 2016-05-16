@@ -33,8 +33,11 @@ MODULE wlOpacityTableIOModuleHDF
   USE wlKindModule, ONLY:dp
   USE wlEnergyGridModule, ONLY: &
     EnergyGridType
-  USE wlOpacityTableModule, ONLY: OpacityTableType, AllocateOpacityTable
-  USE wlOpacityFieldsModule, ONLY: OpacityTypeA
+  USE wlOpacityTableModule, ONLY:&
+    OpacityTableType,&
+    AllocateOpacityTable
+  USE wlOpacityFieldsModule, ONLY:&
+    OpacityTypeA, OpacityTypeB, OpacityTypeC
   USE wlIOModuleHDF
   USE wlEquationOfStateTableModule
 
@@ -96,13 +99,21 @@ CONTAINS
     CALL WriteOpacityTableTypeAHDF( OpacityTable % thermEmAb, group_id )
     CALL CloseGroupHDF( group_id )
 
+    CALL OpenGroupHDF( "scatt_Iso", .true., file_id, group_id )
+    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_Iso, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "scatt_nIso", .true., file_id, group_id )
+    CALL WriteOpacityTableTypeCHDF( OpacityTable % scatt_nIso, group_id )
+    CALL CloseGroupHDF( group_id )   
+
     CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
     CALL WriteEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
     CALL CloseGroupHDF( group_id )
 
-    CALL OpenGroupHDF( "EOSTable", .true., file_id, group_id )
-    CALL WriteEOSTableHDF( OpacityTable % EOSTable, file_id, group_id )
-    CALL CloseGroupHDF( group_id )
+!    CALL OpenGroupHDF( "EOSTable", .true., file_id, group_id )
+!    CALL WriteEOSTableHDF( OpacityTable % EOSTable, file_id, group_id )
+!    CALL CloseGroupHDF( group_id )
      
     CALL CloseFileHDF( file_id )
 
@@ -203,16 +214,30 @@ CONTAINS
          ( "Units", thermEmAb % Units, group_id, datasize1dtemp ) 
 
     datasize1d = thermEmAb % nOpacities 
-    Write(*,*) 'datasize1d before write Ab in writing loop is ', datasize1d
+    datasize4d = thermEmAb % nPoints
     CALL OpenGroupHDF( "Absorptivity", .true., group_id, subgroup_id )
-      DO i = 1, datasize1d
-        datasize4d = SHAPE( thermEmAb % Absorptivity(i) % Values )
-       CALL Write4dHDF_double( "Values", thermEmAb % Absorptivity(i) % Values(:,:,:,:), &
+    DO i = 1, datasize1d
+      CALL Write4dHDF_double( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values(:,:,:,:), &
                               subgroup_id, datasize4d )
-      END DO
+    END DO
     CALL CloseGroupHDF( subgroup_id )
  
   END SUBROUTINE WriteOpacityTableTypeAHDF
+
+  SUBROUTINE WriteOpacityTableTypeBHDF( scattI , group_id )
+
+    TYPE(OpacityTypeB), INTENT(in)              :: scattI
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+  END SUBROUTINE WriteOpacityTableTypeBHDF
+
+  SUBROUTINE WriteOpacityTableTypeCHDF( scattn, group_id )
+
+    TYPE(OpacityTypeC), INTENT(in)              :: scattn
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+  END SUBROUTINE WriteOpacityTableTypeCHDF
+
 
 
   SUBROUTINE Write4dHDF_double &
@@ -253,17 +278,17 @@ CONTAINS
     TYPE(OpacityTableType), INTENT(inout)   :: OpacityTable
     CHARACTER(len=*), INTENT(in)            :: FileName
 
-!    INTEGER, DIMENSION(3)                         :: nPoints
+    INTEGER, DIMENSION(3)                         :: nPointsTS
     INTEGER                                       :: nPointsE
     INTEGER                                       :: nOpacA
     INTEGER                                       :: nOpacB, nMomB
     INTEGER                                       :: nOpacC, nMomC
-!    INTEGER                                       :: nVariables
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
     INTEGER(HID_T)                                :: subgroup_id
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER, DIMENSION(1)                         :: buffer
+    CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
@@ -286,67 +311,84 @@ CONTAINS
     CALL Read1dHDF_integer( "nPointsE", buffer, file_id, datasize1d )
     nPointsE = buffer(1)
 
-     
- !   CALL AllocateOpacityTable &
-!               ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacC, nMomC, nPointsE )
-!    CALL OpenGroupHDF( "EOSTable", .false., file_id, group_id )
-   
-!    Call OpenGroupHDF( "DependentVariables", .false., group_id, subgroup_id )     
-!    CALL ReadDimensionsHDF( nPoints, subgroup_id )
-!!$    Write(*,*),'EOS nPoints', nPoints
-!!$    CALL ReadNumberVariablesHDF( nVariables, subgroup_id )
-!!$    Write(*,*),'EOS nVariables', nVariables
-!!$    CALL CloseGroupHDF( subgroup_id )
-!!$   
-!!$    CALL CloseGroupHDF( group_id )
-!!$  
-!!$    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
-!!$    CALL ReadEnergyPointsHDF( nPointsE, group_id)
-!!$    Write(*,*),'EngeryGrid nPointsE', nPointsE
-!!$    CALL CloseGroupHDF( group_id )
-!!$
-!!$    CALL OpenGroupHDF( "EcapEm", .false., file_id, group_id )
-!!$  !  CALL ReadTableDimensionsHDF( nSpeciesA, group_id )
-!!$    WRITE(*,*),'EcapEm number', nSpeciesA
-!!$    CALL CloseGroupHDF( group_id )
-!!$    
-!!$    CALL AllocateEmptyOpacityTable &
-!!$           ( OpacityTable, nSpeciesA, nPointsE, nPoints, nVariables )
-!!$   
-!!$    CALL OpenGroupHDF( "EOSTable", .false., file_id, group_id )
-!!$    CALL ReadThermoStateHDF( OpacityTable % EOSTable % TS, group_id )
-!!$    CALL ReadDependentVariablesHDF( OpacityTable % EOSTable % DV, group_id )
-!!$    CALL CloseGroupHDF( group_id )
-!!$ 
-!!$    CALL ReadOpacityTypeAHDF( OpacityTable % ECAPEM , file_id )
-!!$
-!!$    CALL ReadEnergyGridHDF( OpacityTable % EnergyGrid, file_id  )
-!!$
-!!$    CALL DescribeOpacityTable( OpacityTable )
+    CALL Read1dHDF_integer( "nPointsTS", nPointsTS, file_id, datasize1d )
 
+    CALL AllocateOpacityTable &
+               ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacC, nMomC, nPointsE )  
+    
+    CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
+    CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "scatt_Iso", .false., file_id, group_id )
+    CALL ReadOpacityTypeBHDF( OpacityTable % scatt_Iso , group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "scatt_nIso", .false., file_id, group_id )
+    CALL ReadOpacityTypeCHDF( OpacityTable % scatt_nIso , group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
+    CALL ReadEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
+    CALL CloseGroupHDF( group_id )
+ 
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadOpacityTableHDF
 
 
-  SUBROUTINE ReadOpacityTypeAHDF( ECAPEM, file_id )
+  SUBROUTINE ReadOpacityTypeAHDF( thermEmAb, group_id )
 
-    TYPE(OpacityTypeA), DIMENSION(:),INTENT(inout)   :: ECAPEM
-    INTEGER(HID_T), INTENT(in)                       :: file_id
+    TYPE(OpacityTypeA),INTENT(inout)                 :: thermEmAb
+    INTEGER(HID_T), INTENT(in)                       :: group_id
 
-!!$    INTEGER(HID_T)                              :: group_id
-!!$    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
-!!$    INTEGER                                     :: i
-!!$    INTEGER, DIMENSION(1)                       :: buffer
-!!$
-!!$    CALL OpenGroupHDF( "EcapEm", .false., file_id, group_id )  
-!!$      
-!!$    DO i = 1, 1
-!!$    CALL Read4dHDF_double( "Valuse ", ECAPEM(i) % Values, &
-!!$                              group_id, datasize4d )
-!!$    END DO
+
+    INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
+    INTEGER                                          :: i
+    INTEGER, DIMENSION(1)                            :: buffer
+    INTEGER(HID_T)                                   :: subgroup_id
+
+    datasize1d(1) = 1
+    CALL Read1dHDF_integer( "nOpacities", buffer, group_id, datasize1d )
+    thermEmAb % nOpacities = buffer(1)
+
+    datasize1d = buffer(1)
+    Call Read1dHDF_string( "Names", thermEmAb % Names, group_id, datasize1d )
+
+    Call Read1dHDF_string( "Units", thermEmAb % Units, group_id, datasize1d )
+
+    CALL Read1dHDF_string( "Species", thermEmAb % Species, group_id, datasize1d )
+
+    datasize1d(1) = 4
+    CALL Read1dHDF_integer( "nPoints", thermEmAb % nPoints, group_id, datasize1d )
+
+    datasize4d = thermEmAb % nPoints
+
+    CALL OpenGroupHDF( "Absorptivity", .false., group_id, subgroup_id )
+    DO i = 1, thermEmAb % nOpacities
+    WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i)
+    CALL Read4dHDF_double( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values, subgroup_id, datasize4d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeAHDF
+
+
+
+  SUBROUTINE ReadOpacityTypeBHDF( thermEmAb, group_id )
+
+    TYPE(OpacityTypeB),INTENT(inout)                 :: thermEmAb
+    INTEGER(HID_T), INTENT(in)                       :: group_id
+  END SUBROUTINE ReadOpacityTypeBHDF
+
+  SUBROUTINE ReadOpacityTypeCHDF( thermEmAb, group_id )
+
+    TYPE(OpacityTypeC),INTENT(inout)                 :: thermEmAb
+    INTEGER(HID_T), INTENT(in)                       :: group_id
+
+  END SUBROUTINE ReadOpacityTypeCHDF
+
 
 
   SUBROUTINE Read4dHDF_double( name, values, group_id, datasize )
@@ -356,64 +398,46 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(4), INTENT(in)  :: datasize
     REAL(dp), DIMENSION(:,:,:,:), INTENT(out)   :: values
    
-!!$    INTEGER(HID_T)                               :: dataset_id
-!!$ 
-!!$    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
-!!$    CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
-!!$    CALL h5dclose_f( dataset_id, hdferr )
+    INTEGER(HID_T)                               :: dataset_id
+ 
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Read4dHDF_double
 
 
-  SUBROUTINE ReadEnergyGridHDF( EnergyGrid, file_id )
+  SUBROUTINE ReadEnergyGridHDF( EnergyGrid, group_id )
 
     TYPE(EnergyGridType), INTENT(inout)         :: EnergyGrid
-    INTEGER(HID_T), INTENT(in)                  :: file_id
+    INTEGER(HID_T), INTENT(in)                  :: group_id
 
-!!$    INTEGER(HID_T)                              :: group_id
-!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-!!$
-!!$    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
-!!$
-!!$ 
-!!$!    CALL Read1HDF_string( "Names", EnergyGrid % Names, &
-!!$!                              group_id )
-!!$!    CALL Read1HDF_string( "Units", EnergyGrid % Units, &
-!!$!                              group_id )
-!!$    CALL Read1dHDF_double( "Values", EnergyGrid % Values(:), &
-!!$                              group_id, datasize1d )
-!!$
-!!$    CALL CloseGroupHDF( group_id )
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER, DIMENSION(1)                       :: buffer
+    CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
+
+    datasize1d(1) = 1
+    Call Read1dHDF_string( "Name", buffer_string, group_id, datasize1d )
+    EnergyGrid % Name = buffer_string(1)
+
+    Call Read1dHDF_string( "Unit", buffer_string, group_id, datasize1d )
+    EnergyGrid % Unit = buffer_string(1)
+
+    CALL Read1dHDF_integer( "nPoints", buffer, group_id, datasize1d )
+    EnergyGrid % nPoints = buffer(1)
+
+    CALL Read1dHDF_integer( "LogInterp", buffer, group_id, datasize1d )
+    EnergyGrid % LogInterp = buffer(1)
+ 
+    datasize1d = EnergyGrid % nPoints
+    CALL Read1dHDF_double( "Values", EnergyGrid % Values, &
+                              group_id, datasize1d )
+
+    EnergyGrid % minValue = MINVAL( EnergyGrid % Values )
+    
+    EnergyGrid % maxValue = MAXVAL( EnergyGrid % Values )
 
   END SUBROUTINE ReadEnergyGridHDF
-
-
-  SUBROUTINE ReadEnergyPointsHDF ( nPointsE, group_id )
-
-    INTEGER(HID_T), INTENT(in)                  :: group_id
-    INTEGER, INTENT(inout)                      :: nPointsE
-
-!!$    INTEGER, DIMENSION(1)                       :: nVarTemp
-!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-!!$
-!!$    datasize1d(1) = 1
-!!$    CALL Read1dHDF_integer( "nPointsE", nVarTemp(:), group_id, datasize1d )
-!!$    nPointsE = nVarTemp(1)
-
-  END SUBROUTINE ReadEnergyPointsHDF
-
-
-  SUBROUTINE Read1HDF_string( name, values, group_id )
-  
-    CHARACTER(*), INTENT(in)                      :: name
-    INTEGER(HID_T)                                :: group_id
-    CHARACTER(len=*), INTENT(inout)               :: values
-
-!!$    INTEGER(HSIZE_T), DIMENSION(1)                :: datasize
-!!$
-!!$!    CALL Read1dHDF_string( name, tempvalues, group_id, datasize )
-
-  END SUBROUTINE Read1HDF_string
 
 
 END MODULE wlOpacityTableIOModuleHDF
