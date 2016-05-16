@@ -38,9 +38,13 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:&
     OpacityTypeA, OpacityTypeB, OpacityTypeC
-  USE wlIOModuleHDF
+  USE wlIOModuleHDF, ONLY:&
+    Write1dHDF_string, Write1dHDF_integer, &
+    Write1dHDF_double, Read1dHDF_string, &
+    Read1dHDF_integer, Read1dHDF_double, &
+    OpenFileHDF, CloseFileHDF, OpenGroupHDF, &
+    CloseGroupHDF
   USE wlEquationOfStateTableModule
-
   USE HDF5
 
   IMPLICIT NONE
