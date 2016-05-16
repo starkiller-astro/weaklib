@@ -89,22 +89,24 @@ implicit none
 
 
 PRINT*, "Allocating OpacityTable"   
- 
+
+   CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpacA, nOpacB, nMomB, &
               nOpacC, nMomC, nPointsE ) 
+   CALL FinalizeHDF( )
   
    OpacityTable % thermEmAb % nOpacities = nOpacA
 
    OpacityTable % thermEmAb % nPoints(1) = nPointsE
    OpacityTable % thermEmAb % nPoints(2:4) = OpacityTable % nPointsTS
 
-   OpacityTable % thermEmAb     % Names = &
-                                (/'Electron Capture Absorbility'/)  
-   OpacityTable % thermEmAb     % Species = &
+   OpacityTable % thermEmAb % Names = &
+                                (/'Electron Capture Absorptivity'/)  
+   OpacityTable % thermEmAb % Species = &
                                 (/'Electron Neutrino           '/)
-   OpacityTable % thermEmAb     % Units = &
-                                (/'Per Centimeter               '/) 
+   OpacityTable % thermEmAb % Units = &
+                                (/'Per Centimeter              '/) 
 
 !-----------------------------   
 ! Generate E grid from limits
@@ -133,7 +135,7 @@ PRINT*, "Making Energy Grid"
 !            Print The OpacityTable
 !-------------------------------------------------------------------------
 
-!  CALL DescribeOpacityTable( OpacityTable )
+   CALL DescribeOpacityTable( OpacityTable )
 
 
 !-------------------------------------------------------------------------
@@ -194,11 +196,12 @@ PRINT*, "Making Energy Grid"
      END DO  !l_ye
    END DO  !i_r
 
+  WRITE (*,*) "OpacityTable % thermEmAb % Absorptivity(i_r) % Values", SHAPE(OpacityTable % thermEmAb % Absorptivity(1) % Values)
 
-  CALL DescribeOpacityTable( OpacityTable )
+ CALL DescribeOpacityTable( OpacityTable )
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
   WRITE (*,*) "HDF write successful"
