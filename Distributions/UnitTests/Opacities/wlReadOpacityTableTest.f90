@@ -5,12 +5,13 @@ PROGRAM wlReadOpacityTableTest
   USE wlGridModule, ONLY: MakeLogGrid
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-
-  USE wlIOModuleHDF!, ONLY:&
-       !   InitializeHDF, FinalizeHDF
   USE wlOpacityTableModule
-  USE wlOpacityTableIOModuleHDF!, ONLY: &
-        !  ReadOpacityTableHDF
+
+  USE wlIOModuleHDF, ONLY:&
+          InitializeHDF, FinalizeHDF
+  USE wlOpacityTableModule
+  USE wlOpacityTableIOModuleHDF, ONLY: &
+          ReadOpacityTableHDF
   USE wlExtPhysicalConstantsModule
 
   implicit none
@@ -18,14 +19,11 @@ PROGRAM wlReadOpacityTableTest
   TYPE(OpacityTableType)  :: OpacityTable
 
   CALL InitializeHDF( )
-
   CALL ReadOpacityTableHDF( OpacityTable, "TestTable.h5" )
+  CALL FinalizeHDF( ) 
 
-!  Write (*,*) OpacityTable % EOSTable % nPoints
-!  Write (*,*) OpacityTable % EOSTable % nVariables
-!  Write (*,*) OpacityTable % EnergyGrid
-!  Write (*,*) OpacityTable % EcapEm % Names
+  PRINT*, "Describe OpacityTable"
 
-  CALL FinalizeHDF( )  
+  CALL DescribeOpacityTable( OpacityTable )
 
 END PROGRAM wlReadOpacityTableTest

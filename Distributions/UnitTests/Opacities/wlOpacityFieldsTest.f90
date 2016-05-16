@@ -44,32 +44,32 @@ PROGRAM wlOpacityFieldsTest
 
   ! -- Absorptivity -- 
 
-  ASSOCIATE( ecap => OpacityTable % ecap )
+  ASSOCIATE( thermEmAb => OpacityTable % thermEmAb )
 
-  ecap % Names &
+  thermEmAb % Names &
     = [ 'Electron Capture Absoptivity    ', &
         'Electron Capture Absoptivity    ', &
         'Electron Capture Absoptivity    ', &
         'Electron Capture Absoptivity    ' ]
 
-  ecap % Species &
+  thermEmAb % Species &
     = [ 'Electron Neutrino               ', &
         'Electron Antineutrino           ', &
         'Mu/Tau Neutrino                 ', &
         'Mu/Tau Antineutrino             ' ]
 
-  ecap % Units &
+  thermEmAb % Units &
     = [ 'Per Centimeter                  ', &
         'Per Centimeter                  ', &
         'Per Centimeter                  ', &
         'Per Centimeter                  ' ]
 
-  ASSOCIATE( Chi_Nu_e => ecap % Absorptivity(iNu_e) % Values )
+  ASSOCIATE( Chi_Nu_e => thermEmAb % Absorptivity(iNu_e) % Values )
 
-  DO iY = 1, ecap % nPoints(4)
-    DO iT = 1, ecap % nPoints(3)
-      DO iD = 1, ecap % nPoints(2)
-        DO iE = 1, ecap % nPoints(1)
+  DO iY = 1, thermEmAb % nPoints(4)
+    DO iT = 1, thermEmAb % nPoints(3)
+      DO iD = 1, thermEmAb % nPoints(2)
+        DO iE = 1, thermEmAb % nPoints(1)
 
           Chi_Nu_e(iE,iD,iT,iY) = 1.0_dp
 
@@ -80,7 +80,7 @@ PROGRAM wlOpacityFieldsTest
 
   END ASSOCIATE ! Chi_Nu_e
 
-  END ASSOCIATE ! ecap
+  END ASSOCIATE ! thermEmAb
 
   ! -- Inelastic Scattering --
 

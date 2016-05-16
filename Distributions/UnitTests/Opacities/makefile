@@ -102,7 +102,7 @@ Opacity_MODS = $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) wlOpacityTableModule.o
 ##OpacityIO_MODS = $(Opacity_MODS) wlOpacityTableIOModuleHDF.o
 OpacityIO_MODS = wlOpacityTableIOModuleHDF.o
 
-Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlOpacityFieldsTest.o
+Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlReadOpacityTableTest.o
 #Opacity_OBJ = $(BASE_MODS)
 #===================================================
 # Build a Dependency list and an Object list, by replacing the .cpp
