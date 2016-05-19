@@ -1,6 +1,7 @@
 include ../../../Build/Makefile_Build
 
-all: wlOpacityFieldsTest
+all: wlOpacityFieldsTest \
+     wlOpacityInterpolationTest
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -8,11 +9,18 @@ wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o \
 	$(LIBRARIES)
 
+wlOpacityInterpolationTest: \
+	$(weaklib) wlOpacityInterpolationTest.o
+	$(FLINKER) $(FLAGS) -o wlOpacityInterpolationTest_$(MACHINE) \
+	$(weaklib) wlOpacityInterpolationTest.o \
+	$(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld
 
 clobber: clean
 	rm -f wlOpacityFieldsTest_$(MACHINE)
+	rm -f wlOpacityInterpolationTest_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
   wlKindModule.o \
@@ -20,3 +28,6 @@ wlOpacityFieldsTest.o: \
   wlOpacityFieldsModule.o \
   wlGridModule.o \
   wlOpacityFieldsTest.f90
+
+wlOpacityInterpolationTest.o: \
+  wlOpacityInterpolationTest.f90
