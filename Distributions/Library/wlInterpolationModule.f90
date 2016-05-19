@@ -3,6 +3,8 @@ MODULE wlInterpolationModule
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
+  USE wlEnergyGridModule!, ONLY: EnergyGridType
+
 
   implicit none
 
@@ -23,7 +25,8 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateSingleVariable_3D
     MODULE PROCEDURE LogInterpolateSingleVariable_4D
   END INTERFACE LogInterpolateSingleVariable
-  
+
+
 CONTAINS
 
 
@@ -144,7 +147,7 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_4D&
                ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
-                 Coordinate4, LogInterp, Offset, Table, Interpolant, Derivative )
+                 Coordinate4, LogInterp, Offset, Table, Interpolant )
 
     REAL(dp), DIMENSION(:), INTENT(in)     :: x1
     REAL(dp), DIMENSION(:), INTENT(in)     :: x2
@@ -158,11 +161,9 @@ CONTAINS
     REAL(dp), INTENT(in)                   :: Offset
     REAL(dp), DIMENSION(:,:,:,:), INTENT(in) :: Table
     REAL(dp), DIMENSION(:), INTENT(out)    :: Interpolant
-    REAL(dp), DIMENSION(:,:,:), INTENT(out)  :: Derivative
 
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
-    REAL(dp) :: epsilon
     REAL(dp), DIMENSION(4) :: alpha, delta
     INTEGER :: i, j, k, l, il1, il2, il3, il4
 
@@ -266,12 +267,6 @@ CONTAINS
   END SUBROUTINE LogInterpolateSingleVariable_4D
 
 
-
-
-
-
-
-
   SUBROUTINE LogInterpolateAllVariables &
                ( x1, x2, x3, LogInterp, TS, DV, Interpolants )
 
@@ -354,7 +349,7 @@ CONTAINS
       END DO
     END DO
 
-  END SUBROUTINE LogInterpolateAllVariables 
+  END SUBROUTINE LogInterpolateAllVariables
 
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable &
