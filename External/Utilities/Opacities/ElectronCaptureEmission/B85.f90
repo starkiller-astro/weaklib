@@ -59,7 +59,7 @@ CONTAINS
     if(z.gt.28.0)               npz = 8.0
     
 
-    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p+dmnp)/TMeV ) - 1.0_dp ) )
+    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p-dmnp)/TMeV ) - 1.0_dp ) )
 !    etapn = rho * xp  / mpG                  ! Approxiation in the nondegenerate regime
 
     midFe = 1.0_dp / ( EXP( (energy+dmnp-chem_e) / TMeV ) + 1.0_dp )
