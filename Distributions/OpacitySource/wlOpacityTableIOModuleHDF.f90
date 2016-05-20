@@ -39,9 +39,7 @@ MODULE wlOpacityTableIOModuleHDF
   USE wlOpacityFieldsModule, ONLY:&
     OpacityTypeA, OpacityTypeB, OpacityTypeC
   USE wlIOModuleHDF, ONLY:&
-    Write1dHDF_string, Write1dHDF_integer, &
-    Write1dHDF_double, Read1dHDF_string, &
-    Read1dHDF_integer, Read1dHDF_double, &
+    ReadHDF, WriteHDF, &
     OpenFileHDF, CloseFileHDF, OpenGroupHDF, &
     CloseGroupHDF
   USE wlEquationOfStateTableModule
@@ -73,32 +71,32 @@ CONTAINS
 
     datasize1d(1) = 1
     tempInteger(1) = OpacityTable % nOpacitiesA
-    CALL Write1dHDF_integer&
-         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nOpacitiesB 
-    CALL Write1dHDF_integer&
-         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
   
     tempInteger(1) = OpacityTable % nMomentsB     
-    CALL Write1dHDF_integer&
-         ( "nMomentsB", tempInteger, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nMomentsB", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nOpacitiesC     
-    CALL Write1dHDF_integer&
-         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nMomentsC   
-    CALL Write1dHDF_integer&
-         ( "nMomentsC", tempInteger, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nMomentsC", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nPointsE  
-    CALL Write1dHDF_integer&
-         ( "nPointsE", tempInteger, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nPointsE", tempInteger, file_id, datasize1d )
 
     datasize1d = 3
-    CALL Write1dHDF_integer&
-         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
+!    CALL WriteHDF&
+!         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
 
     CALL OpenGroupHDF( "thermEmAb", .true., file_id, group_id )
     CALL WriteOpacityTableTypeAHDF( OpacityTable % thermEmAb, group_id )
@@ -135,23 +133,23 @@ CONTAINS
     datasize1d(1) = 1
 
     tempString(1) = EnergyGrid % Name
-    CALL Write1dHDF_string( "Name", tempString, &
+    CALL WriteHDF( "Name", tempString, &
                              group_id, datasize1d )
     
     tempString(1) = EnergyGrid % Unit
-    CALL Write1dHDF_string( "Unit", tempString, &
+    CALL WriteHDF( "Unit", tempString, &
                             group_id, datasize1d )
 
     tempInteger(1) = EnergyGrid % nPoints  
-    CALL Write1dHDF_integer( "nPoints", tempInteger, &
+    CALL WriteHDF( "nPoints", tempInteger, &
                             group_id, datasize1d )
    
     tempInteger(1) = EnergyGrid % LogInterp 
-    CALL Write1dHDF_integer( "LogInterp", tempInteger, &
+    CALL WriteHDF( "LogInterp", tempInteger, &
                              group_id, datasize1d )
    
     datasize1d(1) = EnergyGrid % nPoints
-    CALL Write1dHDF_double( "Values", EnergyGrid % Values(:), &
+    CALL WriteHDF( "Values", EnergyGrid % Values(:), &
                               group_id, datasize1d )
   
   END SUBROUTINE WriteEnergyGridHDF
@@ -177,21 +175,21 @@ CONTAINS
 
     datasize1dtemp(1) = 1
     tempInteger(1) = thermEmAb % nOpacities
-    CALL Write1dHDF_integer&
+    CALL WriteHDF&
          ( "nOpacities", tempInteger, group_id, datasize1dtemp )
 
     datasize1dtemp(1) = 4
-    CALL Write1dHDF_integer&
+    CALL WriteHDF&
          ( "nPoints", thermEmAb % nPoints, group_id, datasize1dtemp )
 
     datasize1dtemp(1) = thermEmAb % nOpacities
-    CALL Write1dHDF_string&
+    CALL WriteHDF&
          ( "Names", thermEmAb % Names, group_id, datasize1dtemp ) 
 
-    CALL Write1dHDF_string&
+    CALL WriteHDF&
          ( "Species", thermEmAb % Species, group_id, datasize1dtemp ) 
 
-    CALL Write1dHDF_string&
+    CALL WriteHDF&
          ( "Units", thermEmAb % Units, group_id, datasize1dtemp ) 
 
     datasize1d = thermEmAb % nOpacities 
@@ -274,25 +272,25 @@ CONTAINS
     CALL OpenFileHDF( FileName, .false., file_id )
 
     datasize1d(1) = 1
-    CALL Read1dHDF_integer( "nOpacitiesA", buffer, file_id, datasize1d )
+    CALL ReadHDF( "nOpacitiesA", buffer, file_id, datasize1d )
     nOpacA = buffer(1)   
 
-    CALL Read1dHDF_integer( "nOpacitiesB", buffer, file_id, datasize1d )
+    CALL ReadHDF( "nOpacitiesB", buffer, file_id, datasize1d )
     nOpacB = buffer(1)
 
-    CALL Read1dHDF_integer( "nMomentsB", buffer, file_id, datasize1d )
+    CALL ReadHDF( "nMomentsB", buffer, file_id, datasize1d )
     nMomB = buffer(1)
 
-    CALL Read1dHDF_integer( "nOpacitiesC", buffer, file_id, datasize1d )
+    CALL ReadHDF( "nOpacitiesC", buffer, file_id, datasize1d )
     nOpacC = buffer(1)
 
-    CALL Read1dHDF_integer( "nMomentsC", buffer, file_id, datasize1d )
+    CALL ReadHDF( "nMomentsC", buffer, file_id, datasize1d )
     nMomC = buffer(1)
 
-    CALL Read1dHDF_integer( "nPointsE", buffer, file_id, datasize1d )
+    CALL ReadHDF( "nPointsE", buffer, file_id, datasize1d )
     nPointsE = buffer(1)
 
-    CALL Read1dHDF_integer( "nPointsTS", nPointsTS, file_id, datasize1d )
+    CALL ReadHDF( "nPointsTS", nPointsTS, file_id, datasize1d )
 
     CALL AllocateOpacityTable &
                ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacC, nMomC, nPointsE )  
@@ -331,18 +329,18 @@ CONTAINS
     INTEGER(HID_T)                                   :: subgroup_id
 
     datasize1d(1) = 1
-    CALL Read1dHDF_integer( "nOpacities", buffer, group_id, datasize1d )
+    CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     thermEmAb % nOpacities = buffer(1)
 
     datasize1d = buffer(1)
-    Call Read1dHDF_string( "Names", thermEmAb % Names, group_id, datasize1d )
+    Call ReadHDF( "Names", thermEmAb % Names, group_id, datasize1d )
 
-    Call Read1dHDF_string( "Units", thermEmAb % Units, group_id, datasize1d )
+    Call ReadHDF( "Units", thermEmAb % Units, group_id, datasize1d )
 
-    CALL Read1dHDF_string( "Species", thermEmAb % Species, group_id, datasize1d )
+    CALL ReadHDF( "Species", thermEmAb % Species, group_id, datasize1d )
 
     datasize1d(1) = 4
-    CALL Read1dHDF_integer( "nPoints", thermEmAb % nPoints, group_id, datasize1d )
+    CALL ReadHDF( "nPoints", thermEmAb % nPoints, group_id, datasize1d )
 
     datasize4d = thermEmAb % nPoints
 
@@ -398,20 +396,20 @@ CONTAINS
     CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
 
     datasize1d(1) = 1
-    Call Read1dHDF_string( "Name", buffer_string, group_id, datasize1d )
+    Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
     EnergyGrid % Name = buffer_string(1)
 
-    Call Read1dHDF_string( "Unit", buffer_string, group_id, datasize1d )
+    Call ReadHDF( "Unit", buffer_string, group_id, datasize1d )
     EnergyGrid % Unit = buffer_string(1)
 
-    CALL Read1dHDF_integer( "nPoints", buffer, group_id, datasize1d )
+    CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
     EnergyGrid % nPoints = buffer(1)
 
-    CALL Read1dHDF_integer( "LogInterp", buffer, group_id, datasize1d )
+    CALL ReadHDF( "LogInterp", buffer, group_id, datasize1d )
     EnergyGrid % LogInterp = buffer(1)
  
     datasize1d = EnergyGrid % nPoints
-    CALL Read1dHDF_double( "Values", EnergyGrid % Values, &
+    CALL ReadHDF( "Values", EnergyGrid % Values, &
                               group_id, datasize1d )
 
     EnergyGrid % minValue = MINVAL( EnergyGrid % Values )
