@@ -64,6 +64,7 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityFieldsModule
   USE wlOpacityTableIOModuleHDF
   USE wlExtPhysicalConstantsModule
+  USE wlExtNumericalModule, ONLY: epsilon
   USE B85
 
 implicit none
@@ -161,30 +162,35 @@ PRINT*, "Making Energy Grid"
 
               chem_e = 10**OpacityTable % EOSTable % DV % Variables (4) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
-                       DV % Offsets(4)            !4 =Electron Chemical Potential             
+                       DV % Offsets(4) - epsilon    !4 =Electron Chemical Potential             
 
               chem_p = 10**OpacityTable % EOSTable % DV % Variables (5) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
-                       DV % Offsets(5)            !5 =Proton Chemical Potential 
+                       DV % Offsets(5) - epsilon    !5 =Proton Chemical Potential 
 
               chem_n = 10**OpacityTable % EOSTable % DV % Variables (6) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % & 
-                       DV % Offsets(6)            !6 =Neutron Chemical Potential
+                       DV % Offsets(6) - epsilon    !6 =Neutron Chemical Potential
 
                  xp  = 10**OpacityTable % EOSTable % DV % Variables (7) %&
-                       Values (j_rho, k_t, l_ye)  !7 =Proton Mass Fraction
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(7) - epsilon    !7 =Proton Mass Fraction
 
                  xn  = 10**OpacityTable % EOSTable % DV % Variables (8) %&
-                       Values (j_rho, k_t, l_ye)  !8 =Neutron Mass Fraction
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(8) - epsilon    !8 =Neutron Mass Fraction
 
              xheavy  = 10**OpacityTable % EOSTable % DV % Variables (10) %&
-                       Values (j_rho, k_t, l_ye)  !10 =Heavy Mass Fraction
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(10) - epsilon   !10 =Heavy Mass Fraction
 
                  Z   = OpacityTable % EOSTable % DV % Variables (11) %&
-                       Values (j_rho, k_t, l_ye)  !11 =Heavy Charge Number
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(11) - epsilon   !11 =Heavy Charge Number
 
                  A   = OpacityTable % EOSTable % DV % Variables (12) %&
-                       Values (j_rho, k_t, l_ye)  !12 =Heavy Mass Number 
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
+                       DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
 
               OpacityTable % thermEmAb % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
                = totalECapEm(energy, rho, T, Z, A,&
