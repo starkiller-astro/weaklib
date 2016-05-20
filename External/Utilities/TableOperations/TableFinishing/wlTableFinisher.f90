@@ -148,9 +148,9 @@ PROGRAM wlTableFinisher
     END DO
   END DO
 
-  CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
-                          EOSTable % nPoints(1), EOSTable % nPoints(2), &
-                          EOSTable % nPoints(3), 2, EOSTable % DV % Repaired )
+  !CALL MonotonicityCheck( EOSTable % DV % Variables(3) % Values(:,:,:), &
+  !                        EOSTable % nPoints(1), EOSTable % nPoints(2), &
+  !                        EOSTable % nPoints(3), 2, EOSTable % DV % Repaired )
 
   DO l = 1, EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)

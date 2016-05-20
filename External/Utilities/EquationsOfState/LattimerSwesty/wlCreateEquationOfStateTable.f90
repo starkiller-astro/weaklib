@@ -43,11 +43,11 @@ PROGRAM wlCreateEquationOfStateTable
 !  READ( InputUnit, * ) Description, Resolution 
 
 !  nPoints = (/81,24,24/) ! Low Res
-  nPoints = (/10,10,10/) ! Low Res
+!  nPoints = (/151,47,49/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
 !  nPoints = (/161,93,25/) ! High Res in T only
 !  nPoints = (/161,47,49/) ! Standard D Res
-!  nPoints = (/161,47,25/) ! Standard C Res
+  nPoints = (/161,47,25/) ! Standard C Res
 !  nPoints = (/321,47,25/) ! High Res in Rho
 !  nPoints = (/321,93,93/) ! High Res
   nVariables = 15
@@ -75,6 +75,9 @@ PRINT*, "Allocate Independent Variable Units "
 
   EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.7, 0.06d0/)
   EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+
+!  EOSTable % TS % minValues(1:3) =  (/1.0d08, 10.d0**9.7, 0.06d0/)
+!  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
 
 !------------------------------------------------------------------------------
 ! Generate rho, T, Ye grid from limits
@@ -182,7 +185,6 @@ PRINT*, "Begin Associate"
 
   ALLOCATE( Ye_save( EOSTable % nPoints(3) ) ) 
 
-write(*,*) "Ye grid",Ye
   DO k = 1, EOSTable % nPoints(3) 
   Ye_save(k) = Ye(k)
   !DO k = 1, kmax
@@ -203,6 +205,7 @@ write(*,*) "Ye grid",Ye
           count = count + 1
           END IF
           
+          WRITE(*,*) Density(i), Temperature(j), Ye(k)     
                
       END DO
     END DO
