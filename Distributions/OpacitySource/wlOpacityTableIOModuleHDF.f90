@@ -71,32 +71,32 @@ CONTAINS
 
     datasize1d(1) = 1
     tempInteger(1) = OpacityTable % nOpacitiesA
-!    CALL WriteHDF&
-!         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nOpacitiesB 
-!    CALL WriteHDF&
-!         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
   
     tempInteger(1) = OpacityTable % nMomentsB     
-!    CALL WriteHDF&
-!         ( "nMomentsB", tempInteger, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nMomentsB", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nOpacitiesC     
-!    CALL WriteHDF&
-!         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nMomentsC   
-!    CALL WriteHDF&
-!         ( "nMomentsC", tempInteger, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nMomentsC", tempInteger, file_id, datasize1d )
 
     tempInteger(1) = OpacityTable % nPointsE  
-!    CALL WriteHDF&
-!         ( "nPointsE", tempInteger, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nPointsE", tempInteger, file_id, datasize1d )
 
     datasize1d = 3
-!    CALL WriteHDF&
-!         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
+    CALL WriteHDF&
+         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
 
     CALL OpenGroupHDF( "thermEmAb", .true., file_id, group_id )
     CALL WriteOpacityTableTypeAHDF( OpacityTable % thermEmAb, group_id )
