@@ -33,7 +33,7 @@ MODULE B85
 CONTAINS
 !========================Function=============================
 
-  PURE REAL(dp) FUNCTION &
+  REAL(dp) FUNCTION &
     totalECapEm( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 
     REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
@@ -58,9 +58,17 @@ CONTAINS
     if(z.gt.20.0.and.z.le.28.0) npz = z - 20.0
     if(z.gt.28.0)               npz = 8.0
     
-
-    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p-dmnp)/TMeV ) - 1.0_dp ) )
+    
+    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
 !    etapn = rho * xp  / mpG                  ! Approxiation in the nondegenerate regime
+    
+    IF (etapn < 0.0_dp ) THEN
+      WRITE(*,*)'etapn is negtive: ', etapn
+      WRITE(*,*)'xn - xp is ', xn - xp
+      WRITE(*,*),'exp term is ',  EXP( (chem_n-chem_p)/TMeV ) - 1.0_dp 
+      WRITE(*,*)'chem_n - chem_p is ', chem_n - chem_p 
+      STOP 
+    END IF
 
     midFe = 1.0_dp / ( EXP( (energy+dmnp-chem_e) / TMeV ) + 1.0_dp )
 
