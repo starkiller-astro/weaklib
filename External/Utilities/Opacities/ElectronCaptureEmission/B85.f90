@@ -75,7 +75,8 @@ CONTAINS
 
     totalECapEm = (jnucleon + jnuclear) / feq
 
-    RETURN
+    RETURN 
+
   END FUNCTION totalECapEm
 
 END MODULE B85

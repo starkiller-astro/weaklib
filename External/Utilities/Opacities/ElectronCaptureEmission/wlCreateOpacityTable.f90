@@ -202,12 +202,29 @@ PRINT*, "Making Energy Grid"
      END DO  !l_ye
    END DO  !i_r
 
-  WRITE (*,*) "OpacityTable % thermEmAb % Absorptivity(i_r) % Values", SHAPE(OpacityTable % thermEmAb % Absorptivity(1) % Values)
-
- CALL DescribeOpacityTable( OpacityTable )
+  CALL DescribeOpacityTable( OpacityTable )
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable_notLog.h5" )
+  CALL FinalizeHDF( )
+
+   DO i_r = 1, nOpacA
+     DO l_ye = 1, OpacityTable % nPointsTS(3)
+       DO k_t = 1, OpacityTable % nPointsTS(2)
+         DO j_rho = 1, OpacityTable % nPointsTS(1)
+           DO i_e = 1, OpacityTable % nPointsE
+             OpacityTable % thermEmAb % Absorptivity(i_r) % &
+                          Values (i_e, j_rho, k_t, l_ye)  &
+             = LOG10( OpacityTable % thermEmAb % Absorptivity(i_r) % &
+                          Values (i_e, j_rho, k_t, l_ye) )
+           END DO  !i_e
+         END DO  !j_rho
+       END DO  !k_t
+     END DO  !l_ye
+   END DO  !i_r
+
+  CALL InitializeHDF( )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable_Log.h5" )
   CALL FinalizeHDF( )
 
   WRITE (*,*) "HDF write successful"
