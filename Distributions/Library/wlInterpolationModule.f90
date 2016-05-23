@@ -489,7 +489,7 @@ CONTAINS
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D &
                ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
                  Coordinate4, LogInterp, Offset, Table, Interpolant, &
-                 Derivative )     
+                 Derivative, debug )     
 
     REAL(dp), DIMENSION(:), INTENT(in)     :: x1
     REAL(dp), DIMENSION(:), INTENT(in)     :: x2
@@ -504,11 +504,23 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:,:), INTENT(in) :: Table
     REAL(dp), DIMENSION(:), INTENT(out)    :: Interpolant
     REAL(dp), DIMENSION(:,:), INTENT(out)  :: Derivative
-
+    LOGICAL                                :: debug
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
     REAL(dp), DIMENSION(4) :: alpha, delta
     INTEGER :: i, j, k, l, il1, il2, il3, il4
+    
+    IF ( ( SIZE(x1) .NE. SIZE(x2) ) .OR. ( SIZE(x2) .NE. SIZE(x3) ) &
+         .OR. ( SIZE(x3) .NE. SIZE(x4) ) .OR. ( SIZE(x4) .NE. SIZE (x1) ) ) &
+    THEN
+      WRITE(*,*), &
+        'ERROR: describe arrays (of interpolation point) have diff size.'
+      RETURN
+    END IF
+
+    IF (debug) THEN
+      WRITE(*,*), ' Now we are in 4D differentiate routine'
+    END IF
 
     DO i = 1, SIZE( x1 )
 
@@ -517,6 +529,10 @@ CONTAINS
       CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(i), il3 )
       CALL locate( Coordinate4, SIZE( Coordinate4 ), x4(i), il4 )
 
+      IF (debug) THEN
+        WRITE(*,*), ' The located postion is ', il1, il2, il3, il4
+      END IF
+ 
       p0000 = ( Table( il1  , il2  , il3  , il4   ) )
       p0001 = ( Table( il1  , il2  , il3  , il4+1 ) )
       p0010 = ( Table( il1  , il2  , il3+1, il4   ) )
@@ -533,6 +549,10 @@ CONTAINS
       p1101 = ( Table( il1+1, il2+1, il3  , il4+1 ) )
       p1110 = ( Table( il1+1, il2+1, il3+1, il4   ) )
       p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) )
+
+      IF (debug) THEN
+        WRITE(*,*), ' 16 corners are loaded'
+      END IF
 
       IF ( LogInterp(1) == 1 ) THEN
         alpha(1) &
@@ -589,6 +609,10 @@ CONTAINS
           = ( x4(i) - Coordinate4(il4) ) &
               / ( Coordinate4(il4+1) - Coordinate4(il4) )
       END IF
+     
+      IF (debug) THEN
+        WRITE(*,*), '  Alpha and delta are calculated.'
+      END IF
 
       Interpolant(i) &
         = 10.d0**( &
@@ -627,6 +651,9 @@ CONTAINS
                   +           delta(3)  * &
                                     delta(2)  *           delta(1)  * p1111 ) ) &
           - Offset
+      IF (debug) THEN
+        WRITE(*,*), 'Interpolant is calculated =', Interpolant(i)
+      END IF
 
       Derivative(i,1) &  ! E
         = 0.0_dp
@@ -689,10 +716,13 @@ CONTAINS
                                     delta(2)  * (1.0_dp - delta(1)) * p0111   &
                   +           delta(3)  * &
                                     delta(2)  *           delta(1)  * p1111 )))
-
-
+    
     END DO
-  
+
+    IF (debug) THEN
+      WRITE(*,*), 'End of differentiate routine'
+    END IF
+
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D
   
 
