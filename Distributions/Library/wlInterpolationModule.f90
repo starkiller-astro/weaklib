@@ -551,18 +551,21 @@ CONTAINS
       p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) )
 
       IF (debug) THEN
-        WRITE(*,*), ' 16 corners are loaded'
+        WRITE(*,*), ' 16 corners are loaded. Then are:'
+        WRITE(*,*), p0000, p0001, &
+                    p0010, p0011, p0100, p0101, p0110, p0111, p1000, &
+                    p1001, p1010, p1011, p1100, p1101, p1110, p1111
       END IF
 
       IF ( LogInterp(1) == 1 ) THEN
         alpha(1) &
-          = 1.0d0 / (ln10 * x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
+          = 0.0_dp ! 1.0_dp / ( x1(i) * LOG10( Coordinate1(il1+1) / Coordinate1(il1) ) )
         delta(1) &
           = LOG10( x1(i) / Coordinate1(il1) ) &
               / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
       ELSE
         alpha(1) &
-          = 1.0d0 / ( Coordinate1(il1+1) - Coordinate1(il1) )
+          = 0.0_dp ! ln10 / ( Coordinate1(il1+1) - Coordinate1(il1) )
         delta(1) &
           = ( x1(i) - Coordinate1(il1) ) &
               / ( Coordinate1(il1+1) - Coordinate1(il1) )
@@ -570,13 +573,13 @@ CONTAINS
 
       IF ( LogInterp(2) == 1 ) THEN
         alpha(2) &
-          = 1.0d0 / ( ln10 * x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
+          = 0.0_dp ! 1.0_dp / ( x2(i) * LOG10( Coordinate2(il2+1) / Coordinate2(il2) ) )
         delta(2) &
           = LOG10( x2(i) / Coordinate2(il2) ) &
               / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
       ELSE
         alpha(2) &
-          = 1.0d0 / ( Coordinate2(il2+1) - Coordinate2(il2) )
+          = 0.0_dp ! ln10 / ( Coordinate2(il2+1) - Coordinate2(il2) )
         delta(2) &
           = ( x2(i) - Coordinate2(il2) ) &
               / ( Coordinate2(il2+1) - Coordinate2(il2) )
@@ -584,27 +587,27 @@ CONTAINS
 
       IF ( LogInterp(3) == 1 ) THEN
         alpha(3) &
-          = 1.0d0 / ( ln10 * x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
+          = 1.0_dp / ( x3(i) * LOG10( Coordinate3(il3+1) / Coordinate3(il3) ) )
         delta(3) &
           = LOG10( x3(i) / Coordinate3(il3) ) &
               / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
         alpha(3) &
-          = 1.0d0 / ( Coordinate3(il3+1) - Coordinate3(il3) )
+          = ln10 / ( Coordinate3(il3+1) - Coordinate3(il3) )
         delta(3) &
           = ( x3(i) - Coordinate3(il3) ) &
               / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
 
-      IF ( LogInterp(3) == 1 ) THEN
+      IF ( LogInterp(4) == 1 ) THEN
         alpha(4) &
-          = 1.0d0 / ( ln10 * x4(i) * LOG10( Coordinate4(il4+1) / Coordinate4(il4) ) )
+          = 1.0_dp / ( x4(i) * LOG10( Coordinate4(il4+1) / Coordinate4(il4) ) )
         delta(4) &
           = LOG10( x4(i) / Coordinate4(il4) ) &
               / LOG10( Coordinate4(il4+1) / Coordinate4(il4) )
       ELSE
         alpha(4) &
-          = 1.0d0 / ( Coordinate4(il4+1) - Coordinate4(il4) )
+          = ln10 / ( Coordinate4(il4+1) - Coordinate4(il4) )
         delta(4) &
           = ( x4(i) - Coordinate4(il4) ) &
               / ( Coordinate4(il4+1) - Coordinate4(il4) )
@@ -651,8 +654,12 @@ CONTAINS
                   +           delta(3)  * &
                                     delta(2)  *           delta(1)  * p1111 ) ) &
           - Offset
+
       IF (debug) THEN
+        WRITE(*,*), ' '
         WRITE(*,*), 'Interpolant is calculated =', Interpolant(i)
+        WRITE(*,*), 'LOG Interpolant is calculated =', LOG10( Interpolant(i) )
+        WRITE(*,*), ''
       END IF
 
       Derivative(i,1) &  ! E
@@ -721,6 +728,7 @@ CONTAINS
 
     IF (debug) THEN
       WRITE(*,*), 'End of differentiate routine'
+      WRITE(*,*), ''
     END IF
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D
