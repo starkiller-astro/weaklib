@@ -8,22 +8,42 @@ PROGRAM wlOpacityInterpolationTest
   USE wlOpacityTableIOModuleHDF
   USE wlEnergyGridModule
   USE wlGridModule, ONLY: MakeLogGrid
+  USE wlExtNumericalModule, ONLY: epsilon
+
   IMPLICIT NONE
 
+  INTEGER, PARAMETER     :: Inte_nPointE = 30
+  REAL(dp)               :: Inte_Emin = 2.0d00
+  REAL(dp)               :: Inte_Emax = 2.0d02
+  TYPE(EnergyGridType)   :: Inte_E
+
   TYPE(OpacityTableType) :: OpacityTable
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_rho, Inte_T, Inte_Ye
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: r, Inte_rho, Inte_T, Inte_Ye, e_int
+  REAL(dp), DIMENSION(Inte_nPointE) :: buffer1, buffer2, buffer3
   INTEGER, DIMENSION(4)  :: LogInterp
-  REAL(dp)               :: Offset = 0.0_dp  ! Will Be Modified
+  REAL(dp)               :: Offset
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: Derivative
+  CHARACTER(LEN=100) :: Format1, Format2, Format3, Format4
+  CHARACTER(LEN=30)  :: a,b,c,d,e,f,g,h
+  INTEGER :: i, ii, datasize
+
 !----------------------------------------
 !   interpolated energy 
 !----------------------------------------
-  INTEGER                :: Inte_nPointE = 3
-  REAL(dp)               :: Inte_Emin = 2.0d00
-  REAL(dp)               :: Inte_Emax = 2.0d02
-  TYPE(EnergyGridType) :: Inte_E  
+ 
+  Format1 = "(2X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9)"
+  Format2 = "(2X, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X, ES9.3)"
+  Format3 = "(2X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9)"
+  Format4 = "(2X, ES9.3, 3x, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X,&
+                  ES9.3, 3X, ES9.3, 3X, ES9.3)"
 
+  OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
+  datasize = 292
+
+! OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
+! datasize = 217
+  
   CALL AllocateEnergyGrid( Inte_E, Inte_nPointE )
 
   Inte_E % Unit = 'MeV                  '
@@ -43,19 +63,27 @@ PROGRAM wlOpacityInterpolationTest
 !---------------------------------------
 !    interpolated rho, T, Ye
 !---------------------------------------
-  ALLOCATE( Inte_rho(3) )
-  ALLOCATE( Inte_T(3) )
-  ALLOCATE( Inte_Ye(3) )
-  ALLOCATE( Interpolant(3) )
-  ALLOCATE( Derivative(3,4) )
+
+  Offset = epsilon
+  ALLOCATE( r( datasize ) )
+  ALLOCATE( e_int( datasize ) )
+  ALLOCATE( Inte_rho( datasize ) )
+  ALLOCATE( Inte_T( datasize ) )
+  ALLOCATE( Inte_Ye( datasize ) )
+  ALLOCATE( Interpolant( datasize * Inte_nPointE ) )
+  ALLOCATE( Derivative( datasize * Inte_nPointE, 4 ) )
+
+  READ( 1, Format1 ) a,b,c,d,e
+  WRITE( *, Format1 ) a,b,c,d,e
+
+  DO i = 1, datasize
+    READ( 1, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i)
+    WRITE( *, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i)
+  END DO
+
+  CLOSE( 1, STATUS = 'keep')  
+
   LogInterp(2:4) = (/1, 1, 0/)     ! rho and T is LogGrid, Ye is linear
-  Inte_rho = (/1.019d08, 1.072d08, 1.126d08 /)
-  Inte_T   = (/6.321d09, 6.265d09, 6.411d09 /)
-  Inte_Ye  = (/4.959d-1, 4.959d-1, 4.959d-1 /)
- 
-  WRITE(*,*), 'The interpolated points is rho:', Inte_rho
-  WRITE(*,*), '                            T :', Inte_T
-  WRITE(*,*), '                           Ye :', Inte_Ye
  
 !---------------------------------------
 !    read in the reference table
@@ -64,24 +92,44 @@ PROGRAM wlOpacityInterpolationTest
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable_Log.h5" )
   CALL FinalizeHDF( )
 
-!  CALL DescribeOpacityTable( OpacityTable )
-
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
+  e = (' energy  ')
+  f = ('  Inter  ')
+  g = (' deriv T ')
+  h = (' deriv Ye')  
+
+!  OPEN( 10, FILE = "IntOutput0ms.d", FORM = "formatted", ACTION = 'write')
+  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
+  WRITE(10, Format3) a,b,c,d,e,f,g,h
+
   ASSOCIATE( Table => OpacityTable % thermEmAb % Absorptivity(1) % Values )
 
+  DO i = 1, datasize
+
+    buffer1(:) = Inte_rho(i)
+    buffer2(:) = Inte_T(i)
+    buffer3(:) = Inte_Ye(i)
+
     CALL LogInterpolateDifferentiateSingleVariable & 
-           (Inte_E % Values, Inte_rho, Inte_T, Inte_Ye, & 
+           (Inte_E % Values, buffer1, buffer2, buffer3, & 
             OpacityTable % EnergyGrid % Values, &
             OpacityTable % EOSTable % TS % States(1) % Values, &
             OpacityTable % EOSTable % TS % States(2) % Values, &
             OpacityTable % EOSTable % TS % States(3) % Values, &
             LogInterp, Offset, Table, Interpolant, Derivative, .FALSE. )
 
+    DO ii = 1, Inte_nPointE
+      WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
+                         Inte_E % Values(ii), Interpolant(ii), Derivative(i,3),&
+                         Derivative(i,4)
+    END DO ! ii
+
+  END DO ! i
+
   END ASSOCIATE ! Table
 
-  WRITE(*,*) 'The Interpolant is ', Interpolant
-  WRITE(*,*) 'The Derivative is ', Derivative
+  CLOSE( 10, STATUS = 'keep')  
 
 END PROGRAM wlOpacityInterpolationTest
