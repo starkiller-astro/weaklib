@@ -519,7 +519,8 @@ CONTAINS
     END IF
 
     IF (debug) THEN
-      WRITE(*,*), ' Now we are in 4D differentiate routine'
+      WRITE(*,*) ' Now we are in 4D differentiate routine'
+      WRITE(*,*) ' SIZE(x1) (number of loop) is ', SIZE( x1 )
     END IF
 
     DO i = 1, SIZE( x1 )
