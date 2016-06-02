@@ -205,19 +205,19 @@ CONTAINS
     CALL OpenGroupHDF( "fluid", .false., file_id, group_id )
 
     datasize3d = (/nx,ny,nz/)
-    CALL Read3dHDF_double( "rho_c", Rho(:,:,:), &
+    CALL ReadHDF( "rho_c", Rho(:,:,:), &
                               group_id, datasize3d )
 
-    CALL Read3dHDF_double( "t_c", T(:,:,:), &
+    CALL ReadHDF( "t_c", T(:,:,:), &
                               group_id, datasize3d )
 
-    CALL Read3dHDF_double( "ye_c", Ye(:,:,:), &
+    CALL ReadHDF( "ye_c", Ye(:,:,:), &
                               group_id, datasize3d )
 
-    CALL Read3dHDF_double( "e_int", E_Int(:,:,:), &
+    CALL ReadHDF( "e_int", E_Int(:,:,:), &
                               group_id, datasize3d )
 
-    CALL Read3dHDF_double( "entropy", Entropy(:,:,:), &
+    CALL ReadHDF( "entropy", Entropy(:,:,:), &
                               group_id, datasize3d )
 
     CALL CloseGroupHDF( group_id )
@@ -225,7 +225,7 @@ CONTAINS
     CALL OpenGroupHDF( "abundance", .false., file_id, group_id )
 
     datasize3d = SHAPE(NSE)
-    CALL Read3dHDF_integer( "nse_c", NSE(:,:,:), &
+    CALL ReadHDF( "nse_c", NSE(:,:,:), &
                               group_id, datasize3d )
 
     CALL CloseGroupHDF( group_id )
