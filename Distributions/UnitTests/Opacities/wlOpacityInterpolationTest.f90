@@ -12,31 +12,36 @@ PROGRAM wlOpacityInterpolationTest
 
   IMPLICIT NONE
 
+!--------- parameters for creating energy grid 
   INTEGER, PARAMETER     :: Inte_nPointE = 30
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(EnergyGridType)   :: Inte_E
 
+!-------- variables for reading opacity table
   TYPE(OpacityTableType) :: OpacityTable
+
+!-------- variables for reading parameters data
   REAL(dp), DIMENSION(:), ALLOCATABLE :: r, Inte_rho, Inte_T, Inte_Ye, e_int
-  REAL(dp), DIMENSION(Inte_nPointE) :: buffer1, buffer2, buffer3
-  INTEGER, DIMENSION(4)  :: LogInterp
-  REAL(dp)               :: Offset
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant
+  REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
+  CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
+  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h
+  INTEGER, DIMENSION(4)               :: LogInterp
+  INTEGER                             :: i, ii, datasize
+  REAL(dp)                            :: Offset
+
+!-------- output variables ------------------------
+  REAL(dp), DIMENSION(:), ALLOCATABLE   :: Interpolant
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: Derivative
-  CHARACTER(LEN=100) :: Format1, Format2, Format3, Format4
-  CHARACTER(LEN=30)  :: a,b,c,d,e,f,g,h
-  INTEGER :: i, ii, datasize
 
 !----------------------------------------
 !   interpolated energy 
 !----------------------------------------
  
-  Format1 = "(2X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9)"
-  Format2 = "(2X, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X, ES9.3)"
-  Format3 = "(2X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9, 3X, A9)"
-  Format4 = "(2X, ES9.3, 3x, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X, ES9.3, 3X,&
-                  ES9.3, 3X, ES9.3, 3X, ES9.3)"
+  Format1 = "(5A12)"
+  Format2 = "(5ES12.3)"
+  Format3 = "(8A12)"
+  Format4 = "(8ES12.3)"
 
   OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
   datasize = 292
@@ -95,13 +100,13 @@ PROGRAM wlOpacityInterpolationTest
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
-  e = (' energy  ')
-  f = ('  Inter  ')
-  g = (' deriv T ')
-  h = (' deriv Ye')  
+  e = ('    energy  ')
+  f = ('    Inter  ')
+  g = ('    deriv T ')
+  h = ('   deriv Ye')  
 
-!  OPEN( 10, FILE = "IntOutput0ms.d", FORM = "formatted", ACTION = 'write')
-  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
+  OPEN( 10, FILE = "IntOutput0ms.d", FORM = "formatted", ACTION = 'write')
+!  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
   WRITE(10, Format3) a,b,c,d,e,f,g,h
 
   ASSOCIATE( Table => OpacityTable % thermEmAb % Absorptivity(1) % Values )
