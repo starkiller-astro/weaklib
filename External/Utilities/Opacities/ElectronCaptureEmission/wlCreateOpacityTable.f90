@@ -216,7 +216,7 @@ PRINT*, "Making Energy Grid"
              OpacityTable % thermEmAb % Absorptivity(i_r) % &
                           Values (i_e, j_rho, k_t, l_ye)  &
              = LOG10( OpacityTable % thermEmAb % Absorptivity(i_r) % &
-                          Values (i_e, j_rho, k_t, l_ye) )
+                          Values (i_e, j_rho, k_t, l_ye) + epsilon)
            END DO  !i_e
          END DO  !j_rho
        END DO  !k_t

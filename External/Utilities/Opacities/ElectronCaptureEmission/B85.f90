@@ -40,13 +40,15 @@ CONTAINS
                             xheavy, xn, xp
 
     REAL(dp) :: TMeV, n, qpri, nhn, npz, etapn, jnucleon, jnuclear, midFe, &
-                            midE, chem_v, feq, mpG, mnG
+                            midE, chem_v, inversefeq, mpG, mnG, feq
 
     TMeV   = T * kmev                 ! kmev = 8.61733d-11 [MeV K^{-1}]
       N    = A - Z
-    qpri   = chem_n - chem_p + 3.0_dp ! [MeV] 3MeV: energy of the 1f5/2 level
-    chem_v = chem_e + chem_p - chem_n ! neutrino chemical potential
-     feq   = 1.0_dp / ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp )   
+    qpri   = chem_n - chem_p + 3.0_dp + dmnp! [MeV] 3MeV: energy of the 1f5/2 level
+    chem_v = chem_e + chem_p - chem_n - dmnp! neutrino chemical potential
+     inversefeq   = ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp )   
+     feq   = MAX( 1.0_dp / ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp ),&
+                  SQRT( TINY( 1.0_dp ) ) )   
      mpG   = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
      mnG   = mn * ergmev * cvel_inv * cvel_inv ! neutron mass [g]
 
@@ -59,10 +61,10 @@ CONTAINS
     if(z.gt.28.0)               npz = 8.0
     
     
-    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
-!    etapn = rho * xp  / mpG                  ! Approxiation in the nondegenerate regime
+!    etapn = rho * ( xn - xp ) / ( mbG * ( EXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
+    etapn = rho * xp  / mpG                  ! Approxiation in the nondegenerate regime
     
-    IF (etapn < 0.0_dp ) THEN
+    IF ( (etapn < 0.0_dp ) ) THEN
       WRITE(*,*)'etapn is negtive: ', etapn
       WRITE(*,*)'xn - xp is ', xn - xp
       WRITE(*,*),'exp term is ',  EXP( (chem_n-chem_p)/TMeV ) - 1.0_dp 
@@ -77,12 +79,42 @@ CONTAINS
 
     jnucleon = therm1 * etapn * midE * midFe
 
-    jnuclear = therm2 * rho * xheavy * npz * nhn * (energy+qpri)**2 &
+    IF ( xheavy * npz * nhn == 0.0_dp ) THEN
+      jnuclear = 0.0_dp
+    ELSE
+      jnuclear = therm2 * rho * xheavy * npz * nhn * (energy+qpri)**2 &
                  * SQRT( 1.0_dp - ( me / (energy+qpri) )**2 ) &
                  / ( mbG * a * ( EXP( (energy+qpri-chem_e) / TMeV ) + 1_dp ) )
+    END IF
 
     totalECapEm = (jnucleon + jnuclear) / feq
-
+ 
+    IF ( ISNAN(totalECapEm ) ) THEN    
+ !   IF ( (jnucleon + jnuclear) == 0.0_dp ) THEN 
+!    IF ( ( totalECapEm .NE. totalECapEm ) .OR. &
+!          ( totalECapEm-1 .EQ. totalECapEm ) ) THEN
+      WRITE(*,*) 'totalECapEm is ', totalECapEm
+      WRITE(*,*) 'LOG10(totalECapEm) is ', LOG10(totalECapEm)
+      WRITE(*,*) 'jnucleon', jnucleon
+      WRITE(*,*) 'jnuclear', jnuclear
+      WRITE(*,*) 'xheavy is ', xheavy
+      WRITE(*,*) 'denum term of jnuclear : ', &
+                   mbG * a * ( EXP( (energy+qpri-chem_e) / TMeV ) + 1_dp )
+      WRITE(*,*) ' num term of jnuclear : ', therm2 * rho * xheavy * npz * &
+                                             nhn * (energy+qpri)**2 &
+                                   * SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )  
+      WRITE(*,*) 'therm2 * rho * xheavy * npz * nhn', &
+                                          therm2 * rho * xheavy * npz * nhn
+      WRITE(*,*) 'SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )', &
+                                     SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )
+      WRITE(*,*) '( me / (energy+qpri) )**2 ', ( me / (energy+qpri) )**2 
+      WRITE(*,*) 'qpri = chem_n + dmnp +3.0_dp - chem_p is ', qpri
+      WRITE(*,*) 'inversefeq is ', inversefeq
+      WRITE(*,*) 'feq is ', feq
+      WRITE(*,*) 'tiny (1.0) is', TINY( 1.0_dp )
+      WRITE(*,*) ''
+!      STOP
+    END IF
     RETURN 
 
   END FUNCTION totalECapEm
