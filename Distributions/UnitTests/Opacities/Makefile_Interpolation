@@ -1,7 +1,7 @@
 # The directories containing the source files, separated by ':'
 # When GNU Make cannot find a prerequisite it will search the directories in the VPATH list (from first to last) and stop at the first directory in which it finds the missing prerequisite.
 #-------------------------
-vpath %.f90 $(WEAKLIB_DIR)/External/Utilities/Opacities/ElectronCaptureEmission:$(WEAKLIB_DIR)/Distributions/OpacitySource:$(WEAKLIB_DIR)/Distributions/Library:$(WEAKLIB_DIR)/Distributions/EOSSource:$(WEAKLIB_DIR)/External/SharedModules
+vpath %.f90 $(WEAKLIB_DIR)/External/Utilities/Opacities/ElectronCaptureEmission:$(WEAKLIB_DIR)/Distributions/OpacitySource:$(WEAKLIB_DIR)/Distributions/Library:$(WEAKLIB_DIR)/Distributions/EOSSource:$(WEAKLIB_DIR)/External/SharedModules:$(WEAKLIB_DIR)/Distributions/UnitTests/Opacities
 #========================= 
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
@@ -99,11 +99,12 @@ Opacity_MODS = $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) wlOpacityTableModule.o
 
 ##Interface_OBJ = wlExtEOSWrapperModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o
 
-##OpacityIO_MODS = $(Opacity_MODS) wlOpacityTableIOModuleHDF.o
 OpacityIO_MODS = wlOpacityTableIOModuleHDF.o
 
-Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlReadOpacityTableTest.o
-#Opacity_OBJ = $(BASE_MODS)
+Interpola_MODS = wlInterpolationModule.o
+
+Interpola_OBJ = $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(Interpola_MODS) $(OpacityIO_MODS) wlOpacityInterpolationTest.o
+#Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlCreateOpacityTable.o
 #===================================================
 # Build a Dependency list and an Object list, by replacing the .cpp
 # extension to .d for dependency files, and .o for object files.
@@ -134,8 +135,8 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 
 #-------------------
 #test: $(Opacity_MODS)
-test: $(Opacity_OBJ)
-	$(LDRL) $(LDRFLAGS) -o wlTEST $(LIBS) $(Opacity_OBJ)
+test: $(Interpola_OBJ)
+	$(LDRL) $(LDRFLAGS) -o wlInterpolaTEST $(LIBS) $(Interpola_OBJ)
 
 #===================
 
@@ -154,8 +155,8 @@ $(BaseIO_MODS): $(EOS_MODS) $(BASE_MODS)
 $(EOSIO_MODS): $(EOS_MODS) $(BaseIO_MODS) $(BASE_MODS)
 $(Opacity_MODS): $(EOSIO_MODS) $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) $(BASE_MODS) 
 $(OpacityIO_MODS): $(Opacity_MODS) $(EOSIO_MODS) $(BASE_MODS)
-wlCreateOpacityTable.o: $(OpacityIO_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(BASE_MODS)
-
+$(Interpola_MODS): $(BASE_MODS)
+#wlOpacityInterpolationTest.o:$(OpacityIO_MODS) $(Interpola_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(BASE_MODS) 
 #==================================
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
