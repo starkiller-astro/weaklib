@@ -90,30 +90,21 @@ CONTAINS
     totalECapEm = (jnucleon + jnuclear) / feq
  
     IF ( ISNAN(totalECapEm ) ) THEN    
- !   IF ( (jnucleon + jnuclear) == 0.0_dp ) THEN 
-!    IF ( ( totalECapEm .NE. totalECapEm ) .OR. &
-!          ( totalECapEm-1 .EQ. totalECapEm ) ) THEN
       WRITE(*,*) 'totalECapEm is ', totalECapEm
       WRITE(*,*) 'LOG10(totalECapEm) is ', LOG10(totalECapEm)
-      WRITE(*,*) 'jnucleon', jnucleon
-      WRITE(*,*) 'jnuclear', jnuclear
-      WRITE(*,*) 'xheavy is ', xheavy
-      WRITE(*,*) 'denum term of jnuclear : ', &
-                   mbG * a * ( EXP( (energy+qpri-chem_e) / TMeV ) + 1_dp )
-      WRITE(*,*) ' num term of jnuclear : ', therm2 * rho * xheavy * npz * &
-                                             nhn * (energy+qpri)**2 &
-                                   * SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )  
-      WRITE(*,*) 'therm2 * rho * xheavy * npz * nhn', &
+      WRITE(*,*) 'jnucleon term is ', jnucleon
+      WRITE(*,*) 'jnuclear term is ', jnuclear
+      WRITE(*,*) 'therm2 * rho * xheavy * npz * nhn = ', &
                                           therm2 * rho * xheavy * npz * nhn
-      WRITE(*,*) 'SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )', &
+      WRITE(*,*) 'SQRT( 1.0_dp - ( me / (energy+qpri) )**2 ) = ', &
                                      SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )
-      WRITE(*,*) '( me / (energy+qpri) )**2 ', ( me / (energy+qpri) )**2 
+      WRITE(*,*) '( me / (energy+qpri) )**2 = ', ( me / (energy+qpri) )**2 
       WRITE(*,*) 'qpri = chem_n + dmnp +3.0_dp - chem_p is ', qpri
       WRITE(*,*) 'inversefeq is ', inversefeq
       WRITE(*,*) 'feq is ', feq
       WRITE(*,*) 'tiny (1.0) is', TINY( 1.0_dp )
       WRITE(*,*) ''
-!      STOP
+      STOP
     END IF
     RETURN 
 
