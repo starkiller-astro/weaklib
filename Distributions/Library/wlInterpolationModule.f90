@@ -3,8 +3,6 @@ MODULE wlInterpolationModule
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-  USE wlEnergyGridModule!, ONLY: EnergyGridType
-
 
   implicit none
 

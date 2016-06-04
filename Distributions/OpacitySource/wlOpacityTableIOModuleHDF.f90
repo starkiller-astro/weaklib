@@ -54,6 +54,7 @@ MODULE wlOpacityTableIOModuleHDF
   PUBLIC ReadOpacityTableHDF
 
 CONTAINS
+
  
   SUBROUTINE WriteOpacityTableHDF( OpacityTable, FileName )
  
@@ -151,7 +152,7 @@ CONTAINS
     datasize1d(1) = EnergyGrid % nPoints
     CALL WriteHDF( "Values", EnergyGrid % Values(:), &
                               group_id, datasize1d )
-  
+
   END SUBROUTINE WriteEnergyGridHDF
 
 
