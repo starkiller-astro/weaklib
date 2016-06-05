@@ -47,9 +47,9 @@ PROGRAM wlCreateEquationOfStateTable
 !  nPoints = (/81,500,24/) ! High Res in T only
 !  nPoints = (/161,93,25/) ! High Res in T only
 !  nPoints = (/161,47,49/) ! Standard D Res
-!  nPoints = (/161,47,25/) ! Standard C Res
+  nPoints = (/161,47,25/) ! Standard C Res
 !  nPoints = (/321,47,25/) ! High Res in Rho
-  nPoints = (/321,93,49/) ! High Res
+!  nPoints = (/321,93,49/) ! High Res
   nVariables = 15
   LScompress = '220'
   LSFilePath = '../../../LS/Data'
