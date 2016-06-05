@@ -511,7 +511,7 @@ CONTAINS
     IF ( ( SIZE(x1) .NE. SIZE(x2) ) .OR. ( SIZE(x2) .NE. SIZE(x3) ) &
          .OR. ( SIZE(x3) .NE. SIZE(x4) ) .OR. ( SIZE(x4) .NE. SIZE (x1) ) ) &
     THEN
-      WRITE(*,*), &
+      WRITE(*,*) &
         'ERROR: describe arrays (of interpolation point) have diff size.'
       RETURN
     END IF
@@ -529,7 +529,7 @@ CONTAINS
       CALL locate( Coordinate4, SIZE( Coordinate4 ), x4(i), il4 )
 
       IF (debug) THEN
-        WRITE(*,*), ' The located postion is ', il1, il2, il3, il4
+        WRITE(*,*) ' The located postion is ', il1, il2, il3, il4
       END IF
  
       p0000 = ( Table( il1  , il2  , il3  , il4   ) )
@@ -550,10 +550,10 @@ CONTAINS
       p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) )
 
       IF (debug) THEN
-        WRITE(*,*), ' 16 corners are loaded. Then are:'
-        WRITE(*,*), p0000, p0001, &
-                    p0010, p0011, p0100, p0101, p0110, p0111, p1000, &
-                    p1001, p1010, p1011, p1100, p1101, p1110, p1111
+        WRITE(*,*) ' 16 corners are loaded. Then are:'
+        WRITE(*,*) p0000, p0001, &
+                   p0010, p0011, p0100, p0101, p0110, p0111, p1000, &
+                   p1001, p1010, p1011, p1100, p1101, p1110, p1111
       END IF
 
       IF ( LogInterp(1) == 1 ) THEN
@@ -613,7 +613,7 @@ CONTAINS
       END IF
      
       IF (debug) THEN
-        WRITE(*,*), '  Alpha and delta are calculated.'
+        WRITE(*,*) '  Alpha and delta are calculated.'
       END IF
 
       Interpolant(i) &
@@ -655,10 +655,10 @@ CONTAINS
           - Offset
 
       IF (debug) THEN
-        WRITE(*,*), ' '
-        WRITE(*,*), 'Interpolant is calculated =', Interpolant(i)
-        WRITE(*,*), 'LOG Interpolant is calculated =', LOG10( Interpolant(i) )
-        WRITE(*,*), ''
+        WRITE(*,*) ' '
+        WRITE(*,*) 'Interpolant is calculated =', Interpolant(i)
+        WRITE(*,*) 'LOG Interpolant is calculated =', LOG10( Interpolant(i) )
+        WRITE(*,*) ''
       END IF
 
       Derivative(i,1) &  ! E
@@ -726,8 +726,8 @@ CONTAINS
     END DO
 
     IF (debug) THEN
-      WRITE(*,*), 'End of differentiate routine'
-      WRITE(*,*), ''
+      WRITE(*,*) 'End of differentiate routine'
+      WRITE(*,*) ''
     END IF
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D

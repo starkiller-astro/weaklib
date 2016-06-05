@@ -27,6 +27,15 @@ if [[ $WEAKLIB_MACHINE == titan_gnu ]]; then
 
   module load PrgEnv-gnu
   module load cray-hdf5
+  module load subversion
+
+elif [[ $WEAKLIB_MACHINE == titan_cray ]]; then
+
+  echo
+
+  module load PrgEnv-cray
+  module load cray-hdf5
+  module load subversion
 
 elif [[ $WEAKLIB_MACHINE == sn1987b ]]; then
 
