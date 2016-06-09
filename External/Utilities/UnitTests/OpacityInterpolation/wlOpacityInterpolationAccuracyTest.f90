@@ -27,10 +27,11 @@ PROGRAM wlOpacityInterpolationAccuracyTest
                                          Inte_Z, Inte_A, Inte_chem_e, &
                                          Inte_chem_n, Inte_chem_p, &
                                          Inte_xheavy, Inte_xn, Inte_xp
+  REAL(dp)                            :: tempxa
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: name1, name2, name3, name4, name5, &
-                                         name6, name7, name8, name9
+                                         name6, name7, name8, name9, name10
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, iii, datasize
   REAL(dp)                            :: Offset
@@ -44,13 +45,16 @@ PROGRAM wlOpacityInterpolationAccuracyTest
 !   interpolated energy 
 !----------------------------------------
  
-  Format1 = "(5A12)"
-  Format2 = "(5ES12.3)"
-  Format3 = "(9A12)"
-  Format4 = "(9ES12.3)"
+  Format1 = "(14A12)"
+  Format2 = "(14ES12.3)"
+  Format3 = "(10A12)"
+  Format4 = "(10ES12.3)"
 
-  OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
-  datasize = 292
+  OPEN(1, FILE = "FidOutput0ms.d", FORM = "formatted", ACTION = 'read')
+  datasize = 312
+
+!  OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
+!  datasize = 292
 
 ! OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
 ! datasize = 217
@@ -96,7 +100,14 @@ PROGRAM wlOpacityInterpolationAccuracyTest
   READ( 1, Format1 ) name1, name2, name3, name4, name5
 
   DO i = 1, datasize
-    READ( 1, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i) !more parameters needed
+    READ( 1, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i), &
+                      Inte_chem_n(i), Inte_chem_p(i), Inte_chem_e(i), &
+                      Inte_xn(i), Inte_xp(i), tempxa, Inte_xheavy(i), &
+                      Inte_Z(i), Inte_A(i)
+    WRITE( *, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i), &
+                      Inte_chem_n(i), Inte_chem_p(i), Inte_chem_e(i), &
+                      Inte_xn(i), Inte_xp(i), tempxa, Inte_xheavy(i), &
+                      Inte_Z(i), Inte_A(i) 
   END DO
 
   CLOSE( 1, STATUS = 'keep')  
@@ -118,11 +129,12 @@ PROGRAM wlOpacityInterpolationAccuracyTest
   name7 = ('   Opacity  ')
   name8 = ('    deriv T ')
   name9 = ('   deriv Ye')
+  name10 = ('error prese')
 
   OPEN( 10, FILE = "IntOutput0ms.d", FORM = "formatted", ACTION = 'write')
 !  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
   WRITE(10, Format3) name1, name2, name3, name4, name5, name6, name7, &
-                     name8, name9
+                     name10, name8, name9
 
   ASSOCIATE( Table => OpacityTable % thermEmAb % Absorptivity(1) % Values, &
              Energy => Inte_E % Values )
@@ -150,6 +162,7 @@ PROGRAM wlOpacityInterpolationAccuracyTest
                                Inte_xn(i), Inte_xp(i) )
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
                          Inte_E % Values(ii), DirectCall(iii), Interpolant(ii),&
+                      ABS( Interpolant(ii)-DirectCall(iii) ) / DirectCall(iii),&
                          Derivative(i,3), Derivative(i,4)
     END DO ! ii
 
