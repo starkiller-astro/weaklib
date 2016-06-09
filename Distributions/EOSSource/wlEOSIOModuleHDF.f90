@@ -188,6 +188,8 @@ CONTAINS
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates,                      &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % LogInterp(:), nStates,                      &
+                     MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
 
     DO i= 1, EOSTable % nVariables  
       CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count,    &
