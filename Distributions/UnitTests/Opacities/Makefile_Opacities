@@ -38,6 +38,9 @@ wlOpacityFieldsTest.o: \
   wlOpacityFieldsTest.f90
 
 wlReadOpacityTableTest.o: \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableIOModuleHDF.o \
   wlReadOpacityTableTest.f90
 
 wlOpacityInterpolationTest.o: \

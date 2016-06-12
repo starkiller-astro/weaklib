@@ -1,21 +1,17 @@
 PROGRAM wlReadOpacityTableTest
-   
-  USE wlKindModule, ONLY: dp
-  USE HDF5
-  USE wlGridModule, ONLY: MakeLogGrid
-  USE wlThermoStateModule
-  USE wlDependentVariablesModule
-  USE wlOpacityTableModule
 
-  USE wlIOModuleHDF, ONLY:&
-          InitializeHDF, FinalizeHDF
-  USE wlOpacityTableModule
+  USE wlOpacityTableModule, ONLY: &
+    OpacityTableType, &
+    DescribeOpacityTable
+  USE wlIOModuleHDF, ONLY: &
+    InitializeHDF, &
+    FinalizeHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
-          ReadOpacityTableHDF
+    ReadOpacityTableHDF
 
-  implicit none
+  IMPLICIT NONE
 
-  TYPE(OpacityTableType)  :: OpacityTable
+  TYPE(OpacityTableType) :: OpacityTable
 
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
