@@ -8,7 +8,6 @@ PROGRAM wlOpacityInterpolationTest
   USE wlOpacityTableIOModuleHDF
   USE wlEnergyGridModule
   USE wlGridModule, ONLY: MakeLogGrid
-  USE wlExtNumericalModule, ONLY: epsilon
 
   IMPLICIT NONE
 
@@ -69,7 +68,7 @@ PROGRAM wlOpacityInterpolationTest
 !    interpolated rho, T, Ye
 !---------------------------------------
 
-  Offset = epsilon
+  Offset = EPSILON( 1.0_dp )
   ALLOCATE( r( datasize ) )
   ALLOCATE( e_int( datasize ) )
   ALLOCATE( Inte_rho( datasize ) )

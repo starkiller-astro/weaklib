@@ -12,7 +12,6 @@ PROGRAM wlReadOpacityTableTest
   USE wlOpacityTableModule
   USE wlOpacityTableIOModuleHDF, ONLY: &
           ReadOpacityTableHDF
-  USE wlExtPhysicalConstantsModule
 
   implicit none
 
