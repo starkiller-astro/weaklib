@@ -44,7 +44,6 @@ MODULE wlOpacityTableIOModuleHDF
     CloseGroupHDF
   USE wlEquationOfStateTableModule
   USE HDF5
-  USE wlExtNumericalModule, ONLY: epsilon
 
   IMPLICIT NONE
   PRIVATE
@@ -358,7 +357,7 @@ CONTAINS
              thermEmAb % Absorptivity(i) %  & 
                 Values (i_e, j_rho, k_t, l_ye)  &
               = 10.0_dp**( thermEmAb % Absorptivity(i) % &
-                Values (i_e, j_rho, k_t, l_ye) ) - epsilon
+                Values (i_e, j_rho, k_t, l_ye) ) - EPSILON( 1.0_dp )
           END DO  !i_e
         END DO  !j_rho
       END DO  !k_t
