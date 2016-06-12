@@ -44,6 +44,7 @@ MODULE wlOpacityTableIOModuleHDF
     CloseGroupHDF
   USE wlEquationOfStateTableModule
   USE HDF5
+  USE wlExtNumericalModule, ONLY: epsilon
 
   IMPLICIT NONE
   PRIVATE
@@ -170,8 +171,7 @@ CONTAINS
     CHARACTER(LEN=32), DIMENSION(1)             :: tempString
     INTEGER, DIMENSION(1)                       :: tempInteger
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
-
-    INTEGER(HID_T)                                :: subgroup_id
+    INTEGER(HID_T)                              :: subgroup_id
 
 
     datasize1dtemp(1) = 1
@@ -201,7 +201,7 @@ CONTAINS
                               subgroup_id, datasize4d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
- 
+
   END SUBROUTINE WriteOpacityTableTypeAHDF
 
   SUBROUTINE WriteOpacityTableTypeBHDF( scattI , group_id )
@@ -328,7 +328,8 @@ CONTAINS
     INTEGER                                          :: i
     INTEGER, DIMENSION(1)                            :: buffer
     INTEGER(HID_T)                                   :: subgroup_id
-
+    INTEGER                                          :: l_ye, k_t, j_rho,i_e   
+ 
     datasize1d(1) = 1
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     thermEmAb % nOpacities = buffer(1)
@@ -349,7 +350,21 @@ CONTAINS
     DO i = 1, thermEmAb % nOpacities
     WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i)
     CALL Read4dHDF_double( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values, subgroup_id, datasize4d )
-    END DO
+    
+    DO l_ye = 1, datasize4d(4)
+      DO k_t = 1, datasize4d(3)
+        DO j_rho = 1, datasize4d(2)
+          DO i_e = 1, datasize4d(1)
+             thermEmAb % Absorptivity(i) %  & 
+                Values (i_e, j_rho, k_t, l_ye)  &
+              = 10.0_dp**( thermEmAb % Absorptivity(i) % &
+                Values (i_e, j_rho, k_t, l_ye) ) - epsilon
+          END DO  !i_e
+        END DO  !j_rho
+      END DO  !k_t
+    END DO  !l_ye
+
+    END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeAHDF
