@@ -1,13 +1,21 @@
 PROGRAM wlOpacityInterpolationTest
 
   USE wlKindModule, ONLY: dp
-  USE wlInterpolationModule
-  USE wlOpacityTableModule 
-  USE wlIOModuleHDF, ONLY:&
-          InitializeHDF, FinalizeHDF
-  USE wlOpacityTableIOModuleHDF
-  USE wlEnergyGridModule
-  USE wlGridModule, ONLY: MakeLogGrid
+  USE wlInterpolationModule, ONLY: &
+    LogInterpolateDifferentiateSingleVariable
+  USE wlOpacityTableModule, ONLY: &
+    OpacityTableType
+  USE wlIOModuleHDF, ONLY: &
+    InitializeHDF, &
+    FinalizeHDF
+  USE wlOpacityTableIOModuleHDF, ONLY: &
+    ReadOpacityTableHDF
+  USE wlEnergyGridModule, ONLY: &
+    EnergyGridType, &
+    AllocateEnergyGrid, &
+    DescribeEnergyGrid
+  USE wlGridModule, ONLY: &
+    MakeLogGrid
 
   IMPLICIT NONE
 

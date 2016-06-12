@@ -44,4 +44,11 @@ wlReadOpacityTableTest.o: \
   wlReadOpacityTableTest.f90
 
 wlOpacityInterpolationTest.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlEnergyGridModule.o \
+  wlGridModule.o \
   wlOpacityInterpolationTest.f90
