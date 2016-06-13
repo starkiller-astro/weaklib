@@ -169,7 +169,7 @@ CONTAINS
     WRITE(*,'(A6,A13,I10.10)') &
       ' ', 'DOFs       = ', &
       Opacity % nOpacities * PRODUCT( Opacity % nPoints )
-    WRITE(*,'(A6,A)') &
+    WRITE(*,'(A6,A13,ES11.4E3)') &
       ' ', 'Offset     = ', Opacity % Offset
 
     DO i = 1, Opacity % nOpacities
