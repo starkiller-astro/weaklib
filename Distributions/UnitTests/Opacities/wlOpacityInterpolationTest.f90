@@ -76,14 +76,13 @@ PROGRAM wlOpacityInterpolationTest
 !    interpolated rho, T, Ye
 !---------------------------------------
 
-  Offset = EPSILON( 1.0_dp )
   ALLOCATE( r( datasize ) )
   ALLOCATE( e_int( datasize ) )
   ALLOCATE( Inte_rho( datasize ) )
   ALLOCATE( Inte_T( datasize ) )
   ALLOCATE( Inte_Ye( datasize ) )
-  ALLOCATE( Interpolant( datasize * Inte_nPointE ) )
-  ALLOCATE( Derivative( datasize * Inte_nPointE, 4 ) )
+  ALLOCATE( Interpolant( Inte_nPointE ) )
+  ALLOCATE( Derivative( Inte_nPointE, 4 ) )
 
   READ( 1, Format1 ) a,b,c,d,e
   WRITE( *, Format1 ) a,b,c,d,e
@@ -101,9 +100,11 @@ PROGRAM wlOpacityInterpolationTest
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable_Log.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
+  Offset = OpacityTable % thermEmAb % Offset
+  WRITE(*,*) 'The offset is read as ', Offset
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
@@ -134,8 +135,8 @@ PROGRAM wlOpacityInterpolationTest
 
     DO ii = 1, Inte_nPointE
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
-                         Inte_E % Values(ii), Interpolant(ii), Derivative(i,3),&
-                         Derivative(i,4)
+                         Inte_E % Values(ii), Interpolant(ii), Derivative(ii,3),&
+                         Derivative(ii,4)
     END DO ! ii
 
   END DO ! i
@@ -143,5 +144,7 @@ PROGRAM wlOpacityInterpolationTest
   END ASSOCIATE ! Table
 
   CLOSE( 10, STATUS = 'keep')  
+
+  WRITE(*,*) 'File IntOutput*ms.d was written/rewrtited.'
 
 END PROGRAM wlOpacityInterpolationTest
