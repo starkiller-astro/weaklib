@@ -29,6 +29,7 @@ MODULE wlOpacityFieldsModule
   TYPE, PUBLIC :: OpacityTypeA
     INTEGER :: nOpacities
     INTEGER, DIMENSION(4) :: nPoints
+    REAL(dp)              :: Offset
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units

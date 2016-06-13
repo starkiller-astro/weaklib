@@ -166,17 +166,20 @@ CONTAINS
     INTEGER                                     :: i
     INTEGER, DIMENSION(1)                       :: buffer
 
-
     CHARACTER(LEN=32), DIMENSION(1)             :: tempString
     INTEGER, DIMENSION(1)                       :: tempInteger
+    REAL(dp), DIMENSION(1)                      :: tempReal
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
     INTEGER(HID_T)                              :: subgroup_id
-
 
     datasize1dtemp(1) = 1
     tempInteger(1) = thermEmAb % nOpacities
     CALL WriteHDF&
          ( "nOpacities", tempInteger, group_id, datasize1dtemp )
+
+    tempReal(1) = thermEmAb % Offset
+    CALL WriteHDF&
+         ( "Offset", tempReal, group_id, datasize1dtemp )
 
     datasize1dtemp(1) = 4
     CALL WriteHDF&
@@ -217,8 +220,6 @@ CONTAINS
 
   END SUBROUTINE WriteOpacityTableTypeCHDF
 
-
-
   SUBROUTINE Write4dHDF_double &
               ( name, values, group_id, datasize, desc_option, unit_option )
 
@@ -250,7 +251,6 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Write4dHDF_double
-
 
   SUBROUTINE ReadOpacityTableHDF( OpacityTable, FileName )
  
@@ -321,17 +321,19 @@ CONTAINS
     TYPE(OpacityTypeA),INTENT(inout)                 :: thermEmAb
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
-
     INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
     INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
     INTEGER                                          :: i
     INTEGER, DIMENSION(1)                            :: buffer
     INTEGER(HID_T)                                   :: subgroup_id
     INTEGER                                          :: l_ye, k_t, j_rho,i_e   
- 
+
     datasize1d(1) = 1
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     thermEmAb % nOpacities = buffer(1)
+
+    CALL ReadHDF( "Offset", buffer, group_id, datasize1d )
+    thermEmAb % Offset = buffer(1)
 
     datasize1d = buffer(1)
     Call ReadHDF( "Names", thermEmAb % Names, group_id, datasize1d )
@@ -357,7 +359,7 @@ CONTAINS
              thermEmAb % Absorptivity(i) %  & 
                 Values (i_e, j_rho, k_t, l_ye)  &
               = 10.0_dp**( thermEmAb % Absorptivity(i) % &
-                Values (i_e, j_rho, k_t, l_ye) ) - EPSILON( 1.0_dp )
+                Values (i_e, j_rho, k_t, l_ye) ) - thermEmAb % Offset
           END DO  !i_e
         END DO  !j_rho
       END DO  !k_t
