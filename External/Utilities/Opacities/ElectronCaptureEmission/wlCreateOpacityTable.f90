@@ -64,12 +64,11 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityFieldsModule
   USE wlOpacityTableIOModuleHDF
   USE wlExtPhysicalConstantsModule
-  USE wlExtNumericalModule, ONLY: epsilon
   USE B85
-
+  USE wlExtNumericalModule, ONLY: epsilon
+ 
 implicit none
     
-
    TYPE(OpacityTableType)  :: OpacityTable
    INTEGER                 :: nOpacA = 1
    INTEGER                 :: nOpacB = 0
@@ -80,9 +79,9 @@ implicit none
 ! Set E grid limits
 !-------------------------------------------------------------------------
    INTEGER                 :: nPointsE = 40 
-   REAL(dp), Parameter     :: Emin = 1.0d00  
-   REAL(dp), Parameter     :: Emax = 3.0d02
-   INTEGER, Parameter      :: nSpeciesA = 1
+   REAL(dp), PARAMETER     :: Emin = 1.0d-1  
+   REAL(dp), PARAMETER     :: Emax = 3.0d02
+   INTEGER, PARAMETER      :: nSpeciesA = 1
    
 
    INTEGER                 :: i_r, i_e, j_rho, k_t, l_ye 
@@ -108,7 +107,8 @@ PRINT*, "Allocating OpacityTable"
                                 (/'Electron Neutrino           '/)
    OpacityTable % thermEmAb % Units = &
                                 (/'Per Centimeter              '/) 
-
+   OpacityTable % thermEmAb % Offset = 1.0d-100
+   
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
@@ -216,7 +216,8 @@ PRINT*, "Making Energy Grid"
              OpacityTable % thermEmAb % Absorptivity(i_r) % &
                           Values (i_e, j_rho, k_t, l_ye)  &
              = LOG10( OpacityTable % thermEmAb % Absorptivity(i_r) % &
-                          Values (i_e, j_rho, k_t, l_ye) + epsilon)
+                          Values (i_e, j_rho, k_t, l_ye) + &
+                      OpacityTable % thermEmAb % Offset )
            END DO  !i_e
          END DO  !j_rho
        END DO  !k_t
@@ -224,7 +225,7 @@ PRINT*, "Making Energy Grid"
    END DO  !i_r
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable_Log.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
   WRITE (*,*) "HDF write successful"
