@@ -70,6 +70,7 @@ MODULE wlOpacityTableModule
     EquationOfStateTableType, &
     DeAllocateEquationOfStateTable, &
     AllocateEquationOfStateTable
+
   IMPLICIT NONE
   PRIVATE
 
@@ -132,7 +133,7 @@ CONTAINS
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
     CALL AllocateOpacity &
-           ( OpTab % thermEmAb,       [ nPointsE, nPoints ], &
+           ( OpTab % thermEmAb,  [ nPointsE, nPoints ], &
              nOpacities = nOpacA )
 
     CALL AllocateOpacity &

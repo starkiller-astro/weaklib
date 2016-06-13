@@ -178,9 +178,9 @@ CONTAINS
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES10.4E2)') &
+      WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Min Value = ', MINVAL( Opacity % Absorptivity(i) % Values )
-      WRITE(*,'(A8,A12,ES10.4E2)') &
+      WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
     END DO
     WRITE(*,*)

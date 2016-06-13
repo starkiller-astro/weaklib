@@ -356,10 +356,10 @@ CONTAINS
       DO k_t = 1, datasize4d(3)
         DO j_rho = 1, datasize4d(2)
           DO i_e = 1, datasize4d(1)
-             thermEmAb % Absorptivity(i) %  & 
-                Values (i_e, j_rho, k_t, l_ye)  &
-              = 10.0_dp**( thermEmAb % Absorptivity(i) % &
-                Values (i_e, j_rho, k_t, l_ye) ) - thermEmAb % Offset
+            thermEmAb % Absorptivity(i) % Values (i_e,j_rho,k_t,l_ye) &
+              = 10.0_dp**( thermEmAb % Absorptivity(i) &
+                             % Values (i_e, j_rho, k_t, l_ye) ) &
+                           - thermEmAb % Offset
           END DO  !i_e
         END DO  !j_rho
       END DO  !k_t
