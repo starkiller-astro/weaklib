@@ -55,7 +55,6 @@ MODULE wlOpacityTableIOModuleHDF
 
 CONTAINS
 
- 
   SUBROUTINE WriteOpacityTableHDF( OpacityTable, FileName )
  
     TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
@@ -118,7 +117,6 @@ CONTAINS
 
   END SUBROUTINE WriteOpacityTableHDF
 
-
   SUBROUTINE WriteEnergyGridHDF( EnergyGrid, group_id )
 
     TYPE(EnergyGridType), INTENT(in)           :: EnergyGrid
@@ -154,7 +152,6 @@ CONTAINS
                               group_id, datasize1d )
 
   END SUBROUTINE WriteEnergyGridHDF
-
 
   SUBROUTINE WriteOpacityTableTypeAHDF( thermEmAb, group_id )
 
@@ -236,8 +233,7 @@ CONTAINS
     INTEGER(HID_T)                              :: attr_id
     INTEGER(SIZE_T)                             :: attr_len
     INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
-  
-    
+   
     CALL h5screate_simple_f( 4, datasize, dataspace_id, hdferr )
 
     CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
@@ -315,7 +311,6 @@ CONTAINS
 
   END SUBROUTINE ReadOpacityTableHDF
 
-
   SUBROUTINE ReadOpacityTypeAHDF( thermEmAb, group_id )
 
     TYPE(OpacityTypeA),INTENT(inout)                 :: thermEmAb
@@ -325,6 +320,7 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
     INTEGER                                          :: i
     INTEGER, DIMENSION(1)                            :: buffer
+    REAL(dp), DIMENSION(1)                           :: bufferReal
     INTEGER(HID_T)                                   :: subgroup_id
     INTEGER                                          :: l_ye, k_t, j_rho,i_e   
 
@@ -332,8 +328,8 @@ CONTAINS
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     thermEmAb % nOpacities = buffer(1)
 
-    CALL ReadHDF( "Offset", buffer, group_id, datasize1d )
-    thermEmAb % Offset = buffer(1)
+    CALL ReadHDF( "Offset", bufferReal, group_id, datasize1d )
+    thermEmAb % Offset = bufferReal(1)
 
     datasize1d = buffer(1)
     Call ReadHDF( "Names", thermEmAb % Names, group_id, datasize1d )
@@ -358,8 +354,8 @@ CONTAINS
           DO i_e = 1, datasize4d(1)
             thermEmAb % Absorptivity(i) % Values (i_e,j_rho,k_t,l_ye) &
               = 10.0_dp**( thermEmAb % Absorptivity(i) &
-                             % Values (i_e, j_rho, k_t, l_ye) ) &
-                           - thermEmAb % Offset
+                           % Values (i_e, j_rho, k_t, l_ye) ) &
+                - thermEmAb % Offset
           END DO  !i_e
         END DO  !j_rho
       END DO  !k_t
@@ -369,8 +365,6 @@ CONTAINS
     CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeAHDF
-
-
 
   SUBROUTINE ReadOpacityTypeBHDF( thermEmAb, group_id )
 
@@ -384,8 +378,6 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
   END SUBROUTINE ReadOpacityTypeCHDF
-
-
 
   SUBROUTINE Read4dHDF_double( name, values, group_id, datasize )
 
