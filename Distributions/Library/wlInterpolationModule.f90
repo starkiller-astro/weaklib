@@ -147,22 +147,23 @@ CONTAINS
 
   END SUBROUTINE LogInterpolateSingleVariable_3D
 
-  SUBROUTINE LogInterpolateSingleVariable_4D&
+
+  SUBROUTINE LogInterpolateSingleVariable_4D &
                ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
                  Coordinate4, LogInterp, Offset, Table, Interpolant )
 
-    REAL(dp), DIMENSION(:), INTENT(in)     :: x1
-    REAL(dp), DIMENSION(:), INTENT(in)     :: x2
-    REAL(dp), DIMENSION(:), INTENT(in)     :: x3
-    REAL(dp), DIMENSION(:), INTENT(in)     :: x4
-    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate1
-    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate2
-    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate3
-    REAL(dp), DIMENSION(:), INTENT(in)     :: Coordinate4
-    INTEGER, DIMENSION(4), INTENT(in)      :: LogInterp
-    REAL(dp), INTENT(in)                   :: Offset
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in) :: Table
-    REAL(dp), DIMENSION(:), INTENT(out)    :: Interpolant
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x4
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate4
+    INTEGER,  DIMENSION(4),       INTENT(in)  :: LogInterp
+    REAL(dp),                     INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:),       INTENT(out) :: Interpolant
 
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
@@ -503,6 +504,7 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(out)    :: Interpolant
     REAL(dp), DIMENSION(:,:), INTENT(out)  :: Derivative
     LOGICAL                                :: debug
+
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
     REAL(dp), DIMENSION(4) :: alpha, delta
