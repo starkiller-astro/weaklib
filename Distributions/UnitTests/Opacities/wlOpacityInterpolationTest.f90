@@ -51,7 +51,7 @@ PROGRAM wlOpacityInterpolationTest
   Format4 = "(8ES12.3)"
 
   OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
-  datasize = 292
+  datasize = 2! 292
 
 ! OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
 ! datasize = 217
@@ -89,7 +89,6 @@ PROGRAM wlOpacityInterpolationTest
 
   DO i = 1, datasize
     READ( 1, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i)
-    WRITE( *, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i)
   END DO
 
   CLOSE( 1, STATUS = 'keep')  
@@ -104,7 +103,6 @@ PROGRAM wlOpacityInterpolationTest
   CALL FinalizeHDF( )
 
   Offset = OpacityTable % thermEmAb % Offset
-  WRITE(*,*) 'The offset is read as ', Offset
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
@@ -117,7 +115,8 @@ PROGRAM wlOpacityInterpolationTest
 !  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
   WRITE(10, Format3) a,b,c,d,e,f,g,h
 
-  ASSOCIATE( Table => OpacityTable % thermEmAb % Absorptivity(1) % Values )
+  ASSOCIATE( Table  => OpacityTable % thermEmAb % Absorptivity(1) % Values,&
+             Energy => Inte_E % Values )
 
   DO i = 1, datasize
 
@@ -126,13 +125,13 @@ PROGRAM wlOpacityInterpolationTest
     buffer3(:) = Inte_Ye(i)
 
     CALL LogInterpolateDifferentiateSingleVariable & 
-           (Inte_E % Values, buffer1, buffer2, buffer3, & 
-            OpacityTable % EnergyGrid % Values, &
-            OpacityTable % EOSTable % TS % States(1) % Values, &
-            OpacityTable % EOSTable % TS % States(2) % Values, &
-            OpacityTable % EOSTable % TS % States(3) % Values, &
-            LogInterp, Offset, Table, Interpolant, Derivative, .FALSE. )
-
+           ( Energy, buffer1, buffer2, buffer3, & 
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset, Table, Interpolant, Derivative, .FALSE. )
+  
     DO ii = 1, Inte_nPointE
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
                          Inte_E % Values(ii), Interpolant(ii), Derivative(ii,3),&
