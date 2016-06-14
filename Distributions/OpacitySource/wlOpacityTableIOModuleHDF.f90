@@ -322,7 +322,6 @@ CONTAINS
     INTEGER, DIMENSION(1)                            :: buffer
     REAL(dp), DIMENSION(1)                           :: bufferReal
     INTEGER(HID_T)                                   :: subgroup_id
-    INTEGER                                          :: l_ye, k_t, j_rho,i_e   
 
     datasize1d(1) = 1
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
@@ -348,19 +347,6 @@ CONTAINS
     WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i)
     CALL Read4dHDF_double( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values, subgroup_id, datasize4d )
     
-    DO l_ye = 1, datasize4d(4)
-      DO k_t = 1, datasize4d(3)
-        DO j_rho = 1, datasize4d(2)
-          DO i_e = 1, datasize4d(1)
-            thermEmAb % Absorptivity(i) % Values (i_e,j_rho,k_t,l_ye) &
-              = 10.0_dp**( thermEmAb % Absorptivity(i) &
-                           % Values (i_e, j_rho, k_t, l_ye) ) &
-                - thermEmAb % Offset
-          END DO  !i_e
-        END DO  !j_rho
-      END DO  !k_t
-    END DO  !l_ye
-
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
