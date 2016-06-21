@@ -1,0 +1,311 @@
+ Table Minimums
+ Pressure                            0.000000000000000     
+ Entropy Per Baryon                -4.6368482777962468E+049
+ Internal Energy Density           -1.6051929520816342E+017
+ Electron Chemical Potential        -1611.316068746113     
+ Proton Chemical Potential          -1807.996662117844     
+ Neutron Chemical Potential         9.2727658131328547E-007
+ Proton Mass Fraction               -53153945456.79002     
+ Neutron Mass Fraction              -28539983279.22526     
+ Alpha Mass Fraction                 0.000000000000000     
+ Heavy Mass Fraction                 0.000000000000000     
+ Heavy Charge Number                 0.000000000000000     
+ Heavy Mass Number                   0.000000000000000     
+ Heavy Binding Energy               -14.50596644651254     
+ zero level for fe: yebck,d0,theta,wsize,egy   0.46429   0.17558   1.10161   6.82264  -8.91447
+ Reading LS EoS data files:
+ ../../../External/LS/Data/max220.atb                                                                                            
+ ../../../External/LS/Data/bd220.atb                                                                                             
+ 
+ <<LOADMX:  MAXWELL CON. TABLE IS INITIALIZED>>
+ 
+ 
+ <<LOADMX:  BOUNDARY TABLE IS INITIALIZED>>
+ 
+ 
+ <<LOADMX:  SKYRME PARAMETERS FOR THIS RUN ARE:>>
+ ABCD:    -711.0151181049628        -107.0621479354742      
+    934.6304798046829         1.260282236135624         0.000000000000000     
+  Satur. density, symmetry engy, & compression          mod.:
+   0.1550000000000000         29.30000000000000         220.0000000000000     
+   0.1550000000000000         29.30000000000000         220.0000000000000     
+  Binding engy, surf. symm. engy, & surface             tension:
+    16.00000000000000         45.80000000000000         1.150000000000000     
+    16.00000000000000         44.80000000000000         1.150000000000000     
+ 
+ 
+ <<LOADMX: FERMI INTEGRAL TABLES ARE INITIALIZED>>
+ 
+ Pressure Interpolation Comparison
+rho=         T=         Ye=         Pressure=
+ 3.11617E+14 1.07812E+12 6.22300E+14 3.38896E+11
+ 5.44732E+11 4.41328E+07 1.11836E+08 2.49868E+10
+ 3.66168E+12 2.10277E+12 3.25633E+11 5.01243E+11
+ 3.11504E+09 1.82221E+11 5.79260E+09 2.59567E+11
+ 2.47908E+08 9.70698E+08 1.96456E+08 3.60473E+09
+ 8.79664E+07 1.35043E+13 4.28396E+09 2.19710E+09
+ 9.00708E+12 3.22104E+13 2.83964E+10 1.39500E+14
+ 1.10128E+14 2.80574E+07 5.86941E+09 1.64489E+13
+ 3.62096E+10 2.73016E+07 2.72352E+09 1.15308E+11
+ 5.92939E+07 3.18522E+11 3.68689E+13 1.16675E+12
+ 2.53344E+13 5.34065E+13 1.02597E+10 1.04695E+09
+ 1.62761E+11 2.79002E+12 1.49845E+14 6.02186E+12
+ 1.72211E+07 5.89350E+14 1.60573E+11 4.01828E+09
+ 4.90452E+09 2.39002E+09 4.00468E+10 4.65769E+10
+ 3.19268E+11 1.23591E+09 7.96618E+11 5.39192E+11
+ 2.66466E+11 1.21196E+10 1.36173E+11 3.90945E+11
+ 7.92762E+10 3.26712E+11 9.93979E+09 2.18657E+10
+ 1.57092E+09 3.88812E+11 7.80850E+11 3.98056E+11
+ 1.01844E+09 5.01546E+11 4.80538E+11 6.22039E+11
+ 2.14629E+11 2.71380E+11 6.07853E+09 6.54363E+10
+ 2.43183E+11 1.70150E+10 8.86631E+10 6.04193E+10
+ 1.43081E+09 3.82022E+11 6.61562E+09 6.92325E+10
+ 2.40503E+10 1.45720E+09 1.91602E+11 3.17906E+09
+ 4.30653E+10 5.16189E+09 3.95453E+11 1.16466E+09
+ 2.08026E+11 1.04727E+10 8.78293E+10 3.50621E+10
+ 3.33264E-01 4.29301E-01 1.42329E-01 4.73846E-01
+ 1.09056E-01 8.50356E-02 4.54373E-01 4.92297E-01
+ 9.08646E-02 3.59622E-01 1.94333E-01 3.92595E-01
+ 5.02447E-01 4.46309E-01 5.60315E-02 4.92358E-01
+ 1.69470E-01 3.25711E-01 3.65610E-01 1.48361E-01
+ 4.56203E-01 2.28526E-01 3.60747E-01 3.09983E-01
+ 1.30658E-01 4.97068E-01 7.81481E-02 5.05080E-01
+ 1.92578E-01 1.23106E-01 4.33377E-01 8.41796E-02
+ 4.87437E-01 3.12048E-01 3.98817E-01 2.88987E-01
+ 1.82540E-01 4.33641E-01 4.90574E-01 2.49564E-01
+ 8.89703E-02 2.63199E-01 4.20709E-01 5.87217E-02
+ 2.44644E-01 2.31548E-01 3.36304E-01 3.44086E-01
+ 9.29012E-02 2.22081E-01 1.19345E+34 4.56572E+30
+ 7.41669E+34 1.16006E+30 2.97471E+30 4.82399E+28
+ 7.59911E+31 3.66895E+28 4.21271E+33 8.32532E+32
+ 5.14306E+31 1.50737E+30 2.62047E+30 2.38122E+32
+ 4.75848E+29 1.36618E+32 3.00114E+26 4.31274E+27
+ 3.62677E+25 2.28820E+32 3.82051E+33 7.90716E+32
+ 3.08820E+27 6.90047E+32 8.34675E+32 3.34454E+33
+ 2.40056E+31 5.89653E+33 9.35196E+32 1.52515E+29
+ 2.47644E+31 3.61791E+31 8.02430E+29 1.45188E+29
+ 1.36709E+27 2.30079E+32 3.92188E+25 3.85415E+30
+ 7.83092E+32 3.42266E+30 4.96095E+32 5.39303E+32
+ 8.44845E+28 5.18951E+26 2.36675E+32 8.80551E+30
+ 3.45404E+33 4.07250E+31 4.72495E+29 7.03516E+34
+  
+rho= 3.11617E+14 T= 1.07812E+12 Ye= 6.22300E+14 Int= 3.38896E+11 DC= 5.44732E+11 Diff= 4.41328E+07
+rho= 1.11836E+08 T= 2.49868E+10 Ye= 3.66168E+12 Int= 2.10277E+12 DC= 3.25633E+11 Diff= 5.01243E+11
+rho= 3.11504E+09 T= 1.82221E+11 Ye= 5.79260E+09 Int= 2.59567E+11 DC= 2.47908E+08 Diff= 9.70698E+08
+rho= 1.96456E+08 T= 3.60473E+09 Ye= 8.79664E+07 Int= 1.35043E+13 DC= 4.28396E+09 Diff= 2.19710E+09
+rho= 9.00708E+12 T= 3.22104E+13 Ye= 2.83964E+10 Int= 1.39500E+14 DC= 1.10128E+14 Diff= 2.80574E+07
+rho= 5.86941E+09 T= 1.64489E+13 Ye= 3.62096E+10 Int= 2.73016E+07 DC= 2.72352E+09 Diff= 1.15308E+11
+rho= 5.92939E+07 T= 3.18522E+11 Ye= 3.68689E+13 Int= 1.16675E+12 DC= 2.53344E+13 Diff= 5.34065E+13
+rho= 1.02597E+10 T= 1.04695E+09 Ye= 1.62761E+11 Int= 2.79002E+12 DC= 1.49845E+14 Diff= 6.02186E+12
+rho= 1.72211E+07 T= 5.89350E+14 Ye= 1.60573E+11 Int= 4.01828E+09 DC= 4.90452E+09 Diff= 2.39002E+09
+rho= 4.00468E+10 T= 4.65769E+10 Ye= 3.19268E+11 Int= 1.23591E+09 DC= 7.96618E+11 Diff= 5.39192E+11
+rho= 2.66466E+11 T= 1.21196E+10 Ye= 1.36173E+11 Int= 3.90945E+11 DC= 7.92762E+10 Diff= 3.26712E+11
+rho= 9.93979E+09 T= 2.18657E+10 Ye= 1.57092E+09 Int= 3.88812E+11 DC= 7.80850E+11 Diff= 3.98056E+11
+rho= 1.01844E+09 T= 5.01546E+11 Ye= 4.80538E+11 Int= 6.22039E+11 DC= 2.14629E+11 Diff= 2.71380E+11
+rho= 6.07853E+09 T= 6.54363E+10 Ye= 2.43183E+11 Int= 1.70150E+10 DC= 8.86631E+10 Diff= 6.04193E+10
+rho= 1.43081E+09 T= 3.82022E+11 Ye= 6.61562E+09 Int= 6.92325E+10 DC= 2.40503E+10 Diff= 1.45720E+09
+rho= 1.91602E+11 T= 3.17906E+09 Ye= 4.30653E+10 Int= 5.16189E+09 DC= 3.95453E+11 Diff= 1.16466E+09
+rho= 2.08026E+11 T= 1.04727E+10 Ye= 8.78293E+10 Int= 3.50621E+10 DC= 3.33264E-01 Diff= 4.29301E-01
+rho= 1.42329E-01 T= 4.73846E-01 Ye= 1.09056E-01 Int= 8.50356E-02 DC= 4.54373E-01 Diff= 4.92297E-01
+rho= 9.08646E-02 T= 3.59622E-01 Ye= 1.94333E-01 Int= 3.92595E-01 DC= 5.02447E-01 Diff= 4.46309E-01
+rho= 5.60315E-02 T= 4.92358E-01 Ye= 1.69470E-01 Int= 3.25711E-01 DC= 3.65610E-01 Diff= 1.48361E-01
+rho= 4.56203E-01 T= 2.28526E-01 Ye= 3.60747E-01 Int= 3.09983E-01 DC= 1.30658E-01 Diff= 4.97068E-01
+rho= 7.81481E-02 T= 5.05080E-01 Ye= 1.92578E-01 Int= 1.23106E-01 DC= 4.33377E-01 Diff= 8.41796E-02
+rho= 4.87437E-01 T= 3.12048E-01 Ye= 3.98817E-01 Int= 2.88987E-01 DC= 1.82540E-01 Diff= 4.33641E-01
+rho= 4.90574E-01 T= 2.49564E-01 Ye= 8.89703E-02 Int= 2.63199E-01 DC= 4.20709E-01 Diff= 5.87217E-02
+rho= 2.44644E-01 T= 2.31548E-01 Ye= 3.36304E-01 Int= 3.44086E-01 DC= 9.29012E-02 Diff= 2.22081E-01
+rho= 1.19345E+34 T= 4.56572E+30 Ye= 7.41669E+34 Int= 1.16006E+30 DC= 2.97471E+30 Diff= 4.82399E+28
+rho= 7.59911E+31 T= 3.66895E+28 Ye= 4.21271E+33 Int= 8.32532E+32 DC= 5.14306E+31 Diff= 1.50737E+30
+rho= 2.62047E+30 T= 2.38122E+32 Ye= 4.75848E+29 Int= 1.36618E+32 DC= 3.00114E+26 Diff= 4.31274E+27
+rho= 3.62677E+25 T= 2.28820E+32 Ye= 3.82051E+33 Int= 7.90716E+32 DC= 3.08820E+27 Diff= 6.90047E+32
+rho= 8.34675E+32 T= 3.34454E+33 Ye= 2.40056E+31 Int= 5.89653E+33 DC= 9.35196E+32 Diff= 1.52515E+29
+rho= 2.47644E+31 T= 3.61791E+31 Ye= 8.02430E+29 Int= 1.45188E+29 DC= 1.36709E+27 Diff= 2.30079E+32
+rho= 3.92188E+25 T= 3.85415E+30 Ye= 7.83092E+32 Int= 3.42266E+30 DC= 4.96095E+32 Diff= 5.39303E+32
+rho= 8.44845E+28 T= 5.18951E+26 Ye= 2.36675E+32 Int= 8.80551E+30 DC= 3.45404E+33 Diff= 4.07250E+31
+rho= 4.72495E+29 T= 7.03516E+34 Ye= 1.05906E+34 Int= 4.20141E+30 DC= 5.73194E+34 Diff= 1.02863E+30
+rho= 1.97770E+30 T= 3.27358E+28 Ye= 7.20574E+31 Int= 3.35502E+28 DC= 3.03006E+33 Diff= 6.80010E+32
+rho= 4.21339E+31 T= 1.36205E+30 Ye= 2.41910E+30 Int= 1.67899E+32 DC= 3.11596E+29 Diff= 8.61203E+31
+rho= 2.02412E+26 T= 3.49840E+27 Ye= 3.46765E+25 Int= 1.58606E+32 DC= 2.57825E+33 Diff= 6.21971E+32
+rho= 2.09410E+27 T= 4.38919E+32 Ye= 7.13015E+32 Int= 2.95025E+33 DC= 1.52177E+31 Diff= 5.18654E+33
+rho= 6.28185E+32 T= 1.27162E+29 Ye= 2.43701E+31 Int= 2.46598E+31 DC= 7.26769E+29 Diff= 9.24318E+28
+rho= 1.31259E+27 T= 1.51340E+32 Ye= 3.09826E+25 Int= 2.98802E+30 DC= 5.48177E+32 Diff= 2.25618E+30
+rho= 3.52699E+32 T= 3.78183E+32 Ye= 6.79227E+28 Int= 3.98386E+26 DC= 1.74908E+32 Diff= 6.51412E+30
+rho= 3.32434E+33 T= 3.07585E+31 Ye= 4.12548E+29 Int= 4.71938E+34 DC= 1.34385E+33 Diff= 3.64306E+29
+rho= 1.68475E+34 T= 1.31421E+29 Ye= 9.97015E+29 Int= 1.55042E+28 DC= 3.93369E+30 Diff= 3.13928E+27
+rho= 1.18264E+33 T= 1.52521E+32 Ye= 9.29668E+30 Int= 1.45319E+29 DC= 2.01371E+29 Diff= 7.02229E+31
+rho= 1.64252E+29 T= 5.04976E+31 Ye= 9.77025E+25 Int= 8.14340E+26 DC= 1.59123E+24 Diff= 7.02145E+31
+rho= 1.24226E+33 T= 1.68745E+32 Ye= 9.94100E+26 Int= 2.51129E+32 DC= 1.21659E+32 Diff= 3.94293E+32
+rho= 8.78792E+30 T= 7.09994E+32 Ye= 3.07011E+32 Int= 2.53532E+28 DC= 3.94218E+29 Diff= 1.15193E+31
+rho= 7.56612E+28 T= 5.27557E+28 Ye= 5.45002E+25 Int= 7.87389E+31 DC= 8.23628E+24 Diff= 8.66131E+29
+rho= 2.34916E+32 T= 1.16648E+30 Ye= 1.43396E+32 Int= 1.61120E+32 DC= 1.65618E+28 Diff= 1.20565E+26
+rho= 6.17672E+31 T= 2.29139E+30 Ye= 1.29695E+32 Int= 9.96650E+30 DC= 5.99471E+28 Diff= 2.31577E+34
+  
+ L1 and Max Norms
+  
+L1norm = 1.53331E+01
+L1norm/N = 3.06663E-01
+Maxnorm = 5.86361E-01
+  
+ Internal Energy Monotonicity Check
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    1
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    1
+Table not monotonic in T at (Nrho, NT, NYe) =     6    2    1
+Table not monotonic in T at (Nrho, NT, NYe) =    44    2    1
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    1
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3    1
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    2
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    2
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    2
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    2
+Table not monotonic in T at (Nrho, NT, NYe) =     6    2    2
+Table not monotonic in T at (Nrho, NT, NYe) =    44    2    2
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    2
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    2
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3    2
+Table not monotonic in T at (Nrho, NT, NYe) =    21    4    2
+Table not monotonic in T at (Nrho, NT, NYe) =    44    4    2
+Table not monotonic in T at (Nrho, NT, NYe) =    21    5    2
+Table not monotonic in T at (Nrho, NT, NYe) =    44    5    2
+Table not monotonic in T at (Nrho, NT, NYe) =    44    6    2
+Table not monotonic in T at (Nrho, NT, NYe) =    44    7    2
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =     6    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =    43    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =    44    2    3
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3    3
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    3
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    3
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3    3
+Table not monotonic in T at (Nrho, NT, NYe) =    43    3    3
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4    3
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    4
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    4
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    4
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    4
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3    4
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    4
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    4
+Table not monotonic in T at (Nrho, NT, NYe) =     2    4    4
+Table not monotonic in T at (Nrho, NT, NYe) =     2    5    4
+Table not monotonic in T at (Nrho, NT, NYe) =    43   10    4
+Table not monotonic in T at (Nrho, NT, NYe) =    43   11    4
+Table not monotonic in T at (Nrho, NT, NYe) =    41   32    4
+Table not monotonic in T at (Nrho, NT, NYe) =    42   32    4
+Table not monotonic in T at (Nrho, NT, NYe) =    41   33    4
+Table not monotonic in T at (Nrho, NT, NYe) =    42   33    4
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    5
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    5
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    5
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    5
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3    5
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    5
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    5
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4    5
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    6
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    6
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    6
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    6
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3    6
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    6
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    6
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4    6
+Table not monotonic in T at (Nrho, NT, NYe) =    42   33    6
+Table not monotonic in T at (Nrho, NT, NYe) =    42   34    6
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    7
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    7
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    7
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    7
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    7
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    7
+Table not monotonic in T at (Nrho, NT, NYe) =    42   33    7
+Table not monotonic in T at (Nrho, NT, NYe) =    42   34    7
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    8
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    8
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    8
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    8
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3    8
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    8
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3    8
+Table not monotonic in T at (Nrho, NT, NYe) =     7    3    8
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4    8
+Table not monotonic in T at (Nrho, NT, NYe) =     6    4    8
+Table not monotonic in T at (Nrho, NT, NYe) =     7    4    8
+Table not monotonic in T at (Nrho, NT, NYe) =    42   33    8
+Table not monotonic in T at (Nrho, NT, NYe) =    42   34    8
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2    9
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2    9
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2    9
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2    9
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3    9
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3    9
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3    9
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3    9
+Table not monotonic in T at (Nrho, NT, NYe) =     7    3    9
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4    9
+Table not monotonic in T at (Nrho, NT, NYe) =     6    4    9
+Table not monotonic in T at (Nrho, NT, NYe) =     7    4    9
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2   10
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2   10
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2   10
+Table not monotonic in T at (Nrho, NT, NYe) =     5    2   10
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3   10
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3   10
+Table not monotonic in T at (Nrho, NT, NYe) =     5    3   10
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3   10
+Table not monotonic in T at (Nrho, NT, NYe) =     7    3   10
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4   10
+Table not monotonic in T at (Nrho, NT, NYe) =     6    4   10
+Table not monotonic in T at (Nrho, NT, NYe) =     7    4   10
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2   11
+Table not monotonic in T at (Nrho, NT, NYe) =     2    2   11
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2   11
+Table not monotonic in T at (Nrho, NT, NYe) =    26    2   11
+Table not monotonic in T at (Nrho, NT, NYe) =     1    3   11
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3   11
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3   11
+Table not monotonic in T at (Nrho, NT, NYe) =     7    3   11
+Table not monotonic in T at (Nrho, NT, NYe) =    26    3   11
+Table not monotonic in T at (Nrho, NT, NYe) =     1    4   11
+Table not monotonic in T at (Nrho, NT, NYe) =     6    4   11
+Table not monotonic in T at (Nrho, NT, NYe) =     7    4   11
+Table not monotonic in T at (Nrho, NT, NYe) =    41   33   11
+Table not monotonic in T at (Nrho, NT, NYe) =    41   34   11
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2   12
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2   12
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3   12
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3   12
+Table not monotonic in T at (Nrho, NT, NYe) =     6    4   12
+Table not monotonic in T at (Nrho, NT, NYe) =    42   34   12
+Table not monotonic in T at (Nrho, NT, NYe) =    42   35   12
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2   13
+Table not monotonic in T at (Nrho, NT, NYe) =     4    2   13
+Table not monotonic in T at (Nrho, NT, NYe) =     4    3   13
+Table not monotonic in T at (Nrho, NT, NYe) =     6    3   13
+Table not monotonic in T at (Nrho, NT, NYe) =     6    4   13
+Table not monotonic in T at (Nrho, NT, NYe) =     1    2   14
+Table not monotonic in T at (Nrho, NT, NYe) =    22    2   14
+Table not monotonic in T at (Nrho, NT, NYe) =    22    3   14
+Table not monotonic in T at (Nrho, NT, NYe) =    42   34   14
+Table not monotonic in T at (Nrho, NT, NYe) =    42   35   14
+Table not monotonic in T at (Nrho, NT, NYe) =    16    2   27
+Table not monotonic in T at (Nrho, NT, NYe) =    15    2   33
+Table not monotonic in T at (Nrho, NT, NYe) =    15    2   41
+Table not monotonic in T at (Nrho, NT, NYe) =    50   12   41
+Table not monotonic in T at (Nrho, NT, NYe) =    50   13   41
+Table not monotonic in T at (Nrho, NT, NYe) =    15    2   42
+Table not monotonic in T at (Nrho, NT, NYe) =    50   12   42
+Table not monotonic in T at (Nrho, NT, NYe) =    50   13   42
+Table not monotonic in T at (Nrho, NT, NYe) =    50   12   43
+Table not monotonic in T at (Nrho, NT, NYe) =    50   13   43
+Table not monotonic in T at (Nrho, NT, NYe) =    50   12   46
+Table not monotonic in T at (Nrho, NT, NYe) =    50   13   46
+Table not monotonic in T at (Nrho, NT, NYe) =    14    2   49
+Table not monotonic in T at (Nrho, NT, NYe) =    50   12   49
+Table not monotonic in T at (Nrho, NT, NYe) =    50   13   49
+Table not monotonic in T at (Nrho, NT, NYe) =    14    2   50
+Table not monotonic in T at (Nrho, NT, NYe) =    50   13   50
+Table not monotonic in T at (Nrho, NT, NYe) =    50   14   50
+          161  Non-monotonic out of        125000

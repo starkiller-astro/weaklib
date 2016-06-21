@@ -1,0 +1,144 @@
+ Table Minimums
+ Pressure                           6.7659408402737281E+023
+ Entropy Per Baryon                 1.3526494885929756E+032
+ Internal Energy Density            8.6026464230679490E-003
+ Electron Chemical Potential        -1611.316068746113     
+ Proton Chemical Potential          -1807.996662117844     
+ Neutron Chemical Potential         9.2727658131328547E-007
+ Proton Mass Fraction               3.3878003033472265E-056
+ Neutron Mass Fraction              1.5458706896650604E-113
+ Alpha Mass Fraction                 0.000000000000000     
+ Heavy Mass Fraction                 0.000000000000000     
+ Heavy Charge Number                1.4734885690399409E-006
+ Heavy Mass Number                  1.9386762585738852E-007
+ Heavy Binding Energy               -14.65755947539439     
+  
+ Pressure                         Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 1.15071E+00
+L1norm/N = 1.15071E-03
+Maxnorm = 4.24173E-02
+LocMax = 381 1.11163E+08 1.04301E+10 2.41695E-01 1.49185E+26 1.55794E+26
+  
+ Entropy Per Baryon               Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 1.34798E+00
+L1norm/N = 1.34798E-03
+Maxnorm = 7.42774E-02
+LocMax = 381 1.11163E+08 1.04301E+10 2.41695E-01 1.46443E+34 1.55794E+26
+  
+ Internal Energy Density          Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 1.47049E+00
+L1norm/N = 1.47049E-03
+Maxnorm = 9.01038E-02
+LocMax = 854 3.69033E+14 3.84929E+09 4.97990E-01 4.11046E-02 1.74785E+34
+  
+ Electron Chemical Potential      Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 3.47267E+00
+L1norm/N = 3.47267E-03
+Maxnorm = 8.50079E-01
+LocMax = 651 4.90679E+14 7.09957E+11 3.26938E-01 7.51310E-02 5.38232E+34
+  
+ Proton Chemical Potential        Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 9.49921E-01
+L1norm/N = 9.49921E-04
+Maxnorm = 3.68938E-01
+LocMax = 591 8.69854E+14 7.24361E+11 2.71121E-01 2.93120E+00 1.72435E+35
+  
+ Neutron Chemical Potential       Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 6.09440E-01
+L1norm/N = 6.09440E-04
+Maxnorm = 5.91416E-03
+LocMax = 642 4.23431E+12 1.35655E+11 6.38548E-02 2.05663E+01 4.80697E+31
+  
+ Proton Mass Fraction             Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 2.42821E+09
+L1norm/N = 2.42821E+06
+Maxnorm = 2.42821E+09
+LocMax = 555 1.68984E+14 2.99960E+09 3.46125E-01 9.26247E-08 2.11972E+33
+  
+ Neutron Mass Fraction            Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 1.74440E+32
+L1norm/N = 1.74440E+29
+Maxnorm = 1.74440E+32
+LocMax = 555 1.68984E+14 2.99960E+09 3.46125E-01 4.17583E-26 2.11972E+33
+  
+ Alpha Mass Fraction              Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 2.06034E+02
+L1norm/N = 2.06034E-01
+Maxnorm = 9.54807E+01
+LocMax = 656 1.50927E+14 4.62141E+10 1.76650E-01 4.15940E-06 1.03930E+33
+  
+ Heavy Mass Fraction              Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 8.11347E+00
+L1norm/N = 8.11347E-03
+Maxnorm = 1.00000E+00
+LocMax = 209 1.15587E+14 6.69191E+09 1.23558E-01 2.12665E-52 4.13877E+32
+  
+ Heavy Charge Number              Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 3.75047E+01
+L1norm/N = 3.75047E-02
+Maxnorm = 9.99355E+00
+LocMax = 316 1.31837E+14 1.71652E+10 1.15978E-01 4.39742E+01 5.72388E+32
+  
+ Heavy Mass Number                Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 2.84817E+01
+L1norm/N = 2.84817E-02
+Maxnorm = 4.62600E+00
+LocMax = 381 1.11163E+08 1.04301E+10 2.41695E-01 1.01268E+01 1.55794E+26
+  
+ Heavy Binding Energy             Interpolation Comparison
+  
+  
+ L1 and Max Norms
+  
+L1norm = 0.00000E+00
+L1norm/N = 0.00000E+00
+Maxnorm =-1.79769+308
+LocMax =   0 6.20931-317 6.21329-317 6.21727-317 6.23312-317 6.23710-317
