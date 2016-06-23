@@ -22,6 +22,10 @@ MODULE wlOpacityFieldsModule
 !
 !---------------------------------------------
 
+  TYPE :: MeanValueTypeA
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Values
+  END type MeanValueTypeA
+
   TYPE :: ValueTypeA
     REAL(dp), DIMENSION(:,:,:,:), ALLOCATABLE :: Values
   END type ValueTypeA
@@ -30,10 +34,12 @@ MODULE wlOpacityFieldsModule
     INTEGER :: nOpacities
     INTEGER, DIMENSION(4) :: nPoints
     REAL(dp)              :: Offset
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(ValueTypeA),  DIMENSION(:), ALLOCATABLE :: Absorptivity
+    CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Names
+    CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Species
+    CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Units
+    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: MeanAbsorptivity
+    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: EquilibriumDensity
+    TYPE(ValueTypeA),     DIMENSION(:), ALLOCATABLE :: Absorptivity
   END TYPE
 
 !---------------------------------------------
