@@ -170,7 +170,14 @@ CONTAINS
     REAL(dp), DIMENSION(4) :: alpha, delta
     INTEGER :: i, il1, il2, il3, il4
 
-
+    IF ( ( SIZE(x1) .NE. SIZE(x2) ) .OR. ( SIZE(x2) .NE. SIZE(x3) ) &
+         .OR. ( SIZE(x3) .NE. SIZE(x4) ) .OR. ( SIZE(x4) .NE. SIZE (x1) ) ) &
+    THEN
+      WRITE(*,*) &
+        'ERROR: describe arrays (of interpolation point) have diff size.'
+      RETURN
+    END IF
+    
     DO i = 1, SIZE( x1 )
 
       CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(i), il1 )
@@ -616,6 +623,8 @@ CONTAINS
      
       IF (debug) THEN
         WRITE(*,*) '  Alpha and delta are calculated.'
+        WRITE(*,*) ' delta = ', delta
+        WRITE(*,*) ' alpha = ', alpha
       END IF
 
       Interpolant(i) &
@@ -665,41 +674,26 @@ CONTAINS
 
       Derivative(i,1) &  ! E
         = ( Interpolant(i) ) * alpha(1) &
-          * ( &
-            (1.0_dp - delta(4)) &
-              * (   (1.0_dp - delta(3)) * &
-                          (1.0_dp - delta(2)) * (- 1.0_dp) * p0000   &
-                  + (1.0_dp - delta(3)) * &
-                          (1.0_dp - delta(2)) *              p1000   &
-                  + (1.0_dp - delta(3)) * &
-                                    delta(2)  * (- 1.0_dp) * p0100   &
-                  + (1.0_dp - delta(3)) * &
-                                    delta(2)  *              p1100   &
-                  +           delta(3)  * &
-                          (1.0_dp - delta(2)) * (- 1.0_dp) * p0010   &
-                  +           delta(3)  * &
-                          (1.0_dp - delta(2)) *              p1010   &
-                  +           delta(3)  * &
-                                    delta(2)  * (- 1.0_dp) * p0110   &
-                  +           delta(3)  * &
-                                    delta(2)  *              p1110 ) &
-            +         delta(4)  &
-              * (   (1.0_dp - delta(3)) * &
-                          (1.0_dp - delta(2)) * (- 1.0_dp) * p0001   &
-                  + (1.0_dp - delta(3)) * &
-                          (1.0_dp - delta(2)) *              p1001   &
-                  + (1.0_dp - delta(3)) * &
-                                    delta(2)  * (- 1.0_dp) * p0101   &
-                  + (1.0_dp - delta(3)) * &
-                                    delta(2)  *              p1101   &
-                  +           delta(3)  * &
-                          (1.0_dp - delta(2)) * (- 1.0_dp) * p0011   &
-                  +           delta(3)  * &
-                          (1.0_dp - delta(2)) *              p1011   &
-                  +           delta(3)  * &
-                                    delta(2)  * (- 1.0_dp) * p0111   &
-                  +           delta(3)  * &
-                                    delta(2)  *              p1111 ) )
+          * ( (1.0_dp - delta(4)) * ( (1.0_dp - delta(3) ) * &
+                                      ( ( delta(2) - 1.0_dp )  * p0000   &
+                                      + ( 1.0_dp   - delta(2)) * p1000   &
+                                                   - delta(2)  * p0100   &
+                                                   + delta(2)  * p1100 ) &
+                                    +           delta(3)   * &
+                                      ( ( delta(2) - 1.0_dp )  * p0010   &
+                                      - ( delta(2) - 1.0_dp )  * p1010   &
+                                                   - delta(2)  * p0110   &
+                                        +            delta(2)  * p1110 ))&
+                      + delta(4) * ( (1.0_dp - delta(3) )  * &
+                                     ( ( delta(2) - 1.0_dp )   * p0001   &
+                                     + ( 1.0_dp   - delta(2))  * p1001   &
+                                                  - delta(2)   * p0101   &
+                                                  + delta(2)   * p1101 ) &
+                                     +           delta(3)  * &
+                                      ( ( delta(2) - 1.0_dp )  * p0011   &
+                                      + ( 1.0_dp - delta(2) )  * p1011   &
+                                                  - delta(2)   * p0111   &
+                                                  + delta(2)   * p1111)) )
      
       Derivative(i,2) &  ! rho
         = ( Interpolant(i) ) * alpha(2) &
@@ -742,23 +736,23 @@ CONTAINS
       Derivative(i,3) &  ! T
         = ( Interpolant(i) )  * alpha(3) &
           * ( (1.0_dp - delta(4)) &
-              * ( -       (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0000   &
-                  -       (1.0_dp - delta(2)) *           delta(1)  * p1000   &
-                  -                 delta(2)  * (1.0_dp - delta(1)) * p0100   &
-                  -                 delta(2)  *           delta(1)  * p1100   &
-                  +       (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0010   &
+              * (      (  (delta(2) - 1.0_dp) * (1.0_dp - delta(1)) * p0000   &
+                  +       (delta(2) - 1.0_dp) *           delta(1)  * p1000   &
+                  +                 delta(2)  * (delta(1) - 1.0_dp) * p0100   &
+                  -                 delta(2)  *           delta(1)  * p1100 ) &
+                  +    (  (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0010   &
                   +       (1.0_dp - delta(2)) *           delta(1)  * p1010   &
                   +                 delta(2)  * (1.0_dp - delta(1)) * p0110   &
-                  +                 delta(2)  *           delta(1)  * p1110 ) &
+                  +                 delta(2)  *           delta(1)  * p1110)) &
             +           delta(4)  &
-              * ( -       (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0001   &
-                  -       (1.0_dp - delta(2)) *           delta(1)  * p1001   &
-                  -                 delta(2)  * (1.0_dp - delta(1)) * p0101   &
-                  -                 delta(2)  *           delta(1)  * p1101   &
-                  +       (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0011   &
+              * (      (  (delta(2) - 1.0_dp) * (1.0_dp - delta(1)) * p0001   &
+                  +       (delta(2) - 1.0_dp) *           delta(1)  * p1001   &
+                  +                 delta(2)  * (delta(1) - 1.0_dp) * p0101   &
+                  -                 delta(2)  *           delta(1)  * p1101 ) &
+                  +    (  (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0011   &
                   +       (1.0_dp - delta(2)) *           delta(1)  * p1011   &
                   +                 delta(2)  * (1.0_dp - delta(1)) * p0111   &
-                  +                 delta(2)  *           delta(1)  * p1111 ) ) 
+                  +                 delta(2)  *           delta(1)  * p1111)) ) 
 
       Derivative(i,4) &  ! Ye
         = ( Interpolant(i) ) * alpha(4) &
@@ -795,6 +789,12 @@ CONTAINS
                   +           delta(3)  * &
                                     delta(2)  *           delta(1)  * p1111 ) )
     
+    IF (debug) THEN
+      WRITE(*,*) ' '
+      WRITE(*,*) 'Derivative is calculated =', Derivative(i,:)
+      WRITE(*,*) ''
+    END IF
+
     END DO
 
     IF (debug) THEN
