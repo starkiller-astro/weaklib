@@ -131,9 +131,15 @@ CONTAINS
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Species(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
+    ALLOCATE( Opacity % MeanAbsorptivity(nOpacities) )
+    ALLOCATE( Opacity % EquilibriumDensity(nOpacities) )
     ALLOCATE( Opacity % Absorptivity(nOpacities) )
-
+    
     DO i = 1, nOpacities
+      ALLOCATE( Opacity % MeanAbsorptivity(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4)) )
+      ALLOCATE( Opacity % EquilibriumDensity(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4)) )
       ALLOCATE( Opacity % Absorptivity(i) % Values &
                   (nPoints(1), nPoints(2), nPoints(3), nPoints(4)) )
     END DO
@@ -148,9 +154,13 @@ CONTAINS
     INTEGER :: i
 
     DO i = 1, Opacity % nOpacities
+      DEALLOCATE( Opacity % MeanAbsorptivity(i) % Values )
+      DEALLOCATE( Opacity % EquilibriumDensity(i) % Values )
       DEALLOCATE( Opacity % Absorptivity(i) % Values )
     END DO
 
+    DEALLOCATE( Opacity % MeanAbsorptivity )
+    DEALLOCATE( Opacity % EquilibriumDensity )
     DEALLOCATE( Opacity % Absorptivity )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Species )
@@ -190,6 +200,24 @@ CONTAINS
         ' ', 'Min Value = ', MINVAL( Opacity % Absorptivity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
+      WRITE(*,*)
+      WRITE(*,'(A6,A17,I3.3,A3,A)') &
+        ' ', 'MeanAbsorptivity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % MeanAbsorptivity(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % MeanAbsorptivity(i) % Values ) 
+      WRITE(*,*)
+      WRITE(*,'(A6,A19,I3.3,A3,A)') &
+        ' ', 'EquilibriumDensity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % EquilibriumDensity(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % EquilibriumDensity(i) % Values )
     END DO
     WRITE(*,*)
 
