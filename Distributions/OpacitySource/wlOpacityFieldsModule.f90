@@ -205,15 +205,19 @@ CONTAINS
         ' ', 'MeanAbsorptivity(',i,'): ', TRIM( Opacity % Names(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,3I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % MeanAbsorptivity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Min Value = ', MINVAL( Opacity % MeanAbsorptivity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % MeanAbsorptivity(i) % Values ) 
       WRITE(*,*)
-      WRITE(*,'(A6,A19,I3.3,A3,A)') &
+      WRITE(*,'(A8,A19,I3.3,A3,A)') &
         ' ', 'EquilibriumDensity(',i,'): ', TRIM( Opacity % Names(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,3I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % EquilibriumDensity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Min Value = ', MINVAL( Opacity % EquilibriumDensity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &

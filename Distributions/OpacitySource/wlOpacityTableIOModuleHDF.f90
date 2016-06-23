@@ -159,6 +159,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T)                            :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d   
     INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
     INTEGER                                     :: i
     INTEGER, DIMENSION(1)                       :: buffer
@@ -168,7 +169,7 @@ CONTAINS
     REAL(dp), DIMENSION(1)                      :: tempReal
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
     INTEGER(HID_T)                              :: subgroup_id
-
+    
     datasize1dtemp(1) = 1
     tempInteger(1) = thermEmAb % nOpacities
     CALL WriteHDF&
@@ -196,8 +197,26 @@ CONTAINS
     datasize4d = thermEmAb % nPoints
     CALL OpenGroupHDF( "Absorptivity", .true., group_id, subgroup_id )
     DO i = 1, datasize1d
-      CALL Write4dHDF_double( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values(:,:,:,:), &
+      CALL Write4dHDF_double&
+         ( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values(:,:,:,:),&
                               subgroup_id, datasize4d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
+
+    datasize3d = thermEmAb % nPoints(2:4)
+    CALL OpenGroupHDF( "MeanAbsorptivity", .true., group_id, subgroup_id )
+    DO i = 1, datasize1d
+    CALL WriteHDF&
+         ( thermEmAb % Names(i), thermEmAb % MeanAbsorptivity(i) % Values,&
+           subgroup_id, datasize3d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "EquilibriumDensity", .true., group_id, subgroup_id )
+    DO i = 1, datasize1d
+    CALL WriteHDF&
+         ( thermEmAb % Names(i), thermEmAb % EquilibriumDensity(i) % Values,&
+           subgroup_id, datasize3d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
@@ -345,8 +364,25 @@ CONTAINS
     CALL OpenGroupHDF( "Absorptivity", .false., group_id, subgroup_id )
     DO i = 1, thermEmAb % nOpacities
     WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i)
-    CALL Read4dHDF_double( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values, subgroup_id, datasize4d )
-    
+    CALL Read4dHDF_double&
+         ( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values,&
+           subgroup_id, datasize4d )
+    END DO ! nOpacities
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "MeanAbsorptivity", .false., group_id, subgroup_id )
+    DO i = 1, thermEmAb % nOpacities
+    CALL ReadHDF&
+         ( thermEmAb % Names(i), thermEmAb % MeanAbsorptivity(i) % Values,&
+           subgroup_id, datasize4d )
+    END DO ! nOpacities
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "EquilibriumDensity", .false., group_id, subgroup_id )
+    DO i = 1, thermEmAb % nOpacities
+    CALL ReadHDF&
+         ( thermEmAb % Names(i), thermEmAb % EquilibriumDensity(i) % Values,&
+           subgroup_id, datasize4d )
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
