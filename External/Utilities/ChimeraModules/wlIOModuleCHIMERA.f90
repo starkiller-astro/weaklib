@@ -17,6 +17,35 @@ MODULE wlIOModuleCHIMERA
 
 CONTAINS
 
+  SUBROUTINE ReadComposeTableHDF( EOSTable, FileName )
+    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+    CHARACTER(len=*), INTENT(in)                  :: FileName
+
+    INTEGER, DIMENSION(3)                         :: nPoints
+    INTEGER                                       :: nVariables
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+    CALL OpenGroupHDF( "pointsnb", .false., file_id, group_id )
+
+    CALL ReadDimensionsHDF( nPoints, group_id )
+    CALL ReadNumberVariablesHDF( nVariables, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+
+    CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+
+    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
+
+    CALL DescribeEquationOfStateTable( EOSTable )
+
+    CALL CloseFileHDF( file_id )
+
+  END SUBROUTINE ReadComposeTableHDF
+
   SUBROUTINE ReadChimeraProfile1D( FileName, MaxZone, r, rho, T, Ye, p, s, &
                                      e_internal, xn, xp, xhe, xa, chem_n,  &
                                      chem_p, chem_e, a_heavy, z_heavy,     &
