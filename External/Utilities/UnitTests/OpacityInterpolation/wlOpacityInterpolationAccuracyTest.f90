@@ -14,7 +14,7 @@ PROGRAM wlOpacityInterpolationAccuracyTest
 
   INTEGER  :: TestUnit1, TestUnit2
 !--------- parameters for creating energy grid 
-  INTEGER, PARAMETER     :: Inte_nPointE = 30
+  INTEGER, PARAMETER     :: Inte_nPointE = 240
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(EnergyGridType)   :: Inte_E
@@ -31,9 +31,11 @@ PROGRAM wlOpacityInterpolationAccuracyTest
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: name1, name2, name3, name4, name5, &
-                                         name6, name7, name8, name9, name10
+                                         name6, name7, name8, name9, name10,&
+                                         name11, name12
+
   INTEGER, DIMENSION(4)               :: LogInterp
-  INTEGER                             :: i, ii, iii, datasize
+  INTEGER                             :: i, ii, datasize
   REAL(dp)                            :: Offset
 
 !-------- output variables ------------------------
@@ -47,11 +49,14 @@ PROGRAM wlOpacityInterpolationAccuracyTest
  
   Format1 = "(14A12)"
   Format2 = "(14ES12.3)"
-  Format3 = "(10A12)"
-  Format4 = "(10ES12.3)"
+  Format3 = "(12A12)"
+  Format4 = "(12ES12.3)"
 
-  OPEN(1, FILE = "FidOutput0ms.d", FORM = "formatted", ACTION = 'read')
-  datasize = 312
+!  OPEN(1, FILE = "FidOutput0ms.d", FORM = "formatted", ACTION = 'read')
+!  datasize = 312
+
+  OPEN(1, FILE = "FidOutput100ms.d", FORM = "formatted", ACTION = 'read')
+  datasize = 212
 
 !  OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
 !  datasize = 292
@@ -93,21 +98,18 @@ PROGRAM wlOpacityInterpolationAccuracyTest
   ALLOCATE( Inte_xheavy( datasize ) )
   ALLOCATE( Inte_xn( datasize ) )
   ALLOCATE( Inte_xp( datasize ) )
-  ALLOCATE( Interpolant( datasize * Inte_nPointE ) )
-  ALLOCATE( DirectCall( datasize * Inte_nPointE ) )
-  ALLOCATE( Derivative( datasize * Inte_nPointE, 4 ) )
+  ALLOCATE( Interpolant( Inte_nPointE ) )
+  ALLOCATE( DirectCall( Inte_nPointE ) )
+  ALLOCATE( Derivative( Inte_nPointE, 4 ) )
 
-  READ( 1, Format1 ) name1, name2, name3, name4, name5
+  READ( 1, Format1 ) name1, name2, name3, name4, name5, name6, name7, name8, name9, name10
+  WRITE( *, Format1 ) name1, name2, name3, name4, name5, name6, name7, name8, name9, name10
 
   DO i = 1, datasize
     READ( 1, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i), &
                       Inte_chem_n(i), Inte_chem_p(i), Inte_chem_e(i), &
                       Inte_xn(i), Inte_xp(i), tempxa, Inte_xheavy(i), &
                       Inte_Z(i), Inte_A(i)
-    WRITE( *, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i), &
-                      Inte_chem_n(i), Inte_chem_p(i), Inte_chem_e(i), &
-                      Inte_xn(i), Inte_xp(i), tempxa, Inte_xheavy(i), &
-                      Inte_Z(i), Inte_A(i) 
   END DO
 
   CLOSE( 1, STATUS = 'keep')  
@@ -118,23 +120,24 @@ PROGRAM wlOpacityInterpolationAccuracyTest
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable_Log.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
-  name5 = ('    energy  ')
-  name6 = (' direct call')
-  name7 = ('   Opacity  ')
-  name8 = ('    deriv T ')
-  name9 = ('   deriv Ye')
-  name10 = ('error prese')
-
-  OPEN( 10, FILE = "IntOutput0ms.d", FORM = "formatted", ACTION = 'write')
-!  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
+  name5  = ('    energy  ')
+  name6  = (' direct call')
+  name7  = ('   Opacity  ')
+  name8  = ('    deriv T ')
+  name9  = ('   deriv Ye ')
+  name10 = ('error prese ')
+  name11 = ('   deriv E  ')
+  name12 = ('   deriv rho')
+!  OPEN( 10, FILE = "IntOutput0ms.d", FORM = "formatted", ACTION = 'write')
+  OPEN( 10, FILE = "IntOutput100ms.d", FORM = "formatted", ACTION = 'write')
   WRITE(10, Format3) name1, name2, name3, name4, name5, name6, name7, &
-                     name10, name8, name9
+                     name10, name8, name9, name11, name12
 
   ASSOCIATE( Table => OpacityTable % thermEmAb % Absorptivity(1) % Values, &
              Energy => Inte_E % Values )
@@ -152,18 +155,19 @@ PROGRAM wlOpacityInterpolationAccuracyTest
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
              LogInterp, Offset, Table, Interpolant, Derivative, .FALSE. )
-
+  
     DO ii = 1, Inte_nPointE
 
-      iii = (i-1) * Inte_nPointE + ii
-      DirectCall( iii ) = totalEcapEm( Energy(ii), Inte_rho(i), Inte_T(i), &
+      DirectCall( ii ) = totalEcapEm( Energy(ii), Inte_rho(i), Inte_T(i), &
                                Inte_Z(i), Inte_A(i), Inte_chem_e(i), &
                                Inte_chem_n(i), Inte_chem_p(i), Inte_xheavy(i), &
                                Inte_xn(i), Inte_xp(i) )
+ 
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
-                         Inte_E % Values(ii), DirectCall(iii), Interpolant(ii),&
-                      ABS( Interpolant(ii)-DirectCall(iii) ) / DirectCall(iii),&
-                         Derivative(i,3), Derivative(i,4)
+                         Energy(ii), DirectCall(ii), Interpolant(ii),&
+                      ABS( Interpolant(ii)-DirectCall(ii) ) / DirectCall(ii),&
+                         Derivative(ii,3), Derivative(ii,4), &
+                         Derivative(ii,1), Derivative(ii,2)
     END DO ! ii
 
   END DO ! i

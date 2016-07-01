@@ -196,6 +196,12 @@ PRINT*, "Making Energy Grid"
                = totalECapEm(energy, rho, T, Z, A,&
                       chem_e, chem_n, chem_p, &
                       xheavy, xn, xp )
+              OpacityTable % thermEmAb % MeanAbsorptivity(i_r) % &
+                           Values ( j_rho, k_t, l_ye)  &
+               = l_ye
+              OpacityTable % thermEmAb % EquilibriumDensity(i_r) % &
+                          Values ( j_rho, k_t, l_ye)  &
+               = j_rho
            END DO  !i_e
          END DO  !j_rho
        END DO  !k_t
@@ -203,10 +209,6 @@ PRINT*, "Making Energy Grid"
    END DO  !i_r
 
   CALL DescribeOpacityTable( OpacityTable )
-
-  CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable_notLog.h5" )
-  CALL FinalizeHDF( )
 
    DO i_r = 1, nOpacA
      DO l_ye = 1, OpacityTable % nPointsTS(3)
