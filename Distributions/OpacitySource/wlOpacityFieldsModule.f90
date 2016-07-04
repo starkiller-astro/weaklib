@@ -201,7 +201,7 @@ CONTAINS
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
       WRITE(*,*)
-      WRITE(*,'(A6,A17,I3.3,A3,A)') &
+      WRITE(*,'(A8,A17,I3.3,A3,A)') &
         ' ', 'MeanAbsorptivity(',i,'): ', TRIM( Opacity % Names(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
