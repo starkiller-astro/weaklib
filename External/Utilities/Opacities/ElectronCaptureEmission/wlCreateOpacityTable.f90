@@ -66,6 +66,7 @@ PROGRAM wlCreateOpacityTable
   USE wlExtPhysicalConstantsModule
   USE B85
   USE wlExtNumericalModule, ONLY: epsilon
+!  USE glaquad
  
 implicit none
     
@@ -84,9 +85,13 @@ implicit none
    INTEGER, PARAMETER      :: nSpeciesA = 1
    
 
-   INTEGER                 :: i_r, i_e, j_rho, k_t, l_ye 
-   REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp 
-
+   INTEGER                 :: i_r, i_e, j_rho, k_t, l_ye, i_quad 
+   REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, &
+                              chem_p, xheavy, xn, xp, &
+                              bufferquad1, bufferquad2
+   REAL(dp)                :: func1, func2
+   INTEGER, PARAMETER      :: nquad = 72
+   REAL(dp), DIMENSION(nquad)  :: x, wt
 
 PRINT*, "Allocating OpacityTable"   
 
@@ -144,6 +149,9 @@ PRINT*, "Making Energy Grid"
 !-------------------------------------------------------------------------
 
 !-----------------  ECAPEM ----------------------- 
+
+  CALL glaquad( nquad, x, wt, nquad)  
+
    DO i_r = 1, nOpacA
  
      DO l_ye = 1, OpacityTable % nPointsTS(3)
@@ -156,10 +164,6 @@ PRINT*, "Making Energy Grid"
 
               rho = OpacityTable % EOSTable % TS % States (1) % Values (j_rho)
 
-           DO i_e = 1, OpacityTable % nPointsE
-
-              energy = OpacityTable % EnergyGrid % Values(i_e)
-
               chem_e = 10**OpacityTable % EOSTable % DV % Variables (4) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(4) - epsilon    !4 =Electron Chemical Potential             
@@ -169,7 +173,7 @@ PRINT*, "Making Energy Grid"
                        DV % Offsets(5) - epsilon    !5 =Proton Chemical Potential 
 
               chem_n = 10**OpacityTable % EOSTable % DV % Variables (6) %&
-                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % & 
+                       Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(6) - epsilon    !6 =Neutron Chemical Potential
 
                  xp  = 10**OpacityTable % EOSTable % DV % Variables (7) %&
@@ -192,17 +196,43 @@ PRINT*, "Making Energy Grid"
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
 
+           DO i_e = 1, OpacityTable % nPointsE
+
+              energy = OpacityTable % EnergyGrid % Values(i_e)
+
               OpacityTable % thermEmAb % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
                = totalECapEm(energy, rho, T, Z, A,&
                       chem_e, chem_n, chem_p, &
                       xheavy, xn, xp )
+           END DO  !i_e
+
+           bufferquad1 = 0.0_dp
+           bufferquad2 = 0.0_dp
+
+!           WRITE(*,*) '- chem_e / (T*kMeV)', - chem_e / (T*kMeV)
+     
+           DO i_quad = 1, nquad
+              func1 = ( x(i_quad)**2) * totalECapEm( x(i_quad), rho, T, Z, A, &
+                                   chem_e, chem_n, chem_p, xheavy, xn, xp ) / &
+                  (EXP(- (chem_e + chem_p - chem_n) / &
+                         (T * kMeV) ) + EXP( - x(i_quad) )  )
+              bufferquad1 = bufferquad1 + wt(i_quad) * func1
+              
+              func2 = x(i_quad)**2 / &
+                  (EXP(- (chem_e + chem_p - chem_n) / &
+                         (T * kMeV) ) + EXP( - x(i_quad) )  )
+              bufferquad2 = bufferquad1 + wt(i_quad) * func2
+           END DO  !i_quad
+!           WRITE(*,*) 'bufferquad1 ', bufferquad1
+
               OpacityTable % thermEmAb % MeanAbsorptivity(i_r) % &
                            Values ( j_rho, k_t, l_ye)  &
-               = l_ye
+              ! = bufferquad1/bufferquad2
+               = (chem_e + chem_p -chem_n) / (T * kMeV)
               OpacityTable % thermEmAb % EquilibriumDensity(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
-               = j_rho
-           END DO  !i_e
+               = bufferquad2
+         
          END DO  !j_rho
        END DO  !k_t
      END DO  !l_ye
@@ -229,6 +259,10 @@ PRINT*, "Making Energy Grid"
   CALL InitializeHDF( )
   CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
+  
+!  CALL glaquad( nquad, x, wt, nquad)  
+!  WRITE (*,*) "x is ", x
+!  WRITE (*,*) "kMeV is ", kMeV
 
   WRITE (*,*) "HDF write successful"
 

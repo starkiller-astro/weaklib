@@ -46,7 +46,7 @@ CONTAINS
                             rop, ron, midFexpp, midFep, midEp, midCons
     REAL(dp) :: emitnp, absornp, emitni, absorni
 
-    TMeV   = T * kmev                 ! kmev = 8.61733d-11 [MeV K^{-1}]
+    TMeV   = T * kMeV                 ! kmev = 8.61733d-11 [MeV K^{-1}]
       N    = A - Z
     qpri   = chem_n - chem_p + 3.0_dp + dmnp! [MeV] 3MeV: energy of the 1f5/2 level
     chem_v = chem_e + chem_p - chem_n - dmnp! neutrino chemical potential
