@@ -66,7 +66,6 @@ PROGRAM wlCreateOpacityTable
   USE wlExtPhysicalConstantsModule
   USE B85
   USE wlExtNumericalModule, ONLY: epsilon
-!  USE glaquad
  
 implicit none
     
@@ -209,7 +208,6 @@ PRINT*, "Making Energy Grid"
            bufferquad1 = 0.0_dp
            bufferquad2 = 0.0_dp
 
-!           WRITE(*,*) '- chem_e / (T*kMeV)', - chem_e / (T*kMeV)
      
            DO i_quad = 1, nquad
               func1 = ( x(i_quad)**2) * totalECapEm( x(i_quad), rho, T, Z, A, &
@@ -223,11 +221,9 @@ PRINT*, "Making Energy Grid"
                          (T * kMeV) ) + EXP( - x(i_quad) )  )
               bufferquad2 = bufferquad1 + wt(i_quad) * func2
            END DO  !i_quad
-!           WRITE(*,*) 'bufferquad1 ', bufferquad1
 
               OpacityTable % thermEmAb % MeanAbsorptivity(i_r) % &
                            Values ( j_rho, k_t, l_ye)  &
-              ! = bufferquad1/bufferquad2
                = (chem_e + chem_p -chem_n) / (T * kMeV)
               OpacityTable % thermEmAb % EquilibriumDensity(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
@@ -260,10 +256,6 @@ PRINT*, "Making Energy Grid"
   CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
   
-!  CALL glaquad( nquad, x, wt, nquad)  
-!  WRITE (*,*) "x is ", x
-!  WRITE (*,*) "kMeV is ", kMeV
-
   WRITE (*,*) "HDF write successful"
 
 !=============================================================
