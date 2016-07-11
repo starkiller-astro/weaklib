@@ -10,7 +10,6 @@ MODULE wlInterpolationModule
   PUBLIC LogInterpolateAllVariables
   PUBLIC LogInterpolateDifferentiateSingleVariable
   PUBLIC LogInterpolateDifferentiateAllVariables
-!  PUBLIC locate 
   PUBLIC MonotonicityCheck
   PUBLIC GetGamma1
   PUBLIC ComputeTempFromIntEnergy
@@ -1162,6 +1161,67 @@ CONTAINS
   DEALLOCATE( entropy_array, rhobuff, yebuff )
 
   END SUBROUTINE ComputeTempFromEntropy
+
+  SUBROUTINE ComputeTempFromPressure &
+               ( rho, p, ye, density_table, temp_table, ye_table, &
+                 LogInterp, pressure_table, Offset, Temperature )
+
+    REAL(dp), INTENT(in)                    :: rho
+    REAL(dp), INTENT(in)                    :: p
+    REAL(dp), INTENT(in)                    :: ye
+    REAL(dp), DIMENSION(:), INTENT(in)      :: density_table
+    REAL(dp), DIMENSION(:), INTENT(in)      :: ye_table
+    REAL(dp), DIMENSION(:), INTENT(in)      :: temp_table
+    INTEGER, DIMENSION(3), INTENT(in)       :: LogInterp
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: pressure_table
+    REAL(dp), INTENT(in) :: Offset
+
+    REAL(dp), DIMENSION(1)                  :: pbuff ! pressure buffer
+    INTEGER                                 :: nPoints
+    INTEGER                                 :: i, j
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: rhobuff
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: pressure_array
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: yebuff
+
+    REAL(dp), DIMENSION(1), INTENT(out)     :: Temperature
+
+  nPoints = SIZE(temp_table)
+
+  ALLOCATE( pressure_array( nPoints ), rhobuff( nPoints ), yebuff( nPoints) )
+
+  rhobuff(1:nPoints) = rho
+  pbuff(1) = p
+  yebuff(1:nPoints) = ye
+
+  CALL LogInterpolateSingleVariable                                     &
+         ( rhobuff, temp_table, yebuff,                                 &
+           density_table,                                               &
+           temp_table,                                                  &
+           ye_table,                                                    &
+           LogInterp,                                                   &
+           Offset,                                                      &
+           pressure_table(:,:,:), pressure_array )
+
+    DO j = 1, SIZE( pbuff )
+
+      CALL locate( pressure_array, SIZE( pressure_array ), pbuff(j), i )
+      IF ( i == SIZE(pressure_array) ) THEN
+        STOP
+      END IF
+
+      IF ( i == 0 ) THEN
+        Temperature(j) = 0.d0
+        CYCLE
+      END IF
+      Temperature(j) = 10.d0**( &
+             LOG10( temp_table(i) ) + LOG10( temp_table(i+1) / temp_table(i) ) &
+                        * LOG10( ( pbuff(j) / pressure_array(i) ) )             &
+                        / LOG10( pressure_array(i+1) / pressure_array(i) ) )
+    END DO
+
+  DEALLOCATE( pressure_array, rhobuff, yebuff )
+
+  END SUBROUTINE ComputeTempFromPressure
 
 
   SUBROUTINE EOSTableQuery &

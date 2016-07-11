@@ -22,27 +22,41 @@ CONTAINS
     CHARACTER(len=*), INTENT(in)                  :: FileName
 
     INTEGER, DIMENSION(3)                         :: nPoints
+    INTEGER, DIMENSION(1)                         :: nPointsTemp
     INTEGER                                       :: nVariables
+    INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
-    CALL OpenGroupHDF( "pointsnb", .false., file_id, group_id )
+    !First goal: just make sure we've read the npoints right 
 
-    CALL ReadDimensionsHDF( nPoints, group_id )
-    CALL ReadNumberVariablesHDF( nVariables, group_id )
+    !CALL OpenGroupHDF( "pointsnb", .false., file_id, group_id )
+    ! nVariables = pointsqty + 5 ? ( mass frax, then heavy Z and heavy A)
+    !CALL CloseGroupHDF( group_id )
+
+    ! read the dimensions of the independent variables, 
+    ! fill nPoints
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "pointsnb", nPointsTemp(:), group_id, datasize1d )
+
+    !CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+
+    !CALL OpenGroupHDF( "nb", .false., file_id, group_id )
+
+    ! read density points into allocate buffer; convert units, write to EOSTable  
+
     CALL CloseGroupHDF( group_id )
 
-    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+    !CALL ReadThermoStateHDF( EOSTable % TS, file_id )
 
-    CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+    !CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
 
-    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
+    !CALL DescribeEquationOfStateTable( EOSTable )
 
-    CALL DescribeEquationOfStateTable( EOSTable )
-
-    CALL CloseFileHDF( file_id )
+    !CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadComposeTableHDF
 

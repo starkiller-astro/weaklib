@@ -27,6 +27,7 @@ PROGRAM wlChimeraProfileReader1Dtest
   REAL(dp), DIMENSION(:), ALLOCATABLE :: vsound 
 
   99 FORMAT ( 5( a7, 6x), 9(a6,6x) ) 
+  98 FORMAT ( 4( a7, 6x) ) 
 
   Maxzone = 720
 
@@ -43,17 +44,19 @@ PROGRAM wlChimeraProfileReader1Dtest
 
   OPEN( newunit = nout, FILE="FidOutput100ms.d")
 
-  WRITE (nout,99) '    r  ','    rho','   T   ','   Ye  ','  e_int', 'chem_n','chem_p', 'chem_e','  xn  ','  xp  ','  xa  ','  xhe ','z_heav','a_heav'
+  !WRITE (nout,99) '    r  ','    rho','   T   ','   Ye  ','  e_int', 'chem_n','chem_p', 'chem_e','  xn  ','  xp  ','  xa  ','  xhe ','z_heav','a_heav'
+  WRITE (nout,98) '    r  ','    rho','   T   ','   Ye  ',' press '
   DO i = Maxzone, 1, -1
-    IF ( rho(i) .lt. 1.0d8 ) CYCLE
+    IF ( rho(i) .lt. 1.0d11 ) CYCLE
 !    WRITE (nout,'(20(es12.5,x))') r(i), rho(i), T(i), Ye(i), p(i), s(i), e_internal(i), &
 !                                    xn(i), xp(i), xhe(i), xa(i), chem_n(i), chem_p(i),  &
 !                                    chem_e(i), a_heavy(i), z_heavy(i), be_heavy(i),     &
 !                                    u(i), rstmss(i), vsound(i) 
                                      
-      WRITE (nout,'(14(es11.3,x))') r(i), rho(i), T(i), Ye(i), e_internal(i), &
-                                    chem_n(i), chem_p(i), chem_e(i), xn(i), xp(i),  &
-                                    xa(i), xhe(i), z_heavy(i), a_heavy(i)
+!      WRITE (nout,'(14(es11.3,x))') r(i), rho(i), T(i), Ye(i), e_internal(i), &
+!                                    chem_n(i), chem_p(i), chem_e(i), xn(i), xp(i),  &
+!                                    xa(i), xhe(i), z_heavy(i), a_heavy(i)
+      WRITE (nout,'(5(es11.3,x))') r(i), rho(i), T(i), Ye(i), p(i)
   END DO
   CLOSE(nout)
 
