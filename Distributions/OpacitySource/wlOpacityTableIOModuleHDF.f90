@@ -204,18 +204,34 @@ CONTAINS
     CALL CloseGroupHDF( subgroup_id )
 
     datasize3d = thermEmAb % nPoints(2:4)
-    CALL OpenGroupHDF( "MeanAbsorptivity", .true., group_id, subgroup_id )
+    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .true., group_id, subgroup_id )
     DO i = 1, datasize1d
     CALL WriteHDF&
-         ( thermEmAb % Names(i), thermEmAb % MeanAbsorptivity(i) % Values,&
+         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Number_FD(i) % Values,&
            subgroup_id, datasize3d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
-    CALL OpenGroupHDF( "EquilibriumDensity", .true., group_id, subgroup_id )
+    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .true., group_id, subgroup_id )
     DO i = 1, datasize1d
     CALL WriteHDF&
-         ( thermEmAb % Names(i), thermEmAb % EquilibriumDensity(i) % Values,&
+         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Energy_FD(i) % Values,&
+           subgroup_id, datasize3d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "GreyMoment_Energy_FD", .true., group_id, subgroup_id )
+    DO i = 1, datasize1d
+    CALL WriteHDF&
+         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Energy_FD(i) % Values,&
+           subgroup_id, datasize3d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "GreyMoment_Number_FD", .true., group_id, subgroup_id )
+    DO i = 1, datasize1d
+    CALL WriteHDF&
+         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Number_FD(i) % Values,&
            subgroup_id, datasize3d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
@@ -370,18 +386,34 @@ CONTAINS
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
-    CALL OpenGroupHDF( "MeanAbsorptivity", .false., group_id, subgroup_id )
+    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
     DO i = 1, thermEmAb % nOpacities
     CALL ReadHDF&
-         ( thermEmAb % Names(i), thermEmAb % MeanAbsorptivity(i) % Values,&
+         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Number_FD(i) % Values,&
            subgroup_id, datasize4d )
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
-    CALL OpenGroupHDF( "EquilibriumDensity", .false., group_id, subgroup_id )
+    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .false., group_id, subgroup_id )
     DO i = 1, thermEmAb % nOpacities
     CALL ReadHDF&
-         ( thermEmAb % Names(i), thermEmAb % EquilibriumDensity(i) % Values,&
+         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Energy_FD(i) % Values,&
+           subgroup_id, datasize4d )
+    END DO ! nOpacities
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "GreyMoment_Number_FD", .false., group_id, subgroup_id )
+    DO i = 1, thermEmAb % nOpacities
+    CALL ReadHDF&
+         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Number_FD(i) % Values,&
+           subgroup_id, datasize4d )
+    END DO ! nOpacities
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "GreyMoment_Energy_FD", .false., group_id, subgroup_id )
+    DO i = 1, thermEmAb % nOpacities
+    CALL ReadHDF&
+         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Energy_FD(i) % Values,&
            subgroup_id, datasize4d )
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )

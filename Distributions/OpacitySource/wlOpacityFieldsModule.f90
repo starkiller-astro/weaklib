@@ -37,8 +37,10 @@ MODULE wlOpacityFieldsModule
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: MeanAbsorptivity
-    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: EquilibriumDensity
+    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyOpacity_Number_FD
+    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyOpacity_Energy_FD
+    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyMoment_Number_FD
+    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyMoment_Energy_FD
     TYPE(ValueTypeA),     DIMENSION(:), ALLOCATABLE :: Absorptivity
   END TYPE
 
@@ -131,15 +133,26 @@ CONTAINS
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Species(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
-    ALLOCATE( Opacity % MeanAbsorptivity(nOpacities) )
-    ALLOCATE( Opacity % EquilibriumDensity(nOpacities) )
+    ALLOCATE( Opacity % GreyOpacity_Number_FD(nOpacities) )
+    ALLOCATE( Opacity % GreyOpacity_Energy_FD(nOpacities) )
+    ALLOCATE( Opacity % GreyMoment_Number_FD(nOpacities) )
+    ALLOCATE( Opacity % GreyMoment_Energy_FD(nOpacities) )
     ALLOCATE( Opacity % Absorptivity(nOpacities) )
     
     DO i = 1, nOpacities
-      ALLOCATE( Opacity % MeanAbsorptivity(i) % Values &
+
+      ALLOCATE( Opacity % GreyOpacity_Number_FD(i) % Values &
                   ( nPoints(2), nPoints(3), nPoints(4)) )
-      ALLOCATE( Opacity % EquilibriumDensity(i) % Values &
+
+      ALLOCATE( Opacity % GreyOpacity_Energy_FD(i) % Values &
                   ( nPoints(2), nPoints(3), nPoints(4)) )
+
+      ALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4)) )
+
+      ALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4)) )
+
       ALLOCATE( Opacity % Absorptivity(i) % Values &
                   (nPoints(1), nPoints(2), nPoints(3), nPoints(4)) )
     END DO
@@ -154,13 +167,17 @@ CONTAINS
     INTEGER :: i
 
     DO i = 1, Opacity % nOpacities
-      DEALLOCATE( Opacity % MeanAbsorptivity(i) % Values )
-      DEALLOCATE( Opacity % EquilibriumDensity(i) % Values )
+      DEALLOCATE( Opacity % GreyOpacity_Number_FD(i) % Values )
+      DEALLOCATE( Opacity % GreyOpacity_Energy_FD(i) % Values )
+      DEALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values )
+      DEALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values )
       DEALLOCATE( Opacity % Absorptivity(i) % Values )
     END DO
 
-    DEALLOCATE( Opacity % MeanAbsorptivity )
-    DEALLOCATE( Opacity % EquilibriumDensity )
+    DEALLOCATE( Opacity % GreyOpacity_Number_FD )
+    DEALLOCATE( Opacity % GreyOpacity_Energy_FD )
+    DEALLOCATE( Opacity % GreyMoment_Number_FD )
+    DEALLOCATE( Opacity % GreyMoment_Energy_FD )
     DEALLOCATE( Opacity % Absorptivity )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Species )
@@ -201,27 +218,50 @@ CONTAINS
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
       WRITE(*,*)
-      WRITE(*,'(A8,A17,I3.3,A3,A)') &
-        ' ', 'MeanAbsorptivity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A22,I3.3,A3,A)') &
+        ' ', 'GreyOpacity_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,3I5.4)') &
-        ' ', 'Shape     = ', SHAPE( Opacity % MeanAbsorptivity(i) % Values )
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyOpacity_Number_FD(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % MeanAbsorptivity(i) % Values )
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyOpacity_Number_FD(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % MeanAbsorptivity(i) % Values ) 
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyOpacity_Number_FD(i) % Values ) 
       WRITE(*,*)
-      WRITE(*,'(A8,A19,I3.3,A3,A)') &
-        ' ', 'EquilibriumDensity(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A22,I3.3,A3,A)') &
+        ' ', 'GreyOpacity_Energy_FD(',i,'): ', TRIM( Opacity % Names(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,3I5.4)') &
-        ' ', 'Shape     = ', SHAPE( Opacity % EquilibriumDensity(i) % Values )
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyOpacity_Energy_FD(i)% Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % EquilibriumDensity(i) % Values )
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyOpacity_Energy_FD(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % EquilibriumDensity(i) % Values )
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyOpacity_Energy_FD(i) % Values )
+      WRITE(*,*)
+      WRITE(*,'(A8,A21,I3.3,A3,A)') &
+        ' ', 'GreyMoment_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,3I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Number_FD(i)% Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Number_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Number_FD(i) % Values )
+      WRITE(*,*)
+      WRITE(*,'(A8,A21,I3.3,A3,A)') &
+        ' ', 'GreyMoment_Energy_FD(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,3I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Energy_FD(i)% Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
+
     END DO
     WRITE(*,*)
 
