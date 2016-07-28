@@ -21,6 +21,11 @@ CONTAINS
     INTEGER  :: i
     REAL(dp) :: BinWidth
 
+    IF ( nPoints == 1 ) THEN
+      Grid(1) = LowerBound
+      RETURN
+    END IF
+
     BinWidth = ( UpperBound - LowerBound ) / DBLE( nPoints - 1 )
 
     DO i = 1, nPoints
@@ -40,6 +45,11 @@ CONTAINS
 
     Integer  :: m
     REAL(dp) :: ScaleFactor
+
+    IF ( nPoints == 1 ) THEN
+      Grid(1) = LowerBound
+      RETURN
+    END IF
 
     ScaleFactor =  EXP( LOG( UpperBound / LowerBound ) / DBLE( nPoints - 1 ) )
 
