@@ -610,12 +610,12 @@ CONTAINS
     IF (func == "GrayMoment_Number  ") THEN
       
       outcome = outcome + weights(ii) * &
-                GrayMoment_Number_FD( roots(ii), bb)
+                Number_FD( roots(ii), bb)
     
     ELSE IF (func == "GrayMoment_Energy  ") THEN
     
       outcome = outcome + weights(ii) * &
-                GrayMoment_Energy_FD( roots(ii), bb)
+                Energy_FD( roots(ii), bb)
 
     END IF
   END DO
@@ -628,27 +628,26 @@ CONTAINS
 !-------------------------------------------------------
 !    Declear GrayFunctions
 !-------------------------------------------------------
-  FUNCTION GrayMoment_Number_FD( x, b )
+  FUNCTION Number_FD( x, b )
   
   USE wlKindModule, ONLY: dp
 
    REAL(dp), INTENT(in)  :: x,b    ! function argument
-   REAL(dp)              :: fexp, GrayMoment_Number_FD
+   REAL(dp)              :: fexp, Number_FD
    
-  GrayMoment_Number_FD =  ( x*x )/( fexp(x-b) + 1.0 )
+   Number_FD =  ( x*x )/( fexp(x-b) + 1.0 )
 
-  END FUNCTION GrayMoment_Number_FD
+  END FUNCTION Number_FD
 
-  FUNCTION GrayMoment_Energy_FD( x, b )
+  FUNCTION Energy_FD( x, b )
   
   USE wlKindModule, ONLY: dp
 
    REAL(dp), INTENT(in)  :: x,b    ! function argument
-   REAL(dp)              :: fexp, GrayMoment_Energy_FD
+   REAL(dp)              :: fexp, Energy_FD
    
-  GrayMoment_Energy_FD =  ( x*x*x )/( fexp(x-b) + 1.0 )
+   Energy_FD =  ( x*x*x )/( fexp(x-b) + 1.0 )
 
-  END FUNCTION GrayMoment_Energy_FD
-
+  END FUNCTION Energy_FD
 
 END MODULE GaussianQuadrature
