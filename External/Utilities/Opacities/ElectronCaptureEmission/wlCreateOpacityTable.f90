@@ -66,6 +66,7 @@ PROGRAM wlCreateOpacityTable
   USE wlExtPhysicalConstantsModule
   USE B85
   USE wlExtNumericalModule, ONLY: epsilon
+  USE GaussianQuadrature
  
 implicit none
     
@@ -86,11 +87,10 @@ implicit none
 
    INTEGER                 :: i_r, i_e, j_rho, k_t, l_ye, i_quad 
    REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, &
-                              chem_p, xheavy, xn, xp, &
-                              bufferquad1, bufferquad2
-   REAL(dp)                :: func1, func2
-   INTEGER, PARAMETER      :: nquad = 72
-   REAL(dp), DIMENSION(nquad)  :: x, wt
+                              chem_p, xheavy, xn, xp, bb, &
+                              bufferquad1, bufferquad2, bufferquad3,&
+                              bufferquad4
+   INTEGER, PARAMETER      :: nquad = 6
 
 PRINT*, "Allocating OpacityTable"   
 
@@ -149,8 +149,6 @@ PRINT*, "Making Energy Grid"
 
 !-----------------  ECAPEM ----------------------- 
 
-  CALL glaquad( nquad, x, wt, nquad)  
-
    DO i_r = 1, nOpacA
  
      DO l_ye = 1, OpacityTable % nPointsTS(3)
@@ -204,36 +202,39 @@ PRINT*, "Making Energy Grid"
                       chem_e, chem_n, chem_p, &
                       xheavy, xn, xp )
            END DO  !i_e
+           
+           bb = (chem_e + chem_p - chem_n)/(T*kMev)
 
-           bufferquad1 = 0.0_dp
-           bufferquad2 = 0.0_dp
+           CALL GreyMomentWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             bufferquad1, "GreyMoment_Number ", .FALSE. )
 
-     
-           DO i_quad = 1, nquad
-              func1 = ( x(i_quad)**2) * totalECapEm( x(i_quad), rho, T, Z, A, &
-                                   chem_e, chem_n, chem_p, xheavy, xn, xp ) / &
-                  (EXP(- (chem_e + chem_p - chem_n) / &
-                         (T * kMeV) ) + EXP( - x(i_quad) )  )
-              bufferquad1 = bufferquad1 + wt(i_quad) * func1
-              
-              func2 = x(i_quad)**2 / &
-                  (EXP(- (chem_e + chem_p - chem_n) / &
-                         (T * kMeV) ) + EXP( - x(i_quad) )  )
-              bufferquad2 = bufferquad1 + wt(i_quad) * func2
-           END DO  !i_quad
+           CALL GreyMomentWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
 
-              OpacityTable % thermEmAb % MeanAbsorptivity(i_r) % &
-                           Values ( j_rho, k_t, l_ye)  &
-               = (chem_e + chem_p -chem_n) / (T * kMeV)
-              OpacityTable % thermEmAb % EquilibriumDensity(i_r) % &
+           OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
-               = bufferquad2
-         
+              = bufferquad1 * (T*kMeV)**3 
+
+           OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
+                          Values ( j_rho, k_t, l_ye)  &
+              = bufferquad2 * (T*kMeV)**3
+
+   !          OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
+   !                       Values ( j_rho, k_t, l_ye)  &
+   !           = (T*kMeV)**3 * GrayO
+
+   !           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
+   !                        Values ( j_rho, k_t, l_ye)  &
+   !            = bufferquad3 * (T*kMeV)**3
+
          END DO  !j_rho
        END DO  !k_t
      END DO  !l_ye
    END DO  !i_r
-
+  
+  
   CALL DescribeOpacityTable( OpacityTable )
 
    DO i_r = 1, nOpacA
@@ -253,7 +254,7 @@ PRINT*, "Making Energy Grid"
    END DO  !i_r
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "wl-OP-LS220-20-40-100.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
