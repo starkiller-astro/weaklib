@@ -151,13 +151,13 @@ PRINT*, "Making Energy Grid"
 
    DO i_r = 1, nOpacA
  
-     DO l_ye = 1, OpacityTable % nPointsTS(3)
+     DO l_ye = 1, 2!OpacityTable % nPointsTS(3)
 
-       DO k_t = 1, OpacityTable % nPointsTS(2)
+       DO k_t = 1, 2!OpacityTable % nPointsTS(2)
 
              T = OpacityTable % EOSTable % TS % States (2) % Values (k_t)
 
-         DO j_rho = 1, OpacityTable % nPointsTS(1)
+         DO j_rho = 1, 2!OpacityTable % nPointsTS(1)
 
               rho = OpacityTable % EOSTable % TS % States (1) % Values (j_rho)
 
@@ -193,7 +193,7 @@ PRINT*, "Making Energy Grid"
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
 
-           DO i_e = 1, OpacityTable % nPointsE
+           DO i_e = 1, 2!OpacityTable % nPointsE
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
 
@@ -213,6 +213,19 @@ PRINT*, "Making Energy Grid"
                            ( nquad, bb, &
                              bufferquad2, "GreyMoment_Energy ", .FALSE. )
 
+           CALL GreyOpacityWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             rho, T, Z, A, chem_e, chem_n,&
+                             chem_p, xheavy, xn, xp,&
+                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
+
+           CALL GreyOpacityWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             rho, T, Z, A, chem_e, chem_n,&
+                             chem_p, xheavy, xn, xp,&
+                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
+
+
            OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
               = bufferquad1 * (T*kMeV)**3 
@@ -221,13 +234,13 @@ PRINT*, "Making Energy Grid"
                           Values ( j_rho, k_t, l_ye)  &
               = bufferquad2 * (T*kMeV)**3
 
-   !          OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
-   !                       Values ( j_rho, k_t, l_ye)  &
-   !           = (T*kMeV)**3 * GrayO
+           OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
+                         Values ( j_rho, k_t, l_ye)  &
+              = bufferquad3 * (T*kMeV)**3 
 
-   !           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
-   !                        Values ( j_rho, k_t, l_ye)  &
-   !            = bufferquad3 * (T*kMeV)**3
+           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
+                           Values ( j_rho, k_t, l_ye)  &
+              = bufferquad4 * (T*kMeV)**3
 
          END DO  !j_rho
        END DO  !k_t

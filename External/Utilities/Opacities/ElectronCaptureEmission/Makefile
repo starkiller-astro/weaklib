@@ -85,11 +85,13 @@ endif
 # VPATH will locate them...
 #---------------------------------------------------
 
-BASE_MODS = wlKindModule.o glaquad.o GaussianQuadrature.o wlEnergyGridModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o fexp.o
+BASE_MODS = wlKindModule.o glaquad.o fexp.o wlEnergyGridModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o
 
 EOS_MODS = wlEquationOfStateTableModule.o
 
 PHY_MODS = B85.o
+
+Grey_MODS = GaussianQuadrature.o
 
 BaseIO_MODS = wlIOModuleHDF.o
 
@@ -102,7 +104,7 @@ Opacity_MODS = $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) wlOpacityTableModule.o
 ##OpacityIO_MODS = $(Opacity_MODS) wlOpacityTableIOModuleHDF.o
 OpacityIO_MODS = wlOpacityTableIOModuleHDF.o
 
-Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlCreateOpacityTable.o
+Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Grey_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlCreateOpacityTable.o
 #Opacity_OBJ = $(BASE_MODS)
 #===================================================
 # Build a Dependency list and an Object list, by replacing the .cpp
@@ -141,7 +143,6 @@ test: $(Opacity_OBJ)
 
 #---------------------------------
 glaquad.o: wlKindModule.o
-GaussianQuadrature.o: wlKindModule.o
 wlEnergyGridModule.o: wlKindModule.o
 wlGridModule.o: wlKindModule.o
 wlThermoStateModule.o: wlKindModule.o
@@ -150,13 +151,15 @@ wlExtNumericalModule.o: wlKindModule.o
 wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
 B85.o: wlKindModule.o wlExtPhysicalConstantsModule.o fexp.o
 wlOpacityFieldsModule.o: wlKindModule.o
+GaussianQuadrature.o: wlKindModule.o fexp.o B85.o
 
 $(EOS_MODS): $(BASE_MODS)
 $(BaseIO_MODS): $(EOS_MODS) $(BASE_MODS)
 $(EOSIO_MODS): $(EOS_MODS) $(BaseIO_MODS) $(BASE_MODS)
 $(Opacity_MODS): $(EOSIO_MODS) $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) $(BASE_MODS) 
+$(Grey_MODS):$(BASE_MODS) $(PHY_MODS)
 $(OpacityIO_MODS): $(Opacity_MODS) $(EOSIO_MODS) $(BASE_MODS)
-wlCreateOpacityTable.o: $(OpacityIO_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(BASE_MODS)
+wlCreateOpacityTable.o: $(OpacityIO_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(Grey_MODS) $(BASE_MODS)
 
 #==================================
 scrub:
