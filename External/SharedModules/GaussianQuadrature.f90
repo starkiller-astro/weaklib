@@ -15,41 +15,27 @@ MODULE GaussianQuadrature
 !    Subprograms called:
 !      NONE
 !
-!    Input arguments:
-!       nquad          : number of integration points
-!        llim          : low limit of the interval
-!        ulim          : up limit of the interval
-!
-!    Output arguments:
-!         x            : integration points
-!         wt           : integration weights
-!
 !    Mudules used: 
 !      wlKindModule
 !-----------------------------------------------------------------------
 
   USE wlKindModule, ONLY: dp
+  USE B85
 
   IMPLICIT NONE
 
   PUBLIC :: &
     gaquad, &
-    GreyMomentWithGaussianQuadrature
+    GreyMomentWithGaussianQuadrature,&
+    GreyOpacityWithGaussianQuadrature
 
 CONTAINS
 
   SUBROUTINE gaquad( nquad, x, wt, llim, ulim )
 
-!-----------------------------------------------------------------------
-!        Input variables.
-!-----------------------------------------------------------------------
-
   INTEGER, INTENT(in)            :: nquad    ! number of points of the quadrature
   REAL(dp),INTENT(in)            :: llim     ! low limit of interval
   REAL(dp),INTENT(in)            :: ulim     ! up limit of interval  
-!-----------------------------------------------------------------------
-!        Output variables.
-!-----------------------------------------------------------------------
 
   REAL(dp), INTENT(out), DIMENSION(nquad)&
                                  :: x        ! quadrature points
@@ -60,9 +46,7 @@ CONTAINS
   REAL(dp)                       :: scal
 
   scal = (ulim - llim)/2.0_dp
-!-----------------------------------------------------------------------
-!        SetGaussianQuadraturePointsAndWeights
-!-----------------------------------------------------------------------
+
   SELECT CASE (nquad)
       CASE (1)
         x(1) =   0.0000000000000000_dp
@@ -587,35 +571,39 @@ CONTAINS
 
   REAL(dp), INTENT(out)      :: outcome
  
-  INTEGER, PARAMETER         :: npiece = 47
+  INTEGER, PARAMETER         :: npiece = 67
   REAL(dp), DIMENSION(nquad) :: roots, weights
   REAL(dp), DIMENSION(npiece):: lim
   INTEGER                    :: ii, jj
   REAL(dp)                   :: llim, ulim
- 
+
   IF (debug) THEN
     PRINT*,"Calculating ", func
-    PRINT*,"with bb =", bb
+    PRINT*,"with bb = ", bb
   END IF
 
   outcome = 0.0_dp
   lim(1) = 0.0_dp
+  DO jj = 1, npiece-1
+     lim(jj+1) = lim(jj) + 30.0_dp
+  END DO
 
-  DO jj = 1,10
-     lim(jj+1) = lim(jj) + 0.1_dp
-  END DO
-  DO jj = 12, 20
-     lim(jj) = lim(jj-1) + 1.0_dp
-  END DO
-  DO jj = 21, 29
-     lim(jj) = lim(jj-1) + 10.0_dp 
-  END DO
-  DO jj = 30, 38
-     lim(jj) = lim(jj-1) + 100.0_dp
-  END DO
-  DO jj = 39, 47
-     lim(jj) = lim(jj-1) + 1000.0_dp
-  END DO
+! DO jj = 1,10
+!    lim(jj+1) = lim(jj) + 1.0_dp
+! END DO
+! DO jj = 12, 20
+!    lim(jj) = lim(jj-1) + 10.0_dp
+! END DO
+! DO jj = 21, 30
+!    lim(jj) = lim(jj-1) + 30.0_dp
+! END DO
+! DO jj = 31, 38
+!    lim(jj) = lim(jj-1) + 50.0_dp
+! END DO
+! DO jj = 39, 47
+!    lim(jj) = lim(jj-1) + 200.0_dp
+! END DO
+
  
   DO jj = 1,(npiece-1)
     
@@ -649,9 +637,78 @@ CONTAINS
 
   END SUBROUTINE GreyMomentWithGaussianQuadrature
 
+  SUBROUTINE GreyOpacityWithGaussianQuadrature&
+                  ( nquad, bb, &
+                    rho, T, Z, A, chem_e, chem_n,&
+                    chem_p, xheavy, xn, xp,&
+                    outcome, func, debug )
+  INTEGER, INTENT(in)        :: nquad
+  REAL(dp), INTENT(in)       :: bb, rho, T, Z, A, &
+                                chem_e, chem_n, &
+                                chem_p, xheavy, xn,&
+                                xp
+  CHARACTER(18), INTENT(in)  :: func
+  LOGICAL, INTENT(in)        :: debug
+
+  REAL(dp), INTENT(out)      :: outcome
+
+  INTEGER, PARAMETER         :: npiece = 67
+  REAL(dp), DIMENSION(nquad) :: roots, weights, opacity
+  REAL(dp), DIMENSION(npiece):: lim
+  INTEGER                    :: ii, jj
+  REAL(dp)                   :: llim, ulim
+
+  IF (debug) THEN
+    PRINT*,"Calculating ", func
+    PRINT*,"with bb =", bb
+  END IF
+
+  outcome = 0.0_dp
+  lim(1) = 0.0_dp
+  DO jj = 1, npiece
+     lim(jj) = ( jj-1 ) * 30.0_dp
+  END DO
+
+  DO jj = 1,(npiece-1)
+
+    llim = lim(jj)
+    ulim = lim(jj+1)
+    CALL gaquad( nquad, roots, weights, llim, ulim )
+
+    DO ii = 1, nquad
+
+      opacity(ii) = totalECapEm(roots(ii), rho, T, Z, A,&
+                      chem_e, chem_n, chem_p, &
+                      xheavy, xn, xp )
+
+      IF (func == "GreyOpacity_Number ") THEN
+
+        outcome = outcome + weights(ii) * &
+                  Number_FD( roots(ii), bb) * opacity(ii)
+
+      ELSE IF (func == "GreyOpacity_Energy ") THEN
+
+        outcome = outcome + weights(ii) * &
+                  Energy_FD( roots(ii), bb) * opacity(ii)
+      END IF
+    END DO ! ii (nquad)
+
+  END DO ! jj 
+
+  IF (debug) THEN
+    WRITE(*,'(A24,F7.1,A2,F7.1,A1)'),&
+        " Integration domain is [",lim(1),", ",lim(47),"]"
+    print*,"divided into", lim
+    PRINT*, "with nquad=", nquad
+    PRINT*, "and the outcome is", outcome
+  END IF
+
+  END SUBROUTINE GreyOpacityWithGaussianQuadrature
+  
 !-------------------------------------------------------
 !    Declear GrayFunctions
 !-------------------------------------------------------
+
   FUNCTION Number_FD( x, b )
   
   USE wlKindModule, ONLY: dp
