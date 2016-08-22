@@ -97,15 +97,11 @@ BaseIO_MODS = wlIOModuleHDF.o
 
 EOSIO_MODS = wlEOSIOModuleHDF.o
 
-Opacity_MODS = $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) wlOpacityTableModule.o  
+Opacity_MODS = wlOpacityTableModule.o
 
-##Interface_OBJ = wlExtEOSWrapperModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o
-
-##OpacityIO_MODS = $(Opacity_MODS) wlOpacityTableIOModuleHDF.o
 OpacityIO_MODS = wlOpacityTableIOModuleHDF.o
 
-Opacity_OBJ =  $(BASE_MODS) $(EOSIO_MODS) $(Grey_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlCreateOpacityTable.o
-#Opacity_OBJ = $(BASE_MODS)
+Opacity_OBJ =  $(BASE_MODS) $(EOS_MODS) $(PHY_MODS) $(BaseIO_MODS) $(EOSIO_MODS) $(Grey_MODS) $(Opacity_MODS) $(OpacityIO_MODS) wlCreateOpacityTable.o
 #===================================================
 # Build a Dependency list and an Object list, by replacing the .cpp
 # extension to .d for dependency files, and .o for object files.
@@ -154,10 +150,10 @@ B85.o: wlKindModule.o wlExtPhysicalConstantsModule.o fexp.o
 wlOpacityFieldsModule.o: wlKindModule.o
 
 $(EOS_MODS): $(BASE_MODS)
-$(BaseIO_MODS): $(EOS_MODS) $(BASE_MODS)
-$(EOSIO_MODS): $(EOS_MODS) $(BaseIO_MODS) $(BASE_MODS)
-$(Opacity_MODS): $(EOSIO_MODS) $(BaseIO_MODS) $(EOS_MODS) $(PHY_MODS) $(BASE_MODS) 
 $(Grey_MODS):$(BASE_MODS) $(PHY_MODS)
+$(BaseIO_MODS): $(BASE_MODS)
+$(EOSIO_MODS): $(EOS_MODS) $(BaseIO_MODS) $(BASE_MODS)
+$(Opacity_MODS): $(EOSIO_MODS) $(BaseIO_MODS) $(EOS_MODS) $(BASE_MODS) 
 $(OpacityIO_MODS): $(Opacity_MODS) $(EOSIO_MODS) $(BASE_MODS)
 wlCreateOpacityTable.o: $(OpacityIO_MODS) $(Opacity_MODS) $(BaseIO_MODS) $(Grey_MODS) $(BASE_MODS)
 

@@ -111,6 +111,7 @@ CONTAINS
     INTEGER, INTENT(in)                   :: nOpacB, nMomB
     INTEGER, INTENT(in)                   :: nOpacC, nMomC
     INTEGER, INTENT(in)                   :: nPointsE
+    INTEGER, DIMENSION(4)                 :: nPointsTemp
 
     CALL AllocateEnergyGrid( OpTab % EnergyGrid, nPointsE )
 
@@ -132,16 +133,18 @@ CONTAINS
 
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
+    nPointsTemp(1:4) = [ nPointsE, nPoints ]
+
     CALL AllocateOpacity &
-           ( OpTab % thermEmAb,  [ nPointsE, nPoints ], &
+           ( OpTab % thermEmAb, nPointsTemp, &
              nOpacities = nOpacA )
 
     CALL AllocateOpacity &
-           ( OpTab % scatt_Iso,  [ nPointsE, nPoints ], &
+           ( OpTab % scatt_Iso, nPointsTemp, &
              nMoments = nMomB, nOpacities = nOpacB )
 
     CALL AllocateOpacity &
-           ( OpTab % scatt_nIso, [ nPointsE, nPoints ], &
+           ( OpTab % scatt_nIso, nPointsTemp, &
              nMoments = nMomC, nOpacities = nOpacC )
 
     END ASSOCIATE ! nPoints

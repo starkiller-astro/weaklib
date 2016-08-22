@@ -17,7 +17,6 @@ MODULE GreyVariables
 !-----------------------------------------------------------------------
 
   USE wlKindModule, ONLY: dp
-!  USE gaquad
   USE B85
 
   PUBLIC :: &
@@ -35,7 +34,7 @@ CONTAINS
 
   REAL(dp), INTENT(out)      :: outcome
 
-  INTEGER, PARAMETER         :: npiece = 67
+  INTEGER, PARAMETER         :: npiece = 47
   REAL(dp), DIMENSION(nquad) :: roots, weights, FD
   REAL(dp), DIMENSION(npiece):: lim
   INTEGER                    :: ii, jj
@@ -43,24 +42,26 @@ CONTAINS
 
   IF (debug) THEN
     PRINT*,"Calculating ", func
-    PRINT*,"with bb = "
+    PRINT*,"with bb = ",bb
   END IF
   outcome = 0.0_dp
   lim(1) = 0.0_dp
+ 
   DO jj = 1,10
-     lim(jj+1) = lim(jj) + 1.0_dp
+     lim(jj+1) = lim(jj) + 0.1_dp
+     PRINT*, "VALUE of LIM LENGTH",SHAPE(lim)
   END DO
   DO jj = 12, 20
+     lim(jj) = lim(jj-1) + 1.0_dp
+  END DO
+  DO jj = 21, 29
      lim(jj) = lim(jj-1) + 10.0_dp
   END DO
-  DO jj = 21, 30
-     lim(jj) = lim(jj-1) + 30.0_dp
-  END DO
-  DO jj = 31, 38
-     lim(jj) = lim(jj-1) + 50.0_dp
+  DO jj = 30, 38
+     lim(jj) = lim(jj-1) + 100.0_dp
   END DO
   DO jj = 39, 47
-     lim(jj) = lim(jj-1) + 200.0_dp
+     lim(jj) = lim(jj-1) + 1000.0_dp
   END DO
 
 
@@ -111,7 +112,7 @@ CONTAINS
 
   REAL(dp), INTENT(out)      :: outcome
 
-  INTEGER, PARAMETER         :: npiece = 67
+  INTEGER, PARAMETER         :: npiece = 47
   REAL(dp), DIMENSION(nquad) :: roots, weights, opacity
   REAL(dp), DIMENSION(npiece):: lim
   INTEGER                    :: ii, jj
@@ -124,8 +125,21 @@ CONTAINS
 
   outcome = 0.0_dp
   lim(1) = 0.0_dp
-  DO jj = 1, npiece
-     lim(jj) = ( jj-1 ) * 30.0_dp
+
+  DO jj = 1,10
+     lim(jj+1) = lim(jj) + 0.1_dp
+  END DO
+  DO jj = 12, 20
+     lim(jj) = lim(jj-1) + 1.0_dp
+  END DO
+  DO jj = 21, 29
+     lim(jj) = lim(jj-1) + 10.0_dp
+  END DO
+  DO jj = 30, 38
+     lim(jj) = lim(jj-1) + 100.0_dp
+  END DO
+  DO jj = 39, 47
+     lim(jj) = lim(jj-1) + 1000.0_dp
   END DO
 
   DO jj = 1,(npiece-1)
