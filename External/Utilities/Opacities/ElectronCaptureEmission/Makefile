@@ -85,13 +85,13 @@ endif
 # VPATH will locate them...
 #---------------------------------------------------
 
-BASE_MODS = wlKindModule.o glaquad.o fexp.o wlEnergyGridModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o
+BASE_MODS = wlKindModule.o glaquad.o GaussianQuadrature.o fexp.o wlEnergyGridModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o
 
 EOS_MODS = wlEquationOfStateTableModule.o
 
 PHY_MODS = B85.o
 
-Grey_MODS = GaussianQuadrature.o
+Grey_MODS = GreyVariables.o
 
 BaseIO_MODS = wlIOModuleHDF.o
 
@@ -143,6 +143,7 @@ test: $(Opacity_OBJ)
 
 #---------------------------------
 glaquad.o: wlKindModule.o
+GaussianQuadrature.o: wlKindModule.o
 wlEnergyGridModule.o: wlKindModule.o
 wlGridModule.o: wlKindModule.o
 wlThermoStateModule.o: wlKindModule.o
@@ -151,7 +152,6 @@ wlExtNumericalModule.o: wlKindModule.o
 wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
 B85.o: wlKindModule.o wlExtPhysicalConstantsModule.o fexp.o
 wlOpacityFieldsModule.o: wlKindModule.o
-GaussianQuadrature.o: wlKindModule.o fexp.o B85.o
 
 $(EOS_MODS): $(BASE_MODS)
 $(BaseIO_MODS): $(EOS_MODS) $(BASE_MODS)

@@ -66,7 +66,7 @@ PROGRAM wlCreateOpacityTable
   USE wlExtPhysicalConstantsModule
   USE B85
   USE wlExtNumericalModule, ONLY: epsilon
-  USE GaussianQuadrature
+  USE GreyVariables
  
 implicit none
     
