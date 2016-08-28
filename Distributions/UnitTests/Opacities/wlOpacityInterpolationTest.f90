@@ -29,7 +29,8 @@ PROGRAM wlOpacityInterpolationTest
   TYPE(OpacityTableType) :: OpacityTable
 
 !-------- variables for reading parameters data
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: r, Inte_rho, Inte_T, Inte_Ye, e_int
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: r, Inte_rho, Inte_T, Inte_Ye, e_int,&
+                                         database
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h
@@ -51,7 +52,7 @@ PROGRAM wlOpacityInterpolationTest
   Format4 = "(8ES12.3)"
 
   OPEN(1, FILE = "Output0ms.d", FORM = "formatted", ACTION = 'read')
-  datasize = 2! 292
+  datasize = 292
 
 ! OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
 ! datasize = 217
@@ -76,6 +77,7 @@ PROGRAM wlOpacityInterpolationTest
 !    interpolated rho, T, Ye
 !---------------------------------------
 
+  ALLOCATE( database( datasize * 5) )
   ALLOCATE( r( datasize ) )
   ALLOCATE( e_int( datasize ) )
   ALLOCATE( Inte_rho( datasize ) )
@@ -85,13 +87,16 @@ PROGRAM wlOpacityInterpolationTest
   ALLOCATE( Derivative( Inte_nPointE, 4 ) )
 
   READ( 1, Format1 ) a,b,c,d,e
-  WRITE( *, Format1 ) a,b,c,d,e
-
-  DO i = 1, datasize
-    READ( 1, Format2 ) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), e_int(i)
-  END DO
+  READ( 1, Format2 ) database
 
   CLOSE( 1, STATUS = 'keep')  
+
+  DO i = 1, datasize  
+    r(i) = database(i*5-4)
+    Inte_rho(i) = database(i*5-3)
+    Inte_T(i) = database(i*5-2)
+    Inte_Ye(i) = database(i*5-1)
+  END DO 
 
   LogInterp(2:4) = (/1, 1, 0/)     ! rho and T is LogGrid, Ye is linear
  

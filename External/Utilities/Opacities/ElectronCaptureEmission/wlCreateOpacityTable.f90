@@ -90,7 +90,7 @@ implicit none
                               chem_p, xheavy, xn, xp, bb, &
                               bufferquad1, bufferquad2, bufferquad3,&
                               bufferquad4
-   INTEGER, PARAMETER      :: nquad = 6
+   INTEGER, PARAMETER      :: nquad = 5
 
 PRINT*, "Allocating OpacityTable"   
 
@@ -151,13 +151,13 @@ PRINT*, "Making Energy Grid"
 
    DO i_r = 1, nOpacA
  
-     DO l_ye = 1, 2!OpacityTable % nPointsTS(3)
+     DO l_ye = 1, OpacityTable % nPointsTS(3)
 
-       DO k_t = 1, 2!OpacityTable % nPointsTS(2)
+       DO k_t = 1, OpacityTable % nPointsTS(2)
 
              T = OpacityTable % EOSTable % TS % States (2) % Values (k_t)
 
-         DO j_rho = 1, 2!OpacityTable % nPointsTS(1)
+         DO j_rho = 1, OpacityTable % nPointsTS(1)
 
               rho = OpacityTable % EOSTable % TS % States (1) % Values (j_rho)
 
@@ -193,7 +193,7 @@ PRINT*, "Making Energy Grid"
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
 
-           DO i_e = 1, 2!OpacityTable % nPointsE
+           DO i_e = 1, OpacityTable % nPointsE
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
 
@@ -251,23 +251,30 @@ PRINT*, "Making Energy Grid"
   CALL DescribeOpacityTable( OpacityTable )
 
    DO i_r = 1, nOpacA
-     DO l_ye = 1, OpacityTable % nPointsTS(3)
-       DO k_t = 1, OpacityTable % nPointsTS(2)
-         DO j_rho = 1, OpacityTable % nPointsTS(1)
-           DO i_e = 1, OpacityTable % nPointsE
-             OpacityTable % thermEmAb % Absorptivity(i_r) % &
-                          Values (i_e, j_rho, k_t, l_ye)  &
-             = LOG10( OpacityTable % thermEmAb % Absorptivity(i_r) % &
-                          Values (i_e, j_rho, k_t, l_ye) + &
-                      OpacityTable % thermEmAb % Offset )
-           END DO  !i_e
-         END DO  !j_rho
-       END DO  !k_t
-     END DO  !l_ye
+
+     OpacityTable % thermEmAb % Absorptivity(i_r) % Values&
+     = LOG10( OpacityTable % thermEmAb % Absorptivity(i_r) % &
+              Values + OpacityTable % thermEmAb % Offset )
+
+     OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % Values &
+     = LOG10 ( OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
+              Values + OpacityTable % thermEmAb % Offset )
+
+     OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % Values &
+     = LOG10 ( OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
+              Values + OpacityTable % thermEmAb % Offset )
+
+     OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % Values &
+     = LOG10 ( OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
+              Values + OpacityTable % thermEmAb % Offset )
+
+     OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % Values &
+     = LOG10 ( OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
+              Values + OpacityTable % thermEmAb % Offset )
    END DO  !i_r
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "wl-OP-LS220-20-40-100.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_lowEOS_5quad_Grey.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"

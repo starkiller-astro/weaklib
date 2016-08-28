@@ -49,7 +49,6 @@ CONTAINS
  
   DO jj = 1,10
      lim(jj+1) = lim(jj) + 0.1_dp
-     PRINT*, "VALUE of LIM LENGTH",SHAPE(lim)
   END DO
   DO jj = 12, 20
      lim(jj) = lim(jj-1) + 1.0_dp
