@@ -27,6 +27,7 @@ CONTAINS
 
   SUBROUTINE GreyMomentWithGaussianQuadrature&
                   ( nquad, bb, outcome, func, debug )
+
   INTEGER, INTENT(in)        :: nquad
   REAL(dp), INTENT(in)       :: bb
   CHARACTER(18), INTENT(in)  :: func
@@ -44,6 +45,7 @@ CONTAINS
     PRINT*,"Calculating ", func
     PRINT*,"with bb = ",bb
   END IF
+
   outcome = 0.0_dp
   lim(1) = 0.0_dp
  
@@ -68,21 +70,26 @@ CONTAINS
 
     llim = lim(jj)
     ulim = lim(jj+1)
+    
     CALL gaquad( nquad, roots, weights, llim, ulim )
+    
     DO ii = 1, nquad
+      
       IF (func == "GreyMoment_Number  ") THEN
+      
         FD(ii) = Number_FD( roots(ii), bb)
-      ! outcome = outcome + weights(ii) * &
-      !         Number_FD( roots(ii), bb)
+        outcome = outcome + weights(ii) * &
+                  Number_FD( roots(ii), bb)
 
       ELSE IF (func == "GreyMoment_Energy  ") THEN
-        FD(ii) = Energy_FD( roots(ii), bb)
-      ! outcome = outcome + weights(ii) * &
-      !           Energy_FD( roots(ii), bb)
-      END IF
-    END DO ! ii (nquad)
 
-    outcome = SUM( weights * roots * FD )
+        FD(ii) = Energy_FD( roots(ii), bb)
+        outcome = outcome + weights(ii) * &
+                  Energy_FD( roots(ii), bb)
+
+      END IF
+
+    END DO ! ii (nquad)
 
   END DO ! jj 
 
@@ -145,6 +152,7 @@ CONTAINS
 
     llim = lim(jj)
     ulim = lim(jj+1)
+
     CALL gaquad( nquad, roots, weights, llim, ulim )
 
     DO ii = 1, nquad
@@ -165,8 +173,6 @@ CONTAINS
                                                            
       END IF
     END DO ! ii (nquad)
-
-
 
   END DO ! jj 
 
