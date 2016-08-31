@@ -95,8 +95,6 @@ SUBROUTINE e_p_eos( brydns, t_mev, ye, pe, ee, se, ue, yeplus, rel )
 
 USE wlExtPhysicalConstantsModule, ONLY: hbarc, me, rmu, cm3fm3
 
-!USE edit_module, ONLY: nlog
-
 IMPLICIT NONE
 
 !-----------------------------------------------------------------------
@@ -143,7 +141,7 @@ REAL(dp), PARAMETER       :: etabet = 2.d0
 REAL(dp), PARAMETER       :: tthird = 2.d0/3.d0
 
 REAL(dp), PARAMETER       :: const = hbarc**3 * pi2 ! coef used in the high temperature approx
-REAL(dp), PARAMETER       :: cnstnr = hbarc**3 * 3.d0 * pi2/DSQRT( 2.d0 * me**3 ) ! coef for the nr expression for n(electron) - n(positron)
+REAL(dp), PARAMETER       :: cnstnr = hbarc**3 * pi2/SQRT( 2.d0 * me**3 ) ! coef for the nr expression for n(electron) - n(positron)
 REAL(dp), PARAMETER       :: coef_e_fermi_nr = ( hbarc**2/( 2.d0 * me ) ) * ( 3.d0 * pi2 )**tthird ! coef for nr electron Fermi energy
 REAL(dp), PARAMETER       :: rmuec = 0.5d0 * ( 2.d0 * pi * hbarc**2/me )**1.5d0 ! coef for nr, nondegenerate electron chemical potential
 
@@ -206,7 +204,6 @@ REAL(dp)                  :: dyp            ! change in y
 !   tbck      < 0.01
 !-----------------------------------------------------------------------
 
-  !WRITE (*,1003) brydns * rmu/cm3fm3, t_mev, ye
 e_fermi_nr       = coef_e_fermi_nr * ( brydns * ye )**tthird
 non_rel          = .false.
 IF ( e_fermi_nr < 0.01 * me  .and.  t_mev < 0.01 * me ) non_rel = .true.
@@ -285,6 +282,7 @@ IF ( .not. non_rel ) THEN
 !-----------------------------------------------------------------------
 
   tolp          = zero
+  detap         = zero
   Failure       = .false.
 
   DO it = 1,ncnvge
@@ -339,7 +337,8 @@ IF ( .not. non_rel ) THEN
 
   END DO ! it = 1,ncnvge
 
-  IF ( .not. Failure  .and.  ( etae < 35.d0  .or.  pfc/me < 10.d0 ) ) THEN
+  IF ( ( brydns * rmu/cm3fm3 > 2.d+05  .and. .not. Failure  .and.  ( etae < 35.d0  .or.  pfc/me < 10.d0 ) ) &
+&     .or.  brydns * rmu/cm3fm3 < 2.d+05 ) THEN
 
 !-----------------------------------------------------------------------
 !  Convergence success? Compute the rest of the eos functions.
@@ -461,10 +460,12 @@ IF ( non_rel ) THEN
 !-----------------------------------------------------------------------
  
   tolp          = zero
+  detap         = zero
   e_fermi_nr    = coef_e_fermi_nr * ( brydns * ye )**( tthird )
   etad          = e_fermi_nr/t_mev
 
   Sommerfeld    = .false.
+  Failure       = .false.
   IF ( e_fermi_nr/t_mev > 35 ) Sommerfeld = .true.
 
   IF ( .not. Sommerfeld ) THEN
