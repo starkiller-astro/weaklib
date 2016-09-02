@@ -63,7 +63,7 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityTableModule
   USE wlOpacityFieldsModule
   USE wlOpacityTableIOModuleHDF
-  USE wlExtPhysicalConstantsModule
+  USE wlExtPhysicalConstantsModule, ONLY: kMeV,dmnp
   USE B85
   USE wlExtNumericalModule, ONLY: epsilon
   USE GreyVariables
@@ -203,7 +203,7 @@ PRINT*, "Making Energy Grid"
                       xheavy, xn, xp )
            END DO  !i_e
            
-           bb = (chem_e + chem_p - chem_n)/(T*kMev)
+           bb = (chem_e + chem_p - chem_n - dmnp)/(T*kMev)
 
            CALL GreyMomentWithGaussianQuadrature&
                            ( nquad, bb, &
@@ -229,19 +229,22 @@ PRINT*, "Making Energy Grid"
            OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
               = bufferquad1 * (T*kMeV)**3 
+              != chem_e 
 
            OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
-              = bufferquad2 * (T*kMeV)**3
+              = bufferquad2 * (T*kMeV)**3 
+              !=chem_p
 
            OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
                          Values ( j_rho, k_t, l_ye)  &
               = bufferquad3 * (T*kMeV)**3 
-
+              != chem_n
+  
            OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
                            Values ( j_rho, k_t, l_ye)  &
               = bufferquad4 * (T*kMeV)**3
-
+              != bb
          END DO  !j_rho
        END DO  !k_t
      END DO  !l_ye
@@ -274,7 +277,7 @@ PRINT*, "Making Energy Grid"
    END DO  !i_r
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_lowEOS_5quad_Grey.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_Grey_5quad.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"

@@ -40,9 +40,12 @@ PROGRAM wlGreyTableTest
  
   Format1 = "(5A12)"
   Format2 = "(5ES12.3)"
-  Format3 = "(8A12)"
-  Format4 = "(8ES12.3)"
+  Format3 = "(6A12)"
+  Format4 = "(6ES12.3)"
 
+
+!  OPEN(1, FILE = "CRtest.d", FORM = "formatted", ACTION = 'read')
+!  datasize = 2
   OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
   datasize = 213
   
@@ -68,6 +71,7 @@ PROGRAM wlGreyTableTest
     Inte_rho(i) = database(i*5-3)
     Inte_T(i) = database(i*5-2)
     Inte_Ye(i) = database(i*5-1)
+    WRITE(*,*) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i)
   END DO
 
   CLOSE( 1, STATUS = 'keep')  
@@ -78,21 +82,20 @@ PROGRAM wlGreyTableTest
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "OpTa_lowEOS_5quad_Grey.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, "OpTa_Grey_5quad.h5" )
   CALL FinalizeHDF( )
 
   Offset = OpacityTable % thermEmAb % Offset
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
-  e = ('GreyMom_Nu  ')
-  f = ('GreyMom_En  ')
-  g = ('GreyOpa_Nu  ')
+  e = ('    MNO   ')
+  f = ('    MEO   ')
+  g = ('    GON   ')
   h = ('GreyOpa_En')  
 
-!  OPEN( 10, FILE = "GreyOutput0ms.d", FORM = "formatted", ACTION = 'write')
-  OPEN( 10, FILE = "GreyOutput100ms.d", FORM = "formatted", ACTION = 'write')
-  WRITE(10, Format3) a,b,c,d,e,f,g,h
+  OPEN( 10, FILE = "GreyOutput100ms_5quad.d", FORM = "formatted", ACTION = 'write')
+  WRITE(10, Format3) a,b,c,d,e,f
 
   ASSOCIATE( Table  => OpacityTable % thermEmAb % GreyMoment_Number_FD(1)% Values )
     CALL LogInterpolateSingleVariable & 
@@ -106,10 +109,10 @@ PROGRAM wlGreyTableTest
   ASSOCIATE( Table  => OpacityTable % thermEmAb % GreyMoment_Energy_FD(1)% Values )
     CALL LogInterpolateSingleVariable &
            ( Inte_rho, Inte_T, Inte_Ye, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset, Table, GreyME )
+            OpacityTable % EOSTable % TS % States(1) % Values, &
+            OpacityTable % EOSTable % TS % States(2) % Values, &
+            OpacityTable % EOSTable % TS % States(3) % Values, &
+            LogInterp, Offset, Table, GreyME )
   END ASSOCIATE ! Table
 
   ASSOCIATE( Table  => OpacityTable % thermEmAb % GreyOpacity_Number_FD(1)% Values )
@@ -131,10 +134,11 @@ PROGRAM wlGreyTableTest
   END ASSOCIATE ! Table
 
   DO i = 1, datasize
+    WRITE(*,*)GreyMN(i), GreyME(i), GreyON(i), GreyOE(i)
     WRITE(10, Format4) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), &
-                       GreyMN(i), GreyME(i), GreyON(i), GreyOE(i)
+                  !     GreyMN(i), GreyME(i), GreyON(i), GreyOE(i)
+                       GreyON(i)/GreyMN(i), GreyOE(i)/GreyME(i)
   END DO ! ii
-
 
   CLOSE( 10, STATUS = 'keep')  
 

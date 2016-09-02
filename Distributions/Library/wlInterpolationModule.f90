@@ -52,7 +52,7 @@ CONTAINS
     IF (x.eq.xx(1)) THEN
       j = 1
     ELSEIF (x.eq.xx(n)) THEN
-      j = n-1
+      j = n-1  
     ELSE
       j = jl
     END IF
@@ -141,7 +141,7 @@ CONTAINS
                   + (1.0_dp - delta(1)) *           delta(2)  * p011   &
                   +           delta(1)  *           delta(2)  * p111 ) ) &
           - Offset
-
+   
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_3D
