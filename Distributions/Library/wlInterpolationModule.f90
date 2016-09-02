@@ -21,6 +21,7 @@ MODULE wlInterpolationModule
   INTERFACE LogInterpolateSingleVariable
     MODULE PROCEDURE LogInterpolateSingleVariable_3D
     MODULE PROCEDURE LogInterpolateSingleVariable_4D
+    MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom
   END INTERFACE LogInterpolateSingleVariable
 
   INTERFACE LogInterpolateDifferentiateSingleVariable
@@ -58,6 +59,69 @@ CONTAINS
     END IF
 
   END SUBROUTINE locate
+
+
+  PURE INTEGER FUNCTION Index1D( x, xx, n )
+
+    REAL(dp), INTENT(in) :: x, xx(n)
+    INTEGER,  INTENT(in) :: n
+
+    INTEGER :: il, im, iu
+
+    il = 0
+    iu = n+1
+    DO WHILE ( iu - il > 1 )
+      im = (iu+il)/2
+      IF ((xx(n).ge.xx(1)).eqv.(x.ge.xx(im))) THEN
+        il = im
+      ELSE
+        iu = im
+      END IF
+    END DO
+
+    IF (x.eq.xx(1)) THEN
+      Index1D = 1
+    ELSEIF (x.eq.xx(n)) THEN
+      Index1D = n-1
+    ELSE
+      Index1D = il
+    END IF
+
+    RETURN
+  END FUNCTION Index1D
+
+
+  PURE REAL(dp) FUNCTION TetraLinear &
+    ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+      p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+      dX1, dX2, dX3, dX4 )
+
+    REAL(dp), INTENT(in) :: &
+      p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+      p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+      dX1, dX2, dX3, dX4
+
+    REAL(dp) :: ddX1, ddX2, ddX3, ddX4
+
+    ddX1 = 1.0_dp - dX1
+    ddX2 = 1.0_dp - dX2
+    ddX3 = 1.0_dp - dX3
+    ddX4 = 1.0_dp - dX4
+
+    TetraLinear                                                     &
+      = ddX4                                                       &
+         * (   ddX3 * (  ddX2 * ( ddX1 * p0000 + dX1 * p1000 )     &
+                        + dX2 * ( ddX1 * p0100 + dX1 * p1100 ) )   &
+             +  dX3 * (  ddX2 * ( ddX1 * p0010 + dX1 * p1010 )     &
+                        + dX2 * ( ddX1 * p0110 + dX1 * p1110 ) ) ) &
+      +  dX4                                                       &
+         * (   ddX3 * (  ddX2 * ( ddX1 * p0001 + dX1 * p1001 )     &
+                        + dX2 * ( ddX1 * p0101 + dX1 * p1101 ) )   &
+             +  dX3 * (  ddX2 * ( ddX1 * p0011 + dX1 * p1011 )     &
+                        + dX2 * ( ddX1 * p0111 + dX1 * p1111 ) ) )
+
+    RETURN
+  END FUNCTION TetraLinear
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D &
@@ -233,7 +297,7 @@ CONTAINS
                      / ( Coordinate4(il4+1) - Coordinate4(il4) )
       END IF
 
-    Interpolant(i) &
+      Interpolant(i) &
       = 10.d0**( &
           (1.0_dp - delta(4)) &
             * (   (1.0_dp - delta(3)) * &
@@ -274,6 +338,71 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_4D
+
+
+  SUBROUTINE LogInterpolateSingleVariable_4D_Custom &
+               ( E, D, T, Y, Es, Ds, Ts, Ys, OS, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: E,  D,  T,  Y
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Es, Ds, Ts, Ys
+    REAL(dp),                     INTENT(in)  :: OS
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:),       INTENT(out) :: Interpolant
+
+    INTEGER  :: &
+      iP, iE, iD, iT, iY
+    REAL(dp) :: &
+      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111, &
+      dE, dD, dT, dY
+
+    IF( .NOT. ALL( [ SIZE(D), SIZE(T), SIZE(Y) ] == SIZE(E) ) )THEN
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') &
+        '', 'ERROR: arrays of interpolation points have different sizes'
+      WRITE(*,*)
+      RETURN
+    END IF
+
+    DO iP = 1, SIZE( E )
+
+      iE = Index1D( E(iP), Es, SIZE( Es ) )
+      iD = Index1D( D(iP), Ds, SIZE( Ds ) )
+      iT = Index1D( T(iP), Ts, SIZE( Ts ) )
+      iY = Index1D( Y(iP), Ys, SIZE( Ys ) )
+
+      p0000 = Table( iE  , iD  , iT  , iY   )
+      p1000 = Table( iE+1, iD  , iT  , iY   )
+      p0100 = Table( iE  , iD+1, iT  , iY   )
+      p1100 = Table( iE+1, iD+1, iT  , iY   )
+      p0010 = Table( iE  , iD  , iT+1, iY   )
+      p1010 = Table( iE+1, iD  , iT+1, iY   )
+      p0110 = Table( iE  , iD+1, iT+1, iY   )
+      p1110 = Table( iE+1, iD+1, iT+1, iY   )
+      p0001 = Table( iE  , iD  , iT  , iY+1 )
+      p1001 = Table( iE+1, iD  , iT  , iY+1 )
+      p0101 = Table( iE  , iD+1, iT  , iY+1 )
+      p1101 = Table( iE+1, iD+1, iT  , iY+1 )
+      p0011 = Table( iE  , iD  , iT+1, iY+1 )
+      p1011 = Table( iE+1, iD  , iT+1, iY+1 )
+      p0111 = Table( iE  , iD+1, iT+1, iY+1 )
+      p1111 = Table( iE+1, iD+1, iT+1, iY+1 )
+
+      dE = LOG10( E(iP) / Es(iE) ) / LOG10( Es(iE+1) / Es(iE) )
+      dD = LOG10( D(iP) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+      dT = LOG10( T(iP) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+      dY = ( Y(iP) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+      Interpolant(iP) &
+        = 10.0d0**( &
+            TetraLinear &
+              ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                dE, dD, dT, dY ) ) - OS
+
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_4D_Custom
 
 
   SUBROUTINE LogInterpolateAllVariables &

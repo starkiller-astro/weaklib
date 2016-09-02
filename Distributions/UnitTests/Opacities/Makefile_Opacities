@@ -2,7 +2,8 @@ include ../../../Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
-     wlOpacityInterpolationTest
+     wlOpacityInterpolationTest \
+     wlOpacityPerformanceTest
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -22,6 +23,12 @@ wlOpacityInterpolationTest: \
 	$(weaklib) wlOpacityInterpolationTest.o \
 	$(LIBRARIES)
 
+wlOpacityPerformanceTest: \
+	$(weaklib) wlOpacityPerformanceTest.o
+	$(FLINKER) $(FLAGS) -o wlOpacityPerformanceTest_$(MACHINE) \
+	$(weaklib) wlOpacityPerformanceTest.o \
+	$(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld
 
@@ -29,6 +36,7 @@ clobber: clean
 	rm -f wlOpacityFieldsTest_$(MACHINE)
 	rm -f wlReadOpacityTableTest_$(MACHINE)
 	rm -f wlOpacityInterpolationTest_$(MACHINE)
+	rm -f wlOpacityPerformanceTest_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
   wlKindModule.o \
@@ -52,3 +60,11 @@ wlOpacityInterpolationTest.o: \
   wlEnergyGridModule.o \
   wlGridModule.o \
   wlOpacityInterpolationTest.f90
+
+wlOpacityPerformanceTest.o: \
+  wlKindModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlOpacityPerformanceTest.f90
