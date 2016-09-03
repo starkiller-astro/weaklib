@@ -20,6 +20,7 @@ MODULE wlInterpolationModule
 
   INTERFACE LogInterpolateSingleVariable
     MODULE PROCEDURE LogInterpolateSingleVariable_3D
+    MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom
     MODULE PROCEDURE LogInterpolateSingleVariable_4D
     MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom
   END INTERFACE LogInterpolateSingleVariable
@@ -91,6 +92,32 @@ CONTAINS
   END FUNCTION Index1D
 
 
+  PURE REAL(dp) FUNCTION TriLinear &
+    ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX2, dX3 )
+
+    REAL(dp), INTENT(in) :: &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111, &
+      dX1, dX2, dX3
+
+    REAL(dp) :: ddX1, ddX2, ddX3
+
+    ddX1 = 1.0_dp - dX1
+    ddX2 = 1.0_dp - dX2
+    ddX3 = 1.0_dp - dX3
+
+    TriLinear                                        &
+      = ddX3                                         &
+         * (   ddX2 * ( ddX1 * p000 + dX1 * p100 )   &
+             +  dX2 * ( ddX1 * p010 + dX1 * p110 ) ) &
+      +  dX3                                         &
+         * (   ddX2 * ( ddX1 * p001 + dX1 * p101 )   &
+             +  dX2 * ( ddX1 * p011 + dX1 * p111 ) )
+
+    RETURN
+  END FUNCTION TriLinear
+
+
   PURE REAL(dp) FUNCTION TetraLinear &
     ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
       p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
@@ -108,7 +135,7 @@ CONTAINS
     ddX3 = 1.0_dp - dX3
     ddX4 = 1.0_dp - dX4
 
-    TetraLinear                                                     &
+    TetraLinear                                                    &
       = ddX4                                                       &
          * (   ddX3 * (  ddX2 * ( ddX1 * p0000 + dX1 * p1000 )     &
                         + dX2 * ( ddX1 * p0100 + dX1 * p1100 ) )   &
@@ -209,6 +236,68 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_3D
+
+
+  SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
+               ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D,  T,  Y
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Ds, Ts, Ys
+    REAL(dp),                   INTENT(in)  :: OS
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:),     INTENT(out) :: Interpolant
+
+    INTEGER  :: &
+      iP
+    INTEGER, DIMENSION(SIZE(D)) :: &
+      iD, iT, iY
+    REAL(dp) :: &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111, &
+      dD, dT, dY
+
+    IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') &
+        '', 'LogInterpolateSingleVariable_3D_Custom'
+      WRITE(*,'(A4,A)') &
+        '', 'ERROR: arrays of interpolation points have different sizes'
+      WRITE(*,*)
+      RETURN
+    END IF
+
+    DO iP = 1, SIZE( D )
+
+      iD(iP) = Index1D( D(iP), Ds, SIZE( Ds ) )
+      iT(iP) = Index1D( T(iP), Ts, SIZE( Ts ) )
+      iY(iP) = Index1D( Y(iP), Ys, SIZE( Ys ) )
+
+    END DO
+
+    DO iP = 1, SIZE( D )
+
+      p000 = ( Table( iD(iP)  , iT(iP)  , iY(iP)   ) )
+      p100 = ( Table( iD(iP)+1, iT(iP)  , iY(iP)   ) )
+      p010 = ( Table( iD(iP)  , iT(iP)+1, iY(iP)   ) )
+      p110 = ( Table( iD(iP)+1, iT(iP)+1, iY(iP)   ) )
+      p001 = ( Table( iD(iP)  , iT(iP)  , iY(iP)+1 ) )
+      p101 = ( Table( iD(iP)+1, iT(iP)  , iY(iP)+1 ) )
+      p011 = ( Table( iD(iP)  , iT(iP)+1, iY(iP)+1 ) )
+      p111 = ( Table( iD(iP)+1, iT(iP)+1, iY(iP)+1 ) )
+
+      dD = LOG10( D(iP) / Ds(iD(iP)) ) / LOG10( Ds(iD(iP)+1) / Ds(iD(iP)) )
+      dT = LOG10( T(iP) / Ts(iT(iP)) ) / LOG10( Ts(iT(iP)+1) / Ts(iT(iP)) )
+      dY = ( Y(iP) - Ys(iY(iP)) ) / ( Ys(iY(iP)+1) - Ys(iY(iP)) )
+
+      Interpolant(iP) &
+        = 10.0d0**( &
+            TriLinear &
+              ( p000, p100, p010, p110, &
+                p001, p101, p011, p111, dD, dT, dY ) ) - OS
+
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_3D_Custom
 
 
   SUBROUTINE LogInterpolateSingleVariable_4D &
@@ -358,6 +447,8 @@ CONTAINS
 
     IF( .NOT. ALL( [ SIZE(D), SIZE(T), SIZE(Y) ] == SIZE(E) ) )THEN
       WRITE(*,*)
+      WRITE(*,'(A4,A)') &
+        '', 'LogInterpolateSingleVariable_4D_Custom'
       WRITE(*,'(A4,A)') &
         '', 'ERROR: arrays of interpolation points have different sizes'
       WRITE(*,*)
@@ -931,9 +1022,23 @@ CONTAINS
     END IF
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D
-  
 
-  SUBROUTINE LogInterpolateDifferentiateAllVariables( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives )
+
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom &
+       ( E, D, T, Y, Es, Ds, Ts, Ys, OS, Table, Interpolant, Derivatives )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: E,  D,  T,  Y
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Es, Ds, Ts, Ys
+    REAL(dp),                     INTENT(in)  :: OS
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:),       INTENT(out) :: Interpolant
+    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Derivatives
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom
+
+
+  SUBROUTINE LogInterpolateDifferentiateAllVariables &
+               ( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2

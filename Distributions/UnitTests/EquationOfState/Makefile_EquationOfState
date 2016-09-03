@@ -1,0 +1,23 @@
+include ../../../Build/Makefile_Build
+
+all: wlEosPerformanceTest
+
+wlEosPerformanceTest: \
+	$(weaklib) wlEosPerformanceTest.o
+	$(FLINKER) $(FLAGS) -o wlEosPerformanceTest_$(MACHINE) \
+	$(weaklib) wlEosPerformanceTest.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f wlEosPerformanceTest_$(MACHINE)
+
+wlEosPerformanceTest.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlEosPerformanceTest.f90

@@ -21,7 +21,7 @@ PROGRAM wlOpacityPerformanceTest
     LogInterp = [ 1, 1, 1, 0 ]
   INTEGER, PARAMETER :: &
     iD = 1, iT = 2, iY = 3, &
-    nPoints = 2**16
+    nPoints = 2**20
   REAL(dp) :: &
     tBegin, &
     tEnd
@@ -33,7 +33,8 @@ PROGRAM wlOpacityPerformanceTest
     rndm_Y, &
     Interpolant1, &
     Interpolant2
-  TYPE(OpacityTableType) :: OpTab
+  TYPE(OpacityTableType) :: &
+    OpTab
 
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpTab, "OpacityTable.h5" )
