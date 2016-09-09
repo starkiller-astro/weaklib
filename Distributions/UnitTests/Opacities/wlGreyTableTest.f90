@@ -40,8 +40,8 @@ PROGRAM wlGreyTableTest
  
   Format1 = "(5A12)"
   Format2 = "(5ES12.3)"
-  Format3 = "(6A12)"
-  Format4 = "(6ES12.3)"
+  Format3 = "(6A16)"
+  Format4 = "(6ES16.8)"
 
 
 !  OPEN(1, FILE = "CRtest.d", FORM = "formatted", ACTION = 'read')

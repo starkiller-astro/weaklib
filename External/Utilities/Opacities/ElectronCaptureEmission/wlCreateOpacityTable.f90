@@ -90,7 +90,7 @@ implicit none
                               chem_p, xheavy, xn, xp, bb, &
                               bufferquad1, bufferquad2, bufferquad3,&
                               bufferquad4
-   INTEGER, PARAMETER      :: nquad = 5
+   INTEGER, PARAMETER      :: nquad = 20
 
 PRINT*, "Allocating OpacityTable"   
 
@@ -277,7 +277,7 @@ PRINT*, "Making Energy Grid"
    END DO  !i_r
 
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_Grey_5quad.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_Grey_20quad.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
