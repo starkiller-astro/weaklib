@@ -35,8 +35,8 @@ MODULE B85
 CONTAINS
 !========================Function=============================
 
-  REAL(dp) FUNCTION &
-    totalECapEm( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
+  REAL(dp) FUNCTION totalECapEm &
+    ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 
     REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
                             xheavy, xn, xp
@@ -120,7 +120,15 @@ CONTAINS
     totalECapEm = ( emitni + absorni ) + ( emitnp + absornp )
 
     RETURN
-
   END FUNCTION totalECapEm
+
+
+  REAL(dp) FUNCTION totalElasticScatteringKernel( energy, rho, T )
+
+    REAL(dp), INTENT(in) :: energy, rho, T
+
+    RETURN
+  END FUNCTION totalElasticScatteringKernel
+
 
 END MODULE B85
