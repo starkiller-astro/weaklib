@@ -71,7 +71,6 @@ PROGRAM wlGreyTableTest
     Inte_rho(i) = database(i*5-3)
     Inte_T(i) = database(i*5-2)
     Inte_Ye(i) = database(i*5-1)
-    WRITE(*,*) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i)
   END DO
 
   CLOSE( 1, STATUS = 'keep')  

@@ -325,7 +325,11 @@ CONTAINS
 
     CALL AllocateOpacityTable &
                ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacC, nMomC, nPointsE )  
-    
+
+    IF( ( OpacityTable % EOSTable % TS % nPoints(1) .EQ. nPointsTS(1) ) .AND. &
+        ( OpacityTable % EOSTable % TS % nPoints(2) .EQ. nPointsTS(2) ) .AND. &
+        ( OpacityTable % EOSTable % TS % nPoints(3) .EQ. nPointsTS(3) ) ) THEN
+ 
     CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
     CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
     CALL CloseGroupHDF( group_id )
@@ -343,6 +347,12 @@ CONTAINS
     CALL CloseGroupHDF( group_id )
  
     CALL CloseFileHDF( file_id )
+    
+    ELSE 
+      WRITE(*,*) "ERROR!"
+      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
+      STOP
+    END IF
 
   END SUBROUTINE ReadOpacityTableHDF
 
