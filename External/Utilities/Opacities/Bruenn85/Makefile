@@ -1,7 +1,8 @@
 # The directories containing the source files, separated by ':'
 # When GNU Make cannot find a prerequisite it will search the directories in the VPATH list (from first to last) and stop at the first directory in which it finds the missing prerequisite.
 #-------------------------
-vpath %.f90 $(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85:$(WEAKLIB_DIR)/Distributions/OpacitySource:$(WEAKLIB_DIR)/Distributions/Library:$(WEAKLIB_DIR)/Distributions/EOSSource:$(WEAKLIB_DIR)/External/SharedModules
+vpath %.f90 ../../../../Distributions/OpacitySource:../../../../Distributions/Library:../../../../Distributions/EOSSource:../../../../SharedModules
+#vpath %.f90 $(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85:$(WEAKLIB_DIR)/Distributions/OpacitySource:$(WEAKLIB_DIR)/Distributions/Library:$(WEAKLIB_DIR)/Distributions/EOSSource:$(WEAKLIB_DIR)/External/SharedModules
 #========================= 
 # Build configurations using variables defined in System Makefile
 #CMODE = OPTIMIZE
