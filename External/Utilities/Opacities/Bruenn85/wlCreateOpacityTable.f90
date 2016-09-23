@@ -72,8 +72,8 @@ implicit none
     
    TYPE(OpacityTableType)  :: OpacityTable
    INTEGER                 :: nOpacA = 1
-   INTEGER                 :: nOpacB = 0
-   INTEGER                 :: nMomB  = 0
+   INTEGER                 :: nOpacB = 1
+   INTEGER                 :: nMomB  = 2
    INTEGER                 :: nOpacC = 0
    INTEGER                 :: nMomC  = 0
 !-------------------------------------------------------------------------
@@ -85,7 +85,7 @@ implicit none
    INTEGER, PARAMETER      :: nSpeciesA = 1
    
 
-   INTEGER                 :: i_r, i_e, j_rho, k_t, l_ye, i_quad 
+   INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, t_m, i_quad
    REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, &
                               chem_p, xheavy, xn, xp, bb, &
                               bufferquad1, bufferquad2, bufferquad3,&
@@ -99,10 +99,12 @@ PRINT*, "Allocating OpacityTable"
             ( OpacityTable, nOpacA, nOpacB, nMomB, &
               nOpacC, nMomC, nPointsE ) 
    CALL FinalizeHDF( )
-  
+
+! Set OpacityTableTypeA thermEmAb  
    OpacityTable % thermEmAb % nOpacities = nOpacA
 
    OpacityTable % thermEmAb % nPoints(1) = nPointsE
+
    OpacityTable % thermEmAb % nPoints(2:4) = OpacityTable % nPointsTS
 
    OpacityTable % thermEmAb % Names = &
@@ -112,7 +114,23 @@ PRINT*, "Allocating OpacityTable"
    OpacityTable % thermEmAb % Units = &
                                 (/'Per Centimeter              '/) 
    OpacityTable % thermEmAb % Offset = 1.0d-100
+
+! Set OpacityTableTypeB scatt_Iso
+   OpacityTable % scatt_Iso % nOpacities = nOpacB
    
+   OpacityTable % scatt_Iso % nMoments = nMomB
+   
+   OpacityTable % scatt_Iso % nPoints(1) = nPointsE
+
+   OpacityTable % scatt_Iso % nPoints(2:4) = OpacityTable % nPointsTS
+
+   OpacityTable % scatt_Iso % Names = &
+                                (/'Electron Iso-sca Absorptivity'/)
+   OpacityTable % scatt_Iso % Species = &
+                                (/'Electron Neutrino           '/)
+   OpacityTable % scatt_Iso % Units = &
+                                (/'MeV * cm^3 * s^-1           '/)
+
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
@@ -149,7 +167,7 @@ PRINT*, "Making Energy Grid"
 
 !-----------------  ECAPEM ----------------------- 
 
-   DO i_r = 1, nOpacA
+!  DO i_r = 1, nOpacA
  
      DO l_ye = 1, OpacityTable % nPointsTS(3)
 
@@ -192,7 +210,13 @@ PRINT*, "Making Energy Grid"
                  A   = OpacityTable % EOSTable % DV % Variables (12) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
+         
+        IF ( A < 0.0d0 ) THEN
+          WRITE(*,*) "Caution! A (heavy mass number) is less than zero!"
+          STOP
+        END IF
 
+         Do i_r = 1, nOpacA
            DO i_e = 1, OpacityTable % nPointsE
 
               energy = OpacityTable % EnergyGrid % Values(i_e)
@@ -205,26 +229,30 @@ PRINT*, "Making Energy Grid"
            
            bb = (chem_e + chem_p - chem_n)/(T*kMev)
 
-           CALL GreyMomentWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             bufferquad1, "GreyMoment_Number ", .FALSE. )
+!           CALL GreyMomentWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             bufferquad1, "GreyMoment_Number ", .FALSE. )
 
-           CALL GreyMomentWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
+!           CALL GreyMomentWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
 
-           CALL GreyOpacityWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             rho, T, Z, A, chem_e, chem_n,&
-                             chem_p, xheavy, xn, xp,&
-                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
+!           CALL GreyOpacityWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             rho, T, Z, A, chem_e, chem_n,&
+!                             chem_p, xheavy, xn, xp,&
+!                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
 
-           CALL GreyOpacityWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             rho, T, Z, A, chem_e, chem_n,&
-                             chem_p, xheavy, xn, xp,&
-                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
+!           CALL GreyOpacityWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             rho, T, Z, A, chem_e, chem_n,&
+!                             chem_p, xheavy, xn, xp,&
+!                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
 
+           bufferquad1 = 1.0
+           bufferquad2 = 1.0
+           bufferquad3 = 2.0
+           bufferquad4 = 2.0
 
            OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
                           Values ( j_rho, k_t, l_ye)  &
@@ -241,13 +269,32 @@ PRINT*, "Making Energy Grid"
            OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
                            Values ( j_rho, k_t, l_ye)  &
               = bufferquad4 * (T*kMeV)**3
+         END DO !i_r
+
+!-----------------  Scatt_Iso -----------------------
+        DO i_rb = 1, nOpacB
+          DO t_m = 1, nMomB
+            DO i_e = 1, OpacityTable % nPointsE
+
+              energy = OpacityTable % EnergyGrid % Values(i_e)
+
+              OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
+                         ( i_e, j_rho, k_t, l_ye, t_m ) &
+               = totalElasticScatteringKernel&
+                 ( energy, rho, T, xheavy, A, Z, xn, xp, t_m-1 )
+
+           END DO  !i_e
+         END DO !t_m 
+        END DO !i_rb
 
          END DO  !j_rho
        END DO  !k_t
      END DO  !l_ye
-   END DO  !i_r
+!  END DO  !i_r
   
-  
+!-----------------  Scatt_Iso -----------------------
+
+
   CALL DescribeOpacityTable( OpacityTable )
 
    DO i_r = 1, nOpacA

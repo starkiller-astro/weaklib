@@ -25,14 +25,17 @@ MODULE B85
 !-----------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
-    kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, ergmev
- 
+    h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, ergmev,&
+      cv_p, cv_n, ca_p, ca_n, gf, hbarc
+  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero 
 
   implicit none
    
-  PUBLIC totalECapEm
+  PUBLIC totalECapEm, &
+         totalElasticScatteringKernel
 
 CONTAINS
+
 !========================Function=============================
 
   REAL(dp) FUNCTION totalECapEm &
@@ -68,15 +71,15 @@ CONTAINS
     
     
 !    etapn = rho * ( xn - xp ) / ( mbG * ( FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
-    rop = rho * xp / mpG                  ! Approxiation in the nondegenerate regime
-    ron = rho * xn / mpG 
+     rop   = rho * xp / mpG                  ! Approxiation in the nondegenerate regime
+     ron   = rho * xn / mnG 
 !----------------------------------------------------------------------------
 ! Stop the function if any of etapn/rop/ron is negative
 !--------------------------------------------------------------------------- 
     IF ( ( rop < 0.0_dp ) .or. ( ron < 0.0_dp ) ) THEN
 !    IF ( (etapn < 0.0_dp ) .or. ( rop < 0.0_dp ) .or. ( ron < 0.0_dp ) ) THEN
       WRITE(*,*)'xn - xp is ', xn - xp
-      WRITE(*,*),'fexp term is ', FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp 
+      WRITE(*,*)'fexp term is ', FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp 
       WRITE(*,*)'chem_n - chem_p is ', chem_n - chem_p 
       STOP 
     END IF
@@ -85,16 +88,16 @@ CONTAINS
 !   j_nuclear(emitni) and chi_nuclear(absorni) 
 !-----------------------------------------------------------------------------
     IF ( xheavy * npz * nhn == 0.0_dp ) THEN
-      emitni = 0.0_dp
+       emitni  = 0.0_dp
       absorni  = 0.0_dp
     ELSE
-      midCons = therm2 * rho * xheavy * npz * nhn * midEp / (mbG * a)
-      midEp = (energy+qpri)**2 * SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )       
+      midCons  = therm2 * rho * xheavy * npz * nhn * midEp / (mbG * a)
+       midEp   = (energy+qpri)**2 * SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )       
       midFexpp = FEXP( (energy+qpri-chem_e) / TMeV )
-      midFep = 1.0_dp / ( midFexpp + 1.0_dp )
+       midFep  = 1.0_dp / ( midFexpp + 1.0_dp )
 
-      emitni = midCons * midFep 
-      absorni = midCons * FEXP( (chem_n + dmnp - chem_p - qpri) /TMeV ) &
+       emitni  = midCons * midFep 
+      absorni  = midCons * FEXP( (chem_n + dmnp - chem_p - qpri) /TMeV ) &
                * ( 1.0_dp - midFep) 
     END IF
 !-----------------------------------------------------------------------------
@@ -109,13 +112,13 @@ CONTAINS
       RETURN
     END IF
 
-    midFe = 1.0_dp / ( FEXP( (energy+dmnp-chem_e) / TMeV ) + 1.0_dp )
-    midE = (energy+dmnp)**2 &
+      midFe   = 1.0_dp / ( FEXP( (energy+dmnp-chem_e) / TMeV ) + 1.0_dp )
+       midE   = (energy+dmnp)**2 &
                  * SQRT( 1.0_dp - ( me / (energy+dmnp) )**2 )
 
-    jnucleon = therm1 * rop * midE * midFe
-    absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
-    emitnp = jnucleon
+     jnucleon = therm1 * rop * midE * midFe
+     absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
+       emitnp = jnucleon
 
     totalECapEm = ( emitni + absorni ) + ( emitnp + absornp )
 
@@ -123,12 +126,161 @@ CONTAINS
   END FUNCTION totalECapEm
 
 
-  REAL(dp) FUNCTION totalElasticScatteringKernel( energy, rho, T )
+  REAL(dp) FUNCTION totalElasticScatteringKernel&
+     ( energy, rho, T, xh, A, Z, xn, xp, l )
 
-    REAL(dp), INTENT(in) :: energy, rho, T
+!-----------------------------------------------------------------------
+!   Input Variables
+!-----------------------------------------------------------------------
+    REAL(dp), INTENT(in) :: energy, rho, T, xh, A, Z, xn, xp
+    INTEGER, INTENT(in)  :: l
+!-----------------------------------------------------------------------
+!   Physical Constants 
+!-----------------------------------------------------------------------
+    REAL(dp)             :: N, nucleiTP, & ! TP for thermal parameter
+                            nucleonTP, nucleiExp, Cv0, Cv1, etann, etapp
+
+!-----------------------------------------------------------------------
+!   Local Variables
+!-----------------------------------------------------------------------   
+
+    REAL(dp) :: ESNucleiKernel_0, ESNucleonKernel_0, &
+                ESNucleiKernel_1, ESNucleonKernel_1
+
+        N     = A - Z
+       Cv0    = half * ( cv_p + cv_n) !( + hnv  ) * half
+       Cv1    = cv_p - cv_n ! - hnv
+    
+    nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
+                A**(2.0_dp/3.0_dp) * energy**2
+         
+    nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
+                A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2 * &
+                EXP(- nucleiExp )
+
+    CALL etaxx( rho, T, xn, xp, etann, etapp )
+
+    nucleonTP = ( twpi * gf )**2 / h
+  
+
+    ESNucleiKernel_0  = (0.5_dp) * nucleiTP * &
+                        ( EXP(nucleiExp) - EXP(-nucleiExp) ) &
+                        / nucleiExp 
+
+    ESNucleiKernel_1  = (1.5_dp) * nucleiTP * &
+                        ( EXP(nucleiExp) * ( nucleiExp - 1.0_dp) &
+                        - Exp(-nucleiExp) * ( -nucleiExp - 1.0_dp) &
+                        ) / (nucleiExp**2)
+ 
+    ESNucleonKernel_0 = (0.5_dp) * nucleonTP * &
+                        ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
+                          etapp * ( cv_p**2 + 3.0_dp * ca_p**2) )
+ 
+    ESNucleonKernel_1 = (1.5_dp) * nucleonTP * &
+                        ( etann * ( cv_n**2 - ca_n**2) + &
+                          etapp * ( cv_p**2 - ca_p**2) )
+
+    IF ( l == 0 ) THEN
+     totalElasticScatteringKernel = ESNucleiKernel_0 + ESNucleonKernel_0
+    ELSE IF ( l == 1) THEN
+     totalElasticScatteringKernel = ESNucleiKernel_1 + ESNucleonKernel_1
+    ELSE
+     WRITE(*,*) "ERROR: Unable to provide Legendre Moment with &
+                        l other than 0 and 1 "
+    END IF
 
     RETURN
   END FUNCTION totalElasticScatteringKernel
 
+
+  SUBROUTINE etaxx( rho, T, xn, xp, etann, etapp )
+  
+
+!-----------------------------------------------------------------------
+!        Input variables.
+!-----------------------------------------------------------------------
+
+  REAL(dp), INTENT(in)    :: rho           ! density (g/cm3)
+  REAL(dp), INTENT(in)    :: T             ! temperature [K]
+  REAL(dp), INTENT(in)    :: xn            ! neutron mass fraction
+  REAL(dp), INTENT(in)    :: xp            ! proton mass fraction
+
+!-----------------------------------------------------------------------
+!        Output variables.
+!-----------------------------------------------------------------------
+
+  REAL(dp), INTENT(out)   :: etann         ! neutron number corrected for blocking
+  REAL(dp), INTENT(out)   :: etapp         ! proton number corrected for blocking
+
+!-----------------------------------------------------------------------
+!        Local variables
+!-----------------------------------------------------------------------
+
+  REAL(dp)                :: nn            ! neutron number uncorrected for blocking (cm^{-3})
+  REAL(dp)                :: np            ! proton number uncorrected for blocking (cm^{-3})
+  REAL(dp)                :: d_n            ! neutron number uncorrected for blocking (fm^{-3})
+  REAL(dp)                :: d_p            ! proton number uncorrected for blocking (fm^{-3})
+  REAL(dp)                :: efn           ! degenerate expression
+  REAL(dp)                :: efp           ! degenerate expression
+  REAL(dp)                :: etanndgnt     ! nondegenerate expression
+  REAL(dp)                :: etappdgnt     ! nondegenerate expression
+  REAL(dp)                :: mpG, mnG
+  REAL(dp), PARAMETER     :: tthird = 2.d0/3.d0
+  INTEGER                 :: ietann
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+!  nn, np
+!-----------------------------------------------------------------------
+
+  
+  mpG   = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
+  mnG   = mn * ergmev * cvel_inv * cvel_inv ! neutron mass [g]
+  
+
+  nn                 = xn * rho/mpG
+  np                 = xp * rho/mnG
+
+!-----------------------------------------------------------------------
+!  etann, etanp (zeroth approximation)
+!-----------------------------------------------------------------------
+
+  etann              = nn
+  etapp              = np
+
+!-----------------------------------------------------------------------
+!  ietann : final state blocking switch
+!
+!     ietann = 0 : final state blocking due to neutron or proton final
+!      state occupancy in neutrino-neutron and neutrino-proton
+!      isoenergetic scattering turned off.
+!     ietann = 1 : final state blocking due to neutron or proton final
+!      state occupancy in neutrino-neutron and neutrino-proton
+!      isoenergetic scattering turned on.
+!-----------------------------------------------------------------------
+  ietann = 0
+!-----------------------------------------------------------------------
+!  Return if ietann = 0, nn <= 0, or np <= 0
+!-----------------------------------------------------------------------
+
+  IF ( ietann == 0  .or.  nn <= zero  .or.  np <= zero ) RETURN
+
+!-----------------------------------------------------------------------
+!  etann, etanp (analytic approximation)
+!-----------------------------------------------------------------------
+
+  d_n          = nn * 1.d-39
+  d_p          = np * 1.d-39
+  efn          = ( hbarc**2/( 2.d+00 * mn ) ) &
+                    * ( 3.d+00 * pi**2 * d_n )**tthird
+  efp          = ( hbarc**2/( 2.d+00 * mp ) ) &
+                    * ( 3.d+00 * pi**2 * d_p )**tthird
+  etanndgnt    = 1.5d+00 * ( kMev * T/efn )
+  etappdgnt    = 1.5d+00 * ( kMev * T/efp )
+  etann        = nn * etanndgnt/DSQRT( 1.d+00 + etanndgnt**2 )
+  etapp        = np * etappdgnt/DSQRT( 1.d+00 + etappdgnt**2 )
+
+  END SUBROUTINE etaxx
 
 END MODULE B85
