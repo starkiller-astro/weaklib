@@ -16,7 +16,14 @@ MODULE B85
 !   
 !
 !    CONTAINS:
-!      Function totalECapEm: gives opacity with np as approximation 
+!
+!      Function totalECapEm: 
+!                   gives opacity with np as approximation 
+!
+!      Function totalElasticScatteringKernel: 
+!                   gives isoenergetic scattering kernel with nMoment
+!                   l = 0 or 1
+!                            
 !
 !    Modules used:
 !      wlKindModule
@@ -49,10 +56,10 @@ CONTAINS
                             rop, ron, midFexpp, midFep, midEp, midCons
     REAL(dp) :: emitnp, absornp, emitni, absorni
 
-    TMeV   = T * kMeV                 ! kmev = 8.61733d-11 [MeV K^{-1}]
+    TMeV   = T * kMeV                         ! kmev = 8.61733d-11 [MeV K^{-1}]
       N    = A - Z
-    qpri   = chem_n - chem_p + 3.0_dp + dmnp! [MeV] 3MeV: energy of the 1f5/2 level
-    chem_v = chem_e + chem_p - chem_n - dmnp! neutrino chemical potential
+    qpri   = chem_n - chem_p + 3.0_dp + dmnp  ! [MeV] 3 = energy of the 1f5/2 level 
+    chem_v = chem_e + chem_p - chem_n - dmnp  ! neutrino chemical potential
     
     inversefeq   = ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp )   
      feq   = MAX( 1.0_dp / ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp ),&
@@ -71,7 +78,7 @@ CONTAINS
     
     
 !    etapn = rho * ( xn - xp ) / ( mbG * ( FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
-     rop   = rho * xp / mpG                  ! Approxiation in the nondegenerate regime
+     rop   = rho * xp / mpG                   ! Approxiation in the nondegenerate regime
      ron   = rho * xn / mnG 
 !----------------------------------------------------------------------------
 ! Stop the function if any of etapn/rop/ron is negative
@@ -137,7 +144,7 @@ CONTAINS
 !-----------------------------------------------------------------------
 !   Physical Constants 
 !-----------------------------------------------------------------------
-    REAL(dp)             :: N, nucleiTP, & ! TP for thermal parameter
+    REAL(dp)             :: N, nucleiTP, & ! 'TP' for thermal parameter
                             nucleonTP, nucleiExp, Cv0, Cv1, etann, etapp
 
 !-----------------------------------------------------------------------
@@ -148,8 +155,8 @@ CONTAINS
                 ESNucleiKernel_1, ESNucleonKernel_1
 
         N     = A - Z
-       Cv0    = half * ( cv_p + cv_n) !( + hnv  ) * half
-       Cv1    = cv_p - cv_n ! - hnv
+       Cv0    = half * ( cv_p + cv_n) 
+       Cv1    = cv_p - cv_n 
     
     nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
                 A**(2.0_dp/3.0_dp) * energy**2
