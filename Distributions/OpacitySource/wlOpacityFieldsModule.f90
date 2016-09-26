@@ -64,6 +64,7 @@ MODULE wlOpacityFieldsModule
     INTEGER :: nOpacities
     INTEGER :: nMoments
     INTEGER, DIMENSION(4) :: nPoints
+    REAL(dp)              :: Offset
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
@@ -329,8 +330,8 @@ CONTAINS
       ' ', 'nOpacities = ', Opacity % nOpacities
     WRITE(*,'(A6,A13,I3.3)') &
       ' ', 'nMoments   = ', Opacity % nMoments
-    WRITE(*,'(A6,A13,4I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints
+    WRITE(*,'(A6,A13,5I5.4)') &
+      ' ', 'nPoints    = ', Opacity % nPoints, Opacity % nMoments
     WRITE(*,'(A6,A13,I10.10)') &
       ' ', 'DOFs       = ', &
       Opacity % nOpacities * Opacity % nMoments &
