@@ -86,7 +86,7 @@ implicit none
    
 
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, t_m, i_quad
-   REAL(dp)                :: energy, rho, T, Z, A, chem_e, chem_n, &
+   REAL(dp)                :: energy, rho, T, ye, Z, A, chem_e, chem_n, &
                               chem_p, xheavy, xn, xp, bb, &
                               bufferquad1, bufferquad2, bufferquad3,&
                               bufferquad4
@@ -131,6 +131,7 @@ PRINT*, "Allocating OpacityTable"
    OpacityTable % scatt_Iso % Units = &
                                 (/'MeV * cm^3 * s^-1           '/)
 
+   OpacityTable % scatt_Iso % Offset = 1.0d-25
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
@@ -168,6 +169,8 @@ PRINT*, "Making Energy Grid"
 !-----------------  ECAPEM ----------------------- 
 
    DO l_ye = 1, OpacityTable % nPointsTS(3)
+     
+        ye = OpacityTable % EOSTable % TS % States (3) % Values (l_ye)
 
       DO k_t = 1, OpacityTable % nPointsTS(2)
 
@@ -201,18 +204,18 @@ PRINT*, "Making Energy Grid"
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(10) - epsilon   !10 =Heavy Mass Fraction
 
-                 Z   = OpacityTable % EOSTable % DV % Variables (11) %&
+                 Z   = 10**OpacityTable % EOSTable % DV % Variables (11) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(11) - epsilon   !11 =Heavy Charge Number
 
-                 A   = OpacityTable % EOSTable % DV % Variables (12) %&
+                 A   = 10**OpacityTable % EOSTable % DV % Variables (12) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
          
         IF ( A < 0.0d0 ) THEN
-         ! WRITE(*,*) "Caution! A (heavy mass number) is less than zero!"
-         ! WRITE(*,*) " The index in EOSTable is: ", j_rho, k_t, l_ye
-         ! WRITE(*,*) " and A is ", A
+          WRITE(*,*) "Caution! A (heavy mass number) is less than zero!"
+          WRITE(*,*) " The index in EOSTable is: ", j_rho, k_t, l_ye
+          WRITE(*,*) " and A is ", A, " and Ye is ", ye
           A = MAX( A, 0.0)
          ! WRITE(*,*) "Force A to be ", A
         END IF
@@ -230,41 +233,41 @@ PRINT*, "Making Energy Grid"
            
            bb = (chem_e + chem_p - chem_n)/(T*kMev)
 
-           CALL GreyMomentWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             bufferquad1, "GreyMoment_Number ", .FALSE. )
-
-           CALL GreyMomentWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
-
-           CALL GreyOpacityWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             rho, T, Z, A, chem_e, chem_n,&
-                             chem_p, xheavy, xn, xp,&
-                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
-
-           CALL GreyOpacityWithGaussianQuadrature&
-                           ( nquad, bb, &
-                             rho, T, Z, A, chem_e, chem_n,&
-                             chem_p, xheavy, xn, xp,&
-                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
-
-           OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
-                          Values ( j_rho, k_t, l_ye)  &
-              = bufferquad1 * (T*kMeV)**3 
-
-           OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
-                          Values ( j_rho, k_t, l_ye)  &
-              = bufferquad2 * (T*kMeV)**3
-
-           OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
-                         Values ( j_rho, k_t, l_ye)  &
-              = bufferquad3 * (T*kMeV)**3 
-
-           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
-                           Values ( j_rho, k_t, l_ye)  &
-              = bufferquad4 * (T*kMeV)**3
+!           CALL GreyMomentWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             bufferquad1, "GreyMoment_Number ", .FALSE. )
+!
+!           CALL GreyMomentWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
+!
+!           CALL GreyOpacityWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             rho, T, Z, A, chem_e, chem_n,&
+!                             chem_p, xheavy, xn, xp,&
+!                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
+!
+!           CALL GreyOpacityWithGaussianQuadrature&
+!                           ( nquad, bb, &
+!                             rho, T, Z, A, chem_e, chem_n,&
+!                             chem_p, xheavy, xn, xp,&
+!                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
+!
+!           OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
+!                          Values ( j_rho, k_t, l_ye)  &
+!              = bufferquad1 * (T*kMeV)**3 
+!
+!           OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
+!                          Values ( j_rho, k_t, l_ye)  &
+!              = bufferquad2 * (T*kMeV)**3
+!
+!           OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
+!                         Values ( j_rho, k_t, l_ye)  &
+!              = bufferquad3 * (T*kMeV)**3 
+!
+!           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
+!                           Values ( j_rho, k_t, l_ye)  &
+!              = bufferquad4 * (T*kMeV)**3
          END DO !i_r
 
 !-----------------  Scatt_Iso -----------------------
@@ -313,10 +316,19 @@ PRINT*, "Making Energy Grid"
      OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % Values &
      = LOG10 ( OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
               Values + OpacityTable % thermEmAb % Offset )
+
   END DO  !i_r
 
+  DO i_rb = 1, nOpacB
+
+    OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
+    = LOG10 ( OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
+              + OpacityTable % scatt_Iso % Offset )
+
+  END DO !i_rb
+
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_lowEOS_5quad_Grey.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "OpTa_Grey_5quad_ES.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"

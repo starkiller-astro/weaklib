@@ -159,8 +159,9 @@ CONTAINS
        Cv1    = cv_p - cv_n 
     
     nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
-                A**(2.0_dp/3.0_dp) * energy**2
-         
+                A**(2.0_dp/3.0_dp) * energy**2     
+    nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
+
     nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
                 A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2 * &
                 EXP(- nucleiExp )
@@ -169,16 +170,15 @@ CONTAINS
 
     nucleonTP = ( twpi * gf )**2 / h
   
-
     ESNucleiKernel_0  = (0.5_dp) * nucleiTP * &
                         ( EXP(nucleiExp) - EXP(-nucleiExp) ) &
-                        / nucleiExp 
-
-    ESNucleiKernel_1  = (1.5_dp) * nucleiTP * &
-                        ( EXP(nucleiExp) * ( nucleiExp - 1.0_dp) &
-                        - Exp(-nucleiExp) * ( -nucleiExp - 1.0_dp) &
-                        ) / (nucleiExp**2)
+                        / nucleiExp
  
+    ESNucleiKernel_1 = (1.5_dp) * nucleiTP * &
+                       ( ABS( ( nucleiExp - 1.0_dp) * EXP( nucleiExp ) &
+                          + ( nucleiExp + 1.0_dp) * EXP( -nucleiExp ) ) ) &
+                       / ( nucleiExp**2.0_dp )
+
     ESNucleonKernel_0 = (0.5_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
                           etapp * ( cv_p**2 + 3.0_dp * ca_p**2) )
@@ -188,15 +188,21 @@ CONTAINS
                           etapp * ( cv_p**2 - ca_p**2) )
 
     IF ( l == 0 ) THEN
+    
      totalElasticScatteringKernel = ESNucleiKernel_0 + ESNucleonKernel_0
+
     ELSE IF ( l == 1) THEN
+
      totalElasticScatteringKernel = ESNucleiKernel_1 + ESNucleonKernel_1
+
     ELSE
+
      WRITE(*,*) "ERROR: Unable to provide Legendre Moment with &
                         l other than 0 and 1 "
     END IF
 
     RETURN
+
   END FUNCTION totalElasticScatteringKernel
 
 
@@ -233,7 +239,6 @@ CONTAINS
   REAL(dp)                :: etappdgnt     ! nondegenerate expression
   REAL(dp)                :: mpG, mnG
   REAL(dp), PARAMETER     :: tthird = 2.d0/3.d0
-  INTEGER                 :: ietann
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 
@@ -244,34 +249,12 @@ CONTAINS
   
   mpG   = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
   mnG   = mn * ergmev * cvel_inv * cvel_inv ! neutron mass [g]
-  
-
   nn                 = xn * rho/mpG
   np                 = xp * rho/mnG
 
-!-----------------------------------------------------------------------
-!  etann, etanp (zeroth approximation)
-!-----------------------------------------------------------------------
-
-  etann              = nn
-  etapp              = np
-
-!-----------------------------------------------------------------------
-!  ietann : final state blocking switch
-!
-!     ietann = 0 : final state blocking due to neutron or proton final
-!      state occupancy in neutrino-neutron and neutrino-proton
-!      isoenergetic scattering turned off.
-!     ietann = 1 : final state blocking due to neutron or proton final
-!      state occupancy in neutrino-neutron and neutrino-proton
-!      isoenergetic scattering turned on.
-!-----------------------------------------------------------------------
-  ietann = 0
-!-----------------------------------------------------------------------
-!  Return if ietann = 0, nn <= 0, or np <= 0
-!-----------------------------------------------------------------------
-
-  IF ( ietann == 0  .or.  nn <= zero  .or.  np <= zero ) RETURN
+  IF ( nn <= zero  .or.  np <= zero ) THEN
+    WRITE(*,*) "ERROR! nn or np less than zero."
+  END IF
 
 !-----------------------------------------------------------------------
 !  etann, etanp (analytic approximation)
