@@ -170,14 +170,15 @@ CONTAINS
 
     nucleonTP = ( twpi * gf )**2 / h
   
-    ESNucleiKernel_0  = (0.5_dp) * nucleiTP * &
-                        ( EXP(nucleiExp) - EXP(-nucleiExp) ) &
-                        / nucleiExp
- 
-    ESNucleiKernel_1 = (1.5_dp) * nucleiTP * &
-                       ( ABS( ( nucleiExp - 1.0_dp) * EXP( nucleiExp ) &
-                          + ( nucleiExp + 1.0_dp) * EXP( -nucleiExp ) ) ) &
-                       / ( nucleiExp**2.0_dp )
+    ESNucleiKernel_0  = (0.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**2 ) * &
+                        ( ( nucleiExp - 1.0_dp ) * SINH( nucleiExp ) &
+                          + nucleiExp            * COSH( nucleiExp ) )
+
+    ESNucleiKernel_1  = (1.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**3 ) * &
+                        ( ( nucleiExp**2 - nucleiExp + 2.0_dp ) &
+                                                 * SINH( nucleiExp)  &
+                          + (nucleiExp - 2.0_dp ) * nucleiExp &
+                                                 * COSH( nucleiExp ) )
 
     ESNucleonKernel_0 = (0.5_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
