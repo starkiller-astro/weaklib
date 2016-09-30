@@ -424,6 +424,14 @@ CONTAINS
                                   delta(2)  *           delta(1)  * p1111 ) ) &
         - Offset
 
+    IF ( ISNAN( Interpolant(i) ) ) THEN
+      WRITE(*,*) "The interpolarted value is ", Interpolant(i)
+      WRITE(*,*) "The position is ", il1, il2, il3, il4
+      WRITE(*,*) "The corner is ",p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+      STOP
+    END IF
+
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_4D
