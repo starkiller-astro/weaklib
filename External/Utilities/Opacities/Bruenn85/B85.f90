@@ -145,7 +145,8 @@ CONTAINS
 !   Physical Constants 
 !-----------------------------------------------------------------------
     REAL(dp)             :: N, nucleiTP, & ! 'TP' for thermal parameter
-                            nucleonTP, nucleiExp, Cv0, Cv1, etann, etapp
+                            nucleonTP, nucleiExp, Cv0, Cv1,&
+                            etann, etapp, Npara
 
 !-----------------------------------------------------------------------
 !   Local Variables
@@ -156,10 +157,11 @@ CONTAINS
 
         N     = A - Z
        Cv0    = half * ( cv_p + cv_n) 
-       Cv1    = cv_p - cv_n 
+       Cv1    = cv_p - cv_n
+     Npara    = cvel_inv**4.0 * energy**2.0 / h**3.0
     
     nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
-                A**(2.0_dp/3.0_dp) * energy**2     
+                A**(2.0_dp/3.0_dp) * energy**2.0     
     nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
 
     nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
@@ -190,11 +192,13 @@ CONTAINS
 
     IF ( l == 0 ) THEN
     
-     totalElasticScatteringKernel = ESNucleiKernel_0 + ESNucleonKernel_0
+     totalElasticScatteringKernel = Npara * ( ESNucleiKernel_0 &
+                                            + ESNucleonKernel_0 )
 
     ELSE IF ( l == 1) THEN
 
-     totalElasticScatteringKernel = ESNucleiKernel_1 + ESNucleonKernel_1
+     totalElasticScatteringKernel = Npara * ( ESNucleiKernel_1 &
+                                            + ESNucleonKernel_1 )
 
     ELSE
 

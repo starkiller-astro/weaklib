@@ -131,7 +131,7 @@ PRINT*, "Allocating OpacityTable"
    OpacityTable % scatt_Iso % Units = &
                                 (/'MeV * cm^3 * s^-1           '/)
 
-   OpacityTable % scatt_Iso % Offset = 1.0d-25
+   OpacityTable % scatt_Iso % Offset = 1.0d-1
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
@@ -212,14 +212,6 @@ PRINT*, "Making Energy Grid"
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
                        DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
          
-        IF ( A < 0.0d0 ) THEN
-          WRITE(*,*) "Caution! A (heavy mass number) is less than zero!"
-          WRITE(*,*) " The index in EOSTable is: ", j_rho, k_t, l_ye
-          WRITE(*,*) " and A is ", A, " and Ye is ", ye
-          A = MAX( A, 0.0)
-         ! WRITE(*,*) "Force A to be ", A
-        END IF
-
          Do i_r = 1, nOpacA
            DO i_e = 1, OpacityTable % nPointsE
 
@@ -233,41 +225,41 @@ PRINT*, "Making Energy Grid"
            
            bb = (chem_e + chem_p - chem_n)/(T*kMev)
 
-!           CALL GreyMomentWithGaussianQuadrature&
-!                           ( nquad, bb, &
-!                             bufferquad1, "GreyMoment_Number ", .FALSE. )
-!
-!           CALL GreyMomentWithGaussianQuadrature&
-!                           ( nquad, bb, &
-!                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
-!
-!           CALL GreyOpacityWithGaussianQuadrature&
-!                           ( nquad, bb, &
-!                             rho, T, Z, A, chem_e, chem_n,&
-!                             chem_p, xheavy, xn, xp,&
-!                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
-!
-!           CALL GreyOpacityWithGaussianQuadrature&
-!                           ( nquad, bb, &
-!                             rho, T, Z, A, chem_e, chem_n,&
-!                             chem_p, xheavy, xn, xp,&
-!                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
-!
-!           OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
-!                          Values ( j_rho, k_t, l_ye)  &
-!              = bufferquad1 * (T*kMeV)**3 
-!
-!           OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
-!                          Values ( j_rho, k_t, l_ye)  &
-!              = bufferquad2 * (T*kMeV)**3
-!
-!           OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
-!                         Values ( j_rho, k_t, l_ye)  &
-!              = bufferquad3 * (T*kMeV)**3 
-!
-!           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
-!                           Values ( j_rho, k_t, l_ye)  &
-!              = bufferquad4 * (T*kMeV)**3
+           CALL GreyMomentWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             bufferquad1, "GreyMoment_Number ", .FALSE. )
+
+           CALL GreyMomentWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             bufferquad2, "GreyMoment_Energy ", .FALSE. )
+
+           CALL GreyOpacityWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             rho, T, Z, A, chem_e, chem_n,&
+                             chem_p, xheavy, xn, xp,&
+                             bufferquad3,"GreyOpacity_Number ", .FALSE. )
+
+           CALL GreyOpacityWithGaussianQuadrature&
+                           ( nquad, bb, &
+                             rho, T, Z, A, chem_e, chem_n,&
+                             chem_p, xheavy, xn, xp,&
+                             bufferquad4,"GreyOpacity_Energy ", .FALSE. )
+
+           OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
+                          Values ( j_rho, k_t, l_ye)  &
+              = bufferquad1 * (T*kMeV)**3 
+
+           OpacityTable % thermEmAb % GreyMoment_Energy_FD(i_r) % &
+                          Values ( j_rho, k_t, l_ye)  &
+              = bufferquad2 * (T*kMeV)**3
+
+           OpacityTable % thermEmAb % GreyOpacity_Number_FD(i_r) % &
+                         Values ( j_rho, k_t, l_ye)  &
+              = bufferquad3 * (T*kMeV)**3 
+
+           OpacityTable % thermEmAb % GreyOpacity_Energy_FD(i_r) % &
+                           Values ( j_rho, k_t, l_ye)  &
+              = bufferquad4 * (T*kMeV)**3
          END DO !i_r
 
 !-----------------  Scatt_Iso -----------------------
