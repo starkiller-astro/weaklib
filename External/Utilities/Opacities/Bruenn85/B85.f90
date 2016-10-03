@@ -48,6 +48,8 @@ CONTAINS
   REAL(dp) FUNCTION totalECapEm &
     ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 
+  IMPLICIT NONE
+
     REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
                             xheavy, xn, xp
 
@@ -80,6 +82,7 @@ CONTAINS
 !    etapn = rho * ( xn - xp ) / ( mbG * ( FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
      rop   = rho * xp / mpG                   ! Approxiation in the nondegenerate regime
      ron   = rho * xn / mnG 
+
 !----------------------------------------------------------------------------
 ! Stop the function if any of etapn/rop/ron is negative
 !--------------------------------------------------------------------------- 
@@ -98,10 +101,11 @@ CONTAINS
        emitni  = 0.0_dp
       absorni  = 0.0_dp
     ELSE
-      midCons  = therm2 * rho * xheavy * npz * nhn * midEp / (mbG * a)
-       midEp   = (energy+qpri)**2 * SQRT( 1.0_dp - ( me / (energy+qpri) )**2 )       
+       midEp   = (energy+qpri)**2 * SQRT( 
+                  & MAX( 1.0_dp - ( me / (energy+qpri) )**2, 0.0_dp ) )     
       midFexpp = FEXP( (energy+qpri-chem_e) / TMeV )
        midFep  = 1.0_dp / ( midFexpp + 1.0_dp )
+      midCons  = therm2 * rho * xheavy * npz * nhn * midEp / (mbG * A)
 
        emitni  = midCons * midFep 
       absorni  = midCons * FEXP( (chem_n + dmnp - chem_p - qpri) /TMeV ) &
@@ -126,7 +130,7 @@ CONTAINS
      jnucleon = therm1 * rop * midE * midFe
      absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
        emitnp = jnucleon
-
+  
     totalECapEm = ( emitni + absorni ) + ( emitnp + absornp )
 
     RETURN
@@ -250,7 +254,6 @@ CONTAINS
 !-----------------------------------------------------------------------
 !  nn, np
 !-----------------------------------------------------------------------
-
   
   mpG   = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
   mnG   = mn * ergmev * cvel_inv * cvel_inv ! neutron mass [g]

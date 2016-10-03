@@ -129,7 +129,7 @@ PRINT*, "Allocating OpacityTable"
    OpacityTable % scatt_Iso % Species = &
                                 (/'Electron Neutrino           '/)
    OpacityTable % scatt_Iso % Units = &
-                                (/'MeV * cm^3 * s^-1           '/)
+                                (/'Per Centimeter              '/)
 
    OpacityTable % scatt_Iso % Offset = 1.0d-1
 !-----------------------------   
@@ -218,9 +218,8 @@ PRINT*, "Making Energy Grid"
               energy = OpacityTable % EnergyGrid % Values(i_e)
 
               OpacityTable % thermEmAb % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
-               = totalECapEm(energy, rho, T, Z, A,&
-                      chem_e, chem_n, chem_p, &
-                      xheavy, xn, xp )
+                     = totalECapEm(energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
+                       xheavy, xn, xp )
            END DO  !i_e
            
            bb = (chem_e + chem_p - chem_n)/(T*kMev)
