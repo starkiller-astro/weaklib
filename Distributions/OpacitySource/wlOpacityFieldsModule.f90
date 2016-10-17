@@ -22,13 +22,13 @@ MODULE wlOpacityFieldsModule
 !
 !---------------------------------------------
 
-  TYPE :: MeanValueTypeA
+  TYPE :: ValueType_3D
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Values
-  END type MeanValueTypeA
+  END type ValueType_3D
 
-  TYPE :: ValueTypeA
+  TYPE :: ValueType_4D
     REAL(dp), DIMENSION(:,:,:,:), ALLOCATABLE :: Values
-  END type ValueTypeA
+  END type ValueType_4D
 
   TYPE, PUBLIC :: OpacityTypeA
     INTEGER :: nOpacities
@@ -37,11 +37,11 @@ MODULE wlOpacityFieldsModule
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyOpacity_Number_FD
-    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyOpacity_Energy_FD
-    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyMoment_Number_FD
-    TYPE(MeanValueTypeA), DIMENSION(:), ALLOCATABLE :: GreyMoment_Energy_FD
-    TYPE(ValueTypeA),     DIMENSION(:), ALLOCATABLE :: Absorptivity
+    TYPE(ValueType_3D),   DIMENSION(:), ALLOCATABLE :: GreyOpacity_Number_FD
+    TYPE(ValueType_3D),   DIMENSION(:), ALLOCATABLE :: GreyOpacity_Energy_FD
+    TYPE(ValueType_3D),   DIMENSION(:), ALLOCATABLE :: GreyMoment_Number_FD
+    TYPE(ValueType_3D),   DIMENSION(:), ALLOCATABLE :: GreyMoment_Energy_FD
+    TYPE(ValueType_4D),   DIMENSION(:), ALLOCATABLE :: Absorptivity
   END TYPE
 
 !---------------------------------------------
@@ -56,19 +56,23 @@ MODULE wlOpacityFieldsModule
 !
 !---------------------------------------------  
 
-  TYPE :: ValueTypeB
+  TYPE :: ValueType_5D
     REAL(dp), DIMENSION(:,:,:,:,:), ALLOCATABLE :: Values
-  END type ValueTypeB
+  END type ValueType_5D
 
   TYPE, PUBLIC :: OpacityTypeB
     INTEGER :: nOpacities
     INTEGER :: nMoments
     INTEGER, DIMENSION(4) :: nPoints
     REAL(dp)              :: Offset
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(ValueTypeB),  DIMENSION(:), ALLOCATABLE :: Kernel
+    CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Names
+    CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Species
+    CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Units
+    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyOpacity_Number_FD
+    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyOpacity_Energy_FD
+    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyMoment_Number_FD
+    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyMoment_Energy_FD
+    TYPE(ValueType_5D),  DIMENSION(:), ALLOCATABLE :: Kernel
   END TYPE
 
 !---------------------------------------------
@@ -78,9 +82,9 @@ MODULE wlOpacityFieldsModule
 !
 !---------------------------------------------
 
-  TYPE :: ValueTypeC
+  TYPE :: ValueType_6D
     REAL(dp), DIMENSION(:,:,:,:,:,:), ALLOCATABLE :: Values
-  END type ValueTypeC
+  END type ValueType_6D
 
   TYPE, PUBLIC :: OpacityTypeC
     INTEGER :: nOpacities
@@ -89,7 +93,7 @@ MODULE wlOpacityFieldsModule
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(ValueTypeC),  DIMENSION(:), ALLOCATABLE :: Kernel
+    TYPE(ValueType_6D),  DIMENSION(:), ALLOCATABLE :: Kernel
   END TYPE
 
   PUBLIC :: AllocateOpacity
@@ -288,12 +292,30 @@ CONTAINS
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Species(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
+    ALLOCATE( Opacity % GreyOpacity_Number_FD(nOpacities) )
+    ALLOCATE( Opacity % GreyOpacity_Energy_FD(nOpacities) )
+    ALLOCATE( Opacity % GreyMoment_Number_FD(nOpacities) )
+    ALLOCATE( Opacity % GreyMoment_Energy_FD(nOpacities) )
     ALLOCATE( Opacity % Kernel(nOpacities) )
 
     DO i = 1, nOpacities
+
+      ALLOCATE( Opacity % GreyOpacity_Number_FD(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
+
+      ALLOCATE( Opacity % GreyOpacity_Energy_FD(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
+
+      ALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
+
+      ALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values &
+                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
+
       ALLOCATE( Opacity % Kernel(i) % Values &
-                  (nPoints(1), nPoints(2), nPoints(3), nPoints(4), &
-                   nMoments) )
+                  ( nPoints(1), nPoints(2), nPoints(3), nPoints(4), &
+                    nMoments) )
+
     END DO
 
   END SUBROUTINE AllocateOpacityTypeB
@@ -306,9 +328,17 @@ CONTAINS
     INTEGER :: i
 
     DO i = 1, Opacity % nOpacities
+      DEALLOCATE( Opacity % GreyOpacity_Number_FD(i) % Values )
+      DEALLOCATE( Opacity % GreyOpacity_Energy_FD(i) % Values )
+      DEALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values )
+      DEALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values )
       DEALLOCATE( Opacity % Kernel(i) % Values )
     END DO
 
+    DEALLOCATE( Opacity % GreyOpacity_Number_FD )
+    DEALLOCATE( Opacity % GreyOpacity_Energy_FD )
+    DEALLOCATE( Opacity % GreyMoment_Number_FD )
+    DEALLOCATE( Opacity % GreyMoment_Energy_FD )
     DEALLOCATE( Opacity % Kernel )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Species )
@@ -336,6 +366,8 @@ CONTAINS
       ' ', 'DOFs       = ', &
       Opacity % nOpacities * Opacity % nMoments &
         * PRODUCT( Opacity % nPoints )
+    WRITE(*,'(A6,A13,ES11.4E3)') &
+      ' ', 'Offset     = ', Opacity % Offset
 
     DO i = 1, Opacity % nOpacities
       WRITE(*,*)
@@ -345,10 +377,54 @@ CONTAINS
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES10.4E2)') &
+      WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
-      WRITE(*,'(A8,A12,ES10.4E2)') &
+      WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
+      WRITE(*,*)
+      WRITE(*,'(A8,A22,I3.3,A3,A)') &
+        ' ', 'GreyOpacity_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,4I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyOpacity_Number_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyOpacity_Number_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyOpacity_Number_FD(i) % Values ) 
+      WRITE(*,*)
+      WRITE(*,'(A8,A22,I3.3,A3,A)') &
+        ' ', 'GreyOpacity_Energy_FD(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,4I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyOpacity_Energy_FD(i)% Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyOpacity_Energy_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyOpacity_Energy_FD(i) % Values )
+      WRITE(*,*)
+      WRITE(*,'(A8,A21,I3.3,A3,A)') &
+        ' ', 'GreyMoment_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,4I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Number_FD(i)% Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Number_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Number_FD(i) % Values )
+      WRITE(*,*)
+      WRITE(*,'(A8,A21,I3.3,A3,A)') &
+        ' ', 'GreyMoment_Energy_FD(',i,'): ', TRIM( Opacity % Names(i) )
+      WRITE(*,'(A8,A12,A)') &
+        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+      WRITE(*,'(A8,A12,4I5.4)') &
+        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Energy_FD(i)% Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
     END DO
     WRITE(*,*)
 
@@ -431,9 +507,9 @@ CONTAINS
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES10.4E2)') &
+      WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
-      WRITE(*,'(A8,A12,ES10.4E2)') &
+      WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
     END DO
     WRITE(*,*)
