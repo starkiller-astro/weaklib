@@ -33,13 +33,14 @@ PROGRAM wlEScatteringKernelTest
                                          database
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
-  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h,l
+  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h,l,a1,a2,a3,a4
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, datasize
   REAL(dp)                            :: Offset_Em, Offset_ES
   REAL(dp)                            :: fourPi= 4.0*3.1415926
 !-------- output variables ------------------------
-  REAL(dp), DIMENSION(:), ALLOCATABLE   :: Inte_O, Inte_R0, Inte_R1
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_O, Inte_R0, Inte_R1,&
+                                         GONa, GONb, GOEa, GOEb
 
 !----------------------------------------
 !   interpolated energy 
@@ -47,8 +48,8 @@ PROGRAM wlEScatteringKernelTest
  
   Format1 = "(5A12)"
   Format2 = "(5ES12.3)"
-  Format3 = "(9A16)"
-  Format4 = "(9ES16.8)"
+  Format3 = "(13A16)"
+  Format4 = "(13ES16.8)"
 
   OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
   datasize = 213
@@ -81,6 +82,10 @@ PROGRAM wlEScatteringKernelTest
   ALLOCATE( Inte_O( Inte_nPointE ) )
   ALLOCATE( Inte_R0( Inte_nPointE ) )
   ALLOCATE( Inte_R1( Inte_nPointE ) )
+  ALLOCATE( GONa( Inte_nPointE ) )
+  ALLOCATE( GONb( Inte_nPointE ) )
+  ALLOCATE( GOEa( Inte_nPointE ) )
+  ALLOCATE( GOEb( Inte_nPointE ) )
 
   READ( 1, Format1 ) a,b,c,d,e
   READ( 1, Format2 ) database
@@ -113,13 +118,21 @@ PROGRAM wlEScatteringKernelTest
   g = ('    R0    ')
   h = ('    R1    ')  
   l = ('  ratio   ')
+  a1= ('GON typeA ')
+  a2= ('GON typeB ')
+  a3= ('GOE typeA ')
+  a4= ('GOE typeB ')
 
   OPEN( 10, FILE = "ESOutput100ms_5quad.d", FORM = "formatted", ACTION = 'write')
-  WRITE(10, Format3) a,b,c,d,e,f,g,h,l
+  WRITE(10, Format3) a,b,c,d,e,f,g,h,l,a1,a2,a3,a4
 
   ASSOCIATE( Table1 => OpacityTable % thermEmAb % Absorptivity(1) % Values,&
+             Table4 => OpacityTable % thermEmAb % GreyOpacity_Number_FD(1)% Values,&
+             Table5 => OpacityTable % thermEmAb % GreyOpacity_Energy_FD(1)% Values,&
              Table2 => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,1),&
              Table3 => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,2),&
+             Table6 => OpacityTable % scatt_Iso % GreyOpacity_Number_FD(1)% Values(:,:,:,1),&
+             Table7 => OpacityTable % scatt_Iso % GreyOpacity_Energy_FD(1)% Values(:,:,:,1),&
              Energy => Inte_E % Values )
 
   DO i = 1, datasize
@@ -137,12 +150,40 @@ PROGRAM wlEScatteringKernelTest
              LogInterp, Offset_Em, Table1, Inte_O )
 
     CALL LogInterpolateSingleVariable &
+           ( buffer1, buffer2, buffer3, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset_Em, Table4, GONa )
+
+    CALL LogInterpolateSingleVariable &
+           ( buffer1, buffer2, buffer3, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset_Em, Table5, GOEa )
+
+    CALL LogInterpolateSingleVariable &
            ( Energy, buffer1, buffer2, buffer3, &
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(1) % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
              LogInterp, Offset_ES, Table2, Inte_R0 )
+
+    CALL LogInterpolateSingleVariable &
+           ( buffer1, buffer2, buffer3, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset_ES, Table6, GONb )
+
+    CALL LogInterpolateSingleVariable &
+           ( buffer1, buffer2, buffer3, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset_ES, Table7, GOEb )
 
     CALL LogInterpolateSingleVariable &
            ( Energy, buffer1, buffer2, buffer3, &
@@ -155,7 +196,8 @@ PROGRAM wlEScatteringKernelTest
     DO ii = 1, Inte_nPointE
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
                          Inte_E % Values(ii), Inte_O(ii), Inte_R0(ii),&
-                         Inte_R1(ii), Inte_R0(ii)*fourPi/Inte_O(ii)
+                         Inte_R1(ii), Inte_R0(ii)*fourPi/Inte_O(ii),&
+                         GONa(ii), GONb(ii), GOEa(ii), GOEb(ii)
     END DO ! ii
 
   END DO ! i
