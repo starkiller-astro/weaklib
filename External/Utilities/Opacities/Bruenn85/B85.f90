@@ -101,8 +101,8 @@ CONTAINS
        emitni  = 0.0_dp
       absorni  = 0.0_dp
     ELSE
-       midEp   = (energy+qpri)**2 * SQRT( 
-                  & MAX( 1.0_dp - ( me / (energy+qpri) )**2, 0.0_dp ) )     
+       midEp   = (energy+qpri)**2 * SQRT( & 
+                    MAX( 1.0_dp - ( me / (energy+qpri) )**2, 0.0_dp ) )     
       midFexpp = FEXP( (energy+qpri-chem_e) / TMeV )
        midFep  = 1.0_dp / ( midFexpp + 1.0_dp )
       midCons  = therm2 * rho * xheavy * npz * nhn * midEp / (mbG * A)

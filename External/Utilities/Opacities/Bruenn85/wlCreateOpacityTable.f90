@@ -89,8 +89,10 @@ implicit none
    REAL(dp)                :: energy, rho, T, ye, Z, A, chem_e, chem_n, &
                               chem_p, xheavy, xn, xp, bb, &
                               bufferquad1, bufferquad2, bufferquad3,&
-                              bufferquad4
+                              bufferquad4, bufferquad21, bufferquad22, &
+                              bufferquad23, bufferquad24
    INTEGER, PARAMETER      :: nquad = 5
+!   INTEGER, PARAMETER      :: nquad = 20
 
 PRINT*, "Allocating OpacityTable"   
 
@@ -210,7 +212,9 @@ PRINT*, "Making Energy Grid"
 
                  A   = 10**OpacityTable % EOSTable % DV % Variables (12) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
-                       DV % Offsets(12) - epsilon   !12 =Heavy Mass Number 
+                       DV % Offsets(12) - epsilon   !12 =Heavy Mass Number
+ 
+                 bb  = (chem_e + chem_p - chem_n)/(T*kMev)
          
          Do i_r = 1, nOpacA
            DO i_e = 1, OpacityTable % nPointsE
@@ -222,7 +226,6 @@ PRINT*, "Making Energy Grid"
                        xheavy, xn, xp )
            END DO  !i_e
            
-           bb = (chem_e + chem_p - chem_n)/(T*kMev)
 
            CALL GreyMomentWithGaussianQuadrature&
                            ( nquad, bb, &
@@ -264,16 +267,43 @@ PRINT*, "Making Energy Grid"
 !-----------------  Scatt_Iso -----------------------
          DO i_rb = 1, nOpacB
            DO t_m = 1, nMomB
+
              DO i_e = 1, OpacityTable % nPointsE
  
                energy = OpacityTable % EnergyGrid % Values(i_e)
+
+               CALL GreyOpacityWithGaussianQuadrature_scattIso&
+                            ( nquad, bb, &
+                             rho, T, xheavy, A, Z, xn, xp, t_m-1, &
+                             bufferquad23,"GreyOpacity_Number ", .FALSE. )
+
+               CALL GreyOpacityWithGaussianQuadrature_scattIso&
+                           ( nquad, bb, &
+                             rho, T, xheavy, A, Z, xn, xp, t_m-1, &
+                             bufferquad24,"GreyOpacity_Energy ", .FALSE. )
  
                OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
                           ( i_e, j_rho, k_t, l_ye, t_m ) &
                 = totalElasticScatteringKernel&
                   ( energy, rho, T, xheavy, A, Z, xn, xp, t_m-1 )
- 
              END DO  !i_e
+
+             OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_r) % &
+                            Values ( j_rho, k_t, l_ye, t_m)  &
+                = bufferquad21 * (T*kMeV)**3
+         
+             OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_r) % &
+                            Values ( j_rho, k_t, l_ye, t_m)  &
+                = bufferquad22 * (T*kMeV)**3
+   
+             OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_r) % &
+                            Values ( j_rho, k_t, l_ye, t_m)  &
+                = bufferquad23 * (T*kMeV)**3
+
+             OpacityTable % scatt_Iso % GreyOpacity_Energy_FD(i_r) % &
+                             Values ( j_rho, k_t, l_ye, t_m)  &
+                = bufferquad24 * (T*kMeV)**3
+
            END DO !t_m 
          END DO !i_rb
 
@@ -314,6 +344,22 @@ PRINT*, "Making Energy Grid"
 
     OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
     = LOG10 ( OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
+              + OpacityTable % scatt_Iso % Offset )
+
+    OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
+    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
+              + OpacityTable % scatt_Iso % Offset )
+
+    OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
+    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
+              + OpacityTable % scatt_Iso % Offset )
+
+    OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
+    = LOG10 ( OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
+              + OpacityTable % scatt_Iso % Offset )
+
+    OpacityTable % scatt_Iso % GreyOpacity_Energy_FD(i_rb) % Values &
+    = LOG10 ( OpacityTable % scatt_Iso % GreyOpacity_Energy_FD(i_rb) % Values &
               + OpacityTable % scatt_Iso % Offset )
 
   END DO !i_rb
