@@ -29,6 +29,12 @@ wlOpacityPerformanceTest: \
 	$(weaklib) wlOpacityPerformanceTest.o \
 	$(LIBRARIES)
 
+wlEScatteringKernelTest: \
+	$(weaklib) wlEScatteringKernelTest.o
+	$(FLINKER) $(FLAGS) -o wlEScatteringKernelTest_$(MACHINE) \
+	$(weaklib) wlEScatteringKernelTest.o \
+	$(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld
 

@@ -33,11 +33,11 @@ PROGRAM wlEScatteringKernelTest
                                          database
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
-  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h
+  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h,l
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, datasize
   REAL(dp)                            :: Offset_Em, Offset_ES
-
+  REAL(dp)                            :: fourPi= 4.0*3.1415926
 !-------- output variables ------------------------
   REAL(dp), DIMENSION(:), ALLOCATABLE   :: Inte_O, Inte_R0, Inte_R1
 
@@ -47,8 +47,8 @@ PROGRAM wlEScatteringKernelTest
  
   Format1 = "(5A12)"
   Format2 = "(5ES12.3)"
-  Format3 = "(8A16)"
-  Format4 = "(8ES16.8)"
+  Format3 = "(9A16)"
+  Format4 = "(9ES16.8)"
 
   OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
   datasize = 213
@@ -112,9 +112,10 @@ PROGRAM wlEScatteringKernelTest
   f = ('  Opacity ')
   g = ('    R0    ')
   h = ('    R1    ')  
+  l = ('  ratio   ')
 
   OPEN( 10, FILE = "ESOutput100ms_5quad.d", FORM = "formatted", ACTION = 'write')
-  WRITE(10, Format3) a,b,c,d,e,f,g,h
+  WRITE(10, Format3) a,b,c,d,e,f,g,h,l
 
   ASSOCIATE( Table1 => OpacityTable % thermEmAb % Absorptivity(1) % Values,&
              Table2 => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,1),&
@@ -154,7 +155,7 @@ PROGRAM wlEScatteringKernelTest
     DO ii = 1, Inte_nPointE
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
                          Inte_E % Values(ii), Inte_O(ii), Inte_R0(ii),&
-                         Inte_R1(ii)
+                         Inte_R1(ii), Inte_R0(ii)*fourPi/Inte_O(ii)
     END DO ! ii
 
   END DO ! i
