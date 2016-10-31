@@ -20,7 +20,7 @@ PROGRAM wlEScatteringKernelTest
   IMPLICIT NONE
 
 !--------- parameters for creating energy grid 
-  INTEGER, PARAMETER     :: Inte_nPointE = 5
+  INTEGER, PARAMETER     :: Inte_nPointE =2! 5
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(EnergyGridType)   :: Inte_E
@@ -31,7 +31,7 @@ PROGRAM wlEScatteringKernelTest
 !-------- variables for reading parameters data
   REAL(dp), DIMENSION(:), ALLOCATABLE :: r, Inte_rho, Inte_T, Inte_Ye,&
                                          database
-  REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
+  REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3, buffer_r
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h,l,a1,a2,a3,a4
   INTEGER, DIMENSION(4)               :: LogInterp
@@ -194,9 +194,18 @@ PROGRAM wlEScatteringKernelTest
              LogInterp, Offset_ES, Table3, Inte_R1 )
 
     DO ii = 1, Inte_nPointE
+
+      IF ( Inte_R0(ii)*fourPi == Inte_O(ii) ) THEN
+        buffer_r = 1.0
+      ELSE IF( Inte_R0(ii)*fourPi .gt. Inte_O(ii)*10.0**50  ) THEN
+        buffer_r = 10.0**(-50)
+      ELSE 
+        buffer_r = Inte_R0(ii)*fourPi/Inte_O(ii)
+      END IF
+
       WRITE(10, Format4) r(i), buffer1(ii), buffer2(ii), buffer3(ii), &
                          Inte_E % Values(ii), Inte_O(ii), Inte_R0(ii),&
-                         Inte_R1(ii), Inte_R0(ii)*fourPi/Inte_O(ii),&
+                         Inte_R1(ii), buffer_r,&
                          GONa(ii), GONb(ii), GOEa(ii), GOEb(ii)
     END DO ! ii
 
