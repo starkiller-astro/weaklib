@@ -86,9 +86,9 @@ PROGRAM wlInterpolation
   CLOSE( 1, STATUS = 'keep')  
 
   DO i = 1, datasize  
-    Inte_rho(i) = database(i*3-3)
-    Inte_T(i) = database(i*3-2)
-    Inte_Ye(i) = database(i*3-1)
+    Inte_rho(i) = database(i*3-2)
+    Inte_T(i) = database(i*3-1)
+    Inte_Ye(i) = database(i*3)
   END DO 
 
   LogInterp(2:4) = (/1, 1, 0/)     ! rho and T is LogGrid, Ye is linear
