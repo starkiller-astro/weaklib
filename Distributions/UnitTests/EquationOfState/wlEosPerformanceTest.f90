@@ -45,6 +45,10 @@ INTEGER :: &
   CALL ReadEquationOfStateTableHDF( EosTab, "EquationOfStateTable.h5" )
   CALL FinalizeHDF( )
 
+  WRITE(*,*)
+  WRITE(*,'(A4,A10,I10.10)') '', 'nPoints = ', nPoints
+  WRITE(*,*)
+
   n_rndm = nPoints
 
   ! --- Initialize Density Points ---
@@ -133,7 +137,7 @@ INTEGER :: &
     MAXVAL( ABS( Interpolant1 - Interpolant2 ) / Interpolant1 ), &
     MINVAL( ABS( Interpolant1 - Interpolant2 ) / Interpolant1 )
 
-  ! --- All Vaeriables ---
+  ! --- All Variables ---
 
   CALL CPU_TIME( tBegin )
 
@@ -147,12 +151,26 @@ INTEGER :: &
     '', 'LogInterpolateAllVariables_3D: ', tEnd - tBegin
   WRITE(*,*)
 
+  ASSOCIATE &
+    ( iDtab => EosTab % TS % Indices % iRho, &
+      iTtab => EosTab % TS % Indices % iT,   &
+      iYtab => EosTab % TS % Indices % iYe )
+
+  ASSOCIATE &
+    ( Dtab => EosTab % TS % States(iDtab) % Values, &
+      Ttab => EosTab % TS % States(iTtab) % Values, &
+      Ytab => EosTab % TS % States(iYtab) % Values )
+
   CALL CPU_TIME( tBegin )
 
   CALL LogInterpolateAllVariables &
-         ( D, T, Y, EosTab % TS, EosTab % DV, Interpolants2 )
+         ( D, T, Y, Dtab, Ttab, Ytab, EosTab % DV, Interpolants2 )
 
   CALL CPU_TIME( tEnd )
+
+  END ASSOCIATE ! Dtab, etc.
+
+  END ASSOCIATE ! iDtab, etc.
 
   WRITE(*,*)
   WRITE(*,'(A4,A40,ES10.4E2)') &

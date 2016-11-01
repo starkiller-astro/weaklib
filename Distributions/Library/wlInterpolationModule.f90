@@ -423,14 +423,6 @@ CONTAINS
                                   delta(2)  *           delta(1)  * p1111 ) ) &
         - Offset
 
-    IF ( ISNAN( Interpolant(i) ) ) THEN
-      WRITE(*,*) "The interpolarted value is ", Interpolant(i)
-      WRITE(*,*) "The position is ", il1, il2, il3, il4
-      WRITE(*,*) "The corner is ",p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
-                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
-     ! STOP
-    END IF
-
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_4D
@@ -589,10 +581,10 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateAllVariables_3D_Custom &
-               ( D, T, Y, TS, DV, Interpolants )
+               ( D, T, Y, Ds, Ts, Ys, DV, Interpolants )
 
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: D, T, Y
-    TYPE(ThermoStateType),        INTENT(in)  :: TS
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: D,  T,  Y
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Ds, Ts, Ys
     TYPE(DependentVariablesType), INTENT(in)  :: DV
     REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolants
 
@@ -612,16 +604,6 @@ CONTAINS
       WRITE(*,*)
       RETURN
     END IF
-
-    ASSOCIATE &
-      ( indexD => TS % Indices % iRho, &
-        indexT => TS % Indices % iT,   &
-        indexY => TS % Indices % iYe )
-
-    ASSOCIATE &
-      ( Ds => TS % States(indexD) % Values, &
-        Ts => TS % States(indexT) % Values, &
-        Ys => TS % States(indexY) % Values )
 
     DO iP = 1, SIZE( D )
 
@@ -659,10 +641,6 @@ CONTAINS
       END DO
 
     END DO
-
-    END ASSOCIATE ! Ds, etc.
-
-    END ASSOCIATE ! indexD, etc.
 
   END SUBROUTINE LogInterpolateAllVariables_3D_Custom
 

@@ -54,6 +54,14 @@ elif [[ $WEAKLIB_MACHINE == titan_cray ]]; then
   module load cray-hdf5
   module load subversion
 
+elif [[ $WEAKLIB_MACHINE == titan_pgi ]]; then
+
+  echo
+
+  module load PrgEnv-pgi
+  module load cray-hdf5
+  module load subversion
+
 elif [[ $WEAKLIB_MACHINE == darter_gnu ]]; then
 
   echo

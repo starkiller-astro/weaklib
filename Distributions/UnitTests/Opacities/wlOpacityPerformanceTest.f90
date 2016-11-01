@@ -146,6 +146,6 @@ PROGRAM wlOpacityPerformanceTest
 
   end associate
 
-  WRITE(*,*), MAXVAL( ABS( Interpolant1 - Interpolant2 ) )
+  WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant2 ) )
 
 END PROGRAM wlOpacityPerformanceTest
