@@ -25,6 +25,11 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom
   END INTERFACE LogInterpolateSingleVariable
 
+  INTERFACE LogInterpolateAllVariables
+    MODULE PROCEDURE LogInterpolateAllVariables_3D
+    MODULE PROCEDURE LogInterpolateAllVariables_3D_Custom
+  END INTERFACE LogInterpolateAllVariables
+
   INTERFACE LogInterpolateDifferentiateSingleVariable
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_3D
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_4D
@@ -248,13 +253,11 @@ CONTAINS
     REAL(dp), DIMENSION(:),     INTENT(out) :: Interpolant
 
     INTEGER  :: &
-      iP
-    INTEGER, DIMENSION(SIZE(D)) :: &
-      iD, iT, iY
+      iP, iD, iT, iY
     REAL(dp) :: &
+      dD, dT, dY, &
       p000, p100, p010, p110, &
-      p001, p101, p011, p111, &
-      dD, dT, dY
+      p001, p101, p011, p111
 
     IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
       WRITE(*,*)
@@ -268,26 +271,22 @@ CONTAINS
 
     DO iP = 1, SIZE( D )
 
-      iD(iP) = Index1D( D(iP), Ds, SIZE( Ds ) )
-      iT(iP) = Index1D( T(iP), Ts, SIZE( Ts ) )
-      iY(iP) = Index1D( Y(iP), Ys, SIZE( Ys ) )
+      iD = Index1D( D(iP), Ds, SIZE( Ds ) )
+      iT = Index1D( T(iP), Ts, SIZE( Ts ) )
+      iY = Index1D( Y(iP), Ys, SIZE( Ys ) )
 
-    END DO
+      dD = LOG10( D(iP) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+      dT = LOG10( T(iP) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+      dY = ( Y(iP) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
 
-    DO iP = 1, SIZE( D )
-
-      p000 = ( Table( iD(iP)  , iT(iP)  , iY(iP)   ) )
-      p100 = ( Table( iD(iP)+1, iT(iP)  , iY(iP)   ) )
-      p010 = ( Table( iD(iP)  , iT(iP)+1, iY(iP)   ) )
-      p110 = ( Table( iD(iP)+1, iT(iP)+1, iY(iP)   ) )
-      p001 = ( Table( iD(iP)  , iT(iP)  , iY(iP)+1 ) )
-      p101 = ( Table( iD(iP)+1, iT(iP)  , iY(iP)+1 ) )
-      p011 = ( Table( iD(iP)  , iT(iP)+1, iY(iP)+1 ) )
-      p111 = ( Table( iD(iP)+1, iT(iP)+1, iY(iP)+1 ) )
-
-      dD = LOG10( D(iP) / Ds(iD(iP)) ) / LOG10( Ds(iD(iP)+1) / Ds(iD(iP)) )
-      dT = LOG10( T(iP) / Ts(iT(iP)) ) / LOG10( Ts(iT(iP)+1) / Ts(iT(iP)) )
-      dY = ( Y(iP) - Ys(iY(iP)) ) / ( Ys(iY(iP)+1) - Ys(iY(iP)) )
+      p000 = ( Table( iD  , iT  , iY   ) )
+      p100 = ( Table( iD+1, iT  , iY   ) )
+      p010 = ( Table( iD  , iT+1, iY   ) )
+      p110 = ( Table( iD+1, iT+1, iY   ) )
+      p001 = ( Table( iD  , iT  , iY+1 ) )
+      p101 = ( Table( iD+1, iT  , iY+1 ) )
+      p011 = ( Table( iD  , iT+1, iY+1 ) )
+      p111 = ( Table( iD+1, iT+1, iY+1 ) )
 
       Interpolant(iP) &
         = 10.0d0**( &
@@ -504,7 +503,7 @@ CONTAINS
   END SUBROUTINE LogInterpolateSingleVariable_4D_Custom
 
 
-  SUBROUTINE LogInterpolateAllVariables &
+  SUBROUTINE LogInterpolateAllVariables_3D &
                ( x1, x2, x3, LogInterp, TS, DV, Interpolants )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
@@ -586,7 +585,86 @@ CONTAINS
       END DO
     END DO
 
-  END SUBROUTINE LogInterpolateAllVariables
+  END SUBROUTINE LogInterpolateAllVariables_3D
+
+
+  SUBROUTINE LogInterpolateAllVariables_3D_Custom &
+               ( D, T, Y, TS, DV, Interpolants )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: D, T, Y
+    TYPE(ThermoStateType),        INTENT(in)  :: TS
+    TYPE(DependentVariablesType), INTENT(in)  :: DV
+    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolants
+
+    INTEGER :: &
+      iP, iV, iD, iT, iY
+    REAL(dp) :: &
+      dD, dT, dY, &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111
+
+    IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') &
+        '', 'LogInterpolateAllVariables_3D_Custom'
+      WRITE(*,'(A4,A)') &
+        '', 'ERROR: arrays of interpolation points have different sizes'
+      WRITE(*,*)
+      RETURN
+    END IF
+
+    ASSOCIATE &
+      ( indexD => TS % Indices % iRho, &
+        indexT => TS % Indices % iT,   &
+        indexY => TS % Indices % iYe )
+
+    ASSOCIATE &
+      ( Ds => TS % States(indexD) % Values, &
+        Ts => TS % States(indexT) % Values, &
+        Ys => TS % States(indexY) % Values )
+
+    DO iP = 1, SIZE( D )
+
+      iD = Index1D( D(iP), Ds, SIZE( Ds ) )
+      iT = Index1D( T(iP), Ts, SIZE( Ts ) )
+      iY = Index1D( Y(iP), Ys, SIZE( Ys ) )
+
+      dD = LOG10( D(iP) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+      dT = LOG10( T(iP) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+      dY = ( Y(iP) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+      DO iV = 1, DV % nVariables
+
+        ASSOCIATE &
+          ( Table => DV % Variables(iV) % Values(:,:,:), &
+            OS    => DV % Offsets  (iV) )
+
+        p000 = Table( iD  , iT  , iY   )
+        p100 = Table( iD+1, iT  , iY   )
+        p010 = Table( iD  , iT+1, iY   )
+        p110 = Table( iD+1, iT+1, iY   )
+        p001 = Table( iD  , iT  , iY+1 )
+        p101 = Table( iD+1, iT  , iY+1 )
+        p011 = Table( iD  , iT+1, iY+1 )
+        p111 = Table( iD+1, iT+1, iY+1 )
+
+        Interpolants(iV, iP) &
+          = 10.0d0**( &
+              TriLinear &
+                ( p000, p100, p010, p110, &
+                  p001, p101, p011, p111, dD, dT, dY ) ) - OS
+
+        END ASSOCIATE ! Table, etc.
+
+      END DO
+
+    END DO
+
+    END ASSOCIATE ! Ds, etc.
+
+    END ASSOCIATE ! indexD, etc.
+
+  END SUBROUTINE LogInterpolateAllVariables_3D_Custom
 
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D &

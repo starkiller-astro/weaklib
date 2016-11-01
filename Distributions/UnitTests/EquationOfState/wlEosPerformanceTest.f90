@@ -10,18 +10,20 @@ PROGRAM wlEosPerformanceTest
   USE wlEOSIOModuleHDF, ONLY: &
     ReadEquationOfStateTableHDF
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable
+    LogInterpolateSingleVariable, &
+    LogInterpolateAllVariables
 
   IMPLICIT NONE
 
 INTEGER :: &
     n_rndm, &
-    iPoint
+    iPoint, iV
   INTEGER, DIMENSION(3) :: &
     LogInterp = [ 1, 1, 0 ]
   INTEGER, PARAMETER :: &
     iD = 1, iT = 2, iY = 3, &
-    nPoints = 2**20
+    nPoints = 2**16, &
+    nVariables = 15
   REAL(dp) :: &
     tBegin, &
     tEnd
@@ -32,6 +34,10 @@ INTEGER :: &
     rndm_Y, &
     Interpolant1, &
     Interpolant2
+  REAL(dp), DIMENSION(nPoints,nVariables) :: &
+    Interpolants1
+  REAL(dp), DIMENSION(nVariables,nPoints) :: &
+    Interpolants2
   TYPE(EquationOfStateTableType) :: &
     EosTab
 
@@ -80,6 +86,8 @@ INTEGER :: &
 
   end associate
 
+  ! --- Single Variable ---
+
   ASSOCIATE &
     ( iDtab => EosTab % TS % Indices % iRho, &
       iTtab => EosTab % TS % Indices % iT,   &
@@ -124,5 +132,40 @@ INTEGER :: &
   WRITE(*,*) &
     MAXVAL( ABS( Interpolant1 - Interpolant2 ) / Interpolant1 ), &
     MINVAL( ABS( Interpolant1 - Interpolant2 ) / Interpolant1 )
+
+  ! --- All Vaeriables ---
+
+  CALL CPU_TIME( tBegin )
+
+  CALL LogInterpolateAllVariables &
+         ( D, T, Y, LogInterp, EosTab % TS, EosTab % DV, Interpolants1 )
+
+  CALL CPU_TIME( tEnd )
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A40,ES10.4E2)') &
+    '', 'LogInterpolateAllVariables_3D: ', tEnd - tBegin
+  WRITE(*,*)
+
+  CALL CPU_TIME( tBegin )
+
+  CALL LogInterpolateAllVariables &
+         ( D, T, Y, EosTab % TS, EosTab % DV, Interpolants2 )
+
+  CALL CPU_TIME( tEnd )
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A40,ES10.4E2)') &
+    '', 'LogInterpolateAllVariables_3D_Custom: ', tEnd - tBegin
+  WRITE(*,*)
+
+  DO iV = 1, nVariables
+    WRITE(*,*) iV, &
+    MAXVAL( ABS( ( Interpolants1(:,iV) - Interpolants2(iV,:) ) &
+                 / Interpolants1(:,iV) ) ), &
+    MINVAL( ABS( ( Interpolants1(:,iV) - Interpolants2(iV,:) ) &
+                 / Interpolants1(:,iV) ) )
+  END DO
+  WRITE(*,*)
 
 END PROGRAM wlEosPerformanceTest
