@@ -54,7 +54,7 @@ CONTAINS
                             xheavy, xn, xp
 
     REAL(dp) :: TMeV, n, qpri, nhn, npz, etapn, jnucleon, jnuclear, midFe, &
-                            midE, chem_v, inversefeq, mpG, mnG, feq, fexp, &
+                            midE, chem_v, mpG, mnG, fexp, &
                             rop, ron, midFexpp, midFep, midEp, midCons
     REAL(dp) :: emitnp, absornp, emitni, absorni
 
@@ -63,9 +63,6 @@ CONTAINS
     qpri   = chem_n - chem_p + 3.0_dp + dmnp  ! [MeV] 3 = energy of the 1f5/2 level 
     chem_v = chem_e + chem_p - chem_n - dmnp  ! neutrino chemical potential
     
-    inversefeq   = ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp )   
-     feq   = MAX( 1.0_dp / ( EXP( (energy - chem_v) / TMeV ) + 1.0_dp ),&
-                  SQRT( TINY( 1.0_dp ) ) )   
    
      mpG   = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
      mnG   = mn * ergmev * cvel_inv * cvel_inv ! neutron mass [g]
@@ -111,6 +108,10 @@ CONTAINS
       absorni  = midCons * FEXP( (chem_n + dmnp - chem_p - qpri) /TMeV ) &
                * ( 1.0_dp - midFep) 
     END IF
+
+!    emitni = 0.0  !!!
+!    absorni = 0.0 !!! 
+
 !-----------------------------------------------------------------------------
 !   j_nucleon(emitnp) and chi_nucleon(absornp)
 !-----------------------------------------------------------------------------
@@ -131,7 +132,15 @@ CONTAINS
      absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
        emitnp = jnucleon
   
+!    emitnp = 0.0 !!!
+!    absornp = 0.0 !!!    
+
     totalECapEm = ( emitni + absorni ) + ( emitnp + absornp )
+
+    IF ( ISNAN(totalECapEm) ) THEN
+      WRITE(*,*) "totalECapEm is NAN! "
+      STOP
+    END IF
 
     RETURN
   END FUNCTION totalECapEm
@@ -157,7 +166,8 @@ CONTAINS
 !-----------------------------------------------------------------------   
 
     REAL(dp) :: ESNucleiKernel_0, ESNucleonKernel_0, &
-                ESNucleiKernel_1, ESNucleonKernel_1
+                ESNucleiKernel_1, ESNucleonKernel_1, &
+                tempC1, tempC2, tempD1, tempD2
 
         N     = A - Z
        Cv0    = half * ( cv_p + cv_n) 
@@ -169,22 +179,63 @@ CONTAINS
     nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
 
     nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
-                A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2 * &
-                EXP(- nucleiExp )
+                A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
+
+!    IF ( ISNAN(nucleiExp) .or. ISNAN(nucleiTP)  ) THEN
+!     WRITE(*,*) "ERROR AT B85.f90 MARK 1001 !"
+!     STOP
+!    END IF
 
     CALL etaxx( rho, T, xn, xp, etann, etapp )
 
-    nucleonTP = ( twpi * gf )**2 / h
-  
-    ESNucleiKernel_0  = (0.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**2 ) * &
-                        ( ( nucleiExp - 1.0_dp ) * SINH( nucleiExp ) &
-                          + nucleiExp            * COSH( nucleiExp ) )
+!    IF ( ISNAN(etann) .or. ISNAN(etapp)  ) THEN
+!     WRITE(*,*) "ERROR AT B85.f90 MARK 1002 !"
+!     STOP
+!    END IF
 
-    ESNucleiKernel_1  = (1.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**3 ) * &
-                        ( ( nucleiExp**2 - nucleiExp + 2.0_dp ) &
-                                                 * SINH( nucleiExp)  &
-                          + (nucleiExp - 2.0_dp ) * nucleiExp &
-                                                 * COSH( nucleiExp ) )
+    nucleonTP = ( twpi * gf )**2 / h
+ 
+    tempC1    = (0.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**2 ) *  EXP(- nucleiExp )
+
+    tempC2    = ( nucleiExp - 1.0_dp ) * SINH( nucleiExp ) &
+                  + nucleiExp          * COSH( nucleiExp ) 
+
+    tempD1    = (1.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**3 ) *  EXP(- nucleiExp )
+
+    tempD2    = ( nucleiExp**2 - nucleiExp + 2.0_dp ) &
+                                       * SINH( nucleiExp)  &
+                 + (nucleiExp - 2.0_dp ) * nucleiExp &
+                                       * COSH( nucleiExp )
+
+!    IF( LOG10(tempC2) == tempC2 ) THEN
+!      ESNucleiKernel_0  = tempC2  !Infinity
+!    ELSE
+      ESNucleiKernel_0  = tempC1 * tempC2
+!    END IF
+
+!    IF( LOG10(tempD2) == tempD2 ) THEN
+!      ESNucleiKernel_1  = tempD2  !Infinity
+!    ELSE
+      ESNucleiKernel_1  = tempD1 * tempD2
+!    END IF
+
+!    IF( (LOG10(tempD2) + LOG10(tempD1)) .gt. 100.0) THEN
+!      ESNucleiKernel_1  = 10.0**100
+!    ELSE
+!      ESNucleiKernel_1  = tempD1 * tempD2
+!    END IF
+
+    IF ( ISNAN(ESNucleiKernel_0) .or. ISNAN(ESNucleiKernel_1)  ) THEN
+     WRITE(*,*) "ERROR AT B85.f90 MARK 1003 !"
+     WRITE(*,*) "nucleiExp is ", nucleiExp
+     WRITE(*,*) "ESNucleiKernel_0 ", ESNucleiKernel_0
+     WRITE(*,*) "ESNucleiKernel_1 ", ESNucleiKernel_1
+     WRITE(*,*) "Expression 1 ", tempC2
+     WRITE(*,*) "Expression 1 par ", tempC1
+     WRITE(*,*) "Expression 2 ", tempD2
+     WRITE(*,*) "Expression 2 par ", tempD1
+     STOP
+    END IF
 
     ESNucleonKernel_0 = (0.5_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
@@ -193,6 +244,11 @@ CONTAINS
     ESNucleonKernel_1 = (1.5_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 - ca_n**2) + &
                           etapp * ( cv_p**2 - ca_p**2) )
+
+    IF ( ISNAN(ESNucleonKernel_0) .or. ISNAN(ESNucleonKernel_1)  ) THEN
+     WRITE(*,*) "ERROR AT B85.f90 MARK 1004 !"
+     STOP
+    END IF 
 
     IF ( l == 0 ) THEN
     
@@ -208,6 +264,14 @@ CONTAINS
 
      WRITE(*,*) "ERROR: Unable to provide Legendre Moment with &
                         l other than 0 and 1 "
+    END IF
+    
+    IF ( ISNAN(totalElasticScatteringKernel) ) THEN
+      WRITE(*,*) "totalElasticScatteringKernel is NAN! "
+      WRITE(*,*) "l is", l
+      WRITE(*,*) "ESNucleiKernel_0 + ESNucleonKernel_0 ", ESNucleiKernel_0+ESNucleonKernel_0 
+      WRITE(*,*) "ESNucleiKernel_1 + ESNucleonKernel_1 ", ESNucleiKernel_1+ESNucleonKernel_1 
+      STOP
     END IF
 
     RETURN
