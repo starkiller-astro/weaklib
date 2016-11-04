@@ -15,6 +15,7 @@ MODULE wlInterpolationModule
   PUBLIC ComputeTempFromIntEnergy
   PUBLIC ComputeTempFromEntropy
   PUBLIC EOSTableQuery
+  !PUBLIC InterpolateEOS
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -158,7 +159,7 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_3D &
                ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, &
-                 LogInterp, Offset, Table, Interpolant )
+                 LogInterp, Offset, Table, Interpolant, MaskVar )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -168,7 +169,10 @@ CONTAINS
     REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
     INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-    REAL(dp), INTENT(in) :: Offset
+    REAL(dp), INTENT(in)                :: Offset
+    LOGICAL, DIMENSION(:), OPTIONAL, INTENT(in) :: MaskVar
+    LOGICAL, DIMENSION(:), ALLOCATABLE  :: work_mask
+    INTEGER                             :: Masksize
     REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant 
 
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
@@ -185,8 +189,19 @@ CONTAINS
     ! inputs are the same size (i.e. x1(1) = x(2) = x(3) etc.)
     !-------------------------------
 
+    Masksize = SIZE( x2 )
+    ALLOCATE( work_mask( Masksize ) )
+
+    IF ( PRESENT(MaskVar) ) THEN
+      work_mask = MaskVar
+    ELSE
+      work_mask = .true.
+    END IF
+
     DO i = 1, SIZE( x2 )
- 
+      
+      IF ( .not.work_mask(i) ) CYCLE
+
       CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(i), il1 )
       CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
       CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(i), il3 )
@@ -496,7 +511,7 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateAllVariables_3D &
-               ( x1, x2, x3, LogInterp, TS, DV, Interpolants )
+               ( x1, x2, x3, LogInterp, TS, DV, Interpolants, MaskVar )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -504,16 +519,30 @@ CONTAINS
     INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     TYPE(ThermoStateType), INTENT(in) :: TS
     TYPE(DependentVariablesType), INTENT(in) :: DV
+    LOGICAL, DIMENSION(:), OPTIONAL, INTENT(in) :: MaskVar
 
     REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
 
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
     REAL(dp), DIMENSION(3) :: delta
     INTEGER :: i, j, il1, il2, il3
+    LOGICAL, DIMENSION(:), ALLOCATABLE  :: work_mask
+    INTEGER                             :: Masksize
   
     epsilon = 1.d-200
 
-    DO i = 1, SIZE(x2)
+    Masksize = SIZE( x2 )
+    ALLOCATE( work_mask( Masksize ) )
+
+    IF ( PRESENT(MaskVar) ) THEN
+      work_mask = MaskVar
+    ELSE
+      work_mask = .true.
+    END IF
+
+    DO i = 1, SIZE( x2 )
+
+      IF ( .not.work_mask(i) ) CYCLE
 
       ASSOCIATE( Coordinate1 => TS % States(1) % Values, &    
                  Coordinate2 => TS % States(2) % Values, &    
@@ -645,9 +674,9 @@ CONTAINS
   END SUBROUTINE LogInterpolateAllVariables_3D_Custom
 
 
-  SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D &
-               ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, &
-                 LogInterp, Offset, Table, Interpolant, Derivative )     
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D                    &
+               ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3,          &
+                 LogInterp, Offset, Table, Interpolant, Derivative, MaskVar)     
 
     REAL(dp), DIMENSION(:), INTENT(in)     :: x1
     REAL(dp), DIMENSION(:), INTENT(in)     :: x2
@@ -660,6 +689,9 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
     REAL(dp), DIMENSION(:), INTENT(out)    :: Interpolant
     REAL(dp), DIMENSION(:,:), INTENT(out)  :: Derivative 
+    LOGICAL, DIMENSION(:), OPTIONAL, INTENT(in) :: MaskVar
+    LOGICAL, DIMENSION(:), ALLOCATABLE  :: work_mask
+    INTEGER                             :: Masksize
     
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
     REAL(dp), DIMENSION(3) :: alpha, delta
@@ -667,7 +699,18 @@ CONTAINS
 
     epsilon = 1.d-200
 
+    Masksize = SIZE( x2 )
+    ALLOCATE( work_mask( Masksize ) )
+
+    IF ( PRESENT(MaskVar) ) THEN
+      work_mask = MaskVar
+    ELSE
+      work_mask = .true.
+    END IF
+
     DO i = 1, SIZE( x2 )
+
+      IF ( .not.work_mask(i) ) CYCLE
 
       CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(i), il1 )
       CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
@@ -1102,7 +1145,7 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateDifferentiateAllVariables &
-               ( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives )
+               ( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives, MaskVar )
 
     REAL(dp), DIMENSION(:), INTENT(in) :: x1
     REAL(dp), DIMENSION(:), INTENT(in) :: x2
@@ -1110,6 +1153,7 @@ CONTAINS
     INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
     TYPE(ThermoStateType), INTENT(in) :: TS
     TYPE(DependentVariablesType), INTENT(in) :: DV
+    LOGICAL, DIMENSION(:), OPTIONAL, INTENT(in) :: MaskVar
 
     REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
 
@@ -1117,10 +1161,23 @@ CONTAINS
     REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
     REAL(dp), DIMENSION(3) :: alpha, delta
     INTEGER :: i, j, il1, il2, il3
+    LOGICAL, DIMENSION(:), ALLOCATABLE  :: work_mask
+    INTEGER                             :: Masksize
 
     epsilon = 1.d-200
 
+    Masksize = SIZE( x2 )
+    ALLOCATE( work_mask( Masksize ) )
+
+    IF ( PRESENT(MaskVar) ) THEN
+      work_mask = MaskVar
+    ELSE
+      work_mask = .true.
+    END IF
+
     DO i = 1, SIZE(x2)
+
+      IF ( .not.work_mask(i) ) CYCLE
 
       ASSOCIATE( Coordinate1 => TS % States(1) % Values, &
                  Coordinate2 => TS % States(2) % Values, &
@@ -1548,5 +1605,41 @@ CONTAINS
     END DO
 
   END SUBROUTINE EOSTableQuery
+
+  !SUBROUTINE InterpolateSingleVariableEOS( rho, T, Ye, maskvar, interpolants )
+  !           ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, &
+  !               LogInterp, Offset, Table, Interpolant )
+!
+!    REAL(dp), DIMENSION(:), INTENT(in) :: x1
+!    REAL(dp), DIMENSION(:), INTENT(in) :: x2
+!    REAL(dp), DIMENSION(:), INTENT(in) :: x3
+!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
+!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
+!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
+!    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp
+!    REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
+!    REAL(dp), INTENT(in) :: Offset
+!    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant
+!
+!    REAL(dp), ALLOCATABLE, DIMENSION(:), INTENT(in) :: rho, T, Ye
+!    LOGICAL, ALLOCATABLE, DIMENSION(:), INTENT(in) :: maskvar
+!    LOGICAL, ALLOCATABLE, DIMENSION(:), INTENT(in) :: in_mask
+!
+!    maskvar(:) = ( nse_c(:) == 1 )
+!
+!    IF ( PRESENT(in_mask) ) THEN
+!      work_mask = in_mask
+!    ELSE
+!      work_mask = true
+!
+!    DO i = 1, SIZE(rho)
+
+!      IF ( .not. maskvar(i) ) CYCLE
+!
+!      interpolants(:,i) = ...
+
+!    END DO
+
+!  END SUBROUTINE InterpolateEOS
 
 END MODULE wlInterpolationModule
