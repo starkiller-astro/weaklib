@@ -15,7 +15,6 @@ MODULE wlInterpolationModule
   PUBLIC ComputeTempFromIntEnergy
   PUBLIC ComputeTempFromEntropy
   PUBLIC EOSTableQuery
-  !PUBLIC InterpolateEOS
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -1605,41 +1604,5 @@ CONTAINS
     END DO
 
   END SUBROUTINE EOSTableQuery
-
-  !SUBROUTINE InterpolateSingleVariableEOS( rho, T, Ye, maskvar, interpolants )
-  !           ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, &
-  !               LogInterp, Offset, Table, Interpolant )
-!
-!    REAL(dp), DIMENSION(:), INTENT(in) :: x1
-!    REAL(dp), DIMENSION(:), INTENT(in) :: x2
-!    REAL(dp), DIMENSION(:), INTENT(in) :: x3
-!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
-!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
-!    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-!    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp
-!    REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-!    REAL(dp), INTENT(in) :: Offset
-!    REAL(dp), DIMENSION(:), INTENT(out) :: Interpolant
-!
-!    REAL(dp), ALLOCATABLE, DIMENSION(:), INTENT(in) :: rho, T, Ye
-!    LOGICAL, ALLOCATABLE, DIMENSION(:), INTENT(in) :: maskvar
-!    LOGICAL, ALLOCATABLE, DIMENSION(:), INTENT(in) :: in_mask
-!
-!    maskvar(:) = ( nse_c(:) == 1 )
-!
-!    IF ( PRESENT(in_mask) ) THEN
-!      work_mask = in_mask
-!    ELSE
-!      work_mask = true
-!
-!    DO i = 1, SIZE(rho)
-
-!      IF ( .not. maskvar(i) ) CYCLE
-!
-!      interpolants(:,i) = ...
-
-!    END DO
-
-!  END SUBROUTINE InterpolateEOS
 
 END MODULE wlInterpolationModule
