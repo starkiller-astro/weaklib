@@ -4,8 +4,8 @@
 vpath %.f90 ../../../../Distributions/OpacitySource:../../../../Distributions/Library:../../../../Distributions/EOSSource:../../../SharedModules
 #========================= 
 # Build configurations using variables defined in System Makefile
-#CMODE = OPTIMIZE
-CMODE = DEBUG
+CMODE = OPTIMIZE
+#CMODE = DEBUG
 #CMODE = PROFILE
 
 FFLAGS   = $(R8)

@@ -252,7 +252,17 @@ CONTAINS
                                                            
       END IF
     END DO ! ii (nquad)
+   
+      IF ( l == 0 ) THEN
 
+        outcome = outcome * (4.0*pi)**2
+
+      ELSE IF ( l == 1 ) THEN
+
+        outcome = outcome * (2.0*pi) * (4.0*pi)
+
+      END IF
+    
   END DO ! jj 
 
   IF (debug) THEN
@@ -263,6 +273,10 @@ CONTAINS
    PRINT*, "and the outcome is", outcome
   END IF
 
+  IF ( ISNAN(outcome) )THEN
+   WRITE(*,*)"STOP for data error"
+   STOP
+  END IF
   END SUBROUTINE GreyOpacityWithGaussianQuadrature_scattIso
 
 !-------------------------------------------------------

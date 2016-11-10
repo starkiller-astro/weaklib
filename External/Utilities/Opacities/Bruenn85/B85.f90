@@ -109,9 +109,6 @@ CONTAINS
                * ( 1.0_dp - midFep) 
     END IF
 
-!    emitni = 0.0  !!!
-!    absorni = 0.0 !!! 
-
 !-----------------------------------------------------------------------------
 !   j_nucleon(emitnp) and chi_nucleon(absornp)
 !-----------------------------------------------------------------------------
@@ -131,9 +128,6 @@ CONTAINS
      jnucleon = therm1 * rop * midE * midFe
      absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
        emitnp = jnucleon
-  
-!    emitnp = 0.0 !!!
-!    absornp = 0.0 !!!    
 
     totalECapEm = ( emitni + absorni ) + ( emitnp + absornp )
 
@@ -167,7 +161,8 @@ CONTAINS
 
     REAL(dp) :: ESNucleiKernel_0, ESNucleonKernel_0, &
                 ESNucleiKernel_1, ESNucleonKernel_1, &
-                tempC1, tempC2, tempD1, tempD2
+                tempC0, TempC1
+    INTEGER  :: nquad = 20
 
         N     = A - Z
        Cv0    = half * ( cv_p + cv_n) 
@@ -181,61 +176,32 @@ CONTAINS
     nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
                 A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
 
-!    IF ( ISNAN(nucleiExp) .or. ISNAN(nucleiTP)  ) THEN
-!     WRITE(*,*) "ERROR AT B85.f90 MARK 1001 !"
-!     STOP
-!    END IF
-
-    CALL etaxx( rho, T, xn, xp, etann, etapp )
-
-!    IF ( ISNAN(etann) .or. ISNAN(etapp)  ) THEN
-!     WRITE(*,*) "ERROR AT B85.f90 MARK 1002 !"
-!     STOP
-!    END IF
-
     nucleonTP = ( twpi * gf )**2 / h
- 
-    tempC1    = (0.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**2 ) *  EXP(- nucleiExp )
 
-    tempC2    = ( nucleiExp - 1.0_dp ) * SINH( nucleiExp ) &
-                  + nucleiExp          * COSH( nucleiExp ) 
+!------------------------------
+!  scattering on nuclei
+!------------------------------
 
-    tempD1    = (1.5_dp) * nucleiTP * ( 2.0_dp / nucleiExp**3 ) *  EXP(- nucleiExp )
+    tempC0 = IntegralESNuclei( nucleiExp, 0, nquad )
+    tempC1 = IntegralESNuclei( nucleiExp, 1, nquad )
 
-    tempD2    = ( nucleiExp**2 - nucleiExp + 2.0_dp ) &
-                                       * SINH( nucleiExp)  &
-                 + (nucleiExp - 2.0_dp ) * nucleiExp &
-                                       * COSH( nucleiExp )
+    ESNucleiKernel_0 = nucleiTP * tempC0 / 2.0_dp
 
-!    IF( LOG10(tempC2) == tempC2 ) THEN
-!      ESNucleiKernel_0  = tempC2  !Infinity
-!    ELSE
-      ESNucleiKernel_0  = tempC1 * tempC2
-!    END IF
-
-!    IF( LOG10(tempD2) == tempD2 ) THEN
-!      ESNucleiKernel_1  = tempD2  !Infinity
-!    ELSE
-      ESNucleiKernel_1  = tempD1 * tempD2
-!    END IF
-
-!    IF( (LOG10(tempD2) + LOG10(tempD1)) .gt. 100.0) THEN
-!      ESNucleiKernel_1  = 10.0**100
-!    ELSE
-!      ESNucleiKernel_1  = tempD1 * tempD2
-!    END IF
+    ESNucleiKernel_1 = nucleiTP * tempC1 * 3.0_dp / 2.0_dp
 
     IF ( ISNAN(ESNucleiKernel_0) .or. ISNAN(ESNucleiKernel_1)  ) THEN
      WRITE(*,*) "ERROR AT B85.f90 MARK 1003 !"
      WRITE(*,*) "nucleiExp is ", nucleiExp
      WRITE(*,*) "ESNucleiKernel_0 ", ESNucleiKernel_0
      WRITE(*,*) "ESNucleiKernel_1 ", ESNucleiKernel_1
-     WRITE(*,*) "Expression 1 ", tempC2
-     WRITE(*,*) "Expression 1 par ", tempC1
-     WRITE(*,*) "Expression 2 ", tempD2
-     WRITE(*,*) "Expression 2 par ", tempD1
      STOP
     END IF
+
+!--------------------------------------
+!   Scattering on Nucleons
+!-------------------------------------
+
+    CALL etaxx( rho, T, xn, xp, etann, etapp )
 
     ESNucleonKernel_0 = (0.5_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
@@ -344,5 +310,41 @@ CONTAINS
   etapp        = np * etappdgnt/DSQRT( 1.d+00 + etappdgnt**2 )
 
   END SUBROUTINE etaxx
+
+
+  FUNCTION IntegralESNuclei( a, l, nquad )
+
+  REAL(dp), INTENT(in)       :: a
+  INTEGER,  INTENT(in)       :: l, nquad
+
+  REAL(dp), DIMENSION(nquad) :: roots, weights
+  REAL(dp)                   :: IntegralESNuclei, buffer, func
+  INTEGER                    :: ii
+
+  CALL gaquad( nquad, roots, weights, -1.0_dp , 1.0_dp )
+
+  buffer = 0.0
+
+  IF ( l == 0 ) THEN
+ 
+   DO ii = 1, nquad
+     func = ( 1.0 + roots(ii) )* EXP( a * ( roots(ii) - 1.0 ) )
+     buffer = buffer + weights(ii) * func 
+   END DO
+
+  ELSE IF ( l == 1 ) THEN
+
+   DO ii = 1, nquad
+     func = roots(ii) * ( roots(ii) + 1.0 ) * EXP ( a * ( roots(ii) - 1.0 ) )
+     buffer = buffer + weights(ii) * func
+   END DO
+
+  ELSE 
+    WRITE(*,*) "ERROR when calling IntegralESNuclei function."
+  END IF
+
+  IntegralESNuclei = buffer
+
+  END FUNCTION IntegralESNuclei
 
 END MODULE B85
