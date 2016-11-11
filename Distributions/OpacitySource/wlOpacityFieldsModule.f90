@@ -70,8 +70,8 @@ MODULE wlOpacityFieldsModule
     CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Units
     TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyOpacity_Number_FD
     TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyOpacity_Energy_FD
-    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyMoment_Number_FD
-    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyMoment_Energy_FD
+!    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyMoment_Number_FD
+!    TYPE(ValueType_4D),  DIMENSION(:), ALLOCATABLE :: GreyMoment_Energy_FD
     TYPE(ValueType_5D),  DIMENSION(:), ALLOCATABLE :: Kernel
   END TYPE
 
@@ -294,8 +294,8 @@ CONTAINS
     ALLOCATE( Opacity % Units(nOpacities) )
     ALLOCATE( Opacity % GreyOpacity_Number_FD(nOpacities) )
     ALLOCATE( Opacity % GreyOpacity_Energy_FD(nOpacities) )
-    ALLOCATE( Opacity % GreyMoment_Number_FD(nOpacities) )
-    ALLOCATE( Opacity % GreyMoment_Energy_FD(nOpacities) )
+!    ALLOCATE( Opacity % GreyMoment_Number_FD(nOpacities) )
+!    ALLOCATE( Opacity % GreyMoment_Energy_FD(nOpacities) )
     ALLOCATE( Opacity % Kernel(nOpacities) )
 
     DO i = 1, nOpacities
@@ -306,11 +306,11 @@ CONTAINS
       ALLOCATE( Opacity % GreyOpacity_Energy_FD(i) % Values &
                   ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
 
-      ALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values &
-                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
+!      ALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values &
+!                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
 
-      ALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values &
-                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
+!      ALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values &
+!                  ( nPoints(2), nPoints(3), nPoints(4), nMoments ) )
 
       ALLOCATE( Opacity % Kernel(i) % Values &
                   ( nPoints(1), nPoints(2), nPoints(3), nPoints(4), &
@@ -330,15 +330,15 @@ CONTAINS
     DO i = 1, Opacity % nOpacities
       DEALLOCATE( Opacity % GreyOpacity_Number_FD(i) % Values )
       DEALLOCATE( Opacity % GreyOpacity_Energy_FD(i) % Values )
-      DEALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values )
-      DEALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values )
+!      DEALLOCATE( Opacity % GreyMoment_Number_FD(i) % Values )
+!      DEALLOCATE( Opacity % GreyMoment_Energy_FD(i) % Values )
       DEALLOCATE( Opacity % Kernel(i) % Values )
     END DO
 
     DEALLOCATE( Opacity % GreyOpacity_Number_FD )
     DEALLOCATE( Opacity % GreyOpacity_Energy_FD )
-    DEALLOCATE( Opacity % GreyMoment_Number_FD )
-    DEALLOCATE( Opacity % GreyMoment_Energy_FD )
+!    DEALLOCATE( Opacity % GreyMoment_Number_FD )
+!    DEALLOCATE( Opacity % GreyMoment_Energy_FD )
     DEALLOCATE( Opacity % Kernel )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Species )
@@ -404,27 +404,27 @@ CONTAINS
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % GreyOpacity_Energy_FD(i) % Values )
       WRITE(*,*)
-      WRITE(*,'(A8,A21,I3.3,A3,A)') &
-        ' ', 'GreyMoment_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
-      WRITE(*,'(A8,A12,4I5.4)') &
-        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Number_FD(i)% Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Number_FD(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Number_FD(i) % Values )
-      WRITE(*,*)
-      WRITE(*,'(A8,A21,I3.3,A3,A)') &
-        ' ', 'GreyMoment_Energy_FD(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
-      WRITE(*,'(A8,A12,4I5.4)') &
-        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Energy_FD(i)% Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
+!      WRITE(*,'(A8,A21,I3.3,A3,A)') &
+!        ' ', 'GreyMoment_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
+!      WRITE(*,'(A8,A12,A)') &
+!        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+!      WRITE(*,'(A8,A12,4I5.4)') &
+!        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Number_FD(i)% Values )
+!      WRITE(*,'(A8,A12,ES12.4E3)') &
+!        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Number_FD(i) % Values )
+!      WRITE(*,'(A8,A12,ES12.4E3)') &
+!        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Number_FD(i) % Values )
+!      WRITE(*,*)
+!      WRITE(*,'(A8,A21,I3.3,A3,A)') &
+!        ' ', 'GreyMoment_Energy_FD(',i,'): ', TRIM( Opacity % Names(i) )
+!      WRITE(*,'(A8,A12,A)') &
+!        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
+!      WRITE(*,'(A8,A12,4I5.4)') &
+!        ' ', 'Shape     = ', SHAPE( Opacity % GreyMoment_Energy_FD(i)% Values )
+!      WRITE(*,'(A8,A12,ES12.4E3)') &
+!        ' ', 'Min Value = ', MINVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
+!      WRITE(*,'(A8,A12,ES12.4E3)') &
+!        ' ', 'Max Value = ', MAXVAL( Opacity % GreyMoment_Energy_FD(i) % Values )
     END DO
     WRITE(*,*)
 

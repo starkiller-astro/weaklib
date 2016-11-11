@@ -244,6 +244,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T)                            :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
     INTEGER(HSIZE_T), DIMENSION(5)              :: datasize5d
     INTEGER                                     :: i
     INTEGER, DIMENSION(1)                       :: buffer
@@ -286,6 +287,24 @@ CONTAINS
       CALL Write5dHDF_double&
          ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values(:,:,:,:,:),&
                               subgroup_id, datasize5d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
+
+    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
+    datasize4d(4) = scatt_Iso % nMoments
+    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .true., group_id, subgroup_id )
+    DO i = 1, datasize1d
+    CALL Write4dHDF_double&
+         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Number_FD(i) % Values,&
+           subgroup_id, datasize4d )
+    END DO
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .true., group_id, subgroup_id )
+    DO i = 1, datasize1d
+    CALL Write4dHDF_double&
+         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Energy_FD(i) % Values,&
+           subgroup_id, datasize4d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
@@ -377,6 +396,9 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER, DIMENSION(1)                         :: buffer
     CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
+
+    WRITE(*,*) "           File in"
+    WRITE(*,*) " Reading ", FileName
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
@@ -515,6 +537,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
     INTEGER(HSIZE_T), DIMENSION(5)                   :: datasize5d
     INTEGER                                          :: i
     INTEGER, DIMENSION(1)                            :: buffer
@@ -547,6 +570,26 @@ CONTAINS
     CALL Read5dHDF_double&
          ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values,&
            subgroup_id, datasize5d )
+    END DO ! nOpacities
+    CALL CloseGroupHDF( subgroup_id )
+
+    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
+    datasize4d(4)   = scatt_Iso % nMoments
+    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .false., group_id, subgroup_id )
+    DO i = 1, scatt_Iso % nOpacities
+    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
+    CALL Read4dHDF_double&
+         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Energy_FD(i) % Values,&
+           subgroup_id, datasize4d )
+    END DO ! nOpacities
+    CALL CloseGroupHDF( subgroup_id )
+
+    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
+    DO i = 1, scatt_Iso % nOpacities
+    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
+    CALL Read4dHDF_double&
+         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Number_FD(i) % Values,&
+           subgroup_id, datasize4d )
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 

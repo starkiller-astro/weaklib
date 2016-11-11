@@ -117,10 +117,10 @@ CONTAINS
 
 !    CALL InitializeHDF( )
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'Reading EquationOfStateTable.h5 '
+    WRITE(*,'(A2,A)') ' ', 'Reading wl-EOS-LS220-20-40-100-Lower-T.h5 '
 
     CALL ReadEquationOfStateTableHDF &
-           ( OpTab % EOSTable, "EquationOfStateTable.h5" )
+           ( OpTab % EOSTable, "wl-EOS-LS220-20-40-100-Lower-T.h5" )
 !    CALL FinalizeHDF( )
 
     OpTab % nOpacitiesA = nOpacA
