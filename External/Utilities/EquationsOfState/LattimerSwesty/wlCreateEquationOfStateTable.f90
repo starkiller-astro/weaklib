@@ -43,11 +43,14 @@ PROGRAM wlCreateEquationOfStateTable
 !  READ( InputUnit, * ) Description, Resolution 
 
 !  nPoints = (/81,24,24/) ! Low Res
+  nPoints = (/65,55,13/) ! Low Res, 8pts/dec, 20pts/dec, 25pts/100  
 !  nPoints = (/151,47,49/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
 !  nPoints = (/161,93,25/) ! High Res in T only
-!  nPoints = (/161,47,49/) ! Standard D Res
-  nPoints = (/161,47,25/) ! Standard C Res
+!  nPoints = (/161,47,25/) ! Standard C Res
+!  nPoints = (/161,47,49/) ! Hi Res in Ye
+!  nPoints = (/161,108,49/) ! Standard D Res
+!  nPoints = (/1,93,3/) ! one line
 !  nPoints = (/321,47,25/) ! High Res in Rho
 !  nPoints = (/321,93,49/) ! High Res
   nVariables = 15
@@ -73,11 +76,9 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
-  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.7, 0.06d0/)
-  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+ EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.3, 0.06d0/)
+ EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
 
-!  EOSTable % TS % minValues(1:3) =  (/1.0d08, 10.d0**9.7, 0.06d0/)
-!  EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
 
 !------------------------------------------------------------------------------
 ! Generate rho, T, Ye grid from limits
@@ -175,45 +176,40 @@ PRINT*, "Begin Associate"
 
   count = 0
 
-
-  DO k = 1, EOSTable % nPoints(3) 
-    IF ( Ye(k) .gt. .505d0 ) THEN
-      kmax = k 
-      EXIT
-    END IF
-  END DO
+  EOSTable % DV % Repaired(:,:,:) = 0
 
   ALLOCATE( Ye_save( EOSTable % nPoints(3) ) ) 
 
-  DO k = 1, EOSTable % nPoints(3) 
-  Ye_save(k) = Ye(k)
+ ! DO k = 1, EOSTable % nPoints(3) 
+ ! Ye_save(k) = Ye(k)
   !DO k = 1, kmax
-    DO j = 1, EOSTable % nPoints(2)
+    !DO j = 1, EOSTable % nPoints(2)
       DO i = 1, EOSTable % nPoints(1) 
-!          Ye_tmp = Ye(k)
-          CALL wlGetFullEOS( Density(i), Temperature(j), Ye(k), EOSFlag, fail,      &
+       DO k = EOSTable % nPoints(3), 1, -1
+    DO j = EOSTable % nPoints(2), 1, -1
+  !Ye_save(k) = Ye(k)
+          Ye_tmp = Ye(k)
+          CALL wlGetFullEOS( Density(i), Temperature(j), Ye_tmp, EOSFlag, fail,      &
                        press(i,j,k), energ(i,j,k), entrop(i,j,k), chem_n(i,j,k),    &
                        chem_p(i,j,k), chem_e(i,j,k), xn_neut(i,j,k), xn_prot(i,j,k),&
                        xn_alpha(i,j,k), xn_heavy(i,j,k), a_heavy(i,j,k),            &
                        z_heavy(i,j,k), be_heavy(i,j,k), thermalenergy(i,j,k), gamma1(i,j,k), i, j, k )   
 
-          xn_alpha(i,j,k) = MAX( 1.0d0 - xn_neut(i,j,k) - xn_prot(i,j,k) &
-                              - xn_heavy(i,j,k) , 0.0d0 ) 
-
-          IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. xn_prot(i,j,k) < 0.   &
-               .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
-          count = count + 1
+          IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. press(i,j,k) < 0.   &
+            .or. xn_prot(i,j,k) < 0. .or. xn_alpha(i,j,k) < 0. .or. xn_heavy(i,j,k) < 0. &
+            .or. a_heavy(i,j,k) < 0. .or. z_heavy(i,j,k) < 0. &
+            .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
+            EOSTable % DV % Repaired(i,j,k) = -1
+            count = count + 1
           END IF
-          
-          WRITE(*,*) Density(i), Temperature(j), Ye(k)     
                
       END DO
     END DO
   END DO
 
-  DO k = kmax, EOSTable % nPoints(3) 
-    Ye(k) = Ye_save(k)
-  END DO
+  !DO k = kmax, EOSTable % nPoints(3) 
+  !  Ye(k) = Ye_save(k)
+  !END DO
 
 !DO k = kmax+1, EOSTable % nPoints(3) 
 !  DO j = 1, EOSTable % nPoints(2)
@@ -234,7 +230,7 @@ PRINT*, "Begin Associate"
 !      thermalenergy(i,j,k) = thermalenergy(i,j,kmax)
 !      gamma1(i,j,k) = gamma1(i,j,kmax)
 
-write(*,*) "Ye grid post",Ye
+!write(*,*) "Ye grid post",Ye
 WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3) 
 
   END ASSOCIATE

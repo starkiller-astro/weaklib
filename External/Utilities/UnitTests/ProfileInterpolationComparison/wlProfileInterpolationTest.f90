@@ -58,7 +58,10 @@ PROGRAM wlProfileInterpolationTest
   FileUnit = 50 
   OPEN( unit = FileUnit, FILE="Output0ms.d")
   OPEN( newunit = TestUnit1, FILE="InterpolateAllTest.d")
-  !OPEN( newunit = TestUnit2, FILE="NeutronChemPotTest.d")
+  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSHFx.d")
+  OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSFHo2.d")
+  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSTOS.d")
+  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestLS.d")
 
   LScompress = '220'
   LSFilePath = '../../../LS/Data'
@@ -66,7 +69,12 @@ PROGRAM wlProfileInterpolationTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "wl-EOS-LS220-20-40-100.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibLS.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibSFHx.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibSFHo2.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibSTOS.h5" )
 
   ALLOCATE( rho( NumPoints ), T( NumPoints ), Ye( NumPoints ),  &
             DirectCall( NumPoints, 15), press( NumPoints ), &
@@ -132,11 +140,17 @@ PROGRAM wlProfileInterpolationTest
                                   L1norm(13), L1norm(14), &
                                   L1norm(15)
       !WRITE (TestUnit2, '(3(es14.7,x))' ) rho(i), DirectCall(i,6), Interpolants(i,6) 
+      WRITE (TestUnit2, '(18(es14.7,x))' ) rho(i), T(i), Ye(i), &
+                                          Interpolants(i,1), Interpolants(i,2), Interpolants(i,3), & 
+                                          Interpolants(i,4), Interpolants(i,5), Interpolants(i,6), & 
+                                          Interpolants(i,7), Interpolants(i,8), Interpolants(i,9), & 
+                                          Interpolants(i,10), Interpolants(i,11), Interpolants(i,12), & 
+                                          Interpolants(i,13), Interpolants(i,14), Interpolants(i,15)
     END DO
 
 
   CLOSE(TestUnit1)
-  !CLOSE(TestUnit2)
+  CLOSE(TestUnit2)
   CLOSE(FileUnit)
 
   CALL DeAllocateEquationOfStateTable( EOSTable )

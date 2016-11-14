@@ -5,8 +5,15 @@ MODULE wlIOModuleCHIMERA
   USE wlThermoStateModule
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
-  USE wlInterpolationModule
+!  USE wlInterpolationModule
   USE wlExtNumericalModule, ONLY: epsilon, zero
+  USE wlExtPhysicalConstantsModule
+  USE e_p_eos_module
+  USE EL_EOS_MODULE
+  USE EOS_M4C_MODULE
+  USE MAXWEL_MODULE
+  USE EOS_BCK_MODULE
+  USE wlExtEOSWrapperModule, ONLY: wlGetElectronEOS
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
 
@@ -14,6 +21,7 @@ MODULE wlIOModuleCHIMERA
 
   PUBLIC ReadChimeraProfile1D 
   PUBLIC ReadCHIMERAHDF
+  PUBLIC ReadComposeTableHDF
 
 CONTAINS
 
@@ -23,38 +31,415 @@ CONTAINS
 
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER, DIMENSION(1)                         :: nPointsTemp
+    INTEGER, DIMENSION(1)                         :: TwoPoints
+    INTEGER, DIMENSION(1)                         :: AllPoints
+    INTEGER, DIMENSION(1)                         :: nThermo
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: nb
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: t
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: yq
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: thermo
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: yi
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: yav
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: aav
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: zav
+    !REAL(dp), DIMENSION(0:325)                    :: nb
+    !REAL(dp), DIMENSION(0:80)                     :: t
+    !REAL(dp), DIMENSION(0:59)                     :: yq
+    !REAL(dp), DIMENSION(0:14259239)               :: thermo !  nPoints(1) x 2 x 3 x # of thermo quantities, nThermo(1) 
+    !REAL(dp), DIMENSION(0:4753079)                :: yi     ! ! nPoints(1) x 2 x 3 x 3
+    !REAL(dp), DIMENSION(0:1584359)                :: yav ! nPoints(1) x 2 x 3
+    !REAL(dp), DIMENSION(0:1584359)                :: aav ! nPoints(1) x 2 x 3
+    !REAL(dp), DIMENSION(0:1584359)                :: zav ! nPoints(1) x 2 x 3
     INTEGER                                       :: nVariables
+    INTEGER                                       :: i, j, k, l
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
+    INTEGER :: hdferr
+    INTEGER(HID_T)                                :: dataset_id
+    REAL(dp)                                      :: chem_e      ! electron chemical potential [MeV]
+    REAL(dp)                                      :: press_e     ! electron/positron/photon pressure
+    REAL(dp)                                      :: entrop_e    ! electron/positron/photon entropy [kb/baryon]
+    REAL(dp)                                      :: energ_e     ! electron/positron/photon energy
+    REAL(dp)                                      :: press_buff     
+    REAL(dp)                                      :: entrop_buff   
+    REAL(dp)                                      :: energ_buff   
+    REAL(dp)                                      :: minvar
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
-    !First goal: just make sure we've read the npoints right 
-
-    !CALL OpenGroupHDF( "pointsnb", .false., file_id, group_id )
-    ! nVariables = pointsqty + 5 ? ( mass frax, then heavy Z and heavy A)
-    !CALL CloseGroupHDF( group_id )
-
-    ! read the dimensions of the independent variables, 
-    ! fill nPoints
+write(*,*) 'hdf5 table opened'
 
     datasize1d(1) = 1
-    CALL ReadHDF( "pointsnb", nPointsTemp(:), group_id, datasize1d )
+    CALL ReadHDF( "pointsnb", nPointsTemp(:), file_id, datasize1d )
+    nPoints(1) = nPointsTemp(1)
 
-    !CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+    datasize1d(1) = 1
+    CALL ReadHDF( "pointst", nPointsTemp(:), file_id, datasize1d )
+    nPoints(2) = nPointsTemp(1)
 
-    !CALL OpenGroupHDF( "nb", .false., file_id, group_id )
+    datasize1d(1) = 1
+    CALL ReadHDF( "pointsyq", nPointsTemp(:), file_id, datasize1d )
+    nPoints(3) = nPointsTemp(1)
 
-    ! read density points into allocate buffer; convert units, write to EOSTable  
+    CALL ReadHDF( "pointsqty", nThermo(:), file_id, datasize1d )
+    nVariables = nThermo(1) + 9 ! ( (3 or 4)? mass frax, then heavy Z and heavy A)
 
-    CALL CloseGroupHDF( group_id )
+write (*,*) 'nPoints', nPoints
+write (*,*) 'nVariables', nVariables
 
-    !CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+    TwoPoints(1) = nPoints(1) * nPoints(2)
+    AllPoints(1) = TwoPoints(1) * nPoints(3)
 
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+write (*,*) 'EOSTable allocated'
+
+    ALLOCATE( nb(0:(nPoints(1) - 1 ) ), t(0:(nPoints(2) - 1) ), yq( 0:(nPoints(3) - 1 ) ) )
+    ALLOCATE( thermo(0:(nThermo(1)*AllPoints(1) - 1)) )
+    ALLOCATE( yi(0:(3*AllPoints(1) - 1)), yav(0:(AllPoints(1) - 1)), aav(0:(AllPoints(1) - 1)), zav( 0:(AllPoints(1) - 1) ) )
+    
+write (*,*) 'Buffers Allocated'
+    datasize1d(1) = SIZE(nb)
+    CALL ReadHDF( "nb", nb(:), file_id, datasize1d )
+
+    datasize1d(1) = SIZE(t)
+    CALL ReadHDF( "t", t(:), file_id, datasize1d )
+
+    datasize1d(1) = SIZE(yq)
+    CALL ReadHDF( "yq", yq(:), file_id, datasize1d )
+
+write (*,*) 'Buffers read'
+
+    DO i = 0, nPoints(1) - 1
+      EOSTable % TS % States(1) % Values(i+1) = nb(i) / kfm
+    END DO
+write (*,*) 'rho', EOSTable % TS % States(1) % Values 
+
+    DO i = 0, nPoints(2) - 1
+      EOSTable % TS % States(2) % Values(i+1) = t(i) / kmev
+    END DO
+write (*,*) 'T'
+
+    DO i = 0, nPoints(3) - 1
+      EOSTable % TS % States(3) % Values(i+1) = yq(i) 
+    END DO
+write (*,*) 'ye'
+!-----------------------------------------------------------
+! Now that we've written the TS data, we need to fill in the
+! additional TS metadata, like names, min/max, etc. 
+!-----------------------------------------------------------
+
+    EOSTable % TS % Names(1:3) = (/'Density                         ',&
+                                   'Temperature                     ',&
+                                   'Electron Fraction               '/)
+
+    EOSTable % TS % Indices % iRho = 1
+    EOSTable % TS % Indices % iT   = 2
+    EOSTable % TS % Indices % iYe  = 3
+
+write(*,*), "Allocate Independent Variable Units "
+
+    EOSTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
+                                   'K                               ', &
+                                   '                                '/)
+
+    EOSTable % TS % minValues(1) = EOSTable % TS % States(1) % Values(1)
+    EOSTable % TS % minValues(2) = EOSTable % TS % States(2) % Values(1)
+    EOSTable % TS % minValues(3) = EOSTable % TS % States(3) % Values(1)
+    EOSTable % TS % maxValues(1) = EOSTable % TS % States(1) % Values(nPoints(1))
+    EOSTable % TS % maxValues(2) = EOSTable % TS % States(2) % Values(nPoints(2))
+    EOSTable % TS % maxValues(3) = EOSTable % TS % States(3) % Values(nPoints(3))
+
+    EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
+
+write (*,*) 'TS filled'
     !CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
 
-    !CALL DescribeEquationOfStateTable( EOSTable )
+!-----------------------------------------------------------
+! Now that we've written the TS, we need to read and write the DV
+! In addition to the DV data, we need to fill in the
+! additional DV metadata, like names, min/max, etc. 
+! We also need to fill in the DVID.
+!-----------------------------------------------------------
+
+write(*,*), "Allocate Names "
+    EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
+                                    'Entropy Per Baryon              ', &
+                                    'Internal Energy Density         ', &
+                                    'Electron Chemical Potential     ', &
+                                    'Proton Chemical Potential       ', &
+                                    'Neutron Chemical Potential      ', &
+                                    'Proton Mass Fraction            ', &
+                                    'Neutron Mass Fraction           ', &
+                                    'Alpha Mass Fraction             ', &
+                                    'Heavy Mass Fraction             ', &
+                                    'Heavy Charge Number             ', &
+                                    'Heavy Mass Number               ', &
+                                    'Heavy Binding Energy            ', &
+                                    'Thermal Energy                  ', &
+                                    'Gamma1                          '/)
+
+write(*,*), "Set Dependent Variable Identifier Indicies "
+
+    EOSTable % DV % Indices % iPressure = 1
+    EOSTable % DV % Indices % iEntropyPerBaryon = 2
+    EOSTable % DV % Indices % iInternalEnergyDensity = 3
+    EOSTable % DV % Indices % iElectronChemicalPotential = 4
+    EOSTable % DV % Indices % iProtonChemicalPotential = 5
+    EOSTable % DV % Indices % iNeutronChemicalPotential = 6
+    EOSTable % DV % Indices % iProtonMassFraction = 7
+    EOSTable % DV % Indices % iNeutronMassFraction = 8
+    EOSTable % DV % Indices % iAlphaMassFraction = 9
+    EOSTable % DV % Indices % iHeavyMassFraction = 10
+    EOSTable % DV % Indices % iHeavyChargeNumber = 11
+    EOSTable % DV % Indices % iHeavyMassNumber = 12
+    EOSTable % DV % Indices % iHeavyBindingEnergy = 13
+    EOSTable % DV % Indices % iThermalEnergy = 14
+    EOSTable % DV % Indices % iGamma1 = 15
+
+write(*,*), "Allocate Dependent Variable Units "
+    EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
+                                    'k_b per baryon                  ', &
+                                    'erg per gram                    ', &
+                                    'MeV                             ', &
+                                    'MeV                             ', &
+                                    'MeV                             ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    'MeV                             ', &
+                                    'MeV                             ', &
+                                    '                                '/)
+
+write(*,*), "Allocate Dependent Variable Logical"
+    EOSTable % DV % Repaired(:,:,:) = 0
+
+    datasize1d(1) = SIZE(thermo)
+    CALL ReadHDF( "thermo", thermo(:), file_id, datasize1d )
+write(*,*), "thermo read"
+
+    TwoPoints(1) = nPoints(1) * nPoints(2)
+    AllPoints(1) = TwoPoints(1) * nPoints(3)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(1) % Values(i+1,j,k) &
+            = thermo(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) * 1.6022e33 ! this is kp, or ergmev/cm3fm3 
+        END DO
+      END DO
+    END DO
+write (*,*) 'pressure(1,1,1)', EOSTable % DV % Variables(1) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(2) % Values(i+1,j,k) &
+            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + AllPoints(1) )
+        END DO
+      END DO
+    END DO
+write (*,*) 'entropy(1,1,1)', EOSTable % DV % Variables(2) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(3) % Values(i+1,j,k) &
+            != 1d39 * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) * mn + mn ) ! 
+            != 1d39 * ergmev * nb(i) * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) + 1 ) ! 
+            != kp * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 1 ) / avn ! need to divide by baryons per gram, avn 
+            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 1 ) * avn ! need to multiply by baryons per gram, avn 
+            = ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn ) * avn ! need to multiply by baryons per gram, avn 
+            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + csqinv ) * avn ! need to multiply by baryons per gram, avn 
+        END DO
+      END DO
+    END DO
+write (*,*) 'energy(1,1,1)', EOSTable % DV % Variables(3) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+!          EOSTable % DV % Variables(4) % Values(i+1,j,k) &
+!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) * mn
+          CALL wlGetElectronEOS( EOSTable % TS % States(1) % Values(i+1), & 
+                                 EOSTable % TS % States(2) % Values(j),   &
+                                 EOSTable % TS % States(3) % Values(k),   &
+                                 press_e, &
+                                 entrop_e,&
+                                 energ_e, &
+                                 chem_e )
+
+! Add corrections to pressure, internal energy, entropy)  
+
+          press_buff = EOSTable % DV % Variables(1) % Values(i+1,j,k)
+          EOSTable % DV % Variables(1) % Values(i+1,j,k) &
+            = press_buff + press_e
+
+          entrop_buff = EOSTable % DV % Variables(2) % Values(i+1,j,k)
+          EOSTable % DV % Variables(2) % Values(i+1,j,k) &
+            = entrop_buff + entrop_e
+
+          energ_buff = EOSTable % DV % Variables(3) % Values(i+1,j,k) 
+          EOSTable % DV % Variables(3) % Values(i+1,j,k) &
+            = energ_buff + energ_e
+
+          EOSTable % DV % Variables(4) % Values(i+1,j,k) &
+            = chem_e 
+        END DO
+      END DO
+    END DO
+write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(6) % Values(i+1,j,k) &
+            = ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) + 1 ) * mn - dmnp
+        END DO
+      END DO
+    END DO
+write (*,*) 'neutron chem pot(1,1,1)', EOSTable % DV % Variables(6) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(5) % Values(i+1,j,k) &
+            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ) * mn &
+              + EOSTable % DV % Variables(6) % Values(i+1,j,k) + dmnp
+        END DO
+      END DO
+    END DO
+write (*,*) 'proton chem pot(1,1,1)', EOSTable % DV % Variables(5) % Values(1,1,1)
+write(*,*), "thermo DV's filled" 
+
+    datasize1d(1) = SIZE(yi)
+    CALL ReadHDF( "yi", yi(:), file_id, datasize1d )
+write(*,*), "yi read"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(8) % Values(i+1,j,k) = yi(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+        END DO
+      END DO
+    END DO
+write (*,*) 'neutron mass frac(1,1,1)', EOSTable % DV % Variables(8) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(7) % Values(i+1,j,k) &
+            = yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + AllPoints(1) )
+        END DO
+      END DO
+    END DO
+write (*,*) 'proton mass frac(1,1,1)', EOSTable % DV % Variables(7) % Values(1,1,1)
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(9) % Values(i+1,j,k) &
+            = yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) )
+        END DO
+      END DO
+    END DO
+write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,1)
+write(*,*), "yi DV's filled"
+
+    datasize1d(1) = SIZE(yav)
+    CALL ReadHDF( "yav", yav(:), file_id, datasize1d )
+write(*,*), "yav read"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(10) % Values(i+1,j,k) = yav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+        END DO
+      END DO
+    END DO
+write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
+write(*,*), "yav DV filled"
+
+    datasize1d(1) = SIZE(zav)
+    CALL ReadHDF( "zav", zav(:), file_id, datasize1d )
+write(*,*), "zav read"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(11) % Values(i+1,j,k) = zav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+        END DO
+      END DO
+    END DO
+write (*,*) 'heavy charge number(1,1,1)', EOSTable % DV % Variables(11) % Values(1,1,1)
+write(*,*), "zav DV's filled"
+
+    datasize1d(1) = SIZE(aav)
+    CALL ReadHDF( "aav", aav(:), file_id, datasize1d )
+write(*,*), "aav read"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(12) % Values(i+1,j,k) = aav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+        END DO
+      END DO
+    END DO
+write (*,*) 'heavy mass number(1,1,1)', EOSTable % DV % Variables(12) % Values(1,1,1)
+write(*,*), "aav DV filled"
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
+        END DO
+      END DO
+    END DO
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+
+          !EOSTable % DV % Variables(14) % Values(i,j,k) = ku * ( UTOT - EU + ee             &
+!&            + dmnp * x_proton + 7.075 * x_alpha - BUNUC + 1.5d0 * tmev * XH/A - ye * me )
+
+          EOSTable % DV % Variables(14) % Values(i,j,k) =                    &
+            & EOSTable % DV % Variables(3) % Values(i,j,k)                   &
+            & + ku * ( dmnp * EOSTable % DV % Variables(7) % Values(i,j,k)   &
+            & + 7.075 * EOSTable % DV % Variables(9) % Values(i,j,k)         &
+            & - EOSTable % DV % Variables(13) % Values(i,j,k)                &  
+            & + 1.5d0 * EOSTable % TS % States(2) % Values(j)                &
+            & * ( EOSTable % DV % Variables(10) % Values(i,j,k)              &
+            & / EOSTable % DV % Variables(12) % Values(i,j,k) )              & 
+            & - ( EOSTable % TS % States(3) % Values(k) * me ) )
+        END DO
+      END DO
+    END DO
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(15) % Values(i+1,j,k) &
+            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) ! *(neutron mass for units)
+        END DO
+      END DO
+    END DO
+write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
+
+  DO l = 1, EOSTable % nVariables
+    WRITE (*,*) EOSTable % DV % Names(l)
+    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
+    WRITE (*,*) "minvar=", minvar
+    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
+    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
+    EOSTable % DV % Variables(l) % Values &
+      = LOG10( EOSTable % DV % Variables(l) % Values &
+               + EOSTable % DV % Offsets(l) + epsilon )
+
+  END DO
+
+    CALL WriteEquationOfStateTableHDF( EOSTable )
+
+    CALL DescribeEquationOfStateTable( EOSTable )
 
     !CALL CloseFileHDF( file_id )
 
