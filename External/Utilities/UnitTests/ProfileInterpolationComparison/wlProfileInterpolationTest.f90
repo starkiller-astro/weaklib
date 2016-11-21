@@ -59,9 +59,9 @@ PROGRAM wlProfileInterpolationTest
   OPEN( unit = FileUnit, FILE="Output0ms.d")
   OPEN( newunit = TestUnit1, FILE="InterpolateAllTest.d")
   !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSHFx.d")
-  OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSFHo2.d")
-  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSTOS.d")
-  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestLS.d")
+  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSFHo.d")
+  OPEN( newunit = TestUnit2, FILE="EOSComparisonTestSTOS.d")
+  !OPEN( newunit = TestUnit2, FILE="EOSComparisonTestCLS.d")
 
   LScompress = '220'
   LSFilePath = '../../../LS/Data'
@@ -71,10 +71,10 @@ PROGRAM wlProfileInterpolationTest
 
   !CALL ReadEquationOfStateTableHDF( EOSTable, "wl-EOS-LS220-20-40-100.h5" )
   !CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
-  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibLS.h5" )
-  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibSFHx.h5" )
-  CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibSFHo2.h5" )
-  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibSTOS.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "WeakLibCLS.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "wl-EOS-SFHx-25-25-100.h5" )
+  !CALL ReadEquationOfStateTableHDF( EOSTable, "wl-EOS-SFHo-25-25-100.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "wl-EOS-STOS-25-25-100.h5" )
 
   ALLOCATE( rho( NumPoints ), T( NumPoints ), Ye( NumPoints ),  &
             DirectCall( NumPoints, 15), press( NumPoints ), &

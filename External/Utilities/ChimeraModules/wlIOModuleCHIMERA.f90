@@ -16,6 +16,7 @@ MODULE wlIOModuleCHIMERA
   USE wlExtEOSWrapperModule, ONLY: wlGetElectronEOS
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
+  !USE sfhx_frdm_composition_module
 
   implicit none
 
@@ -65,6 +66,9 @@ CONTAINS
     REAL(dp)                                      :: entrop_buff   
     REAL(dp)                                      :: energ_buff   
     REAL(dp)                                      :: minvar
+    REAL(dp), DIMENSION(8140)           :: mass, bind, degen
+    REAL(dp), DIMENSION(81,0:60,326,8)           :: comp
+    INTEGER, DIMENSION(8140,2) :: az
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
@@ -248,12 +252,8 @@ write (*,*) 'entropy(1,1,1)', EOSTable % DV % Variables(2) % Values(1,1,1)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(3) % Values(i+1,j,k) &
-            != 1d39 * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) * mn + mn ) ! 
-            != 1d39 * ergmev * nb(i) * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) + 1 ) ! 
-            != kp * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 1 ) / avn ! need to divide by baryons per gram, avn 
             != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 1 ) * avn ! need to multiply by baryons per gram, avn 
             = ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn ) * avn ! need to multiply by baryons per gram, avn 
-            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + csqinv ) * avn ! need to multiply by baryons per gram, avn 
         END DO
       END DO
     END DO
@@ -297,7 +297,8 @@ write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(6) % Values(i+1,j,k) &
-            = ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) + 1 ) * mn - dmnp
+            != ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) + 1 ) * mn/1000d0 - dmnp
+            = ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) - dmnp
         END DO
       END DO
     END DO
@@ -307,7 +308,8 @@ write (*,*) 'neutron chem pot(1,1,1)', EOSTable % DV % Variables(6) % Values(1,1
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(5) % Values(i+1,j,k) &
-            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ) * mn &
+            != thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ) * mn/1000d0 &
+            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ) &
               + EOSTable % DV % Variables(6) % Values(i+1,j,k) + dmnp
         END DO
       END DO
@@ -398,6 +400,18 @@ write(*,*), "aav DV filled"
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 1, nPoints(1)
+
+     !REAL(dp), DIMENSION(8140)           :: mass, bind, degen
+     !REAL(dp), DIMENSION(81,0:60,326,8)           :: comp
+     !INTEGER, DIMENSION(8140,2) :: az
+
+        !open(10,file='sfhx_frdm_comp_v1.03.bin',form='unformatted',
+     !& status='old')
+        !read(10) az,mass,bind,comp
+        !write(10) az,mass,bind,comp
+        !close(10)
+
+        !return
 
           !EOSTable % DV % Variables(14) % Values(i,j,k) = ku * ( UTOT - EU + ee             &
 !&            + dmnp * x_proton + 7.075 * x_alpha - BUNUC + 1.5d0 * tmev * XH/A - ye * me )
