@@ -124,7 +124,7 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 %.o: %.f
 	$(FCL)  $(FFLAGS) -c $< -o $@
 %.o: %.f90
-	gfortran -c $< -o $@
+	$(FCL)  $(FFLAGS) -c $< -o $@
 %.o: %.c
 	$(CC) $(CCFLAGS) -c $< -o $@
 %.o: %.cpp
