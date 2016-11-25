@@ -255,11 +255,7 @@ CONTAINS
    
       IF ( l == 0 ) THEN
 
-        outcome = outcome * (4.0*pi)**2
-
-      ELSE IF ( l == 1 ) THEN
-
-        outcome = outcome * (2.0*pi) * (4.0*pi)
+        outcome = outcome * (4.0*pi)
 
       END IF
     

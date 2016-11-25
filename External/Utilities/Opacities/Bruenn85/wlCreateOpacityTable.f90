@@ -170,15 +170,15 @@ PRINT*, "Making Energy Grid"
 
 !-----------------  ECAPEM ----------------------- 
 
-   DO l_ye = 1, OpacityTable % nPointsTS(3)
+   DO l_ye = 20,21!1, OpacityTable % nPointsTS(3)
      
         ye = OpacityTable % EOSTable % TS % States (3) % Values (l_ye)
 
-      DO k_t = 1, OpacityTable % nPointsTS(2)
+      DO k_t = 50,51!1, OpacityTable % nPointsTS(2)
 
            T = OpacityTable % EOSTable % TS % States (2) % Values (k_t)
 
-         DO j_rho = 1, OpacityTable % nPointsTS(1)
+         DO j_rho = 80,81!1, OpacityTable % nPointsTS(1)
 
               rho = OpacityTable % EOSTable % TS % States (1) % Values (j_rho)
 
@@ -288,13 +288,13 @@ PRINT*, "Making Energy Grid"
                   ( energy, rho, T, xheavy, A, Z, xn, xp, t_m-1 )
              END DO  !i_e
 
-             OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % &
-                            Values ( j_rho, k_t, l_ye, t_m)  &
-                = bufferquad21 * (T*kMeV)**3
+!             OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % &
+!                            Values ( j_rho, k_t, l_ye, t_m)  &
+!                = bufferquad21 * (T*kMeV)**3
          
-             OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % &
-                            Values ( j_rho, k_t, l_ye, t_m)  &
-                = bufferquad22 * (T*kMeV)**3
+!             OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % &
+!                            Values ( j_rho, k_t, l_ye, t_m)  &
+!                = bufferquad22 * (T*kMeV)**3
    
              OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % &
                             Values ( j_rho, k_t, l_ye, t_m)  &
@@ -346,13 +346,13 @@ PRINT*, "Making Energy Grid"
     = LOG10 ( OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
               + OpacityTable % scatt_Iso % Offset )
 
-    OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
-    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
-              + OpacityTable % scatt_Iso % Offset )
+!    OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
+!    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
+!              + OpacityTable % scatt_Iso % Offset )
 
-    OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
-    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
-              + OpacityTable % scatt_Iso % Offset )
+!    OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
+!    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
+!              + OpacityTable % scatt_Iso % Offset )
 
     OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
     = LOG10 ( OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
@@ -369,7 +369,7 @@ PRINT*, "Making Energy Grid"
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
-
+  WRITE (*
 !=============================================================
 
 END PROGRAM wlCreateOpacityTable

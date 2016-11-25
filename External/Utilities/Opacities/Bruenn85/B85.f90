@@ -13,8 +13,6 @@ MODULE B85
 !    Purpose:
 !      Provides the function need considering the physics in Bruenn 85
 !
-!   
-!
 !    CONTAINS:
 !
 !      Function totalECapEm: 
@@ -47,7 +45,11 @@ CONTAINS
 
   REAL(dp) FUNCTION totalECapEm &
     ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
-
+!------------------------------------------------------------------------------
+! Purpose:
+!   To compute the neutrino absorptivity.
+!   (1) Absorptivity = emissivity + inverse of mean path
+!------------------------------------------------------------------------------
   IMPLICIT NONE
 
     REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
@@ -143,6 +145,11 @@ CONTAINS
   REAL(dp) FUNCTION totalElasticScatteringKernel&
      ( energy, rho, T, xh, A, Z, xn, xp, l )
 
+!------------------------------------------------------------------------------
+! Purpose:
+!   To compute the zero and first legendre coefs for the neutrino-electron 
+!   elastic scattering kernel. 
+!------------------------------------------------------------------------------
 !-----------------------------------------------------------------------
 !   Input Variables
 !-----------------------------------------------------------------------
