@@ -369,7 +369,6 @@ PRINT*, "Making Energy Grid"
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
-  WRITE (*
 !=============================================================
 
 END PROGRAM wlCreateOpacityTable
