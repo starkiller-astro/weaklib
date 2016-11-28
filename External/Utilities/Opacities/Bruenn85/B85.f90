@@ -30,8 +30,8 @@ MODULE B85
 !-----------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
-    h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, ergmev,&
-      cv_p, cv_n, ca_p, ca_n, gf, hbarc
+    h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, cvel, ergmev,&
+      cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
   USE wlExtNumericalModule, ONLY: pi, half, twpi, zero 
 
   implicit none
@@ -251,6 +251,98 @@ CONTAINS
 
   END FUNCTION totalElasticScatteringKernel
 
+  
+  REAL(dp) FUNCTION NESKern( energy1, energy2, omega, T, chem_e )  ! energy value or energy index?
+!----------------------------------------------------------------------
+! Purpose:
+!    To compute the neutrino-electron scattering (OUT) kernel 
+!    (1) e /= ep
+!    R_out = cons * ( 1 / e / ep) * 
+!                            ( beta1 * I1 + beta2 * I2 + beta3 * I3 )
+!    (2) e == ep
+!    new form of I1,2,3
+!----------------------------------------------------------------------
+  IMPLICIT NONE
+
+    REAL(dp), INTENT(in) :: energy1, energy2, omega, T, chem_e      ! value of omega
+    REAL(dp)             :: beta1, beta2, beta3
+    REAL(dp)             :: cons, I1, I2, I3, sig0, delta, y0, A, B, C
+    REAL(dp)             :: e, ep, tinv, eta, etap
+    REAL(dp)             :: Gfun2, Gfun1, Gfun0
+
+!    INTEGER, PARAMETER   :: jmax=8, & !number of angle bins
+!                            nesp=20   !order of Guass integral
+!    REAL(dp), DIMENSION(jmax, jmax, nesp ) :: omega
+    
+    tinv  = 1.0/T
+     eta  = chem_e / T
+      e   = energy1
+      ep  = energy2
+     etap = eta - tinv * (e-ep)
+    beta1 = ( cv + ca )**2 
+    beta2 = ( cv - ca )**2
+    beta3 = ca**2 - cv**2
+    sig0  = 1.764 * 10**(-44)           ! cm**(-2)
+    cons  = half * pi * sig0 * cvel / ( twpi**3 * me**2 )
+
+    delta = ( e*e + ep*ep - 2*e*ep*omega ) **(1/2)
+      y0  = tinv * (- half * ( e - ep )  &
+                    + half * delta &
+                       * (1.0 + 2.0*(me*me)/( e*ep*(1-omega) ))**(1/2) )
+      A   = e*e + ep*ep + e*ep*( 3.0 + omega )
+      B   = e * ( 2.0*e*e + e*ep*(3.0-omega) - ep*ep * (1+3.0*omega) )
+      C   = e*e * ( (e - ep*omega)**2 - half*ep**2 * (1-omega**2) &
+                     - half*(1+omega)*me*me*delta*delta/((1-omega)*e*e)  )
+
+    Gfun2 = FerInt( 2, etap-y0) - FerInt( 2, eta-y0) 
+    Gfun1 = FerInt( 1, etap-y0) - FerInt( 1, eta-y0)
+    Gfun0 = FerInt( 0, etap-y0) - FerInt( 0, eta-y0)
+
+    IF( e .ne. ep ) THEN
+       I1 = twpi * T *e*e * ep*ep* (1.0-omega)*(1.0-omega) * Fgamm((ep - e)/T) &
+               * ( A*T*T*( Gfun2 + 2.0*y0*Gfun1 + y0*y0*Gfun0 ) &
+                 + B*T*( Gfun1 +   y0*Gfun0 ) &
+                 + C*Gfun0 ) &
+             / delta**5
+       I3 = twpi*T*e*ep*(1.0-omega)*me*me*Fgamm((ep-e)/T)*Gfun0/delta
+       e  = -energy2
+       ep = -energy1
+       B  = e * ( 2.0*e*e + e*ep*(3.0-omega) - ep*ep * (1.0+3.0*omega) )
+       C  = e*e * ( (e - ep*omega)**2 - half*ep**2 * (1.0-omega**2) &
+                   - half*(1.0+omega)*me*me*delta*delta/((1.0-omega)*e*e)  )
+       I2 = twpi * T *e*e * ep*ep* (1-omega)*(1-omega) * Fgamm((ep - e)/T) &
+             * ( A*T*T*( Gfun2 + 2*y0*Gfun1 + y0*y0*Gfun0 ) &
+                 + B*T*( Gfun1 +   y0*Gfun0 ) &
+                 + C*Gfun0 ) &
+
+    ELSE IF ( e .eq. ep ) THEN
+       I1 = 1.0
+       I2 = I1
+       I3 = twpi*T*e*e*(1.0 - omega)*me*me*FerInt(-1, eta-y0)/delta
+    END IF
+    
+    NESKern = cons * ( beta1 * I1 + beta2 * I2 + beta3 * I3 ) / ( e * ep )
+
+  END FUNCTION NESKern
+
+  FUNCTION Fgamm( x )
+    REAL(dp), INTENT(in) :: x
+    REAL(dp)             :: Fgamm, FEXP
+
+    Fgamm = 1.0/( FEXP(x) - 1.0   )
+    RETURN
+  END FUNCTION Fgamm
+
+  FUNCTION FerInt( n, eta )
+
+    INTEGER,  INTENT(in) :: n
+    REAL(dp), INTENT(in) :: eta
+    REAL(dp)             :: FerInt
+    FerInt = 0.0
+    RETURN
+
+  END FUNCTION FerInt
+  
 
   SUBROUTINE etaxx( rho, T, xn, xp, etann, etapp )
   
