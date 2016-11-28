@@ -252,7 +252,7 @@ CONTAINS
   END FUNCTION totalElasticScatteringKernel
 
   
-  REAL(dp) FUNCTION NESKern( energy1, energy2, omega, T, chem_e )  ! energy value or energy index?
+  REAL(dp) FUNCTION NESKern( energygrid, omega, T, chem_e ) 
 !----------------------------------------------------------------------
 ! Purpose:
 !    To compute the neutrino-electron scattering (OUT) kernel 
@@ -264,7 +264,8 @@ CONTAINS
 !----------------------------------------------------------------------
   IMPLICIT NONE
 
-    REAL(dp), INTENT(in) :: energy1, energy2, omega, T, chem_e      ! value of omega
+    REAL(dp), DIMENSION(:), INTENT(in) :: energygrid, omega
+    REAL(dp), INTENT(in) :: T, chem_e      
     REAL(dp)             :: beta1, beta2, beta3
     REAL(dp)             :: cons, I1, I2, I3, sig0, delta, y0, A, B, C
     REAL(dp)             :: e, ep, tinv, eta, etap
@@ -285,6 +286,7 @@ CONTAINS
     sig0  = 1.764 * 10**(-44)           ! cm**(-2)
     cons  = half * pi * sig0 * cvel / ( twpi**3 * me**2 )
 
+    IF( e .ne. ep ) THEN
     delta = ( e*e + ep*ep - 2*e*ep*omega ) **(1/2)
       y0  = tinv * (- half * ( e - ep )  &
                     + half * delta &
@@ -298,7 +300,6 @@ CONTAINS
     Gfun1 = FerInt( 1, etap-y0) - FerInt( 1, eta-y0)
     Gfun0 = FerInt( 0, etap-y0) - FerInt( 0, eta-y0)
 
-    IF( e .ne. ep ) THEN
        I1 = twpi * T *e*e * ep*ep* (1.0-omega)*(1.0-omega) * Fgamm((ep - e)/T) &
                * ( A*T*T*( Gfun2 + 2.0*y0*Gfun1 + y0*y0*Gfun0 ) &
                  + B*T*( Gfun1 +   y0*Gfun0 ) &
