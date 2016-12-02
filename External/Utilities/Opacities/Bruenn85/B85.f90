@@ -252,7 +252,7 @@ CONTAINS
   END FUNCTION totalElasticScatteringKernel
 
   
-  REAL(dp) FUNCTION NESKern( energygrid, omega, T, chem_e ) 
+  SUBROUTINE NESKern( energygrid, omega, T, chem_e, nesktab )
 !----------------------------------------------------------------------
 ! Purpose:
 !    To compute the neutrino-electron scattering (OUT) kernel 
@@ -266,23 +266,40 @@ CONTAINS
 
     REAL(dp), DIMENSION(:), INTENT(in) :: energygrid, omega
     REAL(dp), INTENT(in) :: T, chem_e      
-    REAL(dp)             :: tsq, tinv, eta, FEXP, y0, esq, &
-                            x1, x2, x2inv, FA0, y
-    REAL(dp), DIMENSION(:,:), ALLOCATABLE :: ediff, etap, fgamm, &
-                                             I1, I2, I3 
-    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: delta1
+    REAL(dp), DIMENSION(:,:,:), INTENT(out) :: nesktab
+    REAL(dp)             :: tsq, tinv, eta, FEXP, &
+                            x1, x2, x2inv, &
+                            FA0, FA1, &
+                            y, tpiet, &
+                            COMBO1, COMBO2, &
+                            G0, G1, G2
+    REAL(dp)             :: beta1, beta2, beta3, sig0, cons
     INTEGER              :: D_e, D_ome, i_e1, i_e2, i_ome
+    REAL(dp), DIMENSION(:,:), ALLOCATABLE :: ediff, etap, fgamm, esq
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: delta, y0, I1, I2, I3,&
+                                               A, B, C
 
-     tsq = T*T
-    tinv = 1.0/T
-     eta = chem_e * tinv
-     D_e = SIZE( energygrid )
+       tsq = T*T
+      tinv = 1.0/T
+       eta = chem_e * tinv
+     tpiet = twpi * T                      ! 2*pi*T
+     beta1 = ( cv + ca )**2 
+     beta2 = ( cv - ca )**2
+     beta3 = ca**2 - cv**2
+       D_e = SIZE( energygrid )
      D_ome = SIZE( omega )
+     sig0  = 1.764 * 10**(-44)             ! cm**(-2)
+     cons  = half * pi * sig0 * cvel / ( twpi**3 * me**2 )
 
-    ALLOCATE(  ediff( D_e, D_e )        )
-    ALLOCATE(   etap( D_e, D_e )        )
-    ALLOCATE(  fgamm( D_e, D_e )        ) 
-    ALLOCATE( delta1( D_ome, D_e, D_e ) )
+    ALLOCATE(  ediff( D_e, D_e )        )  ! e1 - e2
+    ALLOCATE(   etap( D_e, D_e )        )  ! eta prim
+    ALLOCATE(   esq ( D_e, D_e )        )  ! e*e
+    ALLOCATE(  fgamm( D_e, D_e )        )  ! gamma function
+    ALLOCATE( delta ( D_ome, D_e, D_e ) )
+    ALLOCATE(    y0 ( D_ome, D_e, D_e ) )
+    ALLOCATE(     A ( D_ome, D_e, D_e ) )
+    ALLOCATE(     B ( D_ome, D_e, D_e ) )
+    ALLOCATE(     C ( D_ome, D_e, D_e ) )
     ALLOCATE(     I1( D_ome, D_e, D_e ) )
     ALLOCATE(     I2( D_ome, D_e, D_e ) )
     ALLOCATE(     I3( D_ome, D_e, D_e ) )
@@ -292,7 +309,8 @@ CONTAINS
 
        ediff(i_e1,i_e2) = energygrid( i_e1 ) - energygrid( i_e2 )
         etap(i_e1,i_e2) = eta - ediff(i_e1,i_e2)*tinv
-     
+         esq(i_e1,i_e2) = energygrid( i_e1 ) * energygrid( i_e2 )
+         
      IF ( i_e1 .ne. i_e2 ) THEN
        fgamm(i_e1,i_e2) = 1.0/(FEXP(-ediff(i_e1,i_e2)*tinv)-1.0)
      ELSE
@@ -301,107 +319,124 @@ CONTAINS
      END DO ! i_e2
     END DO ! i_e1
 
+    DO i_ome = 1, D_ome
+     DO  i_e1 = 1, D_e
+      DO  i_e2 = 1, D_e
+
+       delta(i_ome,i_e1,i_e2) =                                          &
+                             SQRT( esq(i_e1,i_e1) + esq(i_e2,i_e2)       &
+                             - 2.0*esq(i_e1,i_e2)*omega(i_ome)  )
+       y0(i_ome,i_e1,i_e2) =                                             &
+                             tinv*(-0.5*ediff(i_e1,i_e2)                 &
+                              +0.5*delta( i_ome, i_e1, i_e2 )            &
+                                *sqrt(1.0+2.0*me*me                      &
+                                /(esq(i_e1,i_e2)*(1.0-omega(i_ome)))     & 
+                                     )                                   &
+                                  )
+       A(i_ome,i_e1,i_e2) = esq(i_e1,i_e1) + esq(i_e2,i_e2)              &
+                          + esq(i_e1,i_e2)*(3.0 + omega(i_ome))
+
+       B(i_ome,i_e1,i_e2) = energygrid(i_e1) *                           &
+                            ( 2.0*esq(i_e1,i_e1)                         &
+                            + esq(i_e1,i_e2)*(3.0 - omega(i_ome))        &
+                            - esq(i_e2,i_e2)*(1.0 + 3.0*omega(i_ome) ) ) 
+       C(i_ome,i_e1,i_e2) = esq(i_e1,i_e1) *                             &
+                            ( (energygrid(i_e1) -                        &
+                                  energygrid(i_e2)*omega(i_ome) )**2     &
+                             - half*esq(i_e2,i_e2)*(1.0-omega(i_ome)**2) &
+                             - half*( 1.0+omega(i_ome) )*me*me           &
+                                         *(delta(i_ome,i_e1,i_e2)**2)    &
+                               /( (1.0-omega(i_ome)) * esq(i_e1,i_e1) ) )  
+
+      END DO ! i_e2
+     END DO ! i_e1
+    END DO ! i_ome  
+
 !-------------------------------
 !   energy_in == energy_out
 !-------------------------------
    DO i_ome = 1, D_ome
     DO  i_e1 = 1, D_e
         
-      esq = energygrid(i_e1)**2 
-      delta1 ( i_ome, i_e1, i_e1 ) = &
-           SQRT( 2.0*esq - 2.0*esq * omega(i_ome)  )
-       y0 = 0.5*delta1(i_ome, i_e1, i_e1)*tinv &
-            *SQRT( 1.0+2.0*me*me/( esq*(1.0-omega(i_ome)) ) )
-
-       x1 = eta-y0
-       x2 = -FEXP(x1)
-       x2inv = 1.0/x2
-
-       FA0   = LOG(1.0-x2)
-
-       IF(x2.lt.-1.0) x2 = x2inv
-       y = (4.0*x2+1.0)/3.0
-
-      T0=1.0                                                                    
-      T1=y                                                                      
-      T2=2.0*y*T1-T0                                                            
-      T3=2.0*y*T2-T1                                                            
-      T4=2.0*y*T3-T2                                                            
-      T5=2.0*y*T4-T3                                                            
-      T6=2.0*y*T5-T4                                                            
-      T7=2.0*y*T6-T5                                                            
-      T8=2.0*y*T7-T6                                                            
-      T9=2.0*y*T8-T7                                                            
-      T10=2.0*y*T9-T8                                                           
-      T11=2.0*y*T10-T9                                                          
-      T12=2.0*y*T11-T10                                                         
-      T13=2.0*y*T12-T11                                                         
-      T14=2.0*y*T13-T12                                                         
-      T15=2.0*y*T14-T13                                                         
-      T16=2.0*y*T15-T14                                                         
-      T17=2.0*y*T16-T15                                                         
-      T18=2.0*y*T17-T16                                                         
-      T19=2.0*y*T18-T17                                                         
-      T20=2.0*y*T19-T18                                                         
-      T21=2.0*y*T20-T19                                                         
-      T22=2.0*y*T21-T20                                                         
-      T23=2.0*y*T22-T21                                                         
-      T24=2.0*y*T23-T22                                                         
-      T25=2.0*y*T24-T23                                                         
-      T26=2.0*y*T25-T24 
-                                                                                
-      FA1= &
-           -x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4 &
-                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8 &
-                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11       &
-                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14     &
-                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17     &
-                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20     &
-                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23     &
-                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26     &
-             )                                                                  
-
-      if((1.0/x2inv).lt.-1.0) FA1= &
-                             -FA1+0.5*x1**2+pie**2/6.0
-
-      I1(j,l,k,k,n)= &
-         tpiet*efour(k)                                             &
-              *(1.0-omega(j,l,n))*(1.0-omega(i_ome))                &
-              /delta1(j,l,k,n)**5                                   &
-                                                                    &
-              *(A11(j,l,k,n)*tsq                                    &
+!       x1 = eta-y0
+!       x2 = -FEXP(x1)
+!       x2inv = 1.0/x2
+!
+!       FA0   = LOG(1.0-x2)
+!
+!       IF(x2.lt.-1.0) x2 = x2inv
+!       y = (4.0*x2+1.0)/3.0
+!
+!      T0=1.0                                                                    
+!      T1=y                                                                      
+!      T2=2.0*y*T1-T0                                                            
+!      T3=2.0*y*T2-T1                                                            
+!      T4=2.0*y*T3-T2                                                            
+!      T5=2.0*y*T4-T3                                                            
+!      T6=2.0*y*T5-T4                                                            
+!      T7=2.0*y*T6-T5                                                            
+!      T8=2.0*y*T7-T6                                                            
+!      T9=2.0*y*T8-T7                                                            
+!      T10=2.0*y*T9-T8                                                           
+!      T11=2.0*y*T10-T9                                                          
+!      T12=2.0*y*T11-T10                                                         
+!      T13=2.0*y*T12-T11                                                         
+!      T14=2.0*y*T13-T12                                                         I
+!      T15=2.0*y*T14-T13                                                         
+!      T16=2.0*y*T15-T14                                                         
+!      T17=2.0*y*T16-T15                                                         
+!      T18=2.0*y*T17-T16                                                         
+!      T19=2.0*y*T18-T17                                                         
+!      T20=2.0*y*T19-T18                                                         
+!      T21=2.0*y*T20-T19                                                         
+!      T22=2.0*y*T21-T20                                                         
+!      T23=2.0*y*T22-T21                                                         
+!      T24=2.0*y*T23-T22                                                         
+!      T25=2.0*y*T24-T23                                                         
+!      T26=2.0*y*T25-T24 
+!                                                                                
+!      FA1= &
+!           -x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4 &
+!                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8 &
+!                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11       &
+!                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14     &
+!                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17     &
+!                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20     &
+!                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23     &
+!                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26     &
+!             )                                                                  
+!
+!      if((1.0/x2inv).lt.-1.0) FA1= &
+!                             -FA1+0.5*x1**2+pie**2/6.0
+!
+      I1(i_ome,i_e1,i_e1)= &
+         ( tpiet*esq(i_e1,i_e1)*esq(i_e1,i_e1)                      &
+              *(1.0-omega(i_ome))*(1.0-omega(i_ome))                &
+              /delta(i_ome,i_e1,i_e1)**5  )                         &
+              *(A(i_ome,i_e1,i_e1)*tsq                              &
                             *(2.0*FA1                               &
-                             +2.0*yo*FA0                            &
-                             +yo*yo/(fexp(-(eta-yo))+1.0)           &
+                             +2.0*y0(i_ome,i_e1,i_e1)*FA0           &
+                             +y0(i_ome,i_e1,i_e1)**2                &
+                                /(FEXP(-(eta                        &
+                                  -y0(i_ome,i_e1,i_e1)))+1.0)       &
                              )                                      &
-               +B11(j,l,k,n)*ttab(i,mdum)                           &
+               +B(i_ome,i_e1,i_e1)*T                                &
                             *(FA0                                   &
-                             +yo/(fexp(-(eta-yo))+1.0)              &
+                             +y0(i_ome,i_e1,i_e1)                   &
+                                /(FEXP(-(eta                        &
+                                  -y0(i_ome,i_e1,i_e1)))+1.0)       &
                              )                                      &
-               +C11(j,l,k,n)/(fexp(-(eta-yo))+1.0)                  &
+               +C(i_ome,i_e1,i_e1)/(FEXP(-(eta                      &
+                                  -y0(i_ome,i_e1,i_e1)))+1.0)       &
                )      
 
-      I2(j,l,k,k,n)=                                                &
-         tpiet*efour(k)                                             &
-              *(1.0-omega(j,l,n))*(1.0-omega(j,l,n))                &
-              /delta1(j,l,k,n)**5                                   &
-              *(A11(j,l,k,n)*tsq                                    &
-                            *(2.0*FA1                               &
-                             +2.0*yo*FA0                            &
-                             +yo*yo/(fexp(-(eta-yo))+1.0)           &
-                             )                                      &
-               -B11(j,l,k,n)*ttab(i,mdum)                           &
-                            *(FA0+yo/(fexp(-(eta-yo))+1.0)          &
-                             )                                      &
-               +C11(j,l,k,n)/(fexp(-(eta-yo))+1.0)                  &
-               )   
- 
+      I2(i_ome,i_e1,i_e1) =  I1(i_ome,i_e1,i_e1)                    
 
-      I3(j,l,k,k,n)=                                                &
-         tpiet*esq(k)                                               &
-              *(1.0-omega(j,l,n))                                   &
-              *elsq/delta1(j,l,k,n)                                 &
-              /(fexp(-(eta-yo))+1.0)                                &
+      I3(i_ome,i_e1,i_e1) =                                         &
+         tpiet*esq(i_e1,i_e1)                                       &
+              *(1.0-omega(i_ome))                                   &
+              *me*me/delta(i_ome,i_e1,i_e1)                         &
+              /(FEXP(-(eta-y0(i_ome,i_e1,i_e1)))+1.0)             
                  
     END DO ! i_e1
    END DO ! i_ome
@@ -414,188 +449,183 @@ CONTAINS
       DO  i_e2 = 1, D_e
 
       IF( i_e1.ne.i_e2 ) THEN      
-        delta1 ( i_ome, i_e1, i_e2 ) = &
-            SQRT( energygrid(i_e1)**2 + energygrid(i_e2)**2 &
-                  - 2.0*energygrid(i_e1)*energygrid(i_e2)*omega(i_ome)  ) 
-      yo=tinv*(-0.5*ediff(k,m)                                    &
-               +0.5*delta2(j,l,k,m,n)                             &
-                   *sqrt(1.0+2.0*elsq                             &
-                                /(eprod(k,m)*(1.0-omega(j,l,n)))  &
-                        )                                         &
-              )
-                                                                                
-      x3=eta-yo                                                              
-      x4=etap(k,m)-yo 
-
-      x1=x3
-      x2=-fexp(x1)                                                               
-      x2inv=1.0/x2 
-
-      FA00=log(1.0-x2)                                                           
-
-      if(x2.lt.-1.0) x2=x2inv 
-      y1=(4.0*x2+1.0)/3.0       
-
-      T0=1.0                                                                    
-      T1=y1                                                                     
-      T2=2.0*y1*T1-T0                                                           
-      T3=2.0*y1*T2-T1                                                           
-      T4=2.0*y1*T3-T2                                                           
-      T5=2.0*y1*T4-T3                                                           
-      T6=2.0*y1*T5-T4                                                           
-      T7=2.0*y1*T6-T5                                                           
-      T8=2.0*y1*T7-T6                                                           
-      T9=2.0*y1*T8-T7                                                           
-      T10=2.0*y1*T9-T8                                                          
-      T11=2.0*y1*T10-T9                                                         
-      T12=2.0*y1*T11-T10                                                        
-      T13=2.0*y1*T12-T11                                                        
-      T14=2.0*y1*T13-T12                                                        
-      T15=2.0*y1*T14-T13                                                        
-      T16=2.0*y1*T15-T14                                                        
-      T17=2.0*y1*T16-T15                                                        
-      T18=2.0*y1*T17-T16                                                        
-      T19=2.0*y1*T18-T17                                                        
-      T20=2.0*y1*T19-T18                                                        
-      T21=2.0*y1*T20-T19                                                        
-      T22=2.0*y1*T21-T20                                                        
-      T23=2.0*y1*T22-T21  
-
-      F2=-2.0*x2*(0.5*CH20*T0+CH2(1)*T1+CH2(2)*T2+CH2(3)*T3+CH2(4)*T4    & 
-                               +CH2(5)*T5+CH2(6)*T6+CH2(7)*T7+CH2(8)*T8  &
-                               +CH2(9)*T9+CH2(10)*T10+CH2(11)*T11        &
-                               +CH2(12)*T12+CH2(13)*T13+CH2(14)*T14      &
-                               +CH2(15)*T15+CH2(16)*T16+CH2(17)*T17      &
-                               +CH2(18)*T18+CH2(19)*T19+CH2(20)*T20      &
-                               +CH2(21)*T21+CH2(22)*T22+CH2(23)*T23      &
-                 )      
-
-      T24=2.0*y1*T23-T22                                                        
-      T25=2.0*y1*T24-T23                                                        
-      T26=2.0*y1*T25-T24                                                        
-                                                                                
-      F1=-x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4        &
-                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8      &
-                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11            &
-                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14          &
-                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17          &
-                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20          &
-                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23          &
-                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26          &
-             )                     
-
-      if((1.0/x2inv).lt.-1.0) then
-        F1=-F1+0.5*x1**2+pie**2/6.0
-        F2=F2+pie**2*x1/3.0+x1**3/3.0
-      endif
-
-      FA10=F1                                                                    
-      FA20=F2
-
-      x1=x4
-      x2=-fexp(x1)                                                               
-      x2inv=1.0/x2 
-
-      FA01=log(1.0-x2)                                                           
-  
-      if(x2.lt.-1.0) x2=x2inv 
-      y1=(4.0*x2+1.0)/3.0                                                       
-
-      T0=1.0                                                                    
-      T1=y1                  
-      T2=2.0*y1*T1-T0                                                           
-      T3=2.0*y1*T2-T1                                                           
-      T4=2.0*y1*T3-T2                                                           
-      T5=2.0*y1*T4-T3                                                           
-      T6=2.0*y1*T5-T4                                                           
-      T7=2.0*y1*T6-T5                                                           
-      T8=2.0*y1*T7-T6                                                           
-      T9=2.0*y1*T8-T7                                                           
-      T10=2.0*y1*T9-T8                                                          
-      T11=2.0*y1*T10-T9                                                         
-      T12=2.0*y1*T11-T10                                                        
-      T13=2.0*y1*T12-T11                                                        
-      T14=2.0*y1*T13-T12                                                        
-      T15=2.0*y1*T14-T13                                                        
-      T16=2.0*y1*T15-T14                                                        
-      T17=2.0*y1*T16-T15                                                        
-      T18=2.0*y1*T17-T16                                                        
-      T19=2.0*y1*T18-T17                                                        
-      T20=2.0*y1*T19-T18                                                        
-      T21=2.0*y1*T20-T19                                                        
-      T22=2.0*y1*T21-T20                                                        
-      T23=2.0*y1*T22-T21    
-
-      F2=-2.0*x2*(0.5*CH20*T0+CH2(1)*T1+CH2(2)*T2+CH2(3)*T3+CH2(4)*T4    &        
-                               +CH2(5)*T5+CH2(6)*T6+CH2(7)*T7+CH2(8)*T8  &
-                               +CH2(9)*T9+CH2(10)*T10+CH2(11)*T11        &
-                               +CH2(12)*T12+CH2(13)*T13+CH2(14)*T14      &
-                               +CH2(15)*T15+CH2(16)*T16+CH2(17)*T17      &
-                               +CH2(18)*T18+CH2(19)*T19+CH2(20)*T20      &
-                               +CH2(21)*T21+CH2(22)*T22+CH2(23)*T23      &
-                 )      
-
-      T24=2.0*y1*T23-T22                                                        
-      T25=2.0*y1*T24-T23                                                        
-      T26=2.0*y1*T25-T24                                                        
-                                                                                
-      F1=-x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4        &
-                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8      &
-                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11            &
-                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14          &
-                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17          &
-                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20          &
-                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23          &
-                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26          &
-             )                                                                  
-
-      if((1.0/x2inv).lt.-1.0) then
-        F1=-F1+0.5*x1**2+pie**2/6.0
-        F2=F2+pie**2*x1/3.0+x1**3/3.0
-      endif
-
-      FA11=F1                                                                    
-      FA21=F2
-
-      G0=FA01-FA00
-      G1=FA11-FA10
-      G2=FA21-FA20
-                                                                                
-      COMBO1=G2+2.0*yo*G1+yo*yo*G0                                              
-      COMBO2=G1+yo*G0                                                           
-
-      I1(j,l,k,m,n)=                                                     &
-         tpiet*esq(k)*esq(m)                                             &
-              *(1.0-omega(j,l,n))*(1.0-omega(j,l,n))                     &
-              /delta2(j,l,k,m,n)**5                                      &
-              *fgamm(k,m)                                                &
-              *(A12(j,l,k,m,n)*tsq*COMBO1                                &
-               +B12(j,l,k,m,n)*ttab(i,mdum)*COMBO2                       &
-               +C12(j,l,k,m,n)*G0                                        &
-               )                                                         &
+!                                                                                
+!      x3=eta-yo                                                              
+!      x4=etap(k,m)-yo 
+!
+!      x1=x3
+!      x2=-fexp(x1)                                                               
+!      x2inv=1.0/x2 
+!
+!      FA00=log(1.0-x2)                                                           
+!
+!      if(x2.lt.-1.0) x2=x2inv 
+!      y1=(4.0*x2+1.0)/3.0       
+!
+!      T0=1.0                                                                    
+!      T1=y1                                                                     
+!      T2=2.0*y1*T1-T0                                                           
+!      T3=2.0*y1*T2-T1                                                           
+!      T4=2.0*y1*T3-T2                                                           
+!      T5=2.0*y1*T4-T3                                                           
+!      T6=2.0*y1*T5-T4                                                           
+!      T7=2.0*y1*T6-T5                                                           
+!      T8=2.0*y1*T7-T6                                                           
+!      T9=2.0*y1*T8-T7                                                           
+!      T10=2.0*y1*T9-T8                                                          
+!      T11=2.0*y1*T10-T9                                                         
+!      T12=2.0*y1*T11-T10                                                        
+!      T13=2.0*y1*T12-T11                                                        
+!      T14=2.0*y1*T13-T12                                                        
+!      T15=2.0*y1*T14-T13                                                        
+!      T16=2.0*y1*T15-T14                                                        
+!      T17=2.0*y1*T16-T15                                                        
+!      T18=2.0*y1*T17-T16                                                        
+!      T19=2.0*y1*T18-T17                                                        
+!      T20=2.0*y1*T19-T18                                                        
+!      T21=2.0*y1*T20-T19                                                        
+!      T22=2.0*y1*T21-T20                                                        
+!      T23=2.0*y1*T22-T21  
+!
+!      F2=-2.0*x2*(0.5*CH20*T0+CH2(1)*T1+CH2(2)*T2+CH2(3)*T3+CH2(4)*T4    & 
+!                               +CH2(5)*T5+CH2(6)*T6+CH2(7)*T7+CH2(8)*T8  &
+!                               +CH2(9)*T9+CH2(10)*T10+CH2(11)*T11        &
+!                               +CH2(12)*T12+CH2(13)*T13+CH2(14)*T14      &
+!                               +CH2(15)*T15+CH2(16)*T16+CH2(17)*T17      &
+!                               +CH2(18)*T18+CH2(19)*T19+CH2(20)*T20      &
+!                               +CH2(21)*T21+CH2(22)*T22+CH2(23)*T23      &
+!                 )      
+!
+!      T24=2.0*y1*T23-T22                                                        
+!      T25=2.0*y1*T24-T23                                                        
+!      T26=2.0*y1*T25-T24                                                        
+!                                                                                
+!      F1=-x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4        &
+!                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8      &
+!                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11            &
+!                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14          &
+!                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17          &
+!                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20          &
+!                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23          &
+!                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26          &
+!             )                     
+!
+!      if((1.0/x2inv).lt.-1.0) then
+!        F1=-F1+0.5*x1**2+pie**2/6.0
+!        F2=F2+pie**2*x1/3.0+x1**3/3.0
+!      endif
+!
+!      FA10=F1                                                                    
+!      FA20=F2
+!
+!      x1=x4
+!      x2=-fexp(x1)                                                               
+!      x2inv=1.0/x2 
+!
+!      FA01=log(1.0-x2)                                                           
+!  
+!      if(x2.lt.-1.0) x2=x2inv 
+!      y1=(4.0*x2+1.0)/3.0                                                       
+!
+!      T0=1.0                                                                    
+!      T1=y1                  
+!      T2=2.0*y1*T1-T0                                                           
+!      T3=2.0*y1*T2-T1                                                           
+!      T4=2.0*y1*T3-T2                                                           
+!      T5=2.0*y1*T4-T3                                                           
+!      T6=2.0*y1*T5-T4                                                           
+!      T7=2.0*y1*T6-T5                                                           
+!      T8=2.0*y1*T7-T6                                                           
+!      T9=2.0*y1*T8-T7                                                           
+!      T10=2.0*y1*T9-T8                                                          
+!      T11=2.0*y1*T10-T9                                                         
+!      T12=2.0*y1*T11-T10                                                        
+!      T13=2.0*y1*T12-T11                                                        
+!      T14=2.0*y1*T13-T12                                                        
+!      T15=2.0*y1*T14-T13                                                        
+!      T16=2.0*y1*T15-T14                                                        
+!      T17=2.0*y1*T16-T15                                                        
+!      T18=2.0*y1*T17-T16                                                        
+!      T19=2.0*y1*T18-T17                                                        
+!      T20=2.0*y1*T19-T18                                                        
+!      T21=2.0*y1*T20-T19                                                        
+!      T22=2.0*y1*T21-T20                                                        
+!      T23=2.0*y1*T22-T21    
+!
+!      F2=-2.0*x2*(0.5*CH20*T0+CH2(1)*T1+CH2(2)*T2+CH2(3)*T3+CH2(4)*T4    &        
+!                               +CH2(5)*T5+CH2(6)*T6+CH2(7)*T7+CH2(8)*T8  &
+!                               +CH2(9)*T9+CH2(10)*T10+CH2(11)*T11        &
+!                               +CH2(12)*T12+CH2(13)*T13+CH2(14)*T14      &
+!                               +CH2(15)*T15+CH2(16)*T16+CH2(17)*T17      &
+!                               +CH2(18)*T18+CH2(19)*T19+CH2(20)*T20      &
+!                               +CH2(21)*T21+CH2(22)*T22+CH2(23)*T23      &
+!                 )      
+!
+!      T24=2.0*y1*T23-T22                                                        
+!      T25=2.0*y1*T24-T23                                                        
+!      T26=2.0*y1*T25-T24                                                        
+!                                                                                
+!      F1=-x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4        &
+!                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8      &
+!                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11            &
+!                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14          &
+!                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17          &
+!                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20          &
+!                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23          &
+!                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26          &
+!             )                                                                  
+!
+!      if((1.0/x2inv).lt.-1.0) then
+!        F1=-F1+0.5*x1**2+pie**2/6.0
+!        F2=F2+pie**2*x1/3.0+x1**3/3.0
+!      endif
+!
+!      FA11=F1                                                                    
+!      FA21=F2
+!
+      G0=1.0!FA01-FA00
+      G1=2.0!FA11-FA10
+      G2=3.0!FA21-FA20
+!                                                                                
+      COMBO1=1.0!G2+2.0*y0*G1+y0*y0*G0                                              
+      COMBO2=2.0!G1+y0*G0                                                           
+!
+      I1(i_ome,i_e1,i_e2) =                                              &
+         tpiet* esq(i_e1,i_e1)*esq(i_e2,i_e2)                            &
+              *(1.0-omega(i_ome))*(1.0-omega(i_ome))                     &
+              /delta(i_ome,i_e1,i_e2)**5                                 &
+              *fgamm(i_e1,i_e2)                                          &
+              *(A(i_ome,i_e1,i_e2)*tsq*COMBO1                            &
+               +B(i_ome,i_e1,i_e2)*T*COMBO2                              &
+               +C(i_ome,i_e1,i_e2)*G0                                    &
+               )                                                         
                                   
-      I2(j,l,k,m,n)=                                                     &
-         tpiet*esq(k)*esq(m)                                             &
-              *(1.0-omega(j,l,n))*(1.0-omega(j,l,n))                     &
-              /delta2(j,l,k,m,n)**5                                      &
-              *fgamm(k,m)                                                &
-              *(A12(j,l,k,m,n)*tsq*COMBO1                                &
-               +B22(j,l,k,m,n)*ttab(i,mdum)*COMBO2                       &
-               +C22(j,l,k,m,n)*G0                                        &
+      I2(i_ome,i_e1,i_e2) =                                              &
+         tpiet* esq(i_e1,i_e1)*esq(i_e2,i_e2)                            &
+              *(1.0-omega(i_ome))*(1.0-omega(i_ome))                     &
+              /delta(i_ome,i_e1,i_e2)**5                                 &
+              *fgamm(i_e1,i_e2)                                          &
+              *(A(i_ome,i_e1,i_e2)*tsq*COMBO1                            &
+               -B(i_ome,i_e2,i_e1)*T*COMBO2                              &
+               +C(i_ome,i_e2,i_e1)*G0                                    &
                )                                                         
                                                                                 
-      I3(j,l,k,m,n)=                                                     &
-         tpie*ttab(i,mdum)*eprod(k,m)*(1.0-omega(j,l,n))                 &
-             *elsq*fgamm(k,m)*G0/delta2(j,l,k,m,n)                       &
+      I3(i_ome,i_e1,i_e2) =                                              &
+         tpiet* esq(i_e1,i_e2)*(1.0-omega(i_ome))                        &
+             *me*me*fgamm(i_e1,i_e2)*G0/delta(i_ome,i_e1,i_e2)             
 
       ELSE
       END IF
 
+      nesktab(i_ome,i_e1,i_e2) = cons * ( beta1 * I1(i_ome,i_e1,i_e2)    &
+                                        + beta2 * I2(i_ome,i_e1,i_e2)    &
+                                        + beta3 * I3(i_ome,i_e1,i_e2) )  &
+                                      /  esq(i_e1,i_e2)
       END DO ! i_e2
      END DO ! i_e1
     END DO ! i_ome
 
-  END FUNCTION NESKern
+   END SUBROUTINE NESKern
 
 !  FUNCTION Fgamm( x )
 !    REAL(dp), INTENT(in) :: x
