@@ -35,6 +35,11 @@ elif [[ $WEAKLIB_MACHINE == sn1987b* ]]; then
   echo
   echo "INFO: Setting environment for" $WEAKLIB_MACHINE
 
+elif [[ $WEAKLIB_MACHINE == ranchu* ]]; then
+
+  echo
+  echo "INFO: Setting environment for" $WEAKLIB_MACHINE
+
 fi
 
 
@@ -84,6 +89,10 @@ elif [[ $WEAKLIB_MACHINE == beacon_intel ]]; then
   module load hdf5/1.8.14
 
 elif [[ $WEAKLIB_MACHINE == sn1987b ]]; then
+
+  echo
+
+elif [[ $WEAKLIB_MACHINE == ranchu ]]; then
 
   echo
 
