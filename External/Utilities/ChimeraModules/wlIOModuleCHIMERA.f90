@@ -5,7 +5,7 @@ MODULE wlIOModuleCHIMERA
   USE wlThermoStateModule
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
-!  USE wlInterpolationModule
+  USE wlInterpolationModule
   USE wlExtNumericalModule, ONLY: epsilon, zero
   USE wlExtPhysicalConstantsModule
   USE e_p_eos_module
@@ -16,7 +16,7 @@ MODULE wlIOModuleCHIMERA
   USE wlExtEOSWrapperModule, ONLY: wlGetElectronEOS
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  !USE sfhx_frdm_composition_module
+  USE sfho_frdm_composition_module
 
   implicit none
 
@@ -27,6 +27,9 @@ MODULE wlIOModuleCHIMERA
 CONTAINS
 
   SUBROUTINE ReadComposeTableHDF( EOSTable, FileName )
+    
+    IMPLICIT none
+
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     CHARACTER(len=*), INTENT(in)                  :: FileName
 
@@ -52,7 +55,8 @@ CONTAINS
     !REAL(dp), DIMENSION(0:1584359)                :: aav ! nPoints(1) x 2 x 3
     !REAL(dp), DIMENSION(0:1584359)                :: zav ! nPoints(1) x 2 x 3
     INTEGER                                       :: nVariables
-    INTEGER                                       :: i, j, k, l
+    INTEGER                                       :: i, j, k, l, TestUnit1, TestUnit2
+    INTEGER                                       :: iHe4
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
@@ -66,9 +70,18 @@ CONTAINS
     REAL(dp)                                      :: entrop_buff   
     REAL(dp)                                      :: energ_buff   
     REAL(dp)                                      :: minvar
-    REAL(dp), DIMENSION(8140)           :: mass, bind, degen
-    REAL(dp), DIMENSION(81,0:60,326,8)           :: comp
-    INTEGER, DIMENSION(8140,2) :: az
+    REAL(dp), DIMENSION(kmax)                     :: naz, xaz
+    REAL(dp)                                      :: xn, xp, nn, np
+    INTEGER :: sflag
+    REAL(dp), DIMENSION(1) :: InterpolantU
+    REAL(dp), DIMENSION(1) :: InterpolantP
+    REAL(dp), DIMENSION(1,3) :: DerivativeU
+    REAL(dp), DIMENSION(1,3) :: DerivativeP
+    REAL(dp), DIMENSION(1)  :: rhobuff, tbuff, yebuff
+
+
+    OPEN( newunit = TestUnit1, FILE="BindingEnergyTable.d")
+    OPEN( newunit = TestUnit2, FILE="HeavyFracCheck.d")
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
@@ -117,17 +130,17 @@ write (*,*) 'Buffers read'
     DO i = 0, nPoints(1) - 1
       EOSTable % TS % States(1) % Values(i+1) = nb(i) / kfm
     END DO
-write (*,*) 'rho', EOSTable % TS % States(1) % Values 
+!write (*,*) 'rho', EOSTable % TS % States(1) % Values 
 
     DO i = 0, nPoints(2) - 1
       EOSTable % TS % States(2) % Values(i+1) = t(i) / kmev
     END DO
-write (*,*) 'T'
+!write (*,*) 'T'
 
     DO i = 0, nPoints(3) - 1
       EOSTable % TS % States(3) % Values(i+1) = yq(i) 
     END DO
-write (*,*) 'ye'
+!write (*,*) 'ye'
 !-----------------------------------------------------------
 ! Now that we've written the TS data, we need to fill in the
 ! additional TS metadata, like names, min/max, etc. 
@@ -297,7 +310,6 @@ write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(6) % Values(i+1,j,k) &
-            != ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) + 1 ) * mn/1000d0 - dmnp
             = ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) - dmnp
         END DO
       END DO
@@ -308,7 +320,6 @@ write (*,*) 'neutron chem pot(1,1,1)', EOSTable % DV % Variables(6) % Values(1,1
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(5) % Values(i+1,j,k) &
-            != thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ) * mn/1000d0 &
             = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ) &
               + EOSTable % DV % Variables(6) % Values(i+1,j,k) + dmnp
         END DO
@@ -323,7 +334,8 @@ write(*,*), "yi read"
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
-          EOSTable % DV % Variables(8) % Values(i+1,j,k) = yi(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+          EOSTable % DV % Variables(8) % Values(i+1,j,k) &
+            = MAX(yi(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)),1.e-31)
         END DO
       END DO
     END DO
@@ -333,7 +345,7 @@ write (*,*) 'neutron mass frac(1,1,1)', EOSTable % DV % Variables(8) % Values(1,
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(7) % Values(i+1,j,k) &
-            = yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + AllPoints(1) )
+            = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + AllPoints(1) ), 1.e-31)
         END DO
       END DO
     END DO
@@ -343,25 +355,12 @@ write (*,*) 'proton mass frac(1,1,1)', EOSTable % DV % Variables(7) % Values(1,1
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(9) % Values(i+1,j,k) &
-            = yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) )
+            = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ), 1.e-31 )
         END DO
       END DO
     END DO
 write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,1)
 write(*,*), "yi DV's filled"
-
-    datasize1d(1) = SIZE(yav)
-    CALL ReadHDF( "yav", yav(:), file_id, datasize1d )
-write(*,*), "yav read"
-    DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
-        DO i = 0, nPoints(1) - 1
-          EOSTable % DV % Variables(10) % Values(i+1,j,k) = yav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
-        END DO
-      END DO
-    END DO
-write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
-write(*,*), "yav DV filled"
 
     datasize1d(1) = SIZE(zav)
     CALL ReadHDF( "zav", zav(:), file_id, datasize1d )
@@ -369,7 +368,7 @@ write(*,*), "zav read"
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
-          EOSTable % DV % Variables(11) % Values(i+1,j,k) = zav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+          EOSTable % DV % Variables(11) % Values(i+1,j,k) = MAX(zav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)), 1.e-31)
         END DO
       END DO
     END DO
@@ -382,36 +381,82 @@ write(*,*), "aav read"
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
-          EOSTable % DV % Variables(12) % Values(i+1,j,k) = aav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1))
+          EOSTable % DV % Variables(12) % Values(i+1,j,k) = MAX(aav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + epsilon, 1.e-31)
         END DO
       END DO
     END DO
 write (*,*) 'heavy mass number(1,1,1)', EOSTable % DV % Variables(12) % Values(1,1,1)
 write(*,*), "aav DV filled"
 
+    datasize1d(1) = SIZE(yav)
+    CALL ReadHDF( "yav", yav(:), file_id, datasize1d )
+write(*,*), "yav read"
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
-        DO i = 1, nPoints(1)
-          EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
+        DO i = 0, nPoints(1) - 1
+          EOSTable % DV % Variables(10) % Values(i+1,j,k) &
+            = MAX(yav(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) & 
+            * EOSTable % DV % Variables(12) % Values(i+1,j,k) + epsilon, 1.e-31 )
         END DO
+      END DO
+    END DO
+write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
+write(*,*), "yav DV filled"
+
+
+    CALL compdata_readin
+
+
+    !DO i = 1,kmax
+    !    WRITE (TestUnit1, '(3(i4,x), (es14.7,x))' ) i, az(i,1), az(i,2), bind(i)
+    !END DO
+
+    !CLOSE(TestUnit1)
+
+    !STOP
+
+    DO k = 1, nPoints(3)
+!write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
+      DO j = 1, nPoints(2)
+!write(*,*) "T=",EOSTable % TS % States(2) % Values(j)
+        !DO i = 1, nPoints(1)
+        DO i = 1, nPoints(1)
+    !      EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
+     !     CYCLE
+          !CALL sub_dist_grid(i,j,k,xaz,xn,xp,naz,nn,np)
+      !tb=T(i) * kmev
+      !yeb=Ye(i)
+      !nb=rho(i) * kfm
+           CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+             IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
+                 - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
+                 - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
+              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+!write(*,*) "mass frac zero tripped", i,j,k
+            ELSE
+
+            EOSTable % DV % Variables(13) % Values(i,j,k) &
+            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       & !+ bind(iHe4) * xaz(iHe4) / 4.d0   &     
+               + bind(8077) * xaz(8077) / az(8077,1)    &
+               + bind(8076) * xaz(8076) / az(8076,1)    &
+               + bind(8075) * xaz(8075) / az(8075,1)    &
+               + bind(8074) * xaz(8074) / az(8074,1) )  &
+               / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
+               - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
+               - az(8074,1)*naz(8074)/nb(i-1) )
+!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(i,j,k), i, j, k
+          END IF
+        END DO
+!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
       END DO
     END DO
 
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 1, nPoints(1)
-
-     !REAL(dp), DIMENSION(8140)           :: mass, bind, degen
-     !REAL(dp), DIMENSION(81,0:60,326,8)           :: comp
-     !INTEGER, DIMENSION(8140,2) :: az
-
-        !open(10,file='sfhx_frdm_comp_v1.03.bin',form='unformatted',
-     !& status='old')
-        !read(10) az,mass,bind,comp
-        !write(10) az,mass,bind,comp
-        !close(10)
-
-        !return
 
           !EOSTable % DV % Variables(14) % Values(i,j,k) = ku * ( UTOT - EU + ee             &
 !&            + dmnp * x_proton + 7.075 * x_alpha - BUNUC + 1.5d0 * tmev * XH/A - ye * me )
@@ -429,17 +474,67 @@ write(*,*), "aav DV filled"
       END DO
     END DO
 
+
+  DO l = 1, 14 !EOSTable % nVariables
+    WRITE (*,*) EOSTable % DV % Names(l)
+    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
+    WRITE (*,*) "minvar=", minvar
+    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
+    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
+    EOSTable % DV % Variables(l) % Values &
+      = LOG10( EOSTable % DV % Variables(l) % Values &
+               + EOSTable % DV % Offsets(l) + epsilon )
+
+  END DO
+
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
-        DO i = 0, nPoints(1) - 1
-          EOSTable % DV % Variables(15) % Values(i+1,j,k) &
-            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) ! *(neutron mass for units)
+        DO i = 1, nPoints(1)
+        !DO i = 0, nPoints(1) - 1
+          rhobuff(1) = EOSTable % TS % States(1) % Values(i)
+          tbuff(1) = EOSTable % TS % States(2) % Values(j)
+          yebuff(1) = EOSTable % TS % States(3) % Values(k)
+
+    CALL LogInterpolateDifferentiateSingleVariable_3D( &
+                         rhobuff, tbuff, yebuff, &
+                         EOSTable % TS % States(1) % Values(:),        &
+                         EOSTable % TS % States(2) % Values(:),        &
+                         EOSTable % TS % States(3) % Values(:),        &
+                         EOSTable % TS % LogInterp,                    &
+                         EOSTable % DV % Offsets(1),                   &
+                         EOSTable % DV % Variables(1) % Values(:,:,:), &
+                         InterpolantP, DerivativeP )
+
+    CALL LogInterpolateDifferentiateSingleVariable_3D( &
+                         rhobuff, tbuff, yebuff, &
+                         EOSTable % TS % States(1) % Values(:),        &
+                         EOSTable % TS % States(2) % Values(:),        &
+                         EOSTable % TS % States(3) % Values(:),        &
+                         EOSTable % TS % LogInterp,                    &
+                         EOSTable % DV % Offsets(1),                   &
+                         EOSTable % DV % Variables(1) % Values(:,:,:), &
+                         InterpolantU, DerivativeU )
+
+
+          EOSTable % DV % Variables(15) % Values(i,j,k) &
+          = MAX((EOSTable % TS % States(1) % Values(i)/ &
+             (10**EOSTable % DV % Variables(1) % Values(i,j,k)) + epsilon) &
+             *DerivativeP(1,1) + (EOSTable % TS % States(2) % Values(j) &
+             /(10**EOSTable % DV % Variables(1) % Values(i,j,k) * EOSTable % TS % States(1) % Values(i) + epsilon ) ) &
+             *((DerivativeP(1,2))**2)/(DerivativeU(1,2)), 1.e-31)
+!write(*,*) 'Pressure', EOSTable % DV % Variables(1) % Values(i,j,k)
+!write(*,*) 'rho', EOSTable % TS % States(1) % Values(i)
+
+!write (*,*) 'gamma(i,j,k)', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
+
+         !   = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) )
+
         END DO
       END DO
     END DO
 write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
 
-  DO l = 1, EOSTable % nVariables
+  DO l = 15, 15 !EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)
     minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
     WRITE (*,*) "minvar=", minvar

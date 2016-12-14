@@ -43,13 +43,13 @@ PROGRAM wlCreateEquationOfStateTable
 !  READ( InputUnit, * ) Description, Resolution 
 
 !  nPoints = (/81,24,24/) ! Low Res
-  nPoints = (/65,55,13/) ! Low Res, 8pts/dec, 20pts/dec, 25pts/100  
+!  nPoints = (/65,55,13/) ! Low Res, 8pts/dec, 20pts/dec, 25pts/100  
 !  nPoints = (/151,47,49/) ! Low Res
 !  nPoints = (/81,500,24/) ! High Res in T only
 !  nPoints = (/161,93,25/) ! High Res in T only
 !  nPoints = (/161,47,25/) ! Standard C Res
 !  nPoints = (/161,47,49/) ! Hi Res in Ye
-!  nPoints = (/161,108,49/) ! Standard D Res
+  nPoints = (/161,108,49/) ! Standard D Res
 !  nPoints = (/1,93,3/) ! one line
 !  nPoints = (/321,47,25/) ! High Res in Rho
 !  nPoints = (/321,93,49/) ! High Res
