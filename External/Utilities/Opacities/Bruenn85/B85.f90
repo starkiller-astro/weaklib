@@ -37,7 +37,8 @@ MODULE B85
   implicit none
    
   PUBLIC totalECapEm, &
-         totalElasticScatteringKernel
+         totalElasticScatteringKernel, &
+         NESKern
 
 CONTAINS
 
@@ -358,57 +359,8 @@ CONTAINS
    DO i_ome = 1, D_ome
     DO  i_e1 = 1, D_e
         
-!       x1 = eta-y0
-!       x2 = -FEXP(x1)
-!       x2inv = 1.0/x2
-!
-!       FA0   = LOG(1.0-x2)
-!
-!       IF(x2.lt.-1.0) x2 = x2inv
-!       y = (4.0*x2+1.0)/3.0
-!
-!      T0=1.0                                                                    
-!      T1=y                                                                      
-!      T2=2.0*y*T1-T0                                                            
-!      T3=2.0*y*T2-T1                                                            
-!      T4=2.0*y*T3-T2                                                            
-!      T5=2.0*y*T4-T3                                                            
-!      T6=2.0*y*T5-T4                                                            
-!      T7=2.0*y*T6-T5                                                            
-!      T8=2.0*y*T7-T6                                                            
-!      T9=2.0*y*T8-T7                                                            
-!      T10=2.0*y*T9-T8                                                           
-!      T11=2.0*y*T10-T9                                                          
-!      T12=2.0*y*T11-T10                                                         
-!      T13=2.0*y*T12-T11                                                         
-!      T14=2.0*y*T13-T12                                                         I
-!      T15=2.0*y*T14-T13                                                         
-!      T16=2.0*y*T15-T14                                                         
-!      T17=2.0*y*T16-T15                                                         
-!      T18=2.0*y*T17-T16                                                         
-!      T19=2.0*y*T18-T17                                                         
-!      T20=2.0*y*T19-T18                                                         
-!      T21=2.0*y*T20-T19                                                         
-!      T22=2.0*y*T21-T20                                                         
-!      T23=2.0*y*T22-T21                                                         
-!      T24=2.0*y*T23-T22                                                         
-!      T25=2.0*y*T24-T23                                                         
-!      T26=2.0*y*T25-T24 
-!                                                                                
-!      FA1= &
-!           -x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4 &
-!                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8 &
-!                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11       &
-!                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14     &
-!                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17     &
-!                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20     &
-!                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23     &
-!                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26     &
-!             )                                                                  
-!
-!      if((1.0/x2inv).lt.-1.0) FA1= &
-!                             -FA1+0.5*x1**2+pie**2/6.0
-!
+      CALL NESKernFsame( eta, y0(i_ome,i_e1,i_e1), FA0, FA1 )
+
       I1(i_ome,i_e1,i_e1)= &
          ( tpiet*esq(i_e1,i_e1)*esq(i_e1,i_e1)                      &
               *(1.0-omega(i_ome))*(1.0-omega(i_ome))                &
@@ -449,146 +401,13 @@ CONTAINS
       DO  i_e2 = 1, D_e
 
       IF( i_e1.ne.i_e2 ) THEN      
-!                                                                                
-!      x3=eta-yo                                                              
-!      x4=etap(k,m)-yo 
-!
-!      x1=x3
-!      x2=-fexp(x1)                                                               
-!      x2inv=1.0/x2 
-!
-!      FA00=log(1.0-x2)                                                           
-!
-!      if(x2.lt.-1.0) x2=x2inv 
-!      y1=(4.0*x2+1.0)/3.0       
-!
-!      T0=1.0                                                                    
-!      T1=y1                                                                     
-!      T2=2.0*y1*T1-T0                                                           
-!      T3=2.0*y1*T2-T1                                                           
-!      T4=2.0*y1*T3-T2                                                           
-!      T5=2.0*y1*T4-T3                                                           
-!      T6=2.0*y1*T5-T4                                                           
-!      T7=2.0*y1*T6-T5                                                           
-!      T8=2.0*y1*T7-T6                                                           
-!      T9=2.0*y1*T8-T7                                                           
-!      T10=2.0*y1*T9-T8                                                          
-!      T11=2.0*y1*T10-T9                                                         
-!      T12=2.0*y1*T11-T10                                                        
-!      T13=2.0*y1*T12-T11                                                        
-!      T14=2.0*y1*T13-T12                                                        
-!      T15=2.0*y1*T14-T13                                                        
-!      T16=2.0*y1*T15-T14                                                        
-!      T17=2.0*y1*T16-T15                                                        
-!      T18=2.0*y1*T17-T16                                                        
-!      T19=2.0*y1*T18-T17                                                        
-!      T20=2.0*y1*T19-T18                                                        
-!      T21=2.0*y1*T20-T19                                                        
-!      T22=2.0*y1*T21-T20                                                        
-!      T23=2.0*y1*T22-T21  
-!
-!      F2=-2.0*x2*(0.5*CH20*T0+CH2(1)*T1+CH2(2)*T2+CH2(3)*T3+CH2(4)*T4    & 
-!                               +CH2(5)*T5+CH2(6)*T6+CH2(7)*T7+CH2(8)*T8  &
-!                               +CH2(9)*T9+CH2(10)*T10+CH2(11)*T11        &
-!                               +CH2(12)*T12+CH2(13)*T13+CH2(14)*T14      &
-!                               +CH2(15)*T15+CH2(16)*T16+CH2(17)*T17      &
-!                               +CH2(18)*T18+CH2(19)*T19+CH2(20)*T20      &
-!                               +CH2(21)*T21+CH2(22)*T22+CH2(23)*T23      &
-!                 )      
-!
-!      T24=2.0*y1*T23-T22                                                        
-!      T25=2.0*y1*T24-T23                                                        
-!      T26=2.0*y1*T25-T24                                                        
-!                                                                                
-!      F1=-x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4        &
-!                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8      &
-!                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11            &
-!                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14          &
-!                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17          &
-!                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20          &
-!                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23          &
-!                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26          &
-!             )                     
-!
-!      if((1.0/x2inv).lt.-1.0) then
-!        F1=-F1+0.5*x1**2+pie**2/6.0
-!        F2=F2+pie**2*x1/3.0+x1**3/3.0
-!      endif
-!
-!      FA10=F1                                                                    
-!      FA20=F2
-!
-!      x1=x4
-!      x2=-fexp(x1)                                                               
-!      x2inv=1.0/x2 
-!
-!      FA01=log(1.0-x2)                                                           
-!  
-!      if(x2.lt.-1.0) x2=x2inv 
-!      y1=(4.0*x2+1.0)/3.0                                                       
-!
-!      T0=1.0                                                                    
-!      T1=y1                  
-!      T2=2.0*y1*T1-T0                                                           
-!      T3=2.0*y1*T2-T1                                                           
-!      T4=2.0*y1*T3-T2                                                           
-!      T5=2.0*y1*T4-T3                                                           
-!      T6=2.0*y1*T5-T4                                                           
-!      T7=2.0*y1*T6-T5                                                           
-!      T8=2.0*y1*T7-T6                                                           
-!      T9=2.0*y1*T8-T7                                                           
-!      T10=2.0*y1*T9-T8                                                          
-!      T11=2.0*y1*T10-T9                                                         
-!      T12=2.0*y1*T11-T10                                                        
-!      T13=2.0*y1*T12-T11                                                        
-!      T14=2.0*y1*T13-T12                                                        
-!      T15=2.0*y1*T14-T13                                                        
-!      T16=2.0*y1*T15-T14                                                        
-!      T17=2.0*y1*T16-T15                                                        
-!      T18=2.0*y1*T17-T16                                                        
-!      T19=2.0*y1*T18-T17                                                        
-!      T20=2.0*y1*T19-T18                                                        
-!      T21=2.0*y1*T20-T19                                                        
-!      T22=2.0*y1*T21-T20                                                        
-!      T23=2.0*y1*T22-T21    
-!
-!      F2=-2.0*x2*(0.5*CH20*T0+CH2(1)*T1+CH2(2)*T2+CH2(3)*T3+CH2(4)*T4    &        
-!                               +CH2(5)*T5+CH2(6)*T6+CH2(7)*T7+CH2(8)*T8  &
-!                               +CH2(9)*T9+CH2(10)*T10+CH2(11)*T11        &
-!                               +CH2(12)*T12+CH2(13)*T13+CH2(14)*T14      &
-!                               +CH2(15)*T15+CH2(16)*T16+CH2(17)*T17      &
-!                               +CH2(18)*T18+CH2(19)*T19+CH2(20)*T20      &
-!                               +CH2(21)*T21+CH2(22)*T22+CH2(23)*T23      &
-!                 )      
-!
-!      T24=2.0*y1*T23-T22                                                        
-!      T25=2.0*y1*T24-T23                                                        
-!      T26=2.0*y1*T25-T24                                                        
-!                                                                                
-!      F1=-x2*(0.5*CH10*T0+CH1(1)*T1+CH1(2)*T2+CH1(3)*T3+CH1(4)*T4        &
-!                           +CH1(5)*T5+CH1(6)*T6+CH1(7)*T7+CH1(8)*T8      &
-!                           +CH1(9)*T9+CH1(10)*T10+CH1(11)*T11            &
-!                           +CH1(12)*T12+CH1(13)*T13+CH1(14)*T14          &
-!                           +CH1(15)*T15+CH1(16)*T16+CH1(17)*T17          &
-!                           +CH1(18)*T18+CH1(19)*T19+CH1(20)*T20          &
-!                           +CH1(21)*T21+CH1(22)*T22+CH1(23)*T23          &
-!                           +CH1(24)*T24+CH1(25)*T25+CH1(26)*T26          &
-!             )                                                                  
-!
-!      if((1.0/x2inv).lt.-1.0) then
-!        F1=-F1+0.5*x1**2+pie**2/6.0
-!        F2=F2+pie**2*x1/3.0+x1**3/3.0
-!      endif
-!
-!      FA11=F1                                                                    
-!      FA21=F2
-!
-      G0=1.0!FA01-FA00
-      G1=2.0!FA11-FA10
-      G2=3.0!FA21-FA20
-!                                                                                
-      COMBO1=1.0!G2+2.0*y0*G1+y0*y0*G0                                              
-      COMBO2=2.0!G1+y0*G0                                                           
+
+      CALL NESKernGvalue( etap(i_e1,i_e2), &
+                          eta, y0(i_ome,i_e1,i_e2), G0, G1, G2 )
+
+      COMBO1=G2+2.0*y0(i_ome,i_e1,i_e2)*G1&
+             +y0(i_ome,i_e1,i_e2)*y0(i_ome,i_e1,i_e2)*G0                                              
+      COMBO2=G1+y0(i_ome,i_e1,i_e2)*G0                                                           
 !
       I1(i_ome,i_e1,i_e2) =                                              &
          tpiet* esq(i_e1,i_e1)*esq(i_e2,i_e2)                            &
@@ -617,34 +436,154 @@ CONTAINS
       ELSE
       END IF
 
-      nesktab(i_ome,i_e1,i_e2) = cons * ( beta1 * I1(i_ome,i_e1,i_e2)    &
-                                        + beta2 * I2(i_ome,i_e1,i_e2)    &
-                                        + beta3 * I3(i_ome,i_e1,i_e2) )  &
-                                      /  esq(i_e1,i_e2)
+      nesktab(i_ome,i_e1,i_e2) = G0
+!      nesktab(i_ome,i_e1,i_e2) = cons * ( beta1 * I1(i_ome,i_e1,i_e2)    &
+!                                        + beta2 * I2(i_ome,i_e1,i_e2)    &
+!                                        + beta3 * I3(i_ome,i_e1,i_e2) )  &
+!                                      /  esq(i_e1,i_e2)
       END DO ! i_e2
      END DO ! i_e1
     END DO ! i_ome
 
    END SUBROUTINE NESKern
 
-!  FUNCTION Fgamm( x )
-!    REAL(dp), INTENT(in) :: x
-!    REAL(dp)             :: Fgamm, FEXP
-!
-!    Fgamm = 1.0/( FEXP(x) - 1.0   )
-!    RETURN
-!  END FUNCTION Fgamm
+   SUBROUTINE NESKernFsame( eta, y0, FA0, FA1) 
 
-!  FUNCTION FerInt( n, eta )
-!
-!    INTEGER,  INTENT(in) :: n
-!    REAL(dp), INTENT(in) :: eta
-!    REAL(dp)             :: FerInt
-!    FerInt = 0.0
-!    RETURN
-!
-!  END FUNCTION FerInt
-  
+     REAL(dp), INTENT(in)    :: eta, y0
+     REAL(dp), INTENT(out)   :: FA0, FA1
+     REAL(dp)                 :: FEXP
+     REAL(dp)                 :: x1, x2, x2inv
+     REAL(dp)                 :: y, sumFA
+     REAL(dp), DIMENSION(27)  :: Tarr, CHarr
+     INTEGER                  :: i_t
+
+     DO i_t = 1, 27
+       CHarr(i_t) = 1.0
+     END DO
+
+     x1 = eta -y0
+     x2 = -FEXP(x1)
+     x2inv = 1.0/x2
+      
+     FA0 = LOG(1.0 - x2)
+
+     IF(x2 .lt. -1.0) x2 = x2inv
+     y = (4.0*x2+1.0)/3.0
+
+     Tarr(1) = 1.0
+     Tarr(2) = y
+     DO i_t = 3, SIZE(Tarr)
+       Tarr(i_t) = 2.0*y*Tarr(i_t-1)-Tarr(i_t-2)
+     END DO
+    
+     sumFA = 0.0
+     DO i_t = 1, SIZE(Tarr)
+       sumFA = CHarr(i_t) * Tarr(i_t) + sumFA
+     END DO
+     FA1 = &
+           -x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+
+     IF( (1.0/x2inv) .lt. -1.0) FA1 = &
+                               -FA1 + 0.5*x1**2 + pi*pi/6.0
+
+   END SUBROUTINE NESKernFsame
+
+   SUBROUTINE NESKernFdiff&
+              ( etap, eta, y0, FA00, FA01, FA10, FA11, FA20, FA21)
+
+     REAL(dp), INTENT(in)     :: etap, eta, y0
+     REAL(dp), INTENT(out)    :: FA00, FA01, FA10, FA11, FA20, FA21
+
+     REAL(dp)                 :: x1, x2, x2inv, FEXP
+     REAL(dp)                 :: y1, sumFA
+     REAL(dp), DIMENSION(27)  :: Tarr, CHarr
+     INTEGER                  :: i_t
+
+     DO i_t = 1, 27
+       CHarr(i_t) = 1.0
+     END DO
+
+     x1 = eta - y0
+     x2 = - FEXP(x1)
+     x2inv = 1.0/x2
+
+     FA00 = LOG(1.0-x2)
+    
+     IF( x2 .lt. -1.0) x2 = x2inv
+     y1 = (4.0*x2+1.0)/3.0
+
+     Tarr(1) = 1.0
+     Tarr(2) = y1
+     DO i_t = 3, SIZE(Tarr)
+       Tarr(i_t) = 2.0*y1*Tarr(i_t-1)-Tarr(i_t-2)
+     END DO
+
+     sumFA = 0.0
+     DO i_t = 1, 24
+       sumFA = sumFA + CHarr(i_t)*Tarr(i_t) 
+     END DO
+
+     FA20 = -2.0*x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+     
+     DO i_t = 25, SIZE(Tarr)
+       sumFA = sumFA + CHArr(i_t)*Tarr(i_t)
+     END DO 
+
+     FA10 = -x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+
+     IF( (1.0/x2inv).lt.-1.0) THEN
+       FA10 = -FA10 + 0.5*x1*x1+pi*pi/6.0
+       FA20 =  FA20 + pi*pi*x1/3.0 + x1*x1*x1/3.0
+     END IF
+
+     x1 = etap - y0 
+     x2 = - FEXP(x1)
+     x2inv = 1.0/x2
+
+     FA01 = LOG(1.0-x2)
+     IF( x2 .lt. -1.0) x2 = x2inv
+     y1 = (4.0*x2+1.0)/3.0
+
+     Tarr(1) = 1.0
+     Tarr(2) = y1
+     DO i_t = 3, SIZE(Tarr)
+       Tarr(i_t) = 2.0*y1*Tarr(i_t-1)-Tarr(i_t-2)
+     END DO
+
+     sumFA = 0.0
+     DO i_t = 1, 24
+       sumFA = sumFA + CHarr(i_t)*Tarr(i_t)
+     END DO
+
+     FA21 = -2.0*x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+
+     DO i_t = 25, SIZE(Tarr)
+       sumFA = sumFA + CHArr(i_t)*Tarr(i_t)
+     END DO
+
+     FA11 = -x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+
+     IF( (1.0/x2inv).lt.-1.0) THEN
+       FA11 = -FA11 + 0.5*x1*x1+pi*pi/6.0
+       FA21 =  FA21 + pi*pi*x1/3.0 + x1*x1*x1/3.0
+     END IF
+
+   END SUBROUTINE NESKernFdiff
+
+   SUBROUTINE NESKernGvalue( etap, eta, y0, G0, G1, G2 )
+
+    REAL(dp), INTENT(in)      :: etap, eta, y0
+    REAL(dp), INTENT(out)     :: G0, G1, G2
+    REAL(dp)                 :: FA00, FA01, FA10, FA11, FA20, FA21
+
+    CALL NESKernFdiff( etap, eta, y0, FA00, FA01, FA10, FA11, FA20, FA21)
+
+    G0 = FA01 - FA00
+    G1 = FA11 - FA10
+    G2 = FA21 - FA20
+
+  END SUBROUTINE NESKernGvalue
+
 
   SUBROUTINE etaxx( rho, T, xn, xp, etann, etapp )
   
