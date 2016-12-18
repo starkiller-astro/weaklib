@@ -463,10 +463,11 @@ write(*,*), "yav DV filled"
 
           EOSTable % DV % Variables(14) % Values(i,j,k) =                    &
             & EOSTable % DV % Variables(3) % Values(i,j,k)                   &
+            & - EOSTable % DV % Variables(13) % Values(i,j,k)                & ! BINDING ENERGY SHOULD BE OUTSIDE PARENTHESES 
             & + ku * ( dmnp * EOSTable % DV % Variables(7) % Values(i,j,k)   &
-            & + 7.075 * EOSTable % DV % Variables(9) % Values(i,j,k)         &
-            & - EOSTable % DV % Variables(13) % Values(i,j,k)                &  
-            & + 1.5d0 * EOSTable % TS % States(2) % Values(j)                &
+            & + 7.075 * EOSTable % DV % Variables(9) % Values(i,j,k)         & 
+            !& - EOSTable % DV % Variables(13) % Values(i,j,k)                & ! BINDING ENERGY SHOULD BE OUTSIDE PARENTHESES 
+            & + 1.5d0 * kmev * EOSTable % TS % States(2) % Values(j)         &
             & * ( EOSTable % DV % Variables(10) % Values(i,j,k)              &
             & / EOSTable % DV % Variables(12) % Values(i,j,k) )              & 
             & - ( EOSTable % TS % States(3) % Values(k) * me ) )
@@ -532,7 +533,7 @@ write(*,*), "yav DV filled"
         END DO
       END DO
     END DO
-write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
+!write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
 
   DO l = 15, 15 !EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)

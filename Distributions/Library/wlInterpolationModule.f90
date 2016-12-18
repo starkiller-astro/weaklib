@@ -585,6 +585,8 @@ CONTAINS
                  Offset => DV % Offsets(j) )
       DO i = 1, Masksize
 
+        IF ( .not.work_mask(i) ) CYCLE
+
         p000 = ( Table( il1(i)  , il2(i)  , il3(i)   ) )
         p100 = ( Table( il1(i)+1, il2(i)  , il3(i)   ) )
         p010 = ( Table( il1(i)  , il2(i)+1, il3(i)   ) )
@@ -1234,6 +1236,8 @@ CONTAINS
         ASSOCIATE( Table => DV % Variables(j) % Values(:,:,:), &
                    Offset => DV % Offsets(j) )
         DO i = 1, Masksize
+
+          IF ( .not.work_mask(i) ) CYCLE
 
           p000 = ( Table( il1(i)  , il2(i)  , il3(i)   ) )
           p100 = ( Table( il1(i)+1, il2(i)  , il3(i)   ) )
