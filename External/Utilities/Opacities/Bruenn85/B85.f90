@@ -270,11 +270,11 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:), INTENT(out) :: nesktab
     REAL(dp)             :: tsq, tinv, eta, FEXP, &
                             x1, x2, x2inv, &
-                            FA0, FA1, &
+                            FA_, FA0, FA1, &
                             y, tpiet, &
                             COMBO1, COMBO2, &
-                            G0, G1, G2
-    REAL(dp)             :: beta1, beta2, beta3, sig0, cons
+                            G0, G1, G2, buffer1, buffer2
+    REAL(dp)             :: beta1, beta2, beta3, log10_sig0, log10_cons
     INTEGER              :: D_e, D_ome, i_e1, i_e2, i_ome
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: ediff, etap, fgamm, esq
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: delta, y0, I1, I2, I3,&
@@ -289,8 +289,8 @@ CONTAINS
      beta3 = ca**2 - cv**2
        D_e = SIZE( energygrid )
      D_ome = SIZE( omega )
-     sig0  = 1.764 * 10**(-44)             ! cm**(-2)
-     cons  = half * pi * sig0 * cvel / ( twpi**3 * me**2 )
+     log10_sig0  = LOG10(1.764) - 44  ! log10(sig0)            
+     log10_cons  = LOG10(half * pi * cvel / ( twpi**3 * me**2 )) + log10_sig0
 
     ALLOCATE(  ediff( D_e, D_e )        )  ! e1 - e2
     ALLOCATE(   etap( D_e, D_e )        )  ! eta prim
@@ -359,7 +359,7 @@ CONTAINS
    DO i_ome = 1, D_ome
     DO  i_e1 = 1, D_e
         
-      CALL NESKernFsame( eta, y0(i_ome,i_e1,i_e1), FA0, FA1 )
+      CALL NESKernFsame( eta, y0(i_ome,i_e1,i_e1), FA_, FA0, FA1 )
 
       I1(i_ome,i_e1,i_e1)= &
          ( tpiet*esq(i_e1,i_e1)*esq(i_e1,i_e1)                      &
@@ -368,28 +368,21 @@ CONTAINS
               *(A(i_ome,i_e1,i_e1)*tsq                              &
                             *(2.0*FA1                               &
                              +2.0*y0(i_ome,i_e1,i_e1)*FA0           &
-                             +y0(i_ome,i_e1,i_e1)**2                &
-                                /(FEXP(-(eta                        &
-                                  -y0(i_ome,i_e1,i_e1)))+1.0)       &
+                             +y0(i_ome,i_e1,i_e1)**2 *FA_           &
                              )                                      &
                +B(i_ome,i_e1,i_e1)*T                                &
                             *(FA0                                   &
-                             +y0(i_ome,i_e1,i_e1)                   &
-                                /(FEXP(-(eta                        &
-                                  -y0(i_ome,i_e1,i_e1)))+1.0)       &
+                             +y0(i_ome,i_e1,i_e1)*FA_               &
                              )                                      &
-               +C(i_ome,i_e1,i_e1)/(FEXP(-(eta                      &
-                                  -y0(i_ome,i_e1,i_e1)))+1.0)       &
+               +C(i_ome,i_e1,i_e1)*FA_                              &
                )      
 
-      I2(i_ome,i_e1,i_e1) =  I1(i_ome,i_e1,i_e1)                    
+      I2(i_ome,i_e1,i_e1) = I1(i_ome,i_e1,i_e1)                    
 
       I3(i_ome,i_e1,i_e1) =                                         &
          tpiet*esq(i_e1,i_e1)                                       &
               *(1.0-omega(i_ome))                                   &
-              *me*me/delta(i_ome,i_e1,i_e1)                         &
-              /(FEXP(-(eta-y0(i_ome,i_e1,i_e1)))+1.0)             
-                 
+              *me*me*FA_/delta(i_ome,i_e1,i_e1)            
     END DO ! i_e1
    END DO ! i_ome
 
@@ -408,7 +401,7 @@ CONTAINS
       COMBO1=G2+2.0*y0(i_ome,i_e1,i_e2)*G1&
              +y0(i_ome,i_e1,i_e2)*y0(i_ome,i_e1,i_e2)*G0                                              
       COMBO2=G1+y0(i_ome,i_e1,i_e2)*G0                                                           
-!
+
       I1(i_ome,i_e1,i_e2) =                                              &
          tpiet* esq(i_e1,i_e1)*esq(i_e2,i_e2)                            &
               *(1.0-omega(i_ome))*(1.0-omega(i_ome))                     &
@@ -436,30 +429,59 @@ CONTAINS
       ELSE
       END IF
 
-      nesktab(i_ome,i_e1,i_e2) = G0
-!      nesktab(i_ome,i_e1,i_e2) = cons * ( beta1 * I1(i_ome,i_e1,i_e2)    &
-!                                        + beta2 * I2(i_ome,i_e1,i_e2)    &
-!                                        + beta3 * I3(i_ome,i_e1,i_e2) )  &
-!                                      /  esq(i_e1,i_e2)
+      buffer1                   = ( beta1 * I1(i_ome,i_e1,i_e2)    &
+                                        + beta2 * I2(i_ome,i_e1,i_e2)    &
+                                        + beta3 * I3(i_ome,i_e1,i_e2) )  &
+                                      /  esq(i_e1,i_e2)
+      buffer2 = LOG10(buffer1) + log10_cons 
+
+      nesktab(i_ome,i_e1,i_e2) = 10**buffer2
+
       END DO ! i_e2
      END DO ! i_e1
     END DO ! i_ome
 
    END SUBROUTINE NESKern
 
-   SUBROUTINE NESKernFsame( eta, y0, FA0, FA1) 
+   SUBROUTINE NESKernFsame( eta, y0, FA_, FA0, FA1) 
 
      REAL(dp), INTENT(in)    :: eta, y0
-     REAL(dp), INTENT(out)   :: FA0, FA1
+     REAL(dp), INTENT(out)   :: FA_, FA0, FA1
      REAL(dp)                 :: FEXP
      REAL(dp)                 :: x1, x2, x2inv
      REAL(dp)                 :: y, sumFA
-     REAL(dp), DIMENSION(27)  :: Tarr, CHarr
+     REAL(dp), DIMENSION(27)  :: Tarr, CH1arr
      INTEGER                  :: i_t
 
-     DO i_t = 1, 27
-       CHarr(i_t) = 1.0
-     END DO
+     FA_ = 1.0/( FEXP( -(eta - y0) ) + 1.0) 
+  
+     CH1arr(1)  = 1.935064300869969
+     CH1arr(2)  = 0.166073032927855
+     CH1arr(3)  = 0.024879329924228
+     CH1arr(4)  = 0.004686361959447
+     CH1arr(5)  = 0.001001627496164
+     CH1arr(6)  = 0.000232002196094
+     CH1arr(7)  = 0.000056817822718
+     CH1arr(8)  = 0.000014496300557
+     CH1arr(9)  = 0.000003816329463
+     CH1arr(10) = 0.000001029904264
+     CH1arr(11) = 0.000000283575385
+     CH1arr(12) = 0.000000079387055
+     CH1arr(13) = 0.000000022536705
+     CH1arr(14) = 0.000000006474338
+     CH1arr(15) = 0.000000001879117
+     CH1arr(16) = 0.000000000550291
+     CH1arr(17) = 0.000000000162421
+     CH1arr(18) = 0.000000000048274
+     CH1arr(19) = 0.000000000014437
+     CH1arr(20) = 0.000000000004342
+     CH1arr(21) = 0.000000000001312
+     CH1arr(22) = 0.000000000000398
+     CH1arr(23) = 0.000000000000121
+     CH1arr(24) = 0.000000000000037
+     CH1arr(25) = 0.000000000000011
+     CH1arr(26) = 0.000000000000004
+     CH1arr(27) = 0.000000000000001
 
      x1 = eta -y0
      x2 = -FEXP(x1)
@@ -467,23 +489,23 @@ CONTAINS
       
      FA0 = LOG(1.0 - x2)
 
-     IF(x2 .lt. -1.0) x2 = x2inv
+     IF(x2 .lt. -1.0) x2 = x2inv ! x1 .lt. 0
      y = (4.0*x2+1.0)/3.0
 
-     Tarr(1) = 1.0
-     Tarr(2) = y
+     Tarr(1) = 1.0  ! T0
+     Tarr(2) = y    ! T1
      DO i_t = 3, SIZE(Tarr)
        Tarr(i_t) = 2.0*y*Tarr(i_t-1)-Tarr(i_t-2)
      END DO
     
      sumFA = 0.0
-     DO i_t = 1, SIZE(Tarr)
-       sumFA = CHarr(i_t) * Tarr(i_t) + sumFA
+     DO i_t = 2, SIZE(Tarr)
+       sumFA = CH1arr(i_t) * Tarr(i_t) + sumFA
      END DO
      FA1 = &
-           -x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+           -x2*( sumFA + 0.5*CH1arr(1)*Tarr(1) )
 
-     IF( (1.0/x2inv) .lt. -1.0) FA1 = &
+     IF( (1.0/x2inv) .lt. -1.0) FA1 = &  ! x2 .lt. -1
                                -FA1 + 0.5*x1**2 + pi*pi/6.0
 
    END SUBROUTINE NESKernFsame
@@ -496,12 +518,62 @@ CONTAINS
 
      REAL(dp)                 :: x1, x2, x2inv, FEXP
      REAL(dp)                 :: y1, sumFA
-     REAL(dp), DIMENSION(27)  :: Tarr, CHarr
+     REAL(dp), DIMENSION(27)  :: Tarr, CH1arr
+     REAL(dp), DIMENSION(24)  :: CH2arr
      INTEGER                  :: i_t
 
-     DO i_t = 1, 27
-       CHarr(i_t) = 1.0
-     END DO
+     CH1arr(1)  = 1.935064300869969
+     CH1arr(2)  = 0.166073032927855
+     CH1arr(3)  = 0.024879329924228
+     CH1arr(4)  = 0.004686361959447
+     CH1arr(5)  = 0.001001627496164
+     CH1arr(6)  = 0.000232002196094
+     CH1arr(7)  = 0.000056817822718
+     CH1arr(8)  = 0.000014496300557
+     CH1arr(9)  = 0.000003816329463
+     CH1arr(10) = 0.000001029904264
+     CH1arr(11) = 0.000000283575385
+     CH1arr(12) = 0.000000079387055
+     CH1arr(13) = 0.000000022536705
+     CH1arr(14) = 0.000000006474338
+     CH1arr(15) = 0.000000001879117
+     CH1arr(16) = 0.000000000550291
+     CH1arr(17) = 0.000000000162421
+     CH1arr(18) = 0.000000000048274
+     CH1arr(19) = 0.000000000014437
+     CH1arr(20) = 0.000000000004342
+     CH1arr(21) = 0.000000000001312
+     CH1arr(22) = 0.000000000000398
+     CH1arr(23) = 0.000000000000121
+     CH1arr(24) = 0.000000000000037
+     CH1arr(25) = 0.000000000000011
+     CH1arr(26) = 0.000000000000004
+     CH1arr(27) = 0.000000000000001
+
+     CH2arr(1)  = 1.958417213383495
+     CH2arr(2)  = 0.085188131486831
+     CH2arr(3)  = 0.008559852220133
+     CH2arr(4)  = 0.001211772144129
+     CH2arr(5)  = 0.000207227685308
+     CH2arr(6)  = 0.000039969586914 
+     CH2arr(7)  = 0.000008380640658
+     CH2arr(8)  = 0.000001868489447
+     CH2arr(9)  = 0.000000436660867
+     CH2arr(10) = 0.000000105917334
+     CH2arr(11) = 0.000000026478920 
+     CH2arr(12) = 0.000000006787000
+     CH2arr(13) = 0.000000001776536 
+     CH2arr(14) = 0.000000000473417
+     CH2arr(15) = 0.000000000128121
+     CH2arr(16) = 0.000000000035143
+     CH2arr(17) = 0.000000000009754   
+     CH2arr(18) = 0.000000000002736   
+     CH2arr(19) = 0.000000000000775 
+     CH2arr(20) = 0.000000000000221 
+     CH2arr(21) = 0.000000000000064  
+     CH2arr(22) = 0.000000000000018 
+     CH2arr(23) = 0.000000000000005
+     CH2arr(24) = 0.000000000000002
 
      x1 = eta - y0
      x2 = - FEXP(x1)
@@ -509,7 +581,7 @@ CONTAINS
 
      FA00 = LOG(1.0-x2)
     
-     IF( x2 .lt. -1.0) x2 = x2inv
+     IF( x2 .lt. -1.0) x2 = x2inv  ! x1 .lt. 0
      y1 = (4.0*x2+1.0)/3.0
 
      Tarr(1) = 1.0
@@ -519,19 +591,20 @@ CONTAINS
      END DO
 
      sumFA = 0.0
-     DO i_t = 1, 24
-       sumFA = sumFA + CHarr(i_t)*Tarr(i_t) 
+     DO i_t = 1, SIZE(CH2arr)
+       sumFA = sumFA + CH2arr(i_t)*Tarr(i_t) 
      END DO
 
-     FA20 = -2.0*x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
-     
-     DO i_t = 25, SIZE(Tarr)
-       sumFA = sumFA + CHArr(i_t)*Tarr(i_t)
+     FA20 = -2.0*x2*( sumFA - 0.5*CH2arr(1)*Tarr(1) )
+    
+     sumFA = 0.0 
+     DO i_t = 1, SIZE(CH1arr)
+       sumFA = sumFA + CH1Arr(i_t)*Tarr(i_t)
      END DO 
 
-     FA10 = -x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+     FA10 = -x2*( sumFA - 0.5*CH1arr(1)*Tarr(1) )
 
-     IF( (1.0/x2inv).lt.-1.0) THEN
+     IF( (1.0/x2inv).lt.-1.0) THEN  ! x2 .lt. -1
        FA10 = -FA10 + 0.5*x1*x1+pi*pi/6.0
        FA20 =  FA20 + pi*pi*x1/3.0 + x1*x1*x1/3.0
      END IF
@@ -551,17 +624,18 @@ CONTAINS
      END DO
 
      sumFA = 0.0
-     DO i_t = 1, 24
-       sumFA = sumFA + CHarr(i_t)*Tarr(i_t)
+     DO i_t = 1, SIZE(CH2arr)
+       sumFA = sumFA + CH2arr(i_t)*Tarr(i_t)
      END DO
 
-     FA21 = -2.0*x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+     FA21 = -2.0*x2*( sumFA - 0.5*CH2arr(1)*Tarr(1) )
 
-     DO i_t = 25, SIZE(Tarr)
-       sumFA = sumFA + CHArr(i_t)*Tarr(i_t)
+     sumFA = 0.0
+     DO i_t = 1, SIZE(CH1arr)
+       sumFA = sumFA + CH1Arr(i_t)*Tarr(i_t)
      END DO
 
-     FA11 = -x2*( sumFA - 0.5*CHarr(1)*Tarr(1) )
+     FA11 = -x2*( sumFA - 0.5*CH1arr(1)*Tarr(1) )
 
      IF( (1.0/x2inv).lt.-1.0) THEN
        FA11 = -FA11 + 0.5*x1*x1+pi*pi/6.0
