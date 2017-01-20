@@ -359,7 +359,7 @@ CONTAINS
    DO i_ome = 1, D_ome
     DO  i_e1 = 1, D_e
         
-      CALL NESKernFsame( eta, y0(i_ome,i_e1,i_e1), FA_, FA0, FA1 )
+      CALL NESKernFsame( eta- y0(i_ome,i_e1,i_e1), FA_, FA0, FA1 )
 
       I1(i_ome,i_e1,i_e1)= &
          ( tpiet*esq(i_e1,i_e1)*esq(i_e1,i_e1)                      &
@@ -443,9 +443,9 @@ CONTAINS
 
    END SUBROUTINE NESKern
 
-   SUBROUTINE NESKernFsame( eta, y0, FA_, FA0, FA1) 
+   SUBROUTINE NESKernFsame( eta_y0, FA_, FA0, FA1) 
 
-     REAL(dp), INTENT(in)    :: eta, y0
+     REAL(dp), INTENT(in)    :: eta_y0
      REAL(dp), INTENT(out)   :: FA_, FA0, FA1
      REAL(dp)                 :: FEXP
      REAL(dp)                 :: x1, x2, x2inv
@@ -453,7 +453,7 @@ CONTAINS
      REAL(dp), DIMENSION(27)  :: Tarr, CH1arr
      INTEGER                  :: i_t
 
-     FA_ = 1.0/( FEXP( -(eta - y0) ) + 1.0) 
+     FA_ = 1.0/( FEXP( -(eta_y0) ) + 1.0) 
   
      CH1arr(1)  = 1.935064300869969
      CH1arr(2)  = 0.166073032927855
@@ -483,7 +483,7 @@ CONTAINS
      CH1arr(26) = 0.000000000000004
      CH1arr(27) = 0.000000000000001
 
-     x1 = eta -y0
+     x1 = eta_y0
      x2 = -FEXP(x1)
      x2inv = 1.0/x2
       
@@ -511,9 +511,9 @@ CONTAINS
    END SUBROUTINE NESKernFsame
 
    SUBROUTINE NESKernFdiff&
-              ( etap, eta, y0, FA00, FA01, FA10, FA11, FA20, FA21)
+              ( etap_y0, eta_y0, FA00, FA01, FA10, FA11, FA20, FA21)
 
-     REAL(dp), INTENT(in)     :: etap, eta, y0
+     REAL(dp), INTENT(in)     :: etap_y0, eta_y0
      REAL(dp), INTENT(out)    :: FA00, FA01, FA10, FA11, FA20, FA21
 
      REAL(dp)                 :: x1, x2, x2inv, FEXP
@@ -575,12 +575,11 @@ CONTAINS
      CH2arr(23) = 0.000000000000005
      CH2arr(24) = 0.000000000000002
 
-     x1 = eta - y0
+     x1 = eta_y0
      x2 = - FEXP(x1)
      x2inv = 1.0/x2
 
-     FA00 = LOG(1.0-x2)
-    
+     FA00 = LOG(1.0 - x2)
      IF( x2 .lt. -1.0) x2 = x2inv  ! x1 .lt. 0
      y1 = (4.0*x2+1.0)/3.0
 
@@ -609,7 +608,7 @@ CONTAINS
        FA20 =  FA20 + pi*pi*x1/3.0 + x1*x1*x1/3.0
      END IF
 
-     x1 = etap - y0 
+     x1 = etap_y0 
      x2 = - FEXP(x1)
      x2inv = 1.0/x2
 
@@ -650,7 +649,7 @@ CONTAINS
     REAL(dp), INTENT(out)     :: G0, G1, G2
     REAL(dp)                 :: FA00, FA01, FA10, FA11, FA20, FA21
 
-    CALL NESKernFdiff( etap, eta, y0, FA00, FA01, FA10, FA11, FA20, FA21)
+    CALL NESKernFdiff( etap-y0, eta-y0, FA00, FA01, FA10, FA11, FA20, FA21)
 
     G0 = FA01 - FA00
     G1 = FA11 - FA10
