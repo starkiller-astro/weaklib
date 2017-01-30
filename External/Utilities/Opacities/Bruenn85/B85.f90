@@ -266,7 +266,7 @@ CONTAINS
   IMPLICIT NONE
 
     REAL(dp), DIMENSION(:), INTENT(in) :: energygrid, omega
-    REAL(dp), INTENT(in) :: T, chem_e      
+    REAL(dp), INTENT(in) :: T, chem_e       ! both unit = MeV
     REAL(dp), DIMENSION(:,:,:), INTENT(out) :: nesktab
     REAL(dp)             :: tsq, tinv, eta, FEXP, &
                             x1, x2, x2inv, &
@@ -316,14 +316,12 @@ CONTAINS
        fgamm(i_e1,i_e2) = 1.0/(FEXP(-ediff(i_e1,i_e2)*tinv)-1.0)
      ELSE
      END IF     
-
      END DO ! i_e2
     END DO ! i_e1
 
     DO i_ome = 1, D_ome
      DO  i_e1 = 1, D_e
       DO  i_e2 = 1, D_e
-
        delta(i_ome,i_e1,i_e2) =                                          &
                              SQRT( esq(i_e1,i_e1) + esq(i_e2,i_e2)       &
                              - 2.0*esq(i_e1,i_e2)*omega(i_ome)  )
