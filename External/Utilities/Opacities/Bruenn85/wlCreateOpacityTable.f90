@@ -307,6 +307,10 @@ PRINT*, "Making Energy Grid"
            END DO !t_m 
          END DO !i_rb
 
+
+!----------------  Scatt_NES -----------------------
+
+
        END DO  !j_rho
      END DO  !k_t
    END DO  !l_ye

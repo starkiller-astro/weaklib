@@ -36,15 +36,16 @@ MODULE B85
 
   implicit none
    
-  PUBLIC totalECapEm, &
-         totalElasticScatteringKernel, &
-         NESKern
+  PUBLIC TotalECapEm, &
+         TotalElasticScatteringKernel, &
+         NESKernelWithOmega, &
+         TotalNESKernel
 
 CONTAINS
 
 !========================Function=============================
 
-  REAL(dp) FUNCTION totalECapEm &
+  REAL(dp) FUNCTION TotalECapEm &
     ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 !------------------------------------------------------------------------------
 ! Purpose:
@@ -140,10 +141,10 @@ CONTAINS
     END IF
 
     RETURN
-  END FUNCTION totalECapEm
+  END FUNCTION TotalECapEm
 
 
-  REAL(dp) FUNCTION totalElasticScatteringKernel&
+  REAL(dp) FUNCTION TotalElasticScatteringKernel&
      ( energy, rho, T, xh, A, Z, xn, xp, l )
 
 !------------------------------------------------------------------------------
@@ -250,10 +251,58 @@ CONTAINS
 
     RETURN
 
-  END FUNCTION totalElasticScatteringKernel
+  END FUNCTION TotalElasticScatteringKernel
+
+
+  SUBROUTINE TotalNESKernel( energygrid, T, chem_e, nquad, l, NESK )
+
+  REAL(dp), DIMENSION(:), INTENT(in) :: energygrid
+  REAL(dp), INTENT(in)       :: T, chem_e
+  INTEGER , INTENT(in)       :: nquad, l
+  REAL(dp), DIMENSION(:,:), INTENT(out) :: NESK
+
+  REAL(dp), DIMENSION(nquad) :: roots, weights
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: NESK_ome
+  INTEGER                    :: ii, jj, kk, nPointsE
+  REAL(dp)                   :: outcome
+
+  nPointsE = SIZE(energygrid)
+
+  ALLOCATE( NESK_ome( nquad, nPointsE, nPointsE ) )
+
+  CALL gaquad( nquad, roots, weights, -1.0_dp , 1.0_dp )
+
+  CALL NESKernelWithOmega( energygrid, roots, T, chem_e, NESK_ome )
+
+  DO jj = 1, nPointsE
+
+    DO kk = 1, nPointsE
+
+    outcome = 0.0_dp
+
+    DO ii = 1, nquad
+
+      IF ( l == 0 ) THEN
+
+        outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii)
+
+      ELSE IF ( l == 1 ) THEN
+
+        outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii) * roots(ii)
+
+      END IF
+    END DO ! ii (nquad)
+
+    NESK( jj, kk ) = outcome
+
+    END DO
+
+  END DO
+
+  END SUBROUTINE TotalNESKernel
 
   
-  SUBROUTINE NESKern( energygrid, omega, T, chem_e, nesktab )
+  SUBROUTINE NESKernelWithOmega( energygrid, omega, T, chem_e, nesktab )
 !----------------------------------------------------------------------
 ! Purpose:
 !    To compute the neutrino-electron scattering (OUT) kernel 
@@ -292,7 +341,7 @@ CONTAINS
      log10_sig0  = LOG10(1.764) - 44  ! log10(sig0)            
      log10_cons  = LOG10(half * pi * cvel / ( twpi**3 * me**2 )) + log10_sig0
 
-    ALLOCATE(  ediff( D_e, D_e )        )  ! e1 - e2
+    ALLOCATE(  ediff( D_e, D_e )        )  ! e1 - e2 (ein -eout)
     ALLOCATE(   etap( D_e, D_e )        )  ! eta prim
     ALLOCATE(   esq ( D_e, D_e )        )  ! e*e
     ALLOCATE(  fgamm( D_e, D_e )        )  ! gamma function
@@ -357,7 +406,7 @@ CONTAINS
    DO i_ome = 1, D_ome
     DO  i_e1 = 1, D_e
         
-      CALL NESKernFsame( eta- y0(i_ome,i_e1,i_e1), FA_, FA0, FA1 )
+      CALL ComputeFValue_sameE( eta- y0(i_ome,i_e1,i_e1), FA_, FA0, FA1 )
 
       I1(i_ome,i_e1,i_e1)= &
          ( tpiet*esq(i_e1,i_e1)*esq(i_e1,i_e1)                      &
@@ -393,7 +442,7 @@ CONTAINS
 
       IF( i_e1.ne.i_e2 ) THEN      
 
-      CALL NESKernGvalue( etap(i_e1,i_e2), &
+      CALL ComputeGValue_NESK( etap(i_e1,i_e2), &
                           eta, y0(i_ome,i_e1,i_e2), G0, G1, G2 )
 
       COMBO1=G2+2.0*y0(i_ome,i_e1,i_e2)*G1&
@@ -439,9 +488,9 @@ CONTAINS
      END DO ! i_e1
     END DO ! i_ome
 
-   END SUBROUTINE NESKern
+   END SUBROUTINE NESKernelWithOmega
 
-   SUBROUTINE NESKernFsame( eta_y0, FA_, FA0, FA1) 
+   SUBROUTINE ComputeFValue_sameE( eta_y0, FA_, FA0, FA1) 
 
      REAL(dp), INTENT(in)    :: eta_y0
      REAL(dp), INTENT(out)   :: FA_, FA0, FA1
@@ -506,9 +555,9 @@ CONTAINS
      IF( (1.0/x2inv) .lt. -1.0) FA1 = &  ! x2 .lt. -1
                                -FA1 + 0.5*x1**2 + pi*pi/6.0
 
-   END SUBROUTINE NESKernFsame
+   END SUBROUTINE ComputeFValue_sameE
 
-   SUBROUTINE NESKernFdiff&
+   SUBROUTINE ComputeFValue_diffE&
               ( etap_y0, eta_y0, FA00, FA01, FA10, FA11, FA20, FA21)
 
      REAL(dp), INTENT(in)     :: etap_y0, eta_y0
@@ -639,21 +688,21 @@ CONTAINS
        FA21 =  FA21 + pi*pi*x1/3.0 + x1*x1*x1/3.0
      END IF
 
-   END SUBROUTINE NESKernFdiff
+   END SUBROUTINE ComputeFValue_diffE
 
-   SUBROUTINE NESKernGvalue( etap, eta, y0, G0, G1, G2 )
+   SUBROUTINE ComputeGValue_NESK( etap, eta, y0, G0, G1, G2 )
 
     REAL(dp), INTENT(in)      :: etap, eta, y0
     REAL(dp), INTENT(out)     :: G0, G1, G2
     REAL(dp)                 :: FA00, FA01, FA10, FA11, FA20, FA21
 
-    CALL NESKernFdiff( etap-y0, eta-y0, FA00, FA01, FA10, FA11, FA20, FA21)
+    CALL ComputeFValue_diffE( etap-y0, eta-y0, FA00, FA01, FA10, FA11, FA20, FA21)
 
     G0 = FA01 - FA00
     G1 = FA11 - FA10
     G2 = FA21 - FA20
 
-  END SUBROUTINE NESKernGvalue
+  END SUBROUTINE ComputeGValue_NESK
 
 
   SUBROUTINE etaxx( rho, T, xn, xp, etann, etapp )
