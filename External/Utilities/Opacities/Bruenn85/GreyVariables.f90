@@ -186,55 +186,6 @@ CONTAINS
 
   END SUBROUTINE GreyOpacityWithGaussianQuadrature
 
-  
-!  SUBROUTINE GaussianNESK( energygrid, T, chem_e, nquad, l, NESK )
-!
-!  REAL(dp), DIMENSION(:), INTENT(in) :: energygrid
-!  REAL(dp), INTENT(in)       :: T, chem_e
-!  INTEGER , INTENT(in)       :: nquad, l
-!  REAL(dp), DIMENSION(:,:), INTENT(out) :: NESK
-!
-!  REAL(dp), DIMENSION(nquad) :: roots, weights
-!  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: NESK_ome
-!  INTEGER                    :: ii, jj, kk, nPointsE
-!  REAL(dp)                   :: outcome
-!
-!  nPointsE = SIZE(energygrid)
-!
-!  ALLOCATE( NESK_ome( nquad, nPointsE, nPointsE ) )
-!
-!  CALL gaquad( nquad, roots, weights, -1.0_dp , 1.0_dp )
-!    
-!  CALL NESKernelWithOmega( energygrid, roots, T, chem_e, NESK_ome )
-!
-!  DO jj = 1, nPointsE          
-!
-!    DO kk = 1, nPointsE
-!
-!    outcome = 0.0_dp
-!
-!    DO ii = 1, nquad
-!
-!      IF ( l == 0 ) THEN
-!
-!        outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii) 
-!
-!      ELSE IF ( l == 1 ) THEN
-!
-!        outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii) * roots(ii)
-!
-!      END IF
-!
-!    END DO ! ii (nquad)
-!     
-!    NESK( jj, kk ) = outcome
-!
-!    END DO
-!
-!  END DO
-!
-!  END SUBROUTINE GaussianNESK
-!
 
   SUBROUTINE GreyOpacityWithGaussianQuadrature_scattIso&
                   ( nquad, bb, &
