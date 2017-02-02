@@ -1,4 +1,4 @@
-function [ Interpolant ] = interpolate3D( D, T, Y, D1D, T1D, Y1D, V3D, OS )
+function [ Interpolant ] = interpolateEos( D, T, Y, D1D, T1D, Y1D, V3D, OS )
 
   Interpolant = zeros( size( D, 1 ), 1 );
   for i = 1 : size( D, 1 )
