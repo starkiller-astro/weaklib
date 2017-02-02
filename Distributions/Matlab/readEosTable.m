@@ -1,5 +1,5 @@
 function [ D, T, Y, nD, nT, nY, P, S, E, Me, Mp, Mn, Xp, Xn, Xa, Xh,...
-           Zh, Ah, Eh, Eth, Gm ] = readEosTable( fileName )
+           Zh, Ah, Eh, Eth, Gm, OS ] = readEosTable( fileName )
 
     % Reads HDF5 EOS Table
 
