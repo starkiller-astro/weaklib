@@ -54,6 +54,14 @@ MODULE wlOpacityFieldsModule
 !     Ye:  Electron Fraction
 !     l:   Legendre Moment
 !
+! OpacityType B (Inelastic Neutrino-Electron Scattering)
+!   Dependency ( E', E, T, Eta, l )
+!     E':  Neutrino Energy
+!     E:   Neutrino Energy
+!     T:   Temperature
+!     Eta: Electron Chemical Pot. / Temperature
+!     l:   Legendre Moment
+!
 !---------------------------------------------  
 
   TYPE :: ValueType_5D

@@ -92,6 +92,8 @@ MODULE wlOpacityTableModule
       thermEmAb  ! -- Thermal Emission and Absorption
     TYPE(OpacityTypeB)             :: &
       scatt_Iso  ! -- Isoenergenic Scattering
+    TYPE(OpacityTypeB)             :: &
+      scatt_NES  ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeC)             :: &
       scatt_nIso ! -- Non-Isoenergenic Scattering
   END TYPE OpacityTableType
@@ -142,6 +144,11 @@ CONTAINS
     CALL AllocateOpacity &
            ( OpTab % scatt_Iso, nPointsTemp, &
              nMoments = nMomB, nOpacities = nOpacB )
+
+!    nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(2), nPointsEta ]
+
+!    CALL AllocateOpacity &
+!           ( OpTab % scatt_NES, )
 
     CALL AllocateOpacity &
            ( OpTab % scatt_nIso, nPointsTemp, &
