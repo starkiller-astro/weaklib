@@ -48,12 +48,13 @@ MODULE wlOpacityTableModule
 !                 
 !-----------------------------------------------------------------------
  
-  USE wlKindModule, ONLY: dp
-  USE wlEnergyGridModule, ONLY: &
-    EnergyGridType, &
-    AllocateEnergyGrid, &
-    DeallocateEnergyGrid, &
-    DescribeEnergyGrid
+  USE wlKindModule, ONLY: &
+    dp
+  USE wlGridModule, ONLY: &
+    GridType, &
+    AllocateGrid, &
+    DeallocateGrid, &
+    DescribeGrid
   USE wlOpacityFieldsModule, ONLY: &
     OpacityTypeA, &
     OpacityTypeB, &
@@ -80,13 +81,13 @@ MODULE wlOpacityTableModule
 
   TYPE, PUBLIC :: OpacityTableType
     INTEGER                        :: nOpacitiesA
-    INTEGER                        :: nOpacitiesB
-    INTEGER                        :: nMomentsB
-    INTEGER                        :: nOpacitiesC
-    INTEGER                        :: nMomentsC
-    INTEGER                        :: nPointsE
+    INTEGER                        :: nOpacitiesB, nMomentsB
+    INTEGER                        :: nOpacitiesB_NES, nMomentsB_NES
+    INTEGER                        :: nOpacitiesC, nMomentsC
+    INTEGER                        :: nPointsE, nPointsEta
     INTEGER, DIMENSION(3)          :: nPointsTS
-    TYPE(EnergyGridType)           :: EnergyGrid
+    TYPE(GridType)                 :: EnergyGrid
+    TYPE(GridType)                 :: EtaGrid     ! -- eletron chemical potential / kT
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(OpacityTypeA)             :: &
       thermEmAb  ! -- Thermal Emission and Absorption
@@ -104,34 +105,40 @@ MODULE wlOpacityTableModule
 
 CONTAINS
 
-
   SUBROUTINE AllocateOpacityTable &
-               ( OpTab, nOpacA, nOpacB, nMomB, nOpacC, nMomC, nPointsE )
+               ( OpTab, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, nOpacC, nMomC, nPointsE, nPointsEta )
 
     TYPE(OpacityTableType), INTENT(inout) :: OpTab
     INTEGER, INTENT(in)                   :: nOpacA
     INTEGER, INTENT(in)                   :: nOpacB, nMomB
+    INTEGER, INTENT(in)                   :: nOpacB_NES, nMomB_NES
     INTEGER, INTENT(in)                   :: nOpacC, nMomC
     INTEGER, INTENT(in)                   :: nPointsE
+    INTEGER, INTENT(in)                   :: nPointsEta
     INTEGER, DIMENSION(4)                 :: nPointsTemp
 
-    CALL AllocateEnergyGrid( OpTab % EnergyGrid, nPointsE )
-
-!    CALL InitializeHDF( )
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'Reading wl-EOS-LS220-20-40-100-Lower-T.h5 '
+    WRITE(*,'(A2,A)') ' ', 'Reading wl-EOS-LS220-20-40-100-Lower-T.h5 ... '
 
     CALL ReadEquationOfStateTableHDF &
            ( OpTab % EOSTable, "wl-EOS-LS220-20-40-100-Lower-T.h5" )
-!    CALL FinalizeHDF( )
 
-    OpTab % nOpacitiesA = nOpacA
-    OpTab % nOpacitiesB = nOpacB
-    OpTab % nMomentsB = nMomB
-    OpTab % nOpacitiesC = nOpacC
-    OpTab % nMomentsC = nMomC
-    OpTab % nPointsE  = nPointsE
-    OpTab % nPointsTS = OpTab % EOSTable % TS % nPoints
+    WRITE(*,*) 'Read EOS sucessfully.'
+    WRITE(*,*) 'Pass the parameter and allocate OpacityTable ... '
+
+    OpTab % nOpacitiesA     = nOpacA
+    OpTab % nOpacitiesB     = nOpacB
+    OpTab % nMomentsB       = nMomB
+    OpTab % nOpacitiesB_NES = nOpacB_NES
+    OpTab % nMomentsB_NES   = nMomB_NES
+    OpTab % nOpacitiesC     = nOpacC
+    OpTab % nMomentsC       = nMomC
+    OpTab % nPointsE        = nPointsE
+    OpTab % nPointsEta      = nPointsEta
+    OpTab % nPointsTS       = OpTab % EOSTable % TS % nPoints
+
+    CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
+    CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
 
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
@@ -145,14 +152,15 @@ CONTAINS
            ( OpTab % scatt_Iso, nPointsTemp, &
              nMoments = nMomB, nOpacities = nOpacB )
 
-!    nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(2), nPointsEta ]
-
-!    CALL AllocateOpacity &
-!           ( OpTab % scatt_NES, )
-
     CALL AllocateOpacity &
            ( OpTab % scatt_nIso, nPointsTemp, &
              nMoments = nMomC, nOpacities = nOpacC )
+  
+    nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(2), nPointsEta]
+
+    CALL AllocateOpacity &
+           ( OpTab % scatt_NES, nPointsTemp, &
+             nMoments = nMomB_NES, nOpacities = nOpacB_NES )
 
     END ASSOCIATE ! nPoints
 
@@ -162,10 +170,19 @@ CONTAINS
   SUBROUTINE DeAllocateOpacityTable( OpTab )
 
     TYPE(OpacityTableType) :: OpTab
+    
+    WRITE(*,*)
+    WRITE(*,*) 'DeAllocate OpacityTable'
 
     CALL DeAllocateOpacity( OpTab % thermEmAb )
+    CALL DeAllocateOpacity( OpTab % scatt_Iso )
+    CALL DeAllocateOpacity( OpTab % scatt_NES )
+    CALL DeAllocateOpacity( OpTab % scatt_nIso )
+
+    CALL DeAllocateGrid( OpTab % EnergyGrid ) 
+    CALL DeAllocateGrid( OpTab % EtaGrid ) 
+
     CALL DeAllocateEquationOfStateTable( OpTab % EOSTable )
-    CALL DeAllocateEnergyGrid( OpTab % EnergyGrid ) 
  
   END SUBROUTINE DeAllocateOpacityTable
 
@@ -177,9 +194,12 @@ CONTAINS
     WRITE(*,*)
     WRITE(*,'(A2,A)') ' ', 'DescribeOpacityTable'
 
-    CALL DescribeEnergyGrid( OpTab % EnergyGrid )
+    CALL DescribeGrid( OpTab % EnergyGrid )
+    CALL DescribeGrid( OpTab % EtaGrid )
+
     CALL DescribeOpacity( OpTab % thermEmAb )
     CALL DescribeOpacity( OpTab % scatt_Iso )
+    CALL DescribeOpacity( OpTab % scatt_NES )
     CALL DescribeOpacity( OpTab % scatt_nIso )
 
   END SUBROUTINE DescribeOpacityTable
