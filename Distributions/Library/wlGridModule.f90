@@ -2,14 +2,26 @@ MODULE wlGridModule
 
   USE wlKindModule, ONLY: dp
 
-  implicit none
+  IMPLICIT NONE
   PRIVATE
 
-  PUBLIC MakeLinearGrid
-  PUBLIC MakeLogGrid
+  TYPE, PUBLIC :: GridType
+    CHARACTER(LEN=32) :: Name
+    CHARACTER(LEN=32) :: Unit
+    INTEGER  :: nPoints
+    INTEGER  :: LogInterp
+    REAL(dp) :: minValue
+    REAL(dp) :: maxValue
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Values
+  END TYPE
 
-CONTAINS 
+  PUBLIC :: MakeLinearGrid
+  PUBLIC :: MakeLogGrid
+  PUBLIC :: AllocateGrid
+  PUBLIC :: DeallocateGrid
+  PUBLIC :: DescribeGrid
 
+CONTAINS
 
   SUBROUTINE MakeLinearGrid( LowerBound, UpperBound, nPoints, Grid )
 
@@ -62,6 +74,61 @@ CONTAINS
     Grid(nPoints) = UpperBound
 
   END SUBROUTINE MakeLogGrid
+
+  SUBROUTINE AllocateGrid( Grid, nPoints )
+
+    TYPE(GridType), INTENT(inout) :: Grid
+    INTEGER, INTENT(in)                 :: nPoints
+
+    Grid % nPoints = nPoints
+
+    ALLOCATE( Grid % Values(nPoints) )
+
+  END SUBROUTINE AllocateGrid
+
+  SUBROUTINE DeAllocateGrid( Grid )
+
+    TYPE(GridType), INTENT(inout) :: Grid
+
+    DEALLOCATE( Grid % Values )
+
+  END SUBROUTINE DeAllocateGrid
+
+  SUBROUTINE DescribeGrid( Grid )
+
+    TYPE(GridType), INTENT(in) :: Grid
+
+    INTEGER :: i
+
+    WRITE(*,*)
+    WRITE(*,'(A4,A)') '', 'Grid:'
+    WRITE(*,*)
+
+    WRITE(*,'(A6,A12,A)') &
+      ' ', 'Name      = ', TRIM( Grid % Name )
+    WRITE(*,'(A6,A12,A)') &
+      ' ', 'Unit      = ', TRIM( Grid % Unit )
+    WRITE(*,'(A6,A12,ES10.4E2)') &
+      ' ', 'Min Value = ', Grid % minValue
+    WRITE(*,'(A6,A12,ES10.4E2)') &
+      ' ', 'Max Value = ', Grid % maxValue
+    WRITE(*,'(A6,A12,I4.4)') &
+      ' ', 'nPoints   = ', Grid % nPoints
+    IF ( Grid % LogInterp == 1 ) THEN
+      WRITE (*,'(A6,A27)') &
+          ' ', 'Grid Logarithmically Spaced'
+    ELSE
+      WRITE (*,'(A6,A20)') &
+          ' ', 'Grid Linearly Spaced'
+    END IF
+    WRITE(*,*)
+
+    DO i = 1, Grid % nPoints
+      WRITE(*,'(A8,A6,I4.4,A4,ES10.4E2)') &
+        ' ','Value(', i, ') = ', Grid % Values(i)
+    END DO
+
+  END SUBROUTINE DescribeGrid
 
 
 END MODULE wlGridModule
