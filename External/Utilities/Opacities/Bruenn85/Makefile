@@ -85,7 +85,7 @@ endif
 # VPATH will locate them...
 #---------------------------------------------------
 
-BASE_MODS = wlKindModule.o glaquad.o GaussianQuadrature.o fexp.o wlEnergyGridModule.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o
+BASE_MODS = wlKindModule.o glaquad.o GaussianQuadrature.o fexp.o wlGridModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlExtNumericalModule.o wlExtPhysicalConstantsModule.o wlOpacityFieldsModule.o
 
 EOS_MODS = wlEquationOfStateTableModule.o
 
@@ -140,7 +140,6 @@ test: $(Opacity_OBJ)
 #---------------------------------
 glaquad.o: wlKindModule.o
 GaussianQuadrature.o: wlKindModule.o
-wlEnergyGridModule.o: wlKindModule.o
 wlGridModule.o: wlKindModule.o
 wlThermoStateModule.o: wlKindModule.o
 wlDependentVariablesModule.o: wlKindModule.o

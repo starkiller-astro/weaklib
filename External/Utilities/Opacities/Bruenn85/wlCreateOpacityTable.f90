@@ -54,12 +54,11 @@ PROGRAM wlCreateOpacityTable
 
   USE wlKindModule, ONLY: dp
   USE HDF5
-  USE wlGridModule, ONLY: MakeLogGrid  
+  USE wlGridModule, ONLY: MakeLogGrid 
   USE wlThermoStateModule
   USE wlDependentVariablesModule
   
   USE wlIOModuleHDF
-  USE wlEnergyGridModule
   USE wlOpacityTableModule
   USE wlOpacityFieldsModule
   USE wlOpacityTableIOModuleHDF
@@ -71,15 +70,17 @@ PROGRAM wlCreateOpacityTable
 implicit none
     
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpacA = 1
-   INTEGER                 :: nOpacB = 1
-   INTEGER                 :: nMomB  = 2
+   INTEGER                 :: nOpacA = 0
+   INTEGER                 :: nOpacB = 0
+   INTEGER                 :: nMomB  = 0
    INTEGER                 :: nOpacC = 0
+   INTEGER                 :: nOpacCb = 0
    INTEGER                 :: nMomC  = 0
 !-------------------------------------------------------------------------
 ! Set E grid limits
 !-------------------------------------------------------------------------
-   INTEGER                 :: nPointsE = 40 
+   INTEGER                 :: nPointsE = 4 
+!   INTEGER                 :: nPointsE = 40 
    REAL(dp), PARAMETER     :: Emin = 1.0d-1  
    REAL(dp), PARAMETER     :: Emax = 3.0d02
    INTEGER, PARAMETER      :: nSpeciesA = 1
@@ -91,15 +92,16 @@ implicit none
                               bufferquad1, bufferquad2, bufferquad3,&
                               bufferquad4, bufferquad21, bufferquad22, &
                               bufferquad23, bufferquad24
-!   INTEGER, PARAMETER      :: nquad = 5
-  INTEGER, PARAMETER      :: nquadGrey = 20
+   INTEGER, PARAMETER      :: nquadGrey = 5
+!  INTEGER, PARAMETER      :: nquadGrey = 20
 
+   INTEGER                 :: nPointsEta = 4 
 PRINT*, "Allocating OpacityTable"   
 
    CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpacA, nOpacB, nMomB, &
-              nOpacC, nMomC, nPointsE ) 
+              nOpacC, nOpacCb, nMomC, nPointsE, nPointsEta ) 
    CALL FinalizeHDF( )
 
 ! Set OpacityTableTypeA thermEmAb  
