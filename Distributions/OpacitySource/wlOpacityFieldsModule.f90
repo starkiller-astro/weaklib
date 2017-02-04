@@ -86,7 +86,7 @@ MODULE wlOpacityFieldsModule
 !---------------------------------------------
 !
 ! OpacityType C (Inelastic Scattering)
-!   Dependency ( E_in, E_out, rho, T, Ye, l )
+!   Dependency ( E_out, E_in, rho, T, Ye, l )
 !
 !---------------------------------------------
 
@@ -104,16 +104,6 @@ MODULE wlOpacityFieldsModule
     TYPE(ValueType_6D),  DIMENSION(:), ALLOCATABLE :: Kernel
   END TYPE
 
-  TYPE, PUBLIC :: OpacityTypeC_NES
-    INTEGER :: nOpacities
-    INTEGER :: nMoments
-    INTEGER, DIMENSION(4) :: nPoints
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(ValueType_5D),  DIMENSION(:), ALLOCATABLE :: Kernel
-  END TYPE
-
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
   PUBLIC :: DescribeOpacity
@@ -122,21 +112,18 @@ MODULE wlOpacityFieldsModule
     MODULE PROCEDURE AllocateOpacityTypeA
     MODULE PROCEDURE AllocateOpacityTypeB
     MODULE PROCEDURE AllocateOpacityTypeC
-    MODULE PROCEDURE AllocateOpacityTypeC_NES
   END INTERFACE AllocateOpacity
 
   INTERFACE DeallocateOpacity
     MODULE PROCEDURE DeallocateOpacityTypeA
     MODULE PROCEDURE DeallocateOpacityTypeB
     MODULE PROCEDURE DeallocateOpacityTypeC
-    MODULE PROCEDURE DeallocateOpacityTypeC_NES
   END INTERFACE DeallocateOpacity
 
   INTERFACE DescribeOpacity
     MODULE PROCEDURE DescribeOpacityTypeA
     MODULE PROCEDURE DescribeOpacityTypeB
     MODULE PROCEDURE DescribeOpacityTypeC
-    MODULE PROCEDURE DescribeOpacityTypeC_NES
   END INTERFACE DescribeOpacity
 
 CONTAINS
@@ -536,91 +523,6 @@ CONTAINS
     WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeC
-
-  SUBROUTINE AllocateOpacityTypeC_NES( Opacity, nPoints, nMoments, nOpacities )
-
-    TYPE(OpacityTypeC_NES), INTENT(inout) :: &
-      Opacity
-    INTEGER, DIMENSION(4), INTENT(in) :: &
-      nPoints ! e', e, T, chem_e/T
-    INTEGER, INTENT(in) :: &
-      nMoments, &
-      nOpacities
-
-    INTEGER :: i
-
-    Opacity % nOpacities = nOpacities
-    Opacity % nMoments   = nMoments
-    Opacity % nPoints    = nPoints
-
-    ALLOCATE( Opacity % Names(nOpacities) )
-    ALLOCATE( Opacity % Species(nOpacities) )
-    ALLOCATE( Opacity % Units(nOpacities) )
-    ALLOCATE( Opacity % Kernel(nOpacities) )
-
-    DO i = 1, nOpacities
-      ALLOCATE( Opacity % Kernel(i) % Values &
-                  ( nPoints(1), nPoints(2), nPoints(3), &
-                    nPoints(4), nMoments) )
-    END DO
-
-  END SUBROUTINE AllocateOpacityTypeC_NES
-
-
-  SUBROUTINE DeallocateOpacityTypeC_NES( Opacity )
-
-    TYPE(OpacityTypeC_NES), INTENT(inout) :: Opacity
-
-    INTEGER :: i
-
-    DO i = 1, Opacity % nOpacities
-      DEALLOCATE( Opacity % Kernel(i) % Values )
-    END DO
-
-    DEALLOCATE( Opacity % Kernel )
-    DEALLOCATE( Opacity % Units )
-    DEALLOCATE( Opacity % Species )
-    DEALLOCATE( Opacity % Names )
-
-  END SUBROUTINE DeallocateOpacityTypeC_NES
-
-
-  SUBROUTINE DescribeOpacityTypeC_NES( Opacity )
-
-    TYPE(OpacityTypeC_NES), INTENT(in) :: Opacity
-
-    INTEGER :: i
-
-    WRITE(*,*)
-    WRITE(*,'(A4,A)') ' ', 'Opacity Type C_NES'
-    WRITE(*,'(A4,A)') ' ', '--------------'
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nOpacities = ', Opacity % nOpacities
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nMoments   = ', Opacity % nMoments
-    WRITE(*,'(A6,A13,4I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints
-    WRITE(*,'(A6,A13,I10.10)') &
-      ' ', 'DOFs       = ', &
-      Opacity % nOpacities * Opacity % nMoments &
-        * Opacity % nPoints(1) * PRODUCT( Opacity % nPoints )
-
-    DO i = 1, Opacity % nOpacities
-      WRITE(*,*)
-      WRITE(*,'(A6,A8,I3.3,A3,A)') &
-        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
-    END DO
-    WRITE(*,*)
-
-  END SUBROUTINE DescribeOpacityTypeC_NES
 
 
 END MODULE wlOpacityFieldsModule
