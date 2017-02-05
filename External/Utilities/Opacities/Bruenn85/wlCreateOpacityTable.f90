@@ -67,44 +67,51 @@ PROGRAM wlCreateOpacityTable
   USE wlExtNumericalModule, ONLY: epsilon
   USE GreyVariables
  
-implicit none
+IMPLICIT NONE
     
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpacA = 0
-   INTEGER                 :: nOpacB = 0
-   INTEGER                 :: nMomB  = 0
+   INTEGER                 :: nOpacA = 1
+   INTEGER                 :: nOpacB = 1
+   INTEGER                 :: nMomB  = 2
+   INTEGER                 :: nOpacB_NES = 1
+   INTEGER                 :: nMomB_NES  = 2
    INTEGER                 :: nOpacC = 0
-   INTEGER                 :: nOpacCb = 0
    INTEGER                 :: nMomC  = 0
 !-------------------------------------------------------------------------
 ! Set E grid limits
 !-------------------------------------------------------------------------
-   INTEGER                 :: nPointsE = 4 
-!   INTEGER                 :: nPointsE = 40 
+   INTEGER,  PARAMETER     :: nPointsE = 40 
    REAL(dp), PARAMETER     :: Emin = 1.0d-1  
    REAL(dp), PARAMETER     :: Emax = 3.0d02
-   INTEGER, PARAMETER      :: nSpeciesA = 1
-   
 
-   INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, t_m, i_quad
+!-------------------------------------------------------------------------
+! Set Eta grid limits
+!-------------------------------------------------------------------------
+   INTEGER                 :: nPointsEta = 100
+   REAL(dp), PARAMETER     :: Etamin = 1.0d-8
+   REAL(dp), PARAMETER     :: Etamax = 2.5d03
+
+! --- inner variables
+   INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, t_m, i_quad, &
+                              i_eta, i_ep
    REAL(dp)                :: energy, rho, T, ye, Z, A, chem_e, chem_n, &
-                              chem_p, xheavy, xn, xp, bb, &
+                              chem_p, xheavy, xn, xp, bb, eta, &
                               bufferquad1, bufferquad2, bufferquad3,&
                               bufferquad4, bufferquad21, bufferquad22, &
                               bufferquad23, bufferquad24
-   INTEGER, PARAMETER      :: nquadGrey = 5
-!  INTEGER, PARAMETER      :: nquadGrey = 20
+   INTEGER, PARAMETER      :: nquadGrey = 30
+   INTEGER, PARAMETER      :: nquad = 30
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: NESK
 
-   INTEGER                 :: nPointsEta = 4 
-PRINT*, "Allocating OpacityTable"   
 
    CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpacA, nOpacB, nMomB, &
-              nOpacC, nOpacCb, nMomC, nPointsE, nPointsEta ) 
+              nOpacB_NES, nMomB_NES, nOpacC, nMomC, nPointsE, nPointsEta ) 
    CALL FinalizeHDF( )
 
-! Set OpacityTableTypeA thermEmAb  
+! -- Set OpacityTableTypeA thermEmAb  
+
    OpacityTable % thermEmAb % nOpacities = nOpacA
 
    OpacityTable % thermEmAb % nPoints(1) = nPointsE
@@ -113,13 +120,17 @@ PRINT*, "Allocating OpacityTable"
 
    OpacityTable % thermEmAb % Names = &
                                 (/'Electron Capture Absorptivity'/)  
+
    OpacityTable % thermEmAb % Species = &
                                 (/'Electron Neutrino           '/)
+
    OpacityTable % thermEmAb % Units = &
                                 (/'Per Centimeter              '/) 
+
    OpacityTable % thermEmAb % Offset = 1.0d-100
 
-! Set OpacityTableTypeB scatt_Iso
+! -- Set OpacityTableTypeB scatt_Iso
+
    OpacityTable % scatt_Iso % nOpacities = nOpacB
    
    OpacityTable % scatt_Iso % nMoments = nMomB
@@ -130,16 +141,41 @@ PRINT*, "Allocating OpacityTable"
 
    OpacityTable % scatt_Iso % Names = &
                                 (/'Electron Iso-sca Absorptivity'/)
+
    OpacityTable % scatt_Iso % Species = &
                                 (/'Electron Neutrino           '/)
+
    OpacityTable % scatt_Iso % Units = &
                                 (/'Per Centimeter              '/)
 
    OpacityTable % scatt_Iso % Offset = 1.0d-1
+
+! -- Set OpacityTableTypeB scatt_NES
+
+   OpacityTable % scatt_NES % nOpacities = nOpacB_NES
+
+   OpacityTable % scatt_NES % nMoments = nMomB_NES
+
+   OpacityTable % scatt_NES % nPoints(1) = nPointsE
+   OpacityTable % scatt_NES % nPoints(2) = nPointsE
+   OpacityTable % scatt_NES % nPoints(3) = OpacityTable % nPointsTS(2)
+   OpacityTable % scatt_NES % nPoints(4) = nPointsEta
+
+   OpacityTable % scatt_NES % Names = &
+                                (/'Electron non-Iso Absorptivity'/)
+
+   OpacityTable % scatt_NES % Species = &
+                                (/'Electron Neutrino           '/)
+
+   OpacityTable % scatt_NES % Units = &
+                                (/'                            '/)
+
+   OpacityTable % scatt_NES % Offset = 1.0d-100
+
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
-PRINT*, "Making Energy Grid"
+PRINT*, "Making Energy Grid ... "
 
    ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid )
 
@@ -159,30 +195,51 @@ PRINT*, "Making Energy Grid"
  
    END ASSOCIATE ! EnergyGrid
 
-!-------------------------------------------------------------------------
-!            Print The OpacityTable
-!-------------------------------------------------------------------------
+!-----------------------------   
+! Generate Eta grid from limits
+!-----------------------------
+PRINT*, "Making Eta Grid ... "
 
-   CALL DescribeOpacityTable( OpacityTable )
+   ASSOCIATE( EtaGrid => OpacityTable % EtaGrid )
 
+   EtaGrid % Name &
+     = 'Elect. Chem. Pot. / Temperature'
+
+   EtaGrid % Unit &
+     = 'DIMENSIONLESS                   '
+
+   EtaGrid % MinValue = Etamin
+   EtaGrid % MaxValue = Etamax
+   EtaGrid % LogInterp = 1
+
+   CALL MakeLogGrid &
+          ( EtaGrid % MinValue, EtaGrid % MaxValue, &
+            EtaGrid % nPoints, EtaGrid % Values )
+
+   END ASSOCIATE ! EtaGrid
 
 !-------------------------------------------------------------------------
 !              Fill OpacityTable
 !-------------------------------------------------------------------------
 
+PRINT*, 'Filling OpacityTable ...'
 !-----------------  ECAPEM ----------------------- 
+   ASSOCIATE( iRho    => OpacityTable % EOSTable % TS % Indices % iRho , &
+              iT      => OpacityTable % EOSTable % TS % Indices % iT   , &
+              iYe     => OpacityTable % EOSTable % TS % Indices % iYe )
 
-   DO l_ye = 20,21!1, OpacityTable % nPointsTS(3)
+PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
+   DO l_ye = 1, OpacityTable % nPointsTS(3)
      
-        ye = OpacityTable % EOSTable % TS % States (3) % Values (l_ye)
+        ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
 
-      DO k_t = 50,51!1, OpacityTable % nPointsTS(2)
+      DO k_t = 1, OpacityTable % nPointsTS(2)
 
-           T = OpacityTable % EOSTable % TS % States (2) % Values (k_t)
+           T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
 
-         DO j_rho = 80,81!1, OpacityTable % nPointsTS(1)
+         DO j_rho = 1, OpacityTable % nPointsTS(1)
 
-              rho = OpacityTable % EOSTable % TS % States (1) % Values (j_rho)
+              rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
               chem_e = 10**OpacityTable % EOSTable % DV % Variables (4) %&
                        Values (j_rho, k_t, l_ye) - OpacityTable % EOSTable % &
@@ -269,7 +326,6 @@ PRINT*, "Making Energy Grid"
 !----------------  Scatt_Iso -----------------------
          DO i_rb = 1, nOpacB
            DO t_m = 1, nMomB
-
              DO i_e = 1, OpacityTable % nPointsE
  
                energy = OpacityTable % EnergyGrid % Values(i_e)
@@ -290,14 +346,6 @@ PRINT*, "Making Energy Grid"
                   ( energy, rho, T, xheavy, A, Z, xn, xp, t_m-1 )
              END DO  !i_e
 
-!             OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % &
-!                            Values ( j_rho, k_t, l_ye, t_m)  &
-!                = bufferquad21 * (T*kMeV)**3
-         
-!             OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % &
-!                            Values ( j_rho, k_t, l_ye, t_m)  &
-!                = bufferquad22 * (T*kMeV)**3
-   
              OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % &
                             Values ( j_rho, k_t, l_ye, t_m)  &
                 = bufferquad23  * (T*kMeV)**3
@@ -309,18 +357,52 @@ PRINT*, "Making Energy Grid"
            END DO !t_m 
          END DO !i_rb
 
-
-!----------------  Scatt_NES -----------------------
-
-
        END DO  !j_rho
      END DO  !k_t
    END DO  !l_ye
   
+
+!----------------  Scatt_NES -----------------------
+
+PRINT*, 'Calculating Scatt_NES Kernel ... '
+  DO i_rb = 1, nOpacB_NES
+    DO t_m = 1, nMomB_NES 
+      DO i_eta = 1, nPointsEta
+       
+        chem_e = OpacityTable % EtaGrid % Values(i_eta)
+      
+        DO k_t = 1, OpacityTable % nPointsTS(iT)
+
+          T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+            
+          CALL TotalNESKernel&
+              ( OpacityTable % EnergyGrid % Values, T, chem_e, nquad, t_m, NESK)
+
+          DO i_e = 1, nPointsE
+          
+            DO i_ep = 1, nPointsE
+             
+              OpacityTable % scatt_NES % Kernel(i_rb) % Values &
+                           ( i_ep, i_e, k_t, i_eta, t_m)       &
+               = NESK(i_e, i_ep) ! NESK was saved as NESK(e,ep)
+ 
+            END DO ! i_ep
+          END DO ! i_e
+        END DO  !k_t
+      END DO !i_eta
+    END DO ! t_m
+  END DO ! i_rb
+
+   END ASSOCIATE ! EnergyGrid
 !----------------------------------------------------------------------
+!      Describe the Table ( give the real physical value )               
 !----------------------------------------------------------------------
 
   CALL DescribeOpacityTable( OpacityTable )
+
+! ---------------------------------------------------------------------
+!          LOG the WHOLE table for storage
+! ---------------------------------------------------------------------
 
   DO i_r = 1, nOpacA
 
@@ -352,14 +434,6 @@ PRINT*, "Making Energy Grid"
     = LOG10 ( OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
               + OpacityTable % scatt_Iso % Offset )
 
-!    OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
-!    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Number_FD(i_rb) % Values &
-!              + OpacityTable % scatt_Iso % Offset )
-
-!    OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
-!    = LOG10 ( OpacityTable % scatt_Iso % GreyMoment_Energy_FD(i_rb) % Values &
-!              + OpacityTable % scatt_Iso % Offset )
-
     OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
     = LOG10 ( OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
               + OpacityTable % scatt_Iso % Offset )
@@ -370,8 +444,18 @@ PRINT*, "Making Energy Grid"
 
   END DO !i_rb
 
+  DO i_rb = 1, nOpacB_NES
+
+    OpacityTable % scatt_NES % Kernel(i_rb) % Values &
+    = LOG10 ( OpacityTable % scatt_NES % Kernel(i_rb) % Values &
+              + OpacityTable % scatt_NES % Offset )
+
+  END DO !i_rb
+
+! -- write into hdf5 file
+
   CALL InitializeHDF( )
-  CALL WriteOpacityTableHDF( OpacityTable, "wl-OP-LS220-20-40-100-Lower-T-nquad20-Grey.h5" )
+  CALL WriteOpacityTableHDF( OpacityTable, "wl-OP-LS220-20-40-100-Lower-T-nquad30-Grey.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"

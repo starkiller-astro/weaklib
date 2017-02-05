@@ -306,6 +306,11 @@ CONTAINS
 !----------------------------------------------------------------------
 ! Purpose:
 !    To compute the neutrino-electron scattering (OUT) kernel 
+!    (1) e /= ep
+!    R_out = cons * ( 1 / e / ep) * 
+!                            ( beta1 * I1 + beta2 * I2 + beta3 * I3 )
+!    (2) e == ep
+!    new form of I1,2,3
 !----------------------------------------------------------------------
   IMPLICIT NONE
 
