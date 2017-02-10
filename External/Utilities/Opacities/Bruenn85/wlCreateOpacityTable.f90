@@ -68,7 +68,8 @@ PROGRAM wlCreateOpacityTable
   USE GreyVariables
  
 IMPLICIT NONE
-    
+
+   INTEGER*4 today(3), now(3)    
    TYPE(OpacityTableType)  :: OpacityTable
    INTEGER                 :: nOpacA = 1
    INTEGER                 :: nOpacB = 1
@@ -103,6 +104,11 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: nquad = 30
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: NESK
 
+  CALL idate(today)
+  CALL itime(now)
+  write ( *, 1000 )  today(2), today(1), today(3), now
+1000 format ( 'Date ', i2.2, '/', i2.2, '/', i4.4, '; time ',&
+     &         i2.2, ':', i2.2, ':', i2.2 )
 
    CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
@@ -170,7 +176,7 @@ IMPLICIT NONE
    OpacityTable % scatt_NES % Units = &
                                 (/'                            '/)
 
-   OpacityTable % scatt_NES % Offset = 1.0d-100
+   OpacityTable % scatt_NES % Offset = 2.0d02 ! since min -1.89d02
 
 !-----------------------------   
 ! Generate E grid from limits
@@ -229,15 +235,15 @@ PRINT*, 'Filling OpacityTable ...'
               iYe     => OpacityTable % EOSTable % TS % Indices % iYe )
 
 PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
-   DO l_ye = 1, OpacityTable % nPointsTS(3)
+   DO l_ye = 20,21!1, OpacityTable % nPointsTS(3)
      
         ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
 
-      DO k_t = 1, OpacityTable % nPointsTS(2)
+      DO k_t = 40,41! 1, OpacityTable % nPointsTS(2)
 
            T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
 
-         DO j_rho = 1, OpacityTable % nPointsTS(1)
+         DO j_rho = 80,81!1, OpacityTable % nPointsTS(1)
 
               rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
@@ -369,14 +375,15 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
     DO t_m = 1, nMomB_NES 
       DO i_eta = 1, nPointsEta
        
-        chem_e = OpacityTable % EtaGrid % Values(i_eta)
+        eta = OpacityTable % EtaGrid % Values(i_eta)
       
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
           T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
-            
+          chem_e = T * eta
+
           CALL TotalNESKernel&
-              ( OpacityTable % EnergyGrid % Values, T, chem_e, nquad, t_m, NESK)
+              ( OpacityTable % EnergyGrid % Values, T, chem_e, nquad, t_m-1, NESK)
 
           DO i_e = 1, nPointsE
           
