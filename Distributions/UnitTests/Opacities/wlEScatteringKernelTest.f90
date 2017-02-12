@@ -20,7 +20,7 @@ PROGRAM wlEScatteringKernelTest
   IMPLICIT NONE
 
 !--------- parameters for creating energy grid 
-  INTEGER, PARAMETER     :: Inte_nPointE =2! 5
+  INTEGER, PARAMETER     :: Inte_nPointE = 5
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(EnergyGridType)   :: Inte_E
@@ -105,7 +105,7 @@ PROGRAM wlEScatteringKernelTest
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "OpTa_Grey_5quad_ES.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
   Offset_Em = OpacityTable % thermEmAb % Offset
