@@ -1,14 +1,10 @@
-wlEnergyGridModule.o: \
-  wlKindModule.o \
-  wlEnergyGridModule.f90
-
 wlOpacityFieldsModule.o: \
   wlKindModule.o \
   wlOpacityFieldsModule.f90
 
 wlOpacityTableModule.o: \
   wlKindModule.o \
-  wlEnergyGridModule.o \
+  wlGridModule.o \
   wlOpacityFieldsModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
@@ -17,7 +13,7 @@ wlOpacityTableModule.o: \
 
 wlOpacityTableIOModuleHDF.o: \
   wlKindModule.o \
-  wlEnergyGridModule.o \
+  wlGridModule.o \
   wlOpacityTableModule.o \
   wlOpacityFieldsModule.o \
   wlEOSIOModuleHDF.o \
