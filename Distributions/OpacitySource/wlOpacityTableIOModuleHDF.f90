@@ -428,7 +428,7 @@ CONTAINS
     CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
 
     WRITE(*,*) "           File in"
-    WRITE(*,*) " Reading ", FileName
+    WRITE(*,*) " Reading ", FileName, " hdf5 file ... "
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
