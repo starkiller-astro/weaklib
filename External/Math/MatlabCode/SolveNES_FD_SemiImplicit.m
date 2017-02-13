@@ -3,10 +3,10 @@ close all
 
 Model = '001';
 
-FileName = [ 'SemiImplicit_5m9_' Model '.mat' ];
+FileName = [ 'SemiImplicit_BackwardEuler_' Model '.mat' ];
 
 N_g = 40; % Number of Energy Groups
-[ eC, dV, R_In, R_Out ] = InitializeNES( Model, N_g );
+[ eC, dV, R_In, R_Out, N_Eq ] = InitializeNES( Model, N_g );
 
 % Multiply Rates with Momentum Space Volume Element:
 R_In_H  = R_In  * diag( dV );
@@ -14,25 +14,25 @@ R_Out_H = R_Out * diag( dV );
 
 %
 % Computational Parameters:
-t_end = 1.0d-4; % [ s ]
-t     = 0.0d-0; % [ s ]
-dt    = 5.0d-9; % [ s ] Time step
-theta = 0.0;
+t_end  = 1.0d-4;  % [ s ]
+t      = 0.0d-0;  % [ s ]
+dt_max = 1.0d-8;  % [ s ] Maximum time step
+dt     = 1.0d-8;  % [ s ] Initial time step
+alpha  = 1.00;    % Factor to increase time step
+theta  = 0.0;     % Include Fermi blocking with theta = 1.0
+Tol_N  = 1.0d-14; % Tolerance for Newton iterations
+ApplyCorrection = false; % For SIRK2 method
+
+Method = 'BackwardEuler';
 
 %
 % Gaussian Initial Condition:
 N_0 = 7.5d-1 .* exp( - ( 1.0d2 - eC ).^2 / 1.0d2 );
+% N_0 = N_Eq;
 
 %
+% Initial Particle Number:
 Ntot_0 = sum( N_0 .* dV );
-
-fig = figure;
-figure( fig );
-loglog( eC, N_0, '-ob', 'LineWidth', 2 )
-axis( [ 1 3.0e2 1e-5 1.0e1 ] )
-xlabel( '\epsilon [MeV]', 'FontSize', 20 )
-ylabel( 'Particle Density [MeV^{-3}]', 'FontSize', 20 )
-hold on
 
 %
 % Solve to End Time:
@@ -45,12 +45,8 @@ tic
 while ( not( done ) )
 
   cycle = cycle + 1;
-
-  %
-  % Update Matrix (Use Old State):
-  F_In = R_In_H * Nold;
-  k = R_Out_H * ones( N_g, 1 ) + theta .* ( R_In_H - R_Out_H ) * Nold;
-  L = R_In_H - diag( k );
+  
+  dt = min( [ alpha * dt dt_max ] );
   
   if( t + dt > t_end )
     dt = t_end - t;
@@ -59,18 +55,47 @@ while ( not( done ) )
   %
   % Record Detailed Solution:
   Time      (cycle,1) = t;
+  TimeStep  (cycle,1) = dt;
   Density   (cycle,:) = Nold;
   DensitySum(cycle,1) = sum( Nold .* dV );
 
-  %
-  % Backward Euler Solve:
-  A = ( eye( N_g ) - dt * L );
-  Nnew = A \ Nold;
+  switch Method
+    case 'BackwardEuler'
+      
+      %
+      % Backward Euler Solve:
+      [ Nnew, Iterations(cycle,1) ]...
+        = Update_ImplicitEuler...
+            ( Nold, dt, R_In_H, R_Out_H, theta, N_g, Tol_N );
+      
+    case 'PenalizationEuler'
+      
+      %
+      % Penalization Method Solve (Euler):
+      [ Nnew, Iterations(cycle,1) ]...
+        = Update_PenalizationMethod...
+            ( Nold, N_Eq, dt, R_In_H, R_Out_H, theta, N_g );
+
+    case 'PenalizationSIRK2'
+
+      %
+      % Penalization Method Solve (SIRK2):
+      [ Nnew, Iterations(cycle,1) ]...
+        = Update_PenalizationMethod2...
+            ( Nold, N_Eq, dt, R_In_H, R_Out_H, theta, N_g,...
+              ApplyCorrection );
+
+    otherwise
+
+      Nnew = Nold;
+      Iterations(cycle,1) = 1;
+
+  end
 
   dN = max( abs( Nnew - Nold ) ./ Nold );
 
-  Nold  = Nnew; 
-  t     = t + dt;
+  Nold = Nnew; 
+  t    = t + dt;
 
   if ( t >= t_end )
     done = true;
@@ -83,12 +108,6 @@ while ( not( done ) )
 end
 toc
 
-figure( fig );
-loglog( eC, Nnew, '-ok', 'LineWidth', 2 )
-legend( 'Initial Condition', 'Final Solution',...
-        'Location', 'SouthWest' )
-hold off
-
 Ntot = sum( Nnew .* dV );
 
 disp( fprintf( 'Initial Particle Number = %d', Ntot_0 ) );
@@ -97,4 +116,4 @@ disp( fprintf( '    Relative Difference = %d', abs( Ntot - Ntot_0 ) / Ntot_0 ) )
 
 %
 % Save Solution:
-save( FileName, 'Time', 'Density', 'DensitySum' );
+save( FileName, 'Time', 'TimeStep', 'Density', 'DensitySum', 'Iterations' );
