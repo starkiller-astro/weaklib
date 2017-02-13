@@ -10,12 +10,6 @@ PROGRAM wlGreyTableTest
     FinalizeHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
-  USE wlEnergyGridModule, ONLY: &
-    EnergyGridType, &
-    AllocateEnergyGrid, &
-    DescribeEnergyGrid
-  USE wlGridModule, ONLY: &
-    MakeLogGrid
 
   IMPLICIT NONE
 

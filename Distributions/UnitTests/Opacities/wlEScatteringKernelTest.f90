@@ -10,11 +10,10 @@ PROGRAM wlEScatteringKernelTest
     FinalizeHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
-  USE wlEnergyGridModule, ONLY: &
-    EnergyGridType, &
-    AllocateEnergyGrid, &
-    DescribeEnergyGrid
   USE wlGridModule, ONLY: &
+    GridType, &
+    AllocateGrid, &
+    DescribeGrid, &
     MakeLogGrid
 
   IMPLICIT NONE
@@ -23,7 +22,7 @@ PROGRAM wlEScatteringKernelTest
   INTEGER, PARAMETER     :: Inte_nPointE = 5
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
-  TYPE(EnergyGridType)   :: Inte_E
+  TYPE(GridType)   :: Inte_E
 
 !-------- variables for reading opacity table
   TYPE(OpacityTableType) :: OpacityTable
@@ -54,7 +53,7 @@ PROGRAM wlEScatteringKernelTest
   OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
   datasize = 213
 
-  CALL AllocateEnergyGrid( Inte_E, Inte_nPointE )
+  CALL AllocateGrid( Inte_E, Inte_nPointE )
 
   Inte_E % Unit = 'MeV                  '
   Inte_E % Name = 'Intepolated Energy   '
@@ -68,7 +67,7 @@ PROGRAM wlEScatteringKernelTest
           ( Inte_E % MinValue, Inte_E % MaxValue, &
             Inte_E % nPoints, Inte_E % Values )
 
-  CALL DescribeEnergyGrid( Inte_E )
+  CALL DescribeGrid( Inte_E )
   
 !---------------------------------------
 !    interpolated rho, T, Ye
@@ -197,8 +196,8 @@ PROGRAM wlEScatteringKernelTest
 
       IF ( Inte_R0(ii)*fourPi == Inte_O(ii) ) THEN
         buffer_r = 1.0
-      ELSE IF( Inte_R0(ii)*fourPi .gt. Inte_O(ii)*10.0**50  ) THEN
-        buffer_r = 10.0**(-50)
+      ELSE IF( Inte_R0(ii)*fourPi .gt. Inte_O(ii)*10.0**30  ) THEN
+        buffer_r = 10.0**(-30)
       ELSE 
         buffer_r = Inte_R0(ii)*fourPi/Inte_O(ii)
       END IF

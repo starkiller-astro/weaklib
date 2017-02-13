@@ -19,7 +19,8 @@ PROGRAM wlOpacityFieldsTest
 
   CALL AllocateOpacityTable &
          ( OpacityTable, nOpacA = 4, nOpacB = 1, nMomB = 1, &
-           nOpacC = 1, nMomC = 1, nPointsE = 10 )
+           nOpacB_NES = 0, nMomB_NES = 0, nOpacC = 1, nMomC = 1, &
+           nPointsE = 10, nPointsEta = 0 )
 
   ! -- Energy Grid -- 
 

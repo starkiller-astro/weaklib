@@ -2,7 +2,8 @@ PROGRAM wlInterpolation
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateDifferentiateSingleVariable
+    LogInterpolateDifferentiateSingleVariable, &
+    LogInterpolateSingleVariable
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType
   USE wlIOModuleHDF, ONLY: &
@@ -10,11 +11,10 @@ PROGRAM wlInterpolation
     FinalizeHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
-  USE wlEnergyGridModule, ONLY: &
-    EnergyGridType, &
-    AllocateEnergyGrid, &
-    DescribeEnergyGrid
   USE wlGridModule, ONLY: &
+    GridType, &
+    AllocateGrid, &
+    DescribeGrid, &
     MakeLogGrid
 
   IMPLICIT NONE
@@ -23,7 +23,7 @@ PROGRAM wlInterpolation
   INTEGER, PARAMETER     :: Inte_nPointE = 30
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
-  TYPE(EnergyGridType)   :: Inte_E
+  TYPE(GridType)   :: Inte_E
 
 !-------- variables for reading opacity table
   TYPE(OpacityTableType) :: OpacityTable
@@ -35,10 +35,15 @@ PROGRAM wlInterpolation
   CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, datasize
-  REAL(dp)                            :: Offset
+  REAL(dp)                            :: Offset_EOS_cmpe
+  REAL(dp)                            :: Offset_EOS_cmpp
+  REAL(dp)                            :: Offset_EOS_cmpn
+  REAL(dp)                            :: Offset_EOS_cmpnu
+  REAL(dp)                            :: Offset_Em
 
 !-------- output variables ------------------------
   REAL(dp), DIMENSION(:), ALLOCATABLE   :: Interpolant
+  REAL(dp), DIMENSION(:), ALLOCATABLE   :: bufferO1, bufferO2, bufferO3, bufferO4
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: Derivative
 
 !----------------------------------------
@@ -51,9 +56,9 @@ PROGRAM wlInterpolation
   Format4 = "(7ES12.3)"
 
   OPEN(1, FILE = "Inputfile_stand.d", FORM = "formatted", ACTION = 'read')
-  datasize = 1
+  datasize = 2  ! Vary from different input files
 
-  CALL AllocateEnergyGrid( Inte_E, Inte_nPointE )
+  CALL AllocateGrid( Inte_E, Inte_nPointE )
 
   Inte_E % Unit = 'MeV                  '
   Inte_E % Name = 'Intepolated Energy   '
@@ -67,7 +72,7 @@ PROGRAM wlInterpolation
           ( Inte_E % MinValue, Inte_E % MaxValue, &
             Inte_E % nPoints, Inte_E % Values )
 
-  CALL DescribeEnergyGrid( Inte_E ) 
+  CALL DescribeGrid( Inte_E ) 
 
 !---------------------------------------
 !    interpolated rho, T, Ye
@@ -77,6 +82,10 @@ PROGRAM wlInterpolation
   ALLOCATE( Inte_rho( datasize ) )
   ALLOCATE( Inte_T( datasize ) )
   ALLOCATE( Inte_Ye( datasize ) )
+  ALLOCATE( bufferO1( datasize ) )
+  ALLOCATE( bufferO2( datasize ) )
+  ALLOCATE( bufferO3( datasize ) )
+  ALLOCATE( bufferO4( datasize ) )
   ALLOCATE( Interpolant( Inte_nPointE ) )
   ALLOCATE( Derivative( Inte_nPointE, 4 ) )
 
@@ -100,14 +109,18 @@ PROGRAM wlInterpolation
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
-  Offset = OpacityTable % thermEmAb % Offset
+  Offset_Em = OpacityTable % thermEmAb % Offset
+  Offset_EOS_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
+  Offset_EOS_cmpp = OpacityTable % EOSTable % DV % Offsets(5)
+  Offset_EOS_cmpn = OpacityTable % EOSTable % DV % Offsets(6)
+
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
   e = ('    energy  ')
-  f = ('    Inter  ')
-  g = ('   deriv T ')
-  h = ('   deriv Ye')  
+  f = (' thermEmAb  ')
+  g = ('Em_deriv T ')
+  h = ('Em_deriv Ye')  
 
   OPEN( 10, FILE = "Output.d", FORM = "formatted", ACTION = 'write')
   WRITE(10, Format3) a,b,c,e,f,g,h
@@ -127,7 +140,7 @@ PROGRAM wlInterpolation
              OpacityTable % EOSTable % TS % States(1) % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset, Table, Interpolant, Derivative, .FALSE. )
+             LogInterp, Offset_Em, Table, Interpolant, Derivative, .FALSE. )
   
     DO ii = 1, Inte_nPointE
       WRITE(10, Format4) buffer1(ii), buffer2(ii), buffer3(ii), &
@@ -140,6 +153,44 @@ PROGRAM wlInterpolation
   END ASSOCIATE ! Table
 
   CLOSE( 10, STATUS = 'keep')  
+
+  CALL LogInterpolateSingleVariable &
+           ( Inte_rho, Inte_T, Inte_Ye, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             (/1,1,0/), Offset_EOS_cmpe, &
+             OpacityTable % EOSTable % DV % Variables(4) % Values, &
+             bufferO1  )
+
+  WRITE(*,*) 'electron chemical potential = ', bufferO1
+
+  CALL LogInterpolateSingleVariable &
+           ( Inte_rho, Inte_T, Inte_Ye, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             (/1,1,0/), Offset_EOS_cmpp, &
+             OpacityTable % EOSTable % DV % Variables(5) % Values, &
+             bufferO2  )
+
+  WRITE(*,*) 'proton chemical potential = ', bufferO2
+
+  CALL LogInterpolateSingleVariable &
+           ( Inte_rho, Inte_T, Inte_Ye, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             (/1,1,0/), Offset_EOS_cmpn, &
+             OpacityTable % EOSTable % DV % Variables(6) % Values, &
+             bufferO3  )
+
+  WRITE(*,*) 'neutron chemical potential = ', bufferO3
+
+  bufferO4 = bufferO1 + bufferO2 - bufferO3 - 1.29333d+00
+            ! chem_e + chem_p - chem_n - dmnp
+
+  WRITE(*,*) 'neutrino chemical potential = ', bufferO4
 
   WRITE(*,*) 'File Output.d was written/rewrtited.'
 

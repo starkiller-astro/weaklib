@@ -10,11 +10,10 @@ PROGRAM wlOpacityInterpolationTest
     FinalizeHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
-  USE wlEnergyGridModule, ONLY: &
-    EnergyGridType, &
-    AllocateEnergyGrid, &
-    DescribeEnergyGrid
   USE wlGridModule, ONLY: &
+    GridType, &
+    AllocateGrid, &
+    DescribeGrid, &
     MakeLogGrid
 
   IMPLICIT NONE
@@ -23,7 +22,7 @@ PROGRAM wlOpacityInterpolationTest
   INTEGER, PARAMETER     :: Inte_nPointE = 30
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
-  TYPE(EnergyGridType)   :: Inte_E
+  TYPE(GridType)   :: Inte_E
 
 !-------- variables for reading opacity table
   TYPE(OpacityTableType) :: OpacityTable
@@ -57,7 +56,7 @@ PROGRAM wlOpacityInterpolationTest
 ! OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
 ! datasize = 217
   
-  CALL AllocateEnergyGrid( Inte_E, Inte_nPointE )
+  CALL AllocateGrid( Inte_E, Inte_nPointE )
 
   Inte_E % Unit = 'MeV                  '
   Inte_E % Name = 'Intepolated Energy   '
@@ -71,7 +70,7 @@ PROGRAM wlOpacityInterpolationTest
           ( Inte_E % MinValue, Inte_E % MaxValue, &
             Inte_E % nPoints, Inte_E % Values )
 
-  CALL DescribeEnergyGrid( Inte_E ) 
+  CALL DescribeGrid( Inte_E ) 
 
 !---------------------------------------
 !    interpolated rho, T, Ye
