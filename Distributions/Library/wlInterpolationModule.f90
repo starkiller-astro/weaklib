@@ -1467,8 +1467,8 @@ CONTAINS
       END IF
       Temperature(j) = 10.d0**( &
              LOG10( temp_table(i) ) + LOG10( temp_table(i+1) / temp_table(i) ) &
-                        * LOG10( ( eibuff(j) / energy_array(i) ) )             &
-                        / LOG10( energy_array(i+1) / energy_array(i) ) )
+                        * LOG10( ( ( eibuff(j) + Offset ) / ( energy_array(i) + Offset ) ) )             &
+                        / LOG10( ( energy_array(i+1) + Offset ) / ( energy_array(i) + Offset ) ) )
     END DO
 
     DEALLOCATE( energy_array, rhobuff, yebuff )
