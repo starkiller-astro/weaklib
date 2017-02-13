@@ -3,7 +3,10 @@ include ../../../Build/Makefile_Build
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
      wlOpacityInterpolationTest \
-     wlOpacityPerformanceTest
+     wlOpacityPerformanceTest \
+     wlEScatteringKernelTest \
+     wlGreyTableTest \
+     wlNESKernelTest
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -35,6 +38,18 @@ wlEScatteringKernelTest: \
 	$(weaklib) wlEScatteringKernelTest.o \
 	$(LIBRARIES)
 
+wlGreyTableTest: \
+	$(weaklib) wlGreyTableTest.o
+	$(FLINKER) $(FLAGS) -o wlGreyTableTest_$(MACHINE) \
+	$(weaklib) wlGreyTableTest.o \
+	$(LIBRARIES)
+
+wlNESKernelTest: \
+	$(weaklib) wlNESKernelTest.o
+	$(FLINKER) $(FLAGS) -o wlNESKernelTest_$(MACHINE) \
+	$(weaklib) wlNESKernelTest.o \
+        $(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld
 
@@ -43,6 +58,9 @@ clobber: clean
 	rm -f wlReadOpacityTableTest_$(MACHINE)
 	rm -f wlOpacityInterpolationTest_$(MACHINE)
 	rm -f wlOpacityPerformanceTest_$(MACHINE)
+	rm -f wlEScatteringKernelTest_$(MACHINE)
+	rm -f wlGreyTableTest_$(MACHINE)
+	rm -f wlNESKernelTest_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
   wlKindModule.o \
@@ -63,7 +81,6 @@ wlOpacityInterpolationTest.o: \
   wlOpacityTableModule.o \
   wlIOModuleHDF.o \
   wlOpacityTableIOModuleHDF.o \
-  wlEnergyGridModule.o \
   wlGridModule.o \
   wlOpacityInterpolationTest.f90
 
@@ -74,3 +91,28 @@ wlOpacityPerformanceTest.o: \
   wlOpacityTableIOModuleHDF.o \
   wlInterpolationModule.o \
   wlOpacityPerformanceTest.f90
+
+wlEScatteringKernelTest.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlGridModule.o \
+  wlEScatteringKernelTest.f90
+
+wlGreyTableTest.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlGridModule.o \
+  wlGreyTableTest.f90
+
+wlNESKernelTest.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlGridModule.o \
+  wlNESKernelTest.f90
