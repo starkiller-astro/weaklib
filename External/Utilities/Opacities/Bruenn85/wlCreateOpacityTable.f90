@@ -62,7 +62,7 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityTableModule
   USE wlOpacityFieldsModule
   USE wlOpacityTableIOModuleHDF
-  USE wlExtPhysicalConstantsModule
+  USE wlExtPhysicalConstantsModule, ONLY: kMeV
   USE B85
   USE wlExtNumericalModule, ONLY: epsilon
   USE GreyVariables
@@ -95,7 +95,7 @@ IMPLICIT NONE
 ! --- inner variables
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, t_m, i_quad, &
                               i_eta, i_ep
-   REAL(dp)                :: energy, rho, T, ye, Z, A, chem_e, chem_n, &
+   REAL(dp)                :: energy, rho, T, TMeV, ye, Z, A, chem_e, chem_n, &
                               chem_p, xheavy, xn, xp, bb, eta, &
                               bufferquad1, bufferquad2, bufferquad3,&
                               bufferquad4, bufferquad21, bufferquad22, &
@@ -146,7 +146,7 @@ IMPLICIT NONE
    OpacityTable % scatt_Iso % nPoints(2:4) = OpacityTable % nPointsTS
 
    OpacityTable % scatt_Iso % Names = &
-                                (/'Electron Iso-sca Absorptivity'/)
+                                (/'Electron Iso-sca Kernel Momen'/)
 
    OpacityTable % scatt_Iso % Species = &
                                 (/'Electron Neutrino           '/)
@@ -168,7 +168,7 @@ IMPLICIT NONE
    OpacityTable % scatt_NES % nPoints(4) = nPointsEta
 
    OpacityTable % scatt_NES % Names = &
-                                (/'Electron non-Iso Absorptivity'/)
+                                (/'Electron non-Iso Kernel Momen'/)
 
    OpacityTable % scatt_NES % Species = &
                                 (/'Electron Neutrino           '/)
@@ -176,7 +176,7 @@ IMPLICIT NONE
    OpacityTable % scatt_NES % Units = &
                                 (/'                            '/)
 
-   OpacityTable % scatt_NES % Offset = 2.0d02 ! since min -1.89d02
+   OpacityTable % scatt_NES % Offset = 2.0d09 ! since min -1.8084E+009
 
 !-----------------------------   
 ! Generate E grid from limits
@@ -235,15 +235,15 @@ PRINT*, 'Filling OpacityTable ...'
               iYe     => OpacityTable % EOSTable % TS % Indices % iYe )
 
 PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
-   DO l_ye = 20,21!1, OpacityTable % nPointsTS(3)
+   DO l_ye = 1, OpacityTable % nPointsTS(3)
      
         ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
 
-      DO k_t = 40,41! 1, OpacityTable % nPointsTS(2)
+      DO k_t = 1, OpacityTable % nPointsTS(2)
 
            T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
 
-         DO j_rho = 80,81!1, OpacityTable % nPointsTS(1)
+         DO j_rho = 1, OpacityTable % nPointsTS(1)
 
               rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
@@ -380,10 +380,11 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
           T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
-          chem_e = T * eta
+          TMeV = T * kMeV
+          chem_e = TMeV * eta
 
           CALL TotalNESKernel&
-              ( OpacityTable % EnergyGrid % Values, T, chem_e, nquad, t_m-1, NESK)
+              ( OpacityTable % EnergyGrid % Values, TMeV, chem_e, nquad, t_m-1, NESK)
 
           DO i_e = 1, nPointsE
           
