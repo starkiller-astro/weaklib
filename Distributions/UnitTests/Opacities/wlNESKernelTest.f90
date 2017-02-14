@@ -113,6 +113,7 @@ PROGRAM wlNESKernelTest
   DO i = 1, datasize
 
     buffer1(:) = Inte_T(i) / kMeV
+    PRINT*, 'Temperature in K is ', Inte_T(i) / kMeV
     buffer2(:) = Inte_eta(i) 
 
     DO ii = 1, Inte_nPointE
@@ -127,9 +128,9 @@ PROGRAM wlNESKernelTest
              LogInterp, Offset_NES, Table, Interpolant )
   
       DO jj = 1, Inte_nPointE
-        WRITE(10, Format4) buffer1(ii), buffer2(ii), &
+        WRITE(10, Format4) Inte_T(i), buffer2(ii), &
                            buffer3(ii), Energy(jj),  &              
-                           1.0!!Interpolant(jj)
+                           Interpolant(jj)
       END DO ! jj
     END DO ! ii
 
