@@ -71,6 +71,10 @@ MODULE wlOpacityTableModule
     EquationOfStateTableType, &
     DeAllocateEquationOfStateTable, &
     AllocateEquationOfStateTable
+  USE wlThermoStateModule, ONLY: &
+    ThermoStateType, &
+    AllocateThermoState, &
+    DeAllocateThermoState  
 
   IMPLICIT NONE
   PRIVATE
@@ -89,6 +93,7 @@ MODULE wlOpacityTableModule
     TYPE(GridType)                 :: EnergyGrid
     TYPE(GridType)                 :: EtaGrid     ! -- eletron chemical potential / kT
     TYPE(EquationOfStateTableType) :: EOSTable
+    TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeA)             :: &
       thermEmAb  ! -- Thermal Emission and Absorption
     TYPE(OpacityTypeB)             :: &
@@ -139,6 +144,9 @@ CONTAINS
 
     CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
     CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
+    CALL AllocateThermoState( OpTab % TS, OpTab % EOSTable % TS % nPoints )
+
+    OpTab % TS = OpTab % EOSTable % TS
 
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
@@ -179,6 +187,8 @@ CONTAINS
     CALL DeAllocateOpacity( OpTab % scatt_NES )
     CALL DeAllocateOpacity( OpTab % scatt_nIso )
 
+    CALL DeAllocateThermoState( OpTab % TS )
+
     CALL DeAllocateGrid( OpTab % EnergyGrid ) 
     CALL DeAllocateGrid( OpTab % EtaGrid ) 
 
@@ -190,9 +200,41 @@ CONTAINS
   SUBROUTINE DescribeOpacityTable( OpTab )
 
     TYPE(OpacityTableType) :: OpTab
+    INTEGER :: i
 
     WRITE(*,*)
     WRITE(*,'(A2,A)') ' ', 'DescribeOpacityTable'
+
+    ASSOCIATE( TS => OpTab % TS )
+
+    WRITE(*,*)
+    WRITE(*,'(A2,A)') ' ', 'DescribeThermoState'
+    DO i = 1, 3
+
+      WRITE(*,*)
+      WRITE(*,'(A5,A21,I1.1,A3,A32)') &
+        '', 'Independent Variable ', i, ' = ', TRIM( TS % Names(i) )
+      WRITE(*,'(A7,A7,A20)') &
+        '', 'Units: ', TRIM( TS % Units(i) )
+      WRITE(*,'(A7,A12,ES12.6E2)') &
+        '', 'Min Value = ', TS % minValues(i)
+      WRITE(*,'(A7,A12,ES12.6E2)') &
+        '', 'Max Value = ', TS % maxValues(i)
+      WRITE(*,'(A7,A12,I4.4)') &
+        '', 'nPoints   = ', TS % nPoints(i)
+
+      IF ( TS % LogInterp(i) == 1 ) THEN
+        WRITE (*,'(A7,A27)') &
+          '', 'Grid Logarithmically Spaced'
+      ELSE
+        WRITE (*,'(A7,A20)') &
+          '', 'Grid Linearly Spaced'
+      END IF
+
+    END DO
+
+    END ASSOCIATE ! TS
+    
 
     CALL DescribeGrid( OpTab % EnergyGrid )
     CALL DescribeGrid( OpTab % EtaGrid )

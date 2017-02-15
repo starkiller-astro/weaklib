@@ -47,7 +47,9 @@ MODULE wlOpacityTableIOModuleHDF
     OpenFileHDF,                  &
     CloseFileHDF,                 &
     OpenGroupHDF,                 &
-    CloseGroupHDF
+    CloseGroupHDF,                &
+    WriteThermoStateHDF,          &
+    ReadThermoStateHDF
   USE wlEquationOfStateTableModule
   USE HDF5
 
@@ -123,6 +125,10 @@ CONTAINS
 
     CALL OpenGroupHDF( "EtaGrid", .true., file_id, group_id )
     CALL WriteGridHDF( OpacityTable % EtaGrid, group_id )
+    CALL CloseGroupHDF( group_id )
+  
+    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+    CALL WriteThermoStateHDF( OpacityTable % TS, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "thermEmAb", .true., file_id, group_id )
@@ -477,6 +483,10 @@ CONTAINS
     CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
     CALL CloseGroupHDF( group_id )
  
+    CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+    CALL ReadThermoStateHDF( OpacityTable % TS, group_id )
+    CALL CloseGroupHDF( group_id )
+
     CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
     CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
     CALL CloseGroupHDF( group_id )
@@ -537,7 +547,7 @@ CONTAINS
 
     CALL OpenGroupHDF( "Absorptivity", .false., group_id, subgroup_id )
     DO i = 1, thermEmAb % nOpacities
-    WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i)
+    WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i), ' Absorptivity ...'
     CALL Read4dHDF_double&
          ( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values,&
            subgroup_id, datasize4d )
@@ -613,7 +623,7 @@ CONTAINS
 
     CALL OpenGroupHDF( "Kernel", .false., group_id, subgroup_id )
     DO i = 1, scatt_Iso % nOpacities
-    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
+    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i), ' Kernel ...'
     CALL Read5dHDF_double&
          ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values,&
            subgroup_id, datasize5d )
