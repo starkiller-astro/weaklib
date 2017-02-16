@@ -483,9 +483,7 @@ CONTAINS
     CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
     CALL CloseGroupHDF( group_id )
  
-    CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
-    CALL ReadThermoStateHDF( OpacityTable % TS, group_id )
-    CALL CloseGroupHDF( group_id )
+    CALL ReadThermoStateHDF( OpacityTable % TS, file_id )
 
     CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
     CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
@@ -693,13 +691,14 @@ CONTAINS
 
   SUBROUTINE ReadGridHDF( Grid, group_id )
 
-    TYPE(GridType), INTENT(inout)         :: Grid
+    TYPE(GridType), INTENT(inout)               :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER, DIMENSION(1)                       :: buffer
     CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
 
+    PRINT*,'Reading Grid'
     datasize1d(1) = 1
     Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
     Grid % Name = buffer_string(1)

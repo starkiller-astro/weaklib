@@ -145,9 +145,15 @@ CONTAINS
     CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
     CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
     CALL AllocateThermoState( OpTab % TS, OpTab % EOSTable % TS % nPoints )
-
     OpTab % TS = OpTab % EOSTable % TS
-
+!    OpTab % TS % Names   = OpTab % EOSTable % TS % Names
+!    OpTab % TS % Units   = OpTab % EOSTable % TS % Units
+!    OpTab % TS % nPoints = OpTab % EOSTable % TS % nPoints
+!    OpTab % TS % LogInterp = OpTab % EOSTable % TS % LogInterp
+!    OpTab % TS % minValues = OpTab % EOSTable % TS % minValues
+!    OpTab % TS % maxValues = OpTab % EOSTable % TS % maxValues
+!    OpTab % TS % States    = OpTab % EOSTable % TS % States   
+!    OpTab % TS % Indices   = OpTab % EOSTable % TS % Indices  
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
@@ -171,6 +177,8 @@ CONTAINS
              nMoments = nMomB_NES, nOpacities = nOpacB_NES )
 
     END ASSOCIATE ! nPoints
+
+    PRINT*, 'End allocte opacity table.'
 
   END SUBROUTINE AllocateOpacityTable
 
