@@ -28,7 +28,8 @@ MODULE wlThermoStateModule
 
   PUBLIC AllocateThermoState 
   PUBLIC DeAllocateThermoState 
-  
+  PUBLIC CopyThermoState
+ 
 CONTAINS 
 
   SUBROUTINE AllocateThermoState( TS, nPoints )
@@ -57,5 +58,29 @@ CONTAINS
     END DO 
 
   END SUBROUTINE DeAllocateThermoState
+
+  SUBROUTINE CopyThermoState( TS_target, TS_source )
+    
+    TYPE(ThermoStateType) :: TS_target, TS_source
+
+    INTEGER :: i
+
+    TS_target % Names           = TS_source % Names
+    TS_target % Units           = TS_source % Units
+    TS_target % nPoints         = TS_source % nPoints
+    TS_target % LogInterp       = TS_source % LogInterp
+    TS_target % minValues       = TS_source % minValues
+    TS_target % maxValues       = TS_source % maxValues
+    TS_target % Indices % iRho  = TS_source % Indices % iRho 
+    TS_target % Indices % iT    = TS_source % Indices % iT 
+    TS_target % Indices % iYe   = TS_source % Indices % iYe 
+
+    DO i = 1, 3
+
+      TS_target % States(i) % Values = TS_source % States(i) % Values     
+
+    END DO
+
+  END SUBROUTINE CopyThermoState
 
 END MODULE wlThermoStateModule 
