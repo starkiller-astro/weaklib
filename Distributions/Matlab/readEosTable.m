@@ -1,16 +1,16 @@
 function [ D, T, Y, nD, nT, nY, P, S, E, Me, Mp, Mn, Xp, Xn, Xa, Xh,...
-           Zh, Ah, Eh, Eth, Gm, OS ] = readEosTable( fileName )
+           Zh, Ah, Eh, Eth, Gm, OS ] = readEosTable( eosTableName )
 
     % Reads HDF5 EOS Table
 
-    disp( fprintf( 'INFO: Reading EOS from file: %s', fileName ) );
+    disp( fprintf( 'INFO: Reading EOS from file: %s', eosTableName ) );
 
     % Independent Variables:
-    D = h5read( fileName, '/ThermoState/Density' );
-    T = h5read( fileName, '/ThermoState/Temperature' );
-    Y = h5read( fileName, '/ThermoState/Electron Fraction' );
+    D = h5read( eosTableName, '/ThermoState/Density' );
+    T = h5read( eosTableName, '/ThermoState/Temperature' );
+    Y = h5read( eosTableName, '/ThermoState/Electron Fraction' );
     
-    Dims = h5read( fileName, '/ThermoState/Dimensions' );
+    Dims = h5read( eosTableName, '/ThermoState/Dimensions' );
     
     nD = Dims( 1 );
     nT = Dims( 2 );
@@ -31,81 +31,81 @@ function [ D, T, Y, nD, nT, nY, P, S, E, Me, Mp, Mn, Xp, Xn, Xa, Xh,...
 
     % Dependent Variables:
     
-    OS = h5read( fileName, '/DependentVariables/Offsets' );
+    OS = h5read( eosTableName, '/DependentVariables/Offsets' );
     
     % Pressure:
-    iP = h5read( fileName, '/DependentVariables/iPressure' );
-    P  = h5read( fileName, '/DependentVariables/Pressure' );
+    iP = h5read( eosTableName, '/DependentVariables/iPressure' );
+    P  = h5read( eosTableName, '/DependentVariables/Pressure' );
     P  = 10.^( P ) - OS(iP);
     
     % Entropy Per Baryon:
-    iS = h5read( fileName, '/DependentVariables/iEntropyPerBaryon' );
-    S  = h5read( fileName, '/DependentVariables/Entropy Per Baryon' );
+    iS = h5read( eosTableName, '/DependentVariables/iEntropyPerBaryon' );
+    S  = h5read( eosTableName, '/DependentVariables/Entropy Per Baryon' );
     S  = 10.^( S ) - OS(iS);
     
     % Ineternal Energy Density:
-    iE = h5read( fileName, '/DependentVariables/iInternalEnergyDensity' );
-    E  = h5read( fileName, '/DependentVariables/Internal Energy Density' );
+    iE = h5read( eosTableName, '/DependentVariables/iInternalEnergyDensity' );
+    E  = h5read( eosTableName, '/DependentVariables/Internal Energy Density' );
     E  = 10.^( E ) - OS(iE);
     
     % Electron Chemical Potential:
-    iMe = h5read( fileName, '/DependentVariables/iElectronChemicalPotential' );
-    Me  = h5read( fileName, '/DependentVariables/Electron Chemical Potential' );
+    iMe = h5read( eosTableName, '/DependentVariables/iElectronChemicalPotential' );
+    Me  = h5read( eosTableName, '/DependentVariables/Electron Chemical Potential' );
     Me  = 10.^( Me ) - OS(iMe);
     
     % Proton Chemical Potential:
-    iMp = h5read( fileName, '/DependentVariables/iProtonChemicalPotential' );
-    Mp  = h5read( fileName, '/DependentVariables/Proton Chemical Potential' );
+    iMp = h5read( eosTableName, '/DependentVariables/iProtonChemicalPotential' );
+    Mp  = h5read( eosTableName, '/DependentVariables/Proton Chemical Potential' );
     Mp  = 10.^( Mp ) - OS(iMp);
     
     % Neutron Chemical Potential:
-    iMn = h5read( fileName, '/DependentVariables/iNeutronChemicalPotential' );
-    Mn  = h5read( fileName, '/DependentVariables/Neutron Chemical Potential' );
+    iMn = h5read( eosTableName, '/DependentVariables/iNeutronChemicalPotential' );
+    Mn  = h5read( eosTableName, '/DependentVariables/Neutron Chemical Potential' );
     Mn  = 10.^( Mn ) - OS(iMn);
     
     % Proton Mass Fraction:
-    iXp = h5read( fileName, '/DependentVariables/iProtonMassFraction' );
-    Xp  = h5read( fileName, '/DependentVariables/Proton Mass Fraction' );
+    iXp = h5read( eosTableName, '/DependentVariables/iProtonMassFraction' );
+    Xp  = h5read( eosTableName, '/DependentVariables/Proton Mass Fraction' );
     Xp  = 10.^( Xp ) - OS(iXp);
     
     % Neutron Mass Fraction:
-    iXn = h5read( fileName, '/DependentVariables/iNeutronMassFraction' );
-    Xn  = h5read( fileName, '/DependentVariables/Neutron Mass Fraction' );
+    iXn = h5read( eosTableName, '/DependentVariables/iNeutronMassFraction' );
+    Xn  = h5read( eosTableName, '/DependentVariables/Neutron Mass Fraction' );
     Xn  = 10.^( Xn ) - OS(iXn);
     
     % Alpha Mass Fraction:
-    iXa = h5read( fileName, '/DependentVariables/iAlphaMassFraction' );
-    Xa  = h5read( fileName, '/DependentVariables/Alpha Mass Fraction' );
+    iXa = h5read( eosTableName, '/DependentVariables/iAlphaMassFraction' );
+    Xa  = h5read( eosTableName, '/DependentVariables/Alpha Mass Fraction' );
     Xa  = 10.^( Xa ) - OS(iXa);
     
     % Heavy Mass Fraction:
-    iXh = h5read( fileName, '/DependentVariables/iHeavyMassFraction' );
-    Xh  = h5read( fileName, '/DependentVariables/Heavy Mass Fraction' );
+    iXh = h5read( eosTableName, '/DependentVariables/iHeavyMassFraction' );
+    Xh  = h5read( eosTableName, '/DependentVariables/Heavy Mass Fraction' );
     Xh  = 10.^( Xh ) - OS(iXh);
     
     % Heavy Charge Number:
-    iZh = h5read( fileName, '/DependentVariables/iHeavyChargeNumber' );
-    Zh  = h5read( fileName, '/DependentVariables/Heavy Charge Number' );
+    iZh = h5read( eosTableName, '/DependentVariables/iHeavyChargeNumber' );
+    Zh  = h5read( eosTableName, '/DependentVariables/Heavy Charge Number' );
     Zh  = 10.^( Zh ) - OS(iZh);
     
     % Heavy Mass Number:
-    iAh = h5read( fileName, '/DependentVariables/iHeavyMassNumber' );
-    Ah  = h5read( fileName, '/DependentVariables/Heavy Mass Number' );
+    iAh = h5read( eosTableName, '/DependentVariables/iHeavyMassNumber' );
+    Ah  = h5read( eosTableName, '/DependentVariables/Heavy Mass Number' );
     Ah  = 10.^( Ah ) - OS(iAh);
     
     % Heavy Binding Energy:
-    iEh = h5read( fileName, '/DependentVariables/iHeavyBindingEnergy' );
-    Eh  = h5read( fileName, '/DependentVariables/Heavy Binding Energy' );
+    iEh = h5read( eosTableName, '/DependentVariables/iHeavyBindingEnergy' );
+    Eh  = h5read( eosTableName, '/DependentVariables/Heavy Binding Energy' );
     Eh  = 10.^( Eh ) - OS(iEh);
     
     % Thermal Energy:
-    iEth = h5read( fileName, '/DependentVariables/iThermalEnergy' );
-    Eth  = h5read( fileName, '/DependentVariables/Thermal Energy' );
+    iEth = h5read( eosTableName, '/DependentVariables/iThermalEnergy' );
+    Eth  = h5read( eosTableName, '/DependentVariables/Thermal Energy' );
     Eth  = 10.^( Eth ) - OS(iEth);
     
     % Gamma1:
-    iGm = h5read( fileName, '/DependentVariables/iGamma1' );
-    Gm  = h5read( fileName, '/DependentVariables/Gamma1' );
+    iGm = h5read( eosTableName, '/DependentVariables/iGamma1' );
+    Gm  = h5read( eosTableName, '/DependentVariables/Gamma1' );
     Gm  = 10.^( Gm ) - OS(iGm);
     
 end
