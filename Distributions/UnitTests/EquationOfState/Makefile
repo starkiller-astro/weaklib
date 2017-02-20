@@ -100,11 +100,11 @@ $($(GPU_LAPACK_VER)_OBJ): %.o: %.f90
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-writetest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlWriteEquationOfStateTest.o 
-	$(LDRL) $(LDRFLAGS) -o wlwritetest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlWriteEquationOfStateTest.o 
+writetest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o wlWriteEquationOfStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wlwritetest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o wlWriteEquationOfStateTest.o 
 
-readtest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
-	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlReadEquationOfStateTest.o 
+readtest: wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o wlReadEquationOfStateTest.o 
+	$(LDRL) $(LDRFLAGS) -o wlreadtest $(LIBS) wlKindModule.o wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o wlReadEquationOfStateTest.o 
 scrub:
 	rm -f core *.o *.f90_o *.f_o *.mod *.lst *.cub *.ptx *.i *.T *.diag *__genmod.* *.oo 
 

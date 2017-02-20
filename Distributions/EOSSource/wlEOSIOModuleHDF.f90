@@ -20,6 +20,8 @@ MODULE wlEOSIOModuleHDF
   PUBLIC MatchTableStructure
   PUBLIC TransferDependentVariables
   PUBLIC EOSVertexQuery
+  PUBLIC ReadEOSMetadataHDF
+  PUBLIC WriteEOSMetadataHDF
 
 CONTAINS
 
@@ -40,6 +42,10 @@ CONTAINS
     CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
     CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
     CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
+    CALL WriteEOSMetadataHDF( EOSTable % MD, group_id )
+    !CALL CloseGroupHDF( group_id )
 
     CALL CloseFileHDF( file_id )
 
@@ -63,9 +69,9 @@ CONTAINS
         '', 'Independent Variable ', i, ' = ', TRIM( TS % Names(i) )
       WRITE(*,'(A7,A7,A20)') &
         '', 'Units: ', TRIM( TS % Units(i) )
-      WRITE(*,'(A7,A12,ES12.6E2)') &
+      WRITE(*,'(A7,A12,ES12.4E2)') &
         '', 'Min Value = ', TS % minValues(i)
-      WRITE(*,'(A7,A12,ES12.6E2)') &
+      WRITE(*,'(A7,A12,ES12.4E2)') &
         '', 'Max Value = ', TS % maxValues(i)
       WRITE(*,'(A7,A12,I4.4)') &
         '', 'nPoints   = ', TS % nPoints(i)
@@ -96,6 +102,78 @@ CONTAINS
     END ASSOCIATE ! DV
 
   END SUBROUTINE DescribeEquationOfStateTable
+
+  SUBROUTINE ReadEOSMetadataHDF( MD, file_id )
+
+    TYPE(MetadataType), INTENT(inout)           :: MD
+    INTEGER(HID_T), INTENT(in)                  :: file_id
+
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    CALL OpenGroupHDF( "Metadata", .false., file_id, group_id )
+
+    datasize1d = 1
+    CALL ReadHDF( "IDTag", MD % IDTag(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "TableResolution", MD % TableResolution(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "NucEOSLink", MD % NucEOSLink(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "LeptonEOSLink", MD % LeptonEOSLink(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "SourceLink", MD % SourceLink(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "WLRevision", MD % WLRevision(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "TableLink", MD % TableLink(:), &
+                              group_id, datasize1d )
+
+    CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE ReadEOSMetadataHDF
+
+  SUBROUTINE WriteEOSMetadataHDF( MD, group_id )
+
+    TYPE(MetadataType), INTENT(inout)           :: MD
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    datasize1d = 1
+    CALL WriteHDF( "IDTag", MD % IDTag(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "TableResolution", MD % TableResolution(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "NucEOSLink", MD % NucEOSLink(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "LeptonEOSLink", MD % LeptonEOSLink(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "SourceLink", MD % SourceLink(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "WLRevision", MD % WLRevision(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "TableLink", MD % TableLink(:), &
+                              group_id, datasize1d )
+
+    CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE WriteEOSMetadataHDF
   
 
   SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
@@ -122,12 +200,13 @@ CONTAINS
 
     CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
 
-    CALL DescribeEquationOfStateTable( EOSTable )
+    CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
+
+!    CALL DescribeEquationOfStateTable( EOSTable )
 
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadEquationOfStateTableHDF
-
 
   SUBROUTINE BroadcastEquationOfStateTableParallel &
                ( EOSTable, rootproc, myid, ierr,  COMMUNICATOR )

@@ -2,8 +2,8 @@ PROGRAM wlReadEquationOfStateTest
  
   USE HDF5
   USE wlEquationOfStateTableModule
-  USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF, & 
-                           ReadEquationOfStateTableHDF 
+  USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
 
   implicit none
 
@@ -14,8 +14,8 @@ PROGRAM wlReadEquationOfStateTest
 
   CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
 
-  Write (*,*) EOSTable % nPoints
-  Write (*,*) EOSTable % nVariables
+  WRITE (*,*) EOSTable % nPoints
+  WRITE (*,*) EOSTable % nVariables
 
   DO i = 1, SIZE( EOSTable % DV % Variables )
     WRITE (*,*) SHAPE( EOSTable % DV % Variables(i) % Values )
@@ -38,6 +38,15 @@ PROGRAM wlReadEquationOfStateTest
     WRITE(*,*)
     WRITE(*,*) EOSTable % DV % Variables(i) % Values(:,:,:)
   END DO
+
+  WRITE(*,*) "Metadata!" 
+  WRITE(*,*), "Table IDTag", EOSTable % MD % IDTag
+  WRITE(*,*), "Table Rez", EOSTable % MD % TableResolution
+  WRITE(*,*), "Table Nuc EOS Paper", EOSTable % MD % NucEOSLink
+  WRITE(*,*), "Table Lepton EOS Paper", EOSTable % MD % LeptonEOSLink
+  WRITE(*,*), "Table Source Link", EOSTable % MD % SourceLink
+  WRITE(*,*), "WeakLib Revision", EOSTable % MD % WLRevision
+  WRITE(*,*), "WeakLib Table Link", EOSTable % MD % TableLink
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 

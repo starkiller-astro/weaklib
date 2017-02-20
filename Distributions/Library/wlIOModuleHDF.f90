@@ -399,6 +399,12 @@ CONTAINS
     CALL WriteHDF &
            ( "Units", TS % Units(:), group_id, datasize1d )
 
+    CALL WriteHDF &
+           ( "minValues", TS % minValues(:), group_id, datasize1d )
+
+    CALL WriteHDF &
+           ( "maxValues", TS % maxValues(:), group_id, datasize1d )
+
     DO i = 1, 3
       datasize1d(1) = TS % nPoints(i)
       CALL WriteHDF &
@@ -434,6 +440,11 @@ CONTAINS
     CALL WriteHDF( "Units", DV % Units(:), &
                              group_id, datasize1d )
 
+    CALL WriteHDF( "minValues", DV % minValues(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "maxValues", DV % maxValues(:), &
+                              group_id, datasize1d )
     datasize1d = 3
     CALL WriteHDF( "Dimensions", DV % nPoints(:), &
                              group_id, datasize1d )
@@ -590,6 +601,18 @@ CONTAINS
       CALL ReadHDF( "Offsets", DV % Offsets(:), &
                               group_id, datasize1d )
     END DO
+
+    !DO i = 1, SIZE( DV % Names )
+    !  datasize1d = SIZE( DV % Names )
+    !  CALL ReadHDF( "minValues", DV % minValues(:), &
+    !                          group_id, datasize1d )
+    !END DO
+
+    !DO i = 1, SIZE( DV % Names )
+    !  datasize1d = SIZE( DV % Names )
+    !  CALL ReadHDF( "maxValues", DV % maxValues(:), &
+    !                          group_id, datasize1d )
+    !END DO
 
     datasize3d = SHAPE( DV % Repaired )
     CALL ReadHDF( "Repaired", DV % Repaired(:,:,:), &

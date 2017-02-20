@@ -9,11 +9,22 @@ MODULE wlEquationOfStateTableModule
   IMPLICIT NONE
   PRIVATE
 
+  TYPE, PUBLIC :: MetadataType
+    CHARACTER(LEN=120), DIMENSION(1) :: IDTag           ! Format: "wl-EOS-LS220-20-40-100, Energy zero, Date
+    CHARACTER(LEN=120), DIMENSION(1) :: TableResolution ! "20 pts/dec rho, 40 pts/dec 
+    CHARACTER(LEN=120), DIMENSION(1) :: NucEOSLink      ! Nuclear EOS ads link 
+    CHARACTER(LEN=120), DIMENSION(1) :: LeptonEOSLink   ! Electron/photon EOS ads link 
+    CHARACTER(LEN=120), DIMENSION(1) :: SourceLink      ! COMPOSE/SC download URL
+    CHARACTER(LEN=120), DIMENSION(1) :: WLRevision      !
+    CHARACTER(LEN=120), DIMENSION(1) :: TableLink       ! WeakLibTrac Link
+  END TYPE
+
   TYPE, PUBLIC :: EquationOfStateTableType
     INTEGER                      :: nVariables
     INTEGER, DIMENSION(3)        :: nPoints
     TYPE(ThermoStateType)        :: TS
     TYPE(DependentVariablesType) :: DV
+    TYPE(MetadataType)           :: MD
   END TYPE
 
   PUBLIC :: AllocateEquationOfStateTable

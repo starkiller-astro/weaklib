@@ -108,9 +108,9 @@ CONTAINS
       ' ', 'Name      = ', TRIM( Grid % Name )
     WRITE(*,'(A6,A12,A)') &
       ' ', 'Unit      = ', TRIM( Grid % Unit )
-    WRITE(*,'(A6,A12,ES10.4E2)') &
+    WRITE(*,'(A6,A12,ES10.3E2)') &
       ' ', 'Min Value = ', Grid % minValue
-    WRITE(*,'(A6,A12,ES10.4E2)') &
+    WRITE(*,'(A6,A12,ES10.3E2)') &
       ' ', 'Max Value = ', Grid % maxValue
     WRITE(*,'(A6,A12,I4.4)') &
       ' ', 'nPoints   = ', Grid % nPoints
@@ -124,7 +124,7 @@ CONTAINS
     WRITE(*,*)
 
     DO i = 1, Grid % nPoints
-      WRITE(*,'(A8,A6,I4.4,A4,ES10.4E2)') &
+      WRITE(*,'(A8,A6,I4.4,A4,ES10.3E2)') &
         ' ','Value(', i, ') = ', Grid % Values(i)
     END DO
 

@@ -36,6 +36,8 @@ MODULE wlDependentVariablesModule
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Offsets
     INTEGER, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: minValues
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: maxValues
     TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
     TYPE(DVIDType) :: Indices
   END TYPE
@@ -61,6 +63,8 @@ CONTAINS
     ALLOCATE( DV % Units( nVariables ) )
     ALLOCATE( DV % Offsets( nVariables ) ) 
     ALLOCATE( DV % Variables( nVariables ) ) 
+    ALLOCATE( DV % minValues( nVariables ) ) 
+    ALLOCATE( DV % maxValues( nVariables ) ) 
 
     ALLOCATE( DV % Repaired(1:nPoints(1), 1:nPoints(2), 1:nPoints(3)) )
 
@@ -89,6 +93,8 @@ CONTAINS
     DEALLOCATE( DV % Offsets )
     DEALLOCATE( DV % Units )
     DEALLOCATE( DV % Names )
+    DEALLOCATE( DV % minValues )
+    DEALLOCATE( DV % maxValues )
 
   END SUBROUTINE DeAllocateDependentVariables
 

@@ -76,6 +76,15 @@ PROGRAM wlWriteEquationOfStateTest
     EOSTable % DV % Variables(i) % Values = i 
   END DO
 
+  EOSTable % MD % IDTag = 'wl-EOS-LS220-20-40-100, Today'
+  EOSTable % MD % TableResolution = '20 pts/dec rho, 40 pts/dec, delta ye = .01'
+  EOSTable % MD % NucEOSLink = 'Nuc EOS Paper Link'
+  EOSTable % MD % LeptonEOSLink = 'Lepton EOS Paper Link'
+  EOSTable % MD % SourceLink = 'Table Source Link'
+  EOSTable % MD % WLRevision = 'Rev'
+  EOSTable % MD % TableLink = 'Table Storage Link'
+
+
   DO j = 1,3
     WRITE(*,*) TRIM( EOSTable % TS % Names(j) )
     WRITE(*,*) EOSTable % TS % nPoints(j)
@@ -90,13 +99,21 @@ PROGRAM wlWriteEquationOfStateTest
     WRITE(*,*) EOSTable % DV % Variables(j) % Values(:,:,:)
   END DO
 
+  WRITE(*,*), "Table IDTag", EOSTable % MD % IDTag 
+  WRITE(*,*), "Table Rez", EOSTable % MD % TableResolution 
+  WRITE(*,*), "Table Nuc EOS Paper", EOSTable % MD % NucEOSLink 
+  WRITE(*,*), "Table Lepton EOS Paper", EOSTable % MD % LeptonEOSLink 
+  WRITE(*,*), "Table Source Link", EOSTable % MD % SourceLink 
+  WRITE(*,*), "WeakLib Revision", EOSTable % MD % WLRevision
+  WRITE(*,*), "WeakLib Table Link", EOSTable % MD % TableLink
+
 
   CALL InitializeHDF( )
 
   CALL WriteEquationOfStateTableHDF( EOSTable )
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
-  CALL FinalizeHDF( )
+  !CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
 
