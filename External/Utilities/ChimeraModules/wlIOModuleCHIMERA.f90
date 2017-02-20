@@ -21,8 +21,10 @@ MODULE wlIOModuleCHIMERA
   implicit none
 
   PUBLIC ReadChimeraProfile1D 
+  PUBLIC ReadChimeraThermoProfile1D 
   PUBLIC ReadCHIMERAHDF
   PUBLIC ReadComposeTableHDF
+  PUBLIC ReadSCTableHDF
 
 CONTAINS
 
@@ -46,14 +48,6 @@ CONTAINS
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: yav
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: aav
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: zav
-    !REAL(dp), DIMENSION(0:325)                    :: nb
-    !REAL(dp), DIMENSION(0:80)                     :: t
-    !REAL(dp), DIMENSION(0:59)                     :: yq
-    !REAL(dp), DIMENSION(0:14259239)               :: thermo !  nPoints(1) x 2 x 3 x # of thermo quantities, nThermo(1) 
-    !REAL(dp), DIMENSION(0:4753079)                :: yi     ! ! nPoints(1) x 2 x 3 x 3
-    !REAL(dp), DIMENSION(0:1584359)                :: yav ! nPoints(1) x 2 x 3
-    !REAL(dp), DIMENSION(0:1584359)                :: aav ! nPoints(1) x 2 x 3
-    !REAL(dp), DIMENSION(0:1584359)                :: zav ! nPoints(1) x 2 x 3
     INTEGER                                       :: nVariables
     INTEGER                                       :: i, j, k, l, TestUnit1, TestUnit2
     INTEGER                                       :: iHe4
@@ -69,6 +63,9 @@ CONTAINS
     REAL(dp)                                      :: press_buff     
     REAL(dp)                                      :: entrop_buff   
     REAL(dp)                                      :: energ_buff   
+    REAL(dp)                                      :: pebuff   
+    REAL(dp)                                      :: ppbuff   
+    REAL(dp)                                      :: psbuff   
     REAL(dp)                                      :: minvar
     REAL(dp), DIMENSION(kmax)                     :: naz, xaz
     REAL(dp)                                      :: xn, xp, nn, np
@@ -78,6 +75,7 @@ CONTAINS
     REAL(dp), DIMENSION(1,3) :: DerivativeU
     REAL(dp), DIMENSION(1,3) :: DerivativeP
     REAL(dp), DIMENSION(1)  :: rhobuff, tbuff, yebuff
+    REAL(dp), DIMENSION(1)  :: pbuff, ubuff, P1, P2, P1T, P2T, T1, T2, rho1, rho2, U1, U2
 
 
     OPEN( newunit = TestUnit1, FILE="BindingEnergyTable.d")
@@ -110,6 +108,8 @@ write (*,*) 'nVariables', nVariables
 
     CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 write (*,*) 'EOSTable allocated'
+    
+    !EOSTable % TS % Attributes(1) = ('wl-EOS-SFHo-25-40-100, 2-7-17  ')
 
     ALLOCATE( nb(0:(nPoints(1) - 1 ) ), t(0:(nPoints(2) - 1) ), yq( 0:(nPoints(3) - 1 ) ) )
     ALLOCATE( thermo(0:(nThermo(1)*AllPoints(1) - 1)) )
@@ -265,8 +265,10 @@ write (*,*) 'entropy(1,1,1)', EOSTable % DV % Variables(2) % Values(1,1,1)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(3) % Values(i+1,j,k) &
-            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 1 ) * avn ! need to multiply by baryons per gram, avn 
-            = ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn ) * avn ! need to multiply by baryons per gram, avn 
+            != avn * ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) ) !* avn !+ 8.9d0/mn ) * avn ! need to multiply by baryons per gram, avn 
+            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn + dmnp/2 ) * avn ! need to multiply by baryons per gram, avn 
+            = ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn + 0.247/mn ) * avn ! need to multiply by baryons per gram, avn 
+            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn + 1 ) * avn ! need to multiply by baryons per gram, avn 
         END DO
       END DO
     END DO
@@ -275,29 +277,52 @@ write (*,*) 'energy(1,1,1)', EOSTable % DV % Variables(3) % Values(1,1,1)
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
-!          EOSTable % DV % Variables(4) % Values(i+1,j,k) &
-!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) * mn
           CALL wlGetElectronEOS( EOSTable % TS % States(1) % Values(i+1), & 
                                  EOSTable % TS % States(2) % Values(j),   &
                                  EOSTable % TS % States(3) % Values(k),   &
-                                 press_e, &
-                                 entrop_e,&
-                                 energ_e, &
+                                 press_e,  &
+                                 entrop_e, &
+                                 energ_e,  & 
                                  chem_e )
 
 ! Add corrections to pressure, internal energy, entropy)  
-
-          press_buff = EOSTable % DV % Variables(1) % Values(i+1,j,k)
-          EOSTable % DV % Variables(1) % Values(i+1,j,k) &
-            = press_buff + press_e
-
-          entrop_buff = EOSTable % DV % Variables(2) % Values(i+1,j,k)
-          EOSTable % DV % Variables(2) % Values(i+1,j,k) &
-            = entrop_buff + entrop_e
+          
+!write(*,*) 'Old E=', EOSTable % DV % Variables(3) % Values(i+1,j,k)
+          pebuff = asig*( (kmev * EOSTable % TS % States(2) % Values(j) )**4 ) * ku & ! 2COMPOSE way
+           / ( kfm * EOSTable % TS % States(1) % Values(i+1) )
+!!!!!!!!!!!pebuff = asig*( (kmev *  EOSTable % TS % States(2) % Values(j) )**4 ) * ergmev & ! 2COMPOSE way
+!!!!!!!!!!! / ( cm3fm3 * EOSTable % TS % States(1) % Values(i+1) )
 
           energ_buff = EOSTable % DV % Variables(3) % Values(i+1,j,k) 
           EOSTable % DV % Variables(3) % Values(i+1,j,k) &
-            = energ_buff + energ_e
+            = energ_buff + energ_e + pebuff 
+!write(*,*) 'electron_e', energ_e 
+!write(*,*) 'photon_e=', pebuff
+!write(*,*) 'New E=', EOSTable % DV % Variables(3) % Values(i+1,j,k)
+!IF ( pebuff < 0.0d0 ) THEN 
+!write(*,*) 'photon energy is negative'
+!STOP
+!END IF
+
+          ppbuff = EOSTable % TS % States(1) % Values(i+1) * pebuff / ( 3 ) 
+          press_buff = EOSTable % DV % Variables(1) % Values(i+1,j,k)
+          EOSTable % DV % Variables(1) % Values(i+1,j,k) &
+            = press_buff + press_e + ppbuff
+!write(*,*) 'electron_p', press_e
+!write(*,*) 'photon_p=', ppbuff
+!write(*,*) 'New P=', EOSTable % DV % Variables(1) % Values(i+1,j,k)
+
+!          psbuff = asig*( (kmev *  EOSTable % TS % States(2) % Values(j) )**4 ) * ergmev & ! 2COMPOSE way
+!           / ( cm3fm3 * EOSTable % TS % States(1) % Values(i+1) )
+
+          psbuff = (4/3) * (pebuff/ku) / ( kmev * EOSTable % TS % States(2) % Values(j) )
+
+          entrop_buff = EOSTable % DV % Variables(2) % Values(i+1,j,k)
+          EOSTable % DV % Variables(2) % Values(i+1,j,k) &
+            = entrop_buff + entrop_e + psbuff
+!write(*,*) 'electron_s', entrop_e
+!write(*,*) 'photon_s=', psbuff
+!write(*,*) 'New S=', EOSTable % DV % Variables(2) % Values(i+1,j,k)
 
           EOSTable % DV % Variables(4) % Values(i+1,j,k) &
             = chem_e 
@@ -310,7 +335,11 @@ write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(6) % Values(i+1,j,k) &
+            != ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) + 1 ) * mn!- dmnp
             = ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) - dmnp
+!write (*,*) 'neutron chem pot 1)', ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) - dmnp 
+!write (*,*) 'neutron chem pot 2', ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) + mn
+!write (*,*) 'neutron chem pot 3', ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) )*mn
         END DO
       END DO
     END DO
@@ -404,6 +433,73 @@ write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1
 write(*,*), "yav DV filled"
 
 
+write (*,*) 'nPoints', nPoints
+    DO k = 1, nPoints(3) 
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+
+          rhobuff(1) = EOSTable % TS % States(1) % Values(i)
+          tbuff(1)   = EOSTable % TS % States(2) % Values(j)
+          pbuff(1)   = EOSTable % DV % Variables(1) % Values(i,j,k)
+          ubuff(1)   = EOSTable % DV % Variables(3) % Values(i,j,k)
+          P1(1) = LOG10( EOSTable % DV % Variables(1) % Values(i-1,j,k) )
+          P2(1)= LOG10( EOSTable % DV % Variables(1) % Values(i+1,j,k) )
+          P1T(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j-1,k) )
+          P2T(1)= LOG10( EOSTable % DV % Variables(1) % Values(i,j+1,k) )
+          U1(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j-1,k) )
+          U2(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j+1,k) )
+          rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i-1) )
+          rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i+1) )
+          T1(1) = LOG10( EOSTable % TS % States(2) % Values(j-1) )
+          T2(1) = LOG10( EOSTable % TS % States(2) % Values(j+1) )
+          DerivativeP(1,3) = 0.d0
+          DerivativeU(1,3) = 0.d0
+          DerivativeU(1,1) = 0.d0
+          
+          IF ( i == 1 ) THEN
+          P1(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
+          END IF
+
+          IF ( i == nPoints(1) ) THEN
+          P2(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
+          END IF
+
+          IF( j == 1 ) THEN
+          P1T(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          U1(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j,k) )
+          T1(1) = LOG10( EOSTable % TS % States(2) % Values(j) )
+          END IF
+
+          IF( j == nPoints(2) ) THEN
+          P2T(1)= LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          U2(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j,k) )
+          T2(1) = LOG10( EOSTable % TS % States(2) % Values(j) )
+          END IF
+
+          DerivativeP(1,1) = (P2(1) - P1(1))/(rho2(1) - rho1(1)) * (pbuff(1)/rhobuff(1))
+          DerivativeP(1,2) = (P2T(1) - P1T(1))/(T2(1) - T1(1)) * (pbuff(1)/tbuff(1))
+          DerivativeU(1,2) = (U2(1) - U1(1))/(T2(1) - T1(1)) * (ubuff(1)/tbuff(1))
+
+          EOSTable % DV % Variables(15) % Values(i,j,k) &
+          = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
+                * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
+
+!write (*,*) 'inner i gamma1=', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
+
+
+            != thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) & ! c2
+            !  * ( EOSTable % DV % Variables(3) % Values(i+1,j,k) + EOSTable % DV % Variables(1) % Values(i+1,j,k) ) &
+            !  * thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) / 1.6022e33  ! Kt/kp
+        END DO
+!write (*,*) ' outer i gamma1=', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
+      END DO
+!write (*,*) 'gamma1=', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
+    END DO
+
+
+
     CALL compdata_readin
 
 
@@ -413,21 +509,29 @@ write(*,*), "yav DV filled"
 
     !CLOSE(TestUnit1)
 
+!write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
+      !DO j = 1, nPoints(2)
+        !DO i = 1, nPoints(1)
+!write(*,*) "nb=", (nb(i-1) ), EOSTable % TS % States(2) % Values(j) * kfm
+!write(*,*) "T=", (t(j-1) ), EOSTable % TS % States(2) % Values(j) * kmev
+!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
+    !  END DO
     !STOP
 
     DO k = 1, nPoints(3)
-!write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
+write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
       DO j = 1, nPoints(2)
 !write(*,*) "T=",EOSTable % TS % States(2) % Values(j)
         !DO i = 1, nPoints(1)
         DO i = 1, nPoints(1)
     !      EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
      !     CYCLE
-          !CALL sub_dist_grid(i,j,k,xaz,xn,xp,naz,nn,np)
+      !    CALL sub_dist_grid(i,j,k,xaz,xn,xp,naz,nn,np)
+          CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
       !tb=T(i) * kmev
       !yeb=Ye(i)
       !nb=rho(i) * kfm
-           CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+      !     CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
              IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
                  - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
                  - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
@@ -447,6 +551,684 @@ write(*,*), "yav DV filled"
                / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
                - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
                - az(8074,1)*naz(8074)/nb(i-1) )
+!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(i,j,k), i, j, k
+          END IF
+        END DO
+!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
+      END DO
+    END DO
+
+    DO l = 1, EOSTable % nVariables
+      EOSTable % DV % minValues(l) = MINVAL( EOSTable % DV % Variables(l) % Values )
+      EOSTable % DV % maxValues(l) = MAXVAL( EOSTable % DV % Variables(l) % Values )
+    END DO
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+
+          !EOSTable % DV % Variables(14) % Values(i,j,k) = ku * ( UTOT - EU + ee             &
+!&            + dmnp * x_proton + 7.075 * x_alpha - BUNUC + 1.5d0 * tmev * XH/A - ye * me )
+
+          EOSTable % DV % Variables(14) % Values(i,j,k) =                    &
+            & EOSTable % DV % Variables(3) % Values(i,j,k)                   &
+            & - EOSTable % DV % Variables(13) % Values(i,j,k)                & ! BINDING ENERGY SHOULD BE OUTSIDE PARENTHESES 
+            & + ku * ( dmnp * EOSTable % DV % Variables(7) % Values(i,j,k)   &
+            & + 7.075 * EOSTable % DV % Variables(9) % Values(i,j,k)         & 
+            !& - EOSTable % DV % Variables(13) % Values(i,j,k)                & ! BINDING ENERGY SHOULD BE OUTSIDE PARENTHESES 
+            & + 1.5d0 * kmev * EOSTable % TS % States(2) % Values(j)         &
+            & * ( EOSTable % DV % Variables(10) % Values(i,j,k)              &
+            & / EOSTable % DV % Variables(12) % Values(i,j,k) )              & 
+            & - ( EOSTable % TS % States(3) % Values(k) * me ) )
+        END DO
+      END DO
+    END DO
+
+
+!    DO k = 1, nPoints(3)
+!      DO j = 1, nPoints(2)
+!        DO i = 0, nPoints(1) - 1
+!
+!          EOSTable % DV % Variables(15) % Values(i,j,k) &
+!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) &
+!              * ( mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) ) &
+!              + thermo(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) ) & 
+!              * thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) )
+!
+!        END DO
+!      END DO
+!    END DO
+
+
+  !DO l = 1, 14 !EOSTable % nVariables
+  DO l = 1, 15 !EOSTable % nVariables
+    WRITE (*,*) EOSTable % DV % Names(l)
+    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
+    WRITE (*,*) "minvar=", minvar
+    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
+    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
+    EOSTable % DV % Variables(l) % Values &
+      = LOG10( EOSTable % DV % Variables(l) % Values &
+               + EOSTable % DV % Offsets(l) + epsilon )
+
+  END DO
+
+!    DO k = 1, nPoints(3)
+!      DO j = 1, nPoints(2)
+!        DO i = 1, nPoints(1)
+!        !DO i = 0, nPoints(1) - 1
+!          rhobuff(1) = EOSTable % TS % States(1) % Values(i)
+!          tbuff(1)   = EOSTable % TS % States(2) % Values(j)
+!          yebuff(1)  = EOSTable % TS % States(3) % Values(k)
+!          pbuff(1)   = 10**EOSTable % DV % Variables(1) % Values(i,j,k)
+!
+!    CALL LogInterpolateDifferentiateSingleVariable_3D( &
+!                         rhobuff, tbuff, yebuff, &
+!                         EOSTable % TS % States(1) % Values(:),        &
+!                         EOSTable % TS % States(2) % Values(:),        &
+!                         EOSTable % TS % States(3) % Values(:),        &
+!                         EOSTable % TS % LogInterp,                    &
+!                         EOSTable % DV % Offsets(1),                   &
+!                         EOSTable % DV % Variables(1) % Values(:,:,:), &
+!                         InterpolantP, DerivativeP )
+!
+!    CALL LogInterpolateDifferentiateSingleVariable_3D( &
+!                         rhobuff, tbuff, yebuff, &
+!                         EOSTable % TS % States(1) % Values(:),        &
+!                         EOSTable % TS % States(2) % Values(:),        &
+!                         EOSTable % TS % States(3) % Values(:),        &
+!                         EOSTable % TS % LogInterp,                    &
+!                         EOSTable % DV % Offsets(3),                   &
+!                         EOSTable % DV % Variables(3) % Values(:,:,:), &
+!                         InterpolantU, DerivativeU )
+!
+!
+!          EOSTable % DV % Variables(15) % Values(i,j,k) &
+!
+!          = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
+!                * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
+!
+          != MAX((EOSTable % TS % States(1) % Values(i)/ &
+          ! ( (10**EOSTable % DV % Variables(1) % Values(i,j,k)) + epsilon) &
+          !   *DerivativeP(1,1) + (EOSTable % TS % States(2) % Values(j) &
+          !   /(10**EOSTable % DV % Variables(1) % Values(i,j,k) * EOSTable % TS % States(1) % Values(i) + epsilon ) ) &
+          !   *((DerivativeP(1,2))**2)/(DerivativeU(1,2)), 1.e-31)
+
+!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) )
+!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) )
+
+!        END DO
+!      END DO
+!    END DO
+!write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
+
+!  DO l = 15, 15 !EOSTable % nVariables
+!    WRITE (*,*) EOSTable % DV % Names(l)
+!    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
+!    WRITE (*,*) "minvar=", minvar
+!    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
+!    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
+!    EOSTable % DV % Variables(l) % Values &
+!      = LOG10( EOSTable % DV % Variables(l) % Values &
+!               + EOSTable % DV % Offsets(l) + epsilon )
+!
+!  END DO
+
+    CALL WriteEquationOfStateTableHDF( EOSTable )
+
+    CALL DescribeEquationOfStateTable( EOSTable )
+
+    !CALL CloseFileHDF( file_id )
+
+  END SUBROUTINE ReadComposeTableHDF
+
+  SUBROUTINE ReadSCTableHDF( EOSTable, FileName )
+    
+    IMPLICIT none
+
+    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+    CHARACTER(len=*), INTENT(in)                  :: FileName
+
+    INTEGER, DIMENSION(3)                         :: nPoints
+    INTEGER, DIMENSION(1)                         :: nPointsTemp
+    INTEGER, DIMENSION(1)                         :: TwoPoints
+    INTEGER, DIMENSION(1)                         :: AllPoints
+    INTEGER, DIMENSION(1)                         :: nThermo
+    REAL(dp), DIMENSION(1)                        :: energyshift
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: logrho
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: logtemp
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: ye
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: logpress
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: logenergy
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: entropy
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: mu_e
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: mu_n
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: mu_p
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: Xa
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: Xpp
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: Xnn
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: Xh
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: Zbar
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE       :: Abar
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: thermo
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: yi
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: yav
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: aav
+    REAL(dp), DIMENSION(:), ALLOCATABLE           :: zav
+    INTEGER                                       :: nVariables
+    INTEGER                                       :: i, j, k, l, TestUnit1, TestUnit2
+    INTEGER                                       :: iHe4
+    INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(3)                :: datasize3d
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
+    INTEGER :: hdferr
+    INTEGER(HID_T)                                :: dataset_id
+    REAL(dp)                                      :: chem_e      ! electron chemical potential [MeV]
+    REAL(dp)                                      :: press_e     ! electron/positron/photon pressure
+    REAL(dp)                                      :: entrop_e    ! electron/positron/photon entropy [kb/baryon]
+    REAL(dp)                                      :: energ_e     ! electron/positron/photon energy
+    REAL(dp)                                      :: press_buff     
+    REAL(dp)                                      :: entrop_buff   
+    REAL(dp)                                      :: energ_buff   
+    REAL(dp)                                      :: pebuff   
+    REAL(dp)                                      :: ppbuff   
+    REAL(dp)                                      :: psbuff   
+    REAL(dp)                                      :: minvar
+    REAL(dp), DIMENSION(kmax)                     :: naz, xaz
+    REAL(dp)                                      :: xn, xp, nn, np
+    INTEGER :: sflag
+    REAL(dp), DIMENSION(1) :: InterpolantU
+    REAL(dp), DIMENSION(1) :: InterpolantP
+    REAL(dp), DIMENSION(1,3) :: DerivativeU
+    REAL(dp), DIMENSION(1,3) :: DerivativeP
+    REAL(dp), DIMENSION(1)  :: rhobuff, tbuff, yebuff
+    REAL(dp), DIMENSION(1)  :: pbuff, ubuff, P1, P2, P1T, P2T, T1, T2, rho1, rho2, U1, U2
+
+
+    OPEN( newunit = TestUnit1, FILE="BindingEnergyTable.d")
+    OPEN( newunit = TestUnit2, FILE="HeavyFracCheck.d")
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+write(*,*) 'hdf5 table opened'
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "pointsrho", nPointsTemp(:), file_id, datasize1d )
+    nPoints(1) = nPointsTemp(1)
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "pointstemp", nPointsTemp(:), file_id, datasize1d )
+    nPoints(2) = nPointsTemp(1)
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "pointsye", nPointsTemp(:), file_id, datasize1d )
+    nPoints(3) = nPointsTemp(1)
+
+    nVariables = 15!nThermo(1) + 9 ! ( (3 or 4)? mass frax, then heavy Z and heavy A)
+
+write (*,*) 'nPoints', nPoints
+write (*,*) 'nVariables', nVariables
+
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+write (*,*) 'EOSTable allocated'
+
+    ALLOCATE( logrho(0:(nPoints(1) - 1 ) ), logtemp(0:(nPoints(2) - 1) ), ye( 0:(nPoints(3) - 1 ) ) )
+    
+write (*,*) 'Buffers Allocated'
+    datasize1d(1) = SIZE(logrho)
+    CALL ReadHDF( "logrho", logrho(:), file_id, datasize1d )
+
+    datasize1d(1) = SIZE(logtemp)
+    CALL ReadHDF( "logtemp", logtemp(:), file_id, datasize1d )
+
+    datasize1d(1) = SIZE(ye)
+    CALL ReadHDF( "ye", ye(:), file_id, datasize1d )
+
+write (*,*) 'Buffers read'
+
+    DO i = 0, nPoints(1) - 1
+      EOSTable % TS % States(1) % Values(i+1) = 10**logrho(i)
+    END DO
+write (*,*) 'rho', EOSTable % TS % States(1) % Values 
+
+    DO i = 0, nPoints(2) - 1
+      EOSTable % TS % States(2) % Values(i+1) = 10**logtemp(i) / kmev
+    END DO
+write (*,*) 'T', EOSTable % TS % States(2) % Values 
+
+    DO i = 0, nPoints(3) - 1
+      EOSTable % TS % States(3) % Values(i+1) = ye(i) 
+    END DO
+!write (*,*) 'ye'
+write (*,*) 'TS Loaded'
+!-----------------------------------------------------------
+! Now that we've written the TS data, we need to fill in the
+! additional TS metadata, like names, min/max, etc. 
+!-----------------------------------------------------------
+
+    EOSTable % TS % Names(1:3) = (/'Density                         ',&
+                                   'Temperature                     ',&
+                                   'Electron Fraction               '/)
+
+    EOSTable % TS % Indices % iRho = 1
+    EOSTable % TS % Indices % iT   = 2
+    EOSTable % TS % Indices % iYe  = 3
+
+write(*,*), "Allocate Independent Variable Units "
+
+    EOSTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
+                                   'K                               ', &
+                                   '                                '/)
+
+    EOSTable % TS % minValues(1) = EOSTable % TS % States(1) % Values(1)
+    EOSTable % TS % minValues(2) = EOSTable % TS % States(2) % Values(1)
+    EOSTable % TS % minValues(3) = EOSTable % TS % States(3) % Values(1)
+    EOSTable % TS % maxValues(1) = EOSTable % TS % States(1) % Values(nPoints(1))
+    EOSTable % TS % maxValues(2) = EOSTable % TS % States(2) % Values(nPoints(2))
+    EOSTable % TS % maxValues(3) = EOSTable % TS % States(3) % Values(nPoints(3))
+
+    EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
+
+write (*,*) 'TS filled'
+
+!-----------------------------------------------------------
+! Now that we've written the TS, we need to read and write the DV
+! In addition to the DV data, we need to fill in the
+! additional DV metadata, like names, min/max, etc. 
+! We also need to fill in the DVID.
+!-----------------------------------------------------------
+
+write(*,*), "Allocate Names "
+    EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
+                                    'Entropy Per Baryon              ', &
+                                    'Internal Energy Density         ', &
+                                    'Electron Chemical Potential     ', &
+                                    'Proton Chemical Potential       ', &
+                                    'Neutron Chemical Potential      ', &
+                                    'Proton Mass Fraction            ', &
+                                    'Neutron Mass Fraction           ', &
+                                    'Alpha Mass Fraction             ', &
+                                    'Heavy Mass Fraction             ', &
+                                    'Heavy Charge Number             ', &
+                                    'Heavy Mass Number               ', &
+                                    'Heavy Binding Energy            ', &
+                                    'Thermal Energy                  ', &
+                                    'Gamma1                          '/)
+
+write(*,*), "Set Dependent Variable Identifier Indicies "
+
+    EOSTable % DV % Indices % iPressure = 1
+    EOSTable % DV % Indices % iEntropyPerBaryon = 2
+    EOSTable % DV % Indices % iInternalEnergyDensity = 3
+    EOSTable % DV % Indices % iElectronChemicalPotential = 4
+    EOSTable % DV % Indices % iProtonChemicalPotential = 5
+    EOSTable % DV % Indices % iNeutronChemicalPotential = 6
+    EOSTable % DV % Indices % iProtonMassFraction = 7
+    EOSTable % DV % Indices % iNeutronMassFraction = 8
+    EOSTable % DV % Indices % iAlphaMassFraction = 9
+    EOSTable % DV % Indices % iHeavyMassFraction = 10
+    EOSTable % DV % Indices % iHeavyChargeNumber = 11
+    EOSTable % DV % Indices % iHeavyMassNumber = 12
+    EOSTable % DV % Indices % iHeavyBindingEnergy = 13
+    EOSTable % DV % Indices % iThermalEnergy = 14
+    EOSTable % DV % Indices % iGamma1 = 15
+
+write(*,*), "Allocate Dependent Variable Units "
+    EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
+                                    'k_b per baryon                  ', &
+                                    'erg per gram                    ', &
+                                    'MeV                             ', &
+                                    'MeV                             ', &
+                                    'MeV                             ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    '                                ', &
+                                    'MeV                             ', &
+                                    'MeV                             ', &
+                                    '                                '/)
+
+write(*,*), "Allocate Dependent Variable Logical"
+    EOSTable % DV % Repaired(:,:,:) = 0
+write(*,*), "repaired step"
+
+ALLOCATE( logpress(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "logpress allocated"
+
+    datasize3d = SHAPE( logpress )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "logpress", logpress(:,:,:), &
+                              file_id, datasize3d )
+write(*,*), "logpress read from table"
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(1) % Values(i,j,k) = 10**logpress(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'pressure(1,1,1)', EOSTable % DV % Variables(1) % Values(1,1,1)
+
+ALLOCATE( entropy(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "entropy allocated"
+
+    datasize3d = SHAPE( entropy )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "entropy", entropy(:,:,:), &
+                              file_id, datasize3d )
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(2) % Values(i,j,k) &
+            = entropy(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'entropy(1,1,1)', EOSTable % DV % Variables(2) % Values(1,1,1)
+
+ALLOCATE( logenergy(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "logenergy allocated"
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "energy_shift", energyshift(:), file_id, datasize1d )
+
+    datasize3d = SHAPE( logenergy )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "logenergy", logenergy(:,:,:), &
+                              file_id, datasize3d )
+write(*,*), "logenergy read from table"
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(3) % Values(i,j,k) = 10**logenergy(i-1,j-1,k-1) - energyshift(1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'energy(1,1,1)', EOSTable % DV % Variables(3) % Values(1,1,1)
+
+ALLOCATE( mu_e(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "mu_e allocated"
+
+    datasize3d = SHAPE( mu_e )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "mu_e", mu_e(:,:,:), &
+                              file_id, datasize3d )
+write(*,*), "mu_e read from table"
+
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(4) % Values(i,j,k) &
+            = mu_e(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,1,1)
+
+ALLOCATE( mu_n(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "mu_n allocated"
+
+    datasize3d = SHAPE( mu_n )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "mu_n", mu_n(:,:,:), &
+                              file_id, datasize3d )
+write(*,*), "mu_n read from table"
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(6) % Values(i,j,k) = mu_n(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'neutron chem pot(1,1,1)', EOSTable % DV % Variables(6) % Values(1,1,1)
+
+ALLOCATE( mu_p(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "mu_p allocated"
+
+    datasize3d = SHAPE( mu_p )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "mu_p", mu_p(:,:,:), &
+                              file_id, datasize3d )
+write(*,*), "mu_p read from table"
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1) 
+          EOSTable % DV % Variables(6) % Values(i,j,k) = mu_p(i-1,j-1,k-1)    
+        END DO
+      END DO
+    END DO
+    
+write (*,*) 'proton chem pot(1,1,1)', EOSTable % DV % Variables(5) % Values(1,1,1)
+
+ALLOCATE( Xnn(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "Xnn allocated"
+
+    datasize3d = SHAPE( Xnn )
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "Xn", Xnn(:,:,:), &
+                              file_id, datasize3d )
+write(*,*), "Xn read from table"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+          EOSTable % DV % Variables(8) % Values(i,j,k) &
+            = Xnn(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'neutron mass frac(1,1,1)', EOSTable % DV % Variables(8) % Values(1,1,1)
+
+ALLOCATE( Xpp(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "Xpp allocated"
+
+    datasize3d = SHAPE( Xpp ) 
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "Xp", Xpp(:,:,:), & 
+                              file_id, datasize3d )
+write(*,*), "Xpp read from table"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1) 
+          EOSTable % DV % Variables(7) % Values(i,j,k) &
+            = Xpp(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'proton mass frac(1,1,1)', EOSTable % DV % Variables(7) % Values(1,1,1)
+
+ALLOCATE( Xa(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "Xa allocated"
+
+    datasize3d = SHAPE( Xa ) 
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "Xa", Xa(:,:,:), & 
+                              file_id, datasize3d )
+write(*,*), "Xa read from table"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1) 
+          EOSTable % DV % Variables(9) % Values(i,j,k) &
+            = Xa(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,1)
+write(*,*), "yi DV's filled"
+
+ALLOCATE( Zbar(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "Zbar allocated"
+
+    datasize3d = SHAPE( Zbar ) 
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "Zbar", Zbar(:,:,:), & 
+                              file_id, datasize3d )
+write(*,*), "Zbar read from table"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1) 
+          EOSTable % DV % Variables(11) % Values(i,j,k) &
+            = Zbar(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'heavy charge number(1,1,1)', EOSTable % DV % Variables(11) % Values(1,1,1)
+write(*,*), "zav DV's filled"
+
+ALLOCATE( Abar(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "Abar allocated"
+
+    datasize3d = SHAPE( Abar ) 
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "Abar", Abar(:,:,:), & 
+                              file_id, datasize3d )
+write(*,*), "Abar read from table"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1) 
+          EOSTable % DV % Variables(12) % Values(i,j,k) &
+            = Abar(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'heavy mass number(1,1,1)', EOSTable % DV % Variables(12) % Values(1,1,1)
+
+ALLOCATE( Xh(0:(nPoints(1)-1), 0:(nPoints(2)-1), 0:(nPoints(3)-1) ) )
+write(*,*), "Xh allocated"
+
+    datasize3d = SHAPE( Xh ) 
+write(*,*), "datasize shaped"
+    CALL ReadHDF( "Xh", Xh(:,:,:), & 
+                              file_id, datasize3d )
+write(*,*), "Xh read from table"
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1) 
+          EOSTable % DV % Variables(10) % Values(i,j,k) &
+            = Xh(i-1,j-1,k-1)
+        END DO
+      END DO
+    END DO
+write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
+write(*,*), "yav DV filled"
+
+write (*,*) 'nPoints', nPoints
+    DO k = 1, nPoints(3) 
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+
+          rhobuff(1) = EOSTable % TS % States(1) % Values(i)
+          tbuff(1)   = EOSTable % TS % States(2) % Values(j)
+          pbuff(1)   = EOSTable % DV % Variables(1) % Values(i,j,k)
+          ubuff(1)   = EOSTable % DV % Variables(3) % Values(i,j,k)
+          P1(1) = LOG10( EOSTable % DV % Variables(1) % Values(i-1,j,k) )
+          P2(1)= LOG10( EOSTable % DV % Variables(1) % Values(i+1,j,k) )
+          P1T(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j-1,k) )
+          P2T(1)= LOG10( EOSTable % DV % Variables(1) % Values(i,j+1,k) )
+          U1(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j-1,k) )
+          U2(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j+1,k) )
+          rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i-1) )
+          rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i+1) )
+          T1(1) = LOG10( EOSTable % TS % States(2) % Values(j-1) )
+          T2(1) = LOG10( EOSTable % TS % States(2) % Values(j+1) )
+          DerivativeP(1,3) = 0.d0
+          DerivativeU(1,3) = 0.d0
+          DerivativeU(1,1) = 0.d0
+          
+          IF ( i == 1 ) THEN
+          P1(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
+          END IF
+
+          IF ( i == nPoints(1) ) THEN
+          P2(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
+          END IF
+
+          IF( j == 1 ) THEN
+          P1T(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          U1(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j,k) )
+          T1(1) = LOG10( EOSTable % TS % States(2) % Values(j) )
+          END IF
+
+          IF( j == nPoints(2) ) THEN
+          P2T(1)= LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+          U2(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j,k) )
+          T2(1) = LOG10( EOSTable % TS % States(2) % Values(j) )
+          END IF
+
+          DerivativeP(1,1) = (P2(1) - P1(1))/(rho2(1) - rho1(1)) * (pbuff(1)/rhobuff(1))
+          DerivativeP(1,2) = (P2T(1) - P1T(1))/(T2(1) - T1(1)) * (pbuff(1)/tbuff(1))
+          DerivativeU(1,2) = (U2(1) - U1(1))/(T2(1) - T1(1)) * (ubuff(1)/tbuff(1))
+
+          EOSTable % DV % Variables(15) % Values(i,j,k) &
+          = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
+                * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
+
+
+            != thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) & ! c2
+            !  * ( EOSTable % DV % Variables(3) % Values(i+1,j,k) + EOSTable % DV % Variables(1) % Values(i+1,j,k) ) &
+            !  * thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) / 1.6022e33  ! Kt/kp
+        END DO
+      END DO
+    END DO
+
+    CALL compdata_readin
+
+
+    !DO i = 1,kmax
+    !    WRITE (TestUnit1, '(3(i4,x), (es14.7,x))' ) i, az(i,1), az(i,2), bind(i)
+    !END DO
+
+    !CLOSE(TestUnit1)
+
+!write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
+      !DO j = 1, nPoints(2)
+        !DO i = 1, nPoints(1)
+!write(*,*) "nb=", (nb(i-1) ), EOSTable % TS % States(2) % Values(j) * kfm
+!write(*,*) "T=", (t(j-1) ), EOSTable % TS % States(2) % Values(j) * kmev
+!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
+    !  END DO
+    !STOP
+
+    DO k = 1, nPoints(3)
+write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
+      DO j = 1, nPoints(2)
+!write(*,*) "T=",EOSTable % TS % States(2) % Values(j)
+        !DO i = 1, nPoints(1)
+        DO i = 1, nPoints(1)
+    !      EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
+      !    CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
+      !tb=T(i) * kmev
+      !yeb=Ye(i)
+      !nb=rho(i) * kfm
+           CALL sub_dist_interpol((10**logtemp(j-1)),ye(k-1),(10**logrho(i-1) * kfm),xaz,xn,xp,naz,nn,np,sflag)
+             IF ( ( SUM( az(:,1)*naz(:)/(10**logrho(i-1) * kfm ) ) - az(8077,1)*naz(8077)/( 10**logrho(i-1) * kfm ) &
+                 - az(8076,1)*naz(8076)/(10**logrho(i-1) * kfm ) - az(8075,1)*naz(8075)/(10**logrho(i-1) * kfm ) &
+                 - az(8074,1)*naz(8074)/(10**logrho(i-1) * kfm ) ) .le. 0.0d0 ) THEN
+              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+!write(*,*) "mass frac zero tripped", i,j,k
+            ELSE
+
+            EOSTable % DV % Variables(13) % Values(i,j,k) &
+            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       & !+ bind(iHe4) * xaz(iHe4) / 4.d0   &     
+               + bind(8077) * xaz(8077) / az(8077,1)    &
+               + bind(8076) * xaz(8076) / az(8076,1)    &
+               + bind(8075) * xaz(8075) / az(8075,1)    &
+               + bind(8074) * xaz(8074) / az(8074,1) )  &
+               / ( SUM( az(:,1)*naz(:)/(10**logrho(i-1) * kfm ) ) - az(8077,1)*naz(8077)/(10**logrho(i-1) * kfm ) &
+               - az(8076,1)*naz(8076)/(10**logrho(i-1) * kfm ) - az(8075,1)*naz(8075)/(10**logrho(i-1) * kfm ) &
+               - az(8074,1)*naz(8074)/(10**logrho(i-1) * kfm ) )
 !write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(i,j,k), i, j, k
           END IF
         END DO
@@ -476,66 +1258,7 @@ write(*,*), "yav DV filled"
     END DO
 
 
-  DO l = 1, 14 !EOSTable % nVariables
-    WRITE (*,*) EOSTable % DV % Names(l)
-    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
-    WRITE (*,*) "minvar=", minvar
-    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
-    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
-    EOSTable % DV % Variables(l) % Values &
-      = LOG10( EOSTable % DV % Variables(l) % Values &
-               + EOSTable % DV % Offsets(l) + epsilon )
-
-  END DO
-
-    DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
-        DO i = 1, nPoints(1)
-        !DO i = 0, nPoints(1) - 1
-          rhobuff(1) = EOSTable % TS % States(1) % Values(i)
-          tbuff(1) = EOSTable % TS % States(2) % Values(j)
-          yebuff(1) = EOSTable % TS % States(3) % Values(k)
-
-    CALL LogInterpolateDifferentiateSingleVariable_3D( &
-                         rhobuff, tbuff, yebuff, &
-                         EOSTable % TS % States(1) % Values(:),        &
-                         EOSTable % TS % States(2) % Values(:),        &
-                         EOSTable % TS % States(3) % Values(:),        &
-                         EOSTable % TS % LogInterp,                    &
-                         EOSTable % DV % Offsets(1),                   &
-                         EOSTable % DV % Variables(1) % Values(:,:,:), &
-                         InterpolantP, DerivativeP )
-
-    CALL LogInterpolateDifferentiateSingleVariable_3D( &
-                         rhobuff, tbuff, yebuff, &
-                         EOSTable % TS % States(1) % Values(:),        &
-                         EOSTable % TS % States(2) % Values(:),        &
-                         EOSTable % TS % States(3) % Values(:),        &
-                         EOSTable % TS % LogInterp,                    &
-                         EOSTable % DV % Offsets(1),                   &
-                         EOSTable % DV % Variables(1) % Values(:,:,:), &
-                         InterpolantU, DerivativeU )
-
-
-          EOSTable % DV % Variables(15) % Values(i,j,k) &
-          = MAX((EOSTable % TS % States(1) % Values(i)/ &
-             (10**EOSTable % DV % Variables(1) % Values(i,j,k)) + epsilon) &
-             *DerivativeP(1,1) + (EOSTable % TS % States(2) % Values(j) &
-             /(10**EOSTable % DV % Variables(1) % Values(i,j,k) * EOSTable % TS % States(1) % Values(i) + epsilon ) ) &
-             *((DerivativeP(1,2))**2)/(DerivativeU(1,2)), 1.e-31)
-!write(*,*) 'Pressure', EOSTable % DV % Variables(1) % Values(i,j,k)
-!write(*,*) 'rho', EOSTable % TS % States(1) % Values(i)
-
-!write (*,*) 'gamma(i,j,k)', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
-
-         !   = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) )
-
-        END DO
-      END DO
-    END DO
-!write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
-
-  DO l = 15, 15 !EOSTable % nVariables
+  DO l = 1, 15 !EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)
     minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
     WRITE (*,*) "minvar=", minvar
@@ -551,14 +1274,12 @@ write(*,*), "yav DV filled"
 
     CALL DescribeEquationOfStateTable( EOSTable )
 
-    !CALL CloseFileHDF( file_id )
-
-  END SUBROUTINE ReadComposeTableHDF
+  END SUBROUTINE ReadSCTableHDF
 
   SUBROUTINE ReadChimeraProfile1D( FileName, MaxZone, r, rho, T, Ye, p, s, &
                                      e_internal, xn, xp, xhe, xa, chem_n,  &
                                      chem_p, chem_e, a_heavy, z_heavy,     &
-                                     be_heavy, u, rstmss, vsound,          &
+                                     be_heavy, u, rstmss, vsound, gamma1,  &
                                      SkipLinesOption )
 
     CHARACTER(len=*), INTENT(in)  :: FileName
@@ -567,7 +1288,7 @@ write(*,*), "yav DV filled"
     REAL(dp), DIMENSION(:), INTENT(out) :: r, rho, T, Ye, p, s, e_internal, xn, &
                                              xp, xhe, xa, chem_n, chem_p, chem_e, &
                                              a_heavy, z_heavy, be_heavy, u, &
-                                             rstmss, vsound  
+                                             rstmss, vsound, gamma1  
 
     INTEGER :: i
     INTEGER :: j, FileUnit, SkipLines, istate
@@ -649,7 +1370,7 @@ write(*,*), "yav DV filled"
 
         DO i = MaxZone, 1, -1
           READ(FileUnit, 261) j, dum1(i), dum2(i), dum3(i), dum4(i), &
-                              dum5(i), vsound(i), dum6(i), dum7(i), dum8(i), &
+                              dum5(i), vsound(i), dum6(i), dum7(i), gamma1(i), &
                               dum9(i), dum10(i), dum11(i), dum12(i), dum13(i)
         END DO
       END IF
@@ -691,13 +1412,72 @@ write(*,*), "yav DV filled"
           READ(FileUnit, 262) j, dum1(i), dum2(i), be_heavy(i), dum3(i), dum4(i), &
                               dum5(i), dum6(i), dum7(i), dum8(i), dum9(i)
         END DO
+        EXIT
       END IF
-
+      
     END DO
 
     CLOSE(FileUnit)
 
   END SUBROUTINE ReadChimeraProfile1D
+
+SUBROUTINE ReadChimeraThermoProfile1D( FileName, MaxZone, r, rho, T, Ye, s, &
+                                     SkipLinesOption )
+
+    CHARACTER(len=*), INTENT(in)  :: FileName
+    INTEGER, INTENT(in)           :: MaxZone
+    INTEGER, INTENT(in), OPTIONAL :: SkipLinesOption
+    REAL(dp), DIMENSION(:), INTENT(out) :: r, rho, T, Ye, s
+    INTEGER :: i, j, FileUnit, SkipLines, istate
+    LOGICAL, DIMENSION(MaxZone) :: L, shock
+    CHARACTER(len=1), DIMENSION(MaxZone) :: nnse, EOS
+    CHARACTER(LEN=255) :: stanza_name   ! Name of stanza headers
+    REAL(dp), DIMENSION(MaxZone) :: u, v, w, dr, dummy14, flat, lum, &
+                                      Tmev, ah, dum1, dum2, dum3, &
+                                      dum4, dum5, dum6, dum7,     &
+                                      dum8, dum9, dum10, dum11,   &
+                                      dum12, dum13, rstmss
+
+    257 FORMAT (1x,i4,6es11.3,a1,es11.3,L3,es11.3,es14.6,4(es11.3),es10.2,a1,es11.3,1x,a1)
+    258 FORMAT (1x,i4,10es12.4)
+    259 FORMAT (1x,i4,8es11.4)
+    260 FORMAT (1x,i4,11es11.4)
+    261 FORMAT (1x,i4,14es11.4)
+    262 FORMAT (1x,i4,10es11.4)
+    263 FORMAT (1x,i4,18es11.4)
+    264 FORMAT (1x,i4,7es11.4)
+
+    SkipLines = 0
+    IF ( Present ( SkipLinesOption ) ) &
+      SkipLines = SkipLinesOption
+
+    OPEN( newunit = FileUnit, FILE = FileName, status ="old", iostat=istate )
+
+    DO i = 1, SkipLines
+      READ(FileUnit,*)
+    END DO
+
+    DO
+      !IF ( istate /= 0 ) EXIT
+      READ(FileUnit,'(a)',iostat=istate) stanza_name
+      IF ( TRIM(ADJUSTL(stanza_name)) == 'Model configuration' ) THEN
+        PRINT*, TRIM(ADJUSTL(stanza_name))
+        DO i = 1, 4
+          READ(FileUnit,*)
+        END DO
+
+        DO i = MaxZone, 1, -1
+          READ(FileUnit, 257) j, u(i), v(i), w(i), r(i), dr(i), dummy14(i), shock(i), &
+                              flat(i), L(i), lum(i), rstmss(i), rho(i), Tmev(i),   &
+                              T(i), s(i), ah(i), nnse(i), Ye(i), EOS(i)
+        END DO
+        EXIT
+      END IF
+    END DO
+
+    CLOSE(FileUnit)
+
+  END SUBROUTINE ReadChimeraThermoProfile1D
 
   SUBROUTINE ReadCHIMERAHDF( Rho, T, Ye, E_Int, Entropy, NSE, imax, nx, ny, &
                              nz, FileName)
