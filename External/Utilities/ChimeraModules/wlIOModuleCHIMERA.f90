@@ -17,6 +17,7 @@ MODULE wlIOModuleCHIMERA
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE sfho_frdm_composition_module
+  !USE sfhx_frdm_composition_module
 
   implicit none
 
@@ -265,10 +266,8 @@ write (*,*) 'entropy(1,1,1)', EOSTable % DV % Variables(2) % Values(1,1,1)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
           EOSTable % DV % Variables(3) % Values(i+1,j,k) &
-            != avn * ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) ) !* avn !+ 8.9d0/mn ) * avn ! need to multiply by baryons per gram, avn 
             != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn + dmnp/2 ) * avn ! need to multiply by baryons per gram, avn 
-            = ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn + 0.247/mn ) * avn ! need to multiply by baryons per gram, avn 
-            != ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn + 1 ) * avn ! need to multiply by baryons per gram, avn 
+            = ergmev * mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) + 8.9d0/mn ) * avn ! need to multiply by baryons per gram, avn 
         END DO
       END DO
     END DO
@@ -285,44 +284,24 @@ write (*,*) 'energy(1,1,1)', EOSTable % DV % Variables(3) % Values(1,1,1)
                                  energ_e,  & 
                                  chem_e )
 
-! Add corrections to pressure, internal energy, entropy)  
           
-!write(*,*) 'Old E=', EOSTable % DV % Variables(3) % Values(i+1,j,k)
-          pebuff = asig*( (kmev * EOSTable % TS % States(2) % Values(j) )**4 ) * ku & ! 2COMPOSE way
+          pebuff = asig*( (kmev * EOSTable % TS % States(2) % Values(j) )**4 ) * ku & 
            / ( kfm * EOSTable % TS % States(1) % Values(i+1) )
-!!!!!!!!!!!pebuff = asig*( (kmev *  EOSTable % TS % States(2) % Values(j) )**4 ) * ergmev & ! 2COMPOSE way
-!!!!!!!!!!! / ( cm3fm3 * EOSTable % TS % States(1) % Values(i+1) )
 
           energ_buff = EOSTable % DV % Variables(3) % Values(i+1,j,k) 
           EOSTable % DV % Variables(3) % Values(i+1,j,k) &
             = energ_buff + energ_e + pebuff 
-!write(*,*) 'electron_e', energ_e 
-!write(*,*) 'photon_e=', pebuff
-!write(*,*) 'New E=', EOSTable % DV % Variables(3) % Values(i+1,j,k)
-!IF ( pebuff < 0.0d0 ) THEN 
-!write(*,*) 'photon energy is negative'
-!STOP
-!END IF
 
           ppbuff = EOSTable % TS % States(1) % Values(i+1) * pebuff / ( 3 ) 
           press_buff = EOSTable % DV % Variables(1) % Values(i+1,j,k)
           EOSTable % DV % Variables(1) % Values(i+1,j,k) &
             = press_buff + press_e + ppbuff
-!write(*,*) 'electron_p', press_e
-!write(*,*) 'photon_p=', ppbuff
-!write(*,*) 'New P=', EOSTable % DV % Variables(1) % Values(i+1,j,k)
-
-!          psbuff = asig*( (kmev *  EOSTable % TS % States(2) % Values(j) )**4 ) * ergmev & ! 2COMPOSE way
-!           / ( cm3fm3 * EOSTable % TS % States(1) % Values(i+1) )
 
           psbuff = (4/3) * (pebuff/ku) / ( kmev * EOSTable % TS % States(2) % Values(j) )
 
           entrop_buff = EOSTable % DV % Variables(2) % Values(i+1,j,k)
           EOSTable % DV % Variables(2) % Values(i+1,j,k) &
             = entrop_buff + entrop_e + psbuff
-!write(*,*) 'electron_s', entrop_e
-!write(*,*) 'photon_s=', psbuff
-!write(*,*) 'New S=', EOSTable % DV % Variables(2) % Values(i+1,j,k)
 
           EOSTable % DV % Variables(4) % Values(i+1,j,k) &
             = chem_e 
@@ -337,9 +316,6 @@ write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,
           EOSTable % DV % Variables(6) % Values(i+1,j,k) &
             != ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) + 1 ) * mn!- dmnp
             = ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) - dmnp
-!write (*,*) 'neutron chem pot 1)', ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) - dmnp 
-!write (*,*) 'neutron chem pot 2', ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) ) + mn
-!write (*,*) 'neutron chem pot 3', ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 2*AllPoints(1) ) )*mn
         END DO
       END DO
     END DO
@@ -486,52 +462,16 @@ write (*,*) 'nPoints', nPoints
           = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
                 * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
 
-!write (*,*) 'inner i gamma1=', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
-
-
-            != thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) & ! c2
-            !  * ( EOSTable % DV % Variables(3) % Values(i+1,j,k) + EOSTable % DV % Variables(1) % Values(i+1,j,k) ) &
-            !  * thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) / 1.6022e33  ! Kt/kp
         END DO
-!write (*,*) ' outer i gamma1=', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
       END DO
-!write (*,*) 'gamma1=', EOSTable % DV % Variables(15) % Values(i,j,k), i, j, k
     END DO
-
-
 
     CALL compdata_readin
 
-
-    !DO i = 1,kmax
-    !    WRITE (TestUnit1, '(3(i4,x), (es14.7,x))' ) i, az(i,1), az(i,2), bind(i)
-    !END DO
-
-    !CLOSE(TestUnit1)
-
-!write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
-      !DO j = 1, nPoints(2)
-        !DO i = 1, nPoints(1)
-!write(*,*) "nb=", (nb(i-1) ), EOSTable % TS % States(2) % Values(j) * kfm
-!write(*,*) "T=", (t(j-1) ), EOSTable % TS % States(2) % Values(j) * kmev
-!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
-    !  END DO
-    !STOP
-
     DO k = 1, nPoints(3)
-write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
       DO j = 1, nPoints(2)
-!write(*,*) "T=",EOSTable % TS % States(2) % Values(j)
-        !DO i = 1, nPoints(1)
         DO i = 1, nPoints(1)
-    !      EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
-     !     CYCLE
-      !    CALL sub_dist_grid(i,j,k,xaz,xn,xp,naz,nn,np)
           CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
-      !tb=T(i) * kmev
-      !yeb=Ye(i)
-      !nb=rho(i) * kfm
-      !     CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
              IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
                  - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
                  - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
@@ -539,7 +479,6 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
               EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
               EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
               EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
-!write(*,*) "mass frac zero tripped", i,j,k
             ELSE
 
             EOSTable % DV % Variables(13) % Values(i,j,k) &
@@ -551,10 +490,8 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
                / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
                - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
                - az(8074,1)*naz(8074)/nb(i-1) )
-!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(i,j,k), i, j, k
           END IF
         END DO
-!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
       END DO
     END DO
 
@@ -567,15 +504,12 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
       DO j = 1, nPoints(2)
         DO i = 1, nPoints(1)
 
-          !EOSTable % DV % Variables(14) % Values(i,j,k) = ku * ( UTOT - EU + ee             &
-!&            + dmnp * x_proton + 7.075 * x_alpha - BUNUC + 1.5d0 * tmev * XH/A - ye * me )
 
           EOSTable % DV % Variables(14) % Values(i,j,k) =                    &
             & EOSTable % DV % Variables(3) % Values(i,j,k)                   &
             & - EOSTable % DV % Variables(13) % Values(i,j,k)                & ! BINDING ENERGY SHOULD BE OUTSIDE PARENTHESES 
             & + ku * ( dmnp * EOSTable % DV % Variables(7) % Values(i,j,k)   &
             & + 7.075 * EOSTable % DV % Variables(9) % Values(i,j,k)         & 
-            !& - EOSTable % DV % Variables(13) % Values(i,j,k)                & ! BINDING ENERGY SHOULD BE OUTSIDE PARENTHESES 
             & + 1.5d0 * kmev * EOSTable % TS % States(2) % Values(j)         &
             & * ( EOSTable % DV % Variables(10) % Values(i,j,k)              &
             & / EOSTable % DV % Variables(12) % Values(i,j,k) )              & 
@@ -584,23 +518,6 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
       END DO
     END DO
 
-
-!    DO k = 1, nPoints(3)
-!      DO j = 1, nPoints(2)
-!        DO i = 0, nPoints(1) - 1
-!
-!          EOSTable % DV % Variables(15) % Values(i,j,k) &
-!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) &
-!              * ( mn * ( thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ) ) &
-!              + thermo(i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) ) & 
-!              * thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) )
-!
-!        END DO
-!      END DO
-!    END DO
-
-
-  !DO l = 1, 14 !EOSTable % nVariables
   DO l = 1, 15 !EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)
     minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
@@ -612,67 +529,6 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
                + EOSTable % DV % Offsets(l) + epsilon )
 
   END DO
-
-!    DO k = 1, nPoints(3)
-!      DO j = 1, nPoints(2)
-!        DO i = 1, nPoints(1)
-!        !DO i = 0, nPoints(1) - 1
-!          rhobuff(1) = EOSTable % TS % States(1) % Values(i)
-!          tbuff(1)   = EOSTable % TS % States(2) % Values(j)
-!          yebuff(1)  = EOSTable % TS % States(3) % Values(k)
-!          pbuff(1)   = 10**EOSTable % DV % Variables(1) % Values(i,j,k)
-!
-!    CALL LogInterpolateDifferentiateSingleVariable_3D( &
-!                         rhobuff, tbuff, yebuff, &
-!                         EOSTable % TS % States(1) % Values(:),        &
-!                         EOSTable % TS % States(2) % Values(:),        &
-!                         EOSTable % TS % States(3) % Values(:),        &
-!                         EOSTable % TS % LogInterp,                    &
-!                         EOSTable % DV % Offsets(1),                   &
-!                         EOSTable % DV % Variables(1) % Values(:,:,:), &
-!                         InterpolantP, DerivativeP )
-!
-!    CALL LogInterpolateDifferentiateSingleVariable_3D( &
-!                         rhobuff, tbuff, yebuff, &
-!                         EOSTable % TS % States(1) % Values(:),        &
-!                         EOSTable % TS % States(2) % Values(:),        &
-!                         EOSTable % TS % States(3) % Values(:),        &
-!                         EOSTable % TS % LogInterp,                    &
-!                         EOSTable % DV % Offsets(3),                   &
-!                         EOSTable % DV % Variables(3) % Values(:,:,:), &
-!                         InterpolantU, DerivativeU )
-!
-!
-!          EOSTable % DV % Variables(15) % Values(i,j,k) &
-!
-!          = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
-!                * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
-!
-          != MAX((EOSTable % TS % States(1) % Values(i)/ &
-          ! ( (10**EOSTable % DV % Variables(1) % Values(i,j,k)) + epsilon) &
-          !   *DerivativeP(1,1) + (EOSTable % TS % States(2) % Values(j) &
-          !   /(10**EOSTable % DV % Variables(1) % Values(i,j,k) * EOSTable % TS % States(1) % Values(i) + epsilon ) ) &
-          !   *((DerivativeP(1,2))**2)/(DerivativeU(1,2)), 1.e-31)
-
-!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) )
-!            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) )
-
-!        END DO
-!      END DO
-!    END DO
-!write (*,*) 'gamma(1,1,1)', EOSTable % DV % Variables(15) % Values(1,1,1)
-
-!  DO l = 15, 15 !EOSTable % nVariables
-!    WRITE (*,*) EOSTable % DV % Names(l)
-!    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
-!    WRITE (*,*) "minvar=", minvar
-!    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
-!    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
-!    EOSTable % DV % Variables(l) % Values &
-!      = LOG10( EOSTable % DV % Variables(l) % Values &
-!               + EOSTable % DV % Offsets(l) + epsilon )
-!
-!  END DO
 
     CALL WriteEquationOfStateTableHDF( EOSTable )
 
@@ -1172,52 +1028,23 @@ write (*,*) 'nPoints', nPoints
           = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
                 * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
 
-
-            != thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) & ! c2
-            !  * ( EOSTable % DV % Variables(3) % Values(i+1,j,k) + EOSTable % DV % Variables(1) % Values(i+1,j,k) ) &
-            !  * thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 6*AllPoints(1) ) / 1.6022e33  ! Kt/kp
         END DO
       END DO
     END DO
 
     CALL compdata_readin
 
-
-    !DO i = 1,kmax
-    !    WRITE (TestUnit1, '(3(i4,x), (es14.7,x))' ) i, az(i,1), az(i,2), bind(i)
-    !END DO
-
-    !CLOSE(TestUnit1)
-
-!write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
-      !DO j = 1, nPoints(2)
-        !DO i = 1, nPoints(1)
-!write(*,*) "nb=", (nb(i-1) ), EOSTable % TS % States(2) % Values(j) * kfm
-!write(*,*) "T=", (t(j-1) ), EOSTable % TS % States(2) % Values(j) * kmev
-!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
-    !  END DO
-    !STOP
-
     DO k = 1, nPoints(3)
 write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
       DO j = 1, nPoints(2)
-!write(*,*) "T=",EOSTable % TS % States(2) % Values(j)
-        !DO i = 1, nPoints(1)
         DO i = 1, nPoints(1)
-    !      EOSTable % DV % Variables(13) % Values(i,j,k) = 8.755831d0
-      !    CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
-      !tb=T(i) * kmev
-      !yeb=Ye(i)
-      !nb=rho(i) * kfm
            CALL sub_dist_interpol((10**logtemp(j-1)),ye(k-1),(10**logrho(i-1) * kfm),xaz,xn,xp,naz,nn,np,sflag)
              IF ( ( SUM( az(:,1)*naz(:)/(10**logrho(i-1) * kfm ) ) - az(8077,1)*naz(8077)/( 10**logrho(i-1) * kfm ) &
                  - az(8076,1)*naz(8076)/(10**logrho(i-1) * kfm ) - az(8075,1)*naz(8075)/(10**logrho(i-1) * kfm ) &
                  - az(8074,1)*naz(8074)/(10**logrho(i-1) * kfm ) ) .le. 0.0d0 ) THEN
-              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
               EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
               EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
               EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
-!write(*,*) "mass frac zero tripped", i,j,k
             ELSE
 
             EOSTable % DV % Variables(13) % Values(i,j,k) &
@@ -1229,19 +1056,14 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
                / ( SUM( az(:,1)*naz(:)/(10**logrho(i-1) * kfm ) ) - az(8077,1)*naz(8077)/(10**logrho(i-1) * kfm ) &
                - az(8076,1)*naz(8076)/(10**logrho(i-1) * kfm ) - az(8075,1)*naz(8075)/(10**logrho(i-1) * kfm ) &
                - az(8074,1)*naz(8074)/(10**logrho(i-1) * kfm ) )
-!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(i,j,k), i, j, k
           END IF
         END DO
-!write(*,*) "binding energy:", EOSTable % DV % Variables(13) % Values(10,j,k)
       END DO
     END DO
 
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 1, nPoints(1)
-
-          !EOSTable % DV % Variables(14) % Values(i,j,k) = ku * ( UTOT - EU + ee             &
-!&            + dmnp * x_proton + 7.075 * x_alpha - BUNUC + 1.5d0 * tmev * XH/A - ye * me )
 
           EOSTable % DV % Variables(14) % Values(i,j,k) =                    &
             & EOSTable % DV % Variables(3) % Values(i,j,k)                   &
