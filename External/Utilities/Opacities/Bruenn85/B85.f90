@@ -265,7 +265,9 @@ CONTAINS
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: NESK_ome
   INTEGER                    :: ii, jj, kk, nPointsE
   REAL(dp)                   :: outcome
+  REAL(dp)                   :: UnitConvertConstant
 
+  UnitConvertConstant = cvel_inv**4.0 / h**3.0
   nPointsE = SIZE(energygrid)
 
   ALLOCATE( NESK_ome( nquad, nPointsE, nPointsE ) )
@@ -293,7 +295,7 @@ CONTAINS
       END IF
     END DO ! ii (nquad)
 
-    NESK( jj, kk ) = outcome
+    NESK( jj, kk ) = UnitConvertConstant * outcome
 
     END DO
 
