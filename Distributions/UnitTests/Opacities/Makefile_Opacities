@@ -6,7 +6,8 @@ all: wlOpacityFieldsTest \
      wlOpacityPerformanceTest \
      wlEScatteringKernelTest \
      wlGreyTableTest \
-     wlNESKernelTest
+     wlNESKernelTest_Tchem \
+     wlNESKernelTest_RhoTYe
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -44,10 +45,16 @@ wlGreyTableTest: \
 	$(weaklib) wlGreyTableTest.o \
 	$(LIBRARIES)
 
-wlNESKernelTest: \
-	$(weaklib) wlNESKernelTest.o
-	$(FLINKER) $(FLAGS) -o wlNESKernelTest_$(MACHINE) \
-	$(weaklib) wlNESKernelTest.o \
+wlNESKernelTest_Tchem: \
+	$(weaklib) wlNESKernelTest_Tchem.o
+	$(FLINKER) $(FLAGS) -o wlNESKernelTest_Tchem_$(MACHINE) \
+	$(weaklib) wlNESKernelTest_Tchem.o \
+	$(LIBRARIES)
+
+wlNESKernelTest_RhoTYe: \
+	$(weaklib) wlNESKernelTest_RhoTYe.o
+	$(FLINKER) $(FLAGS) -o wlNESKernelTest_RhoTYe_$(MACHINE) \
+	$(weaklib) wlNESKernelTest_RhoTYe.o \
         $(LIBRARIES)
 
 clean:
@@ -60,7 +67,8 @@ clobber: clean
 	rm -f wlOpacityPerformanceTest_$(MACHINE)
 	rm -f wlEScatteringKernelTest_$(MACHINE)
 	rm -f wlGreyTableTest_$(MACHINE)
-	rm -f wlNESKernelTest_$(MACHINE)
+	rm -f wlNESKernelTest_RhoTYe_$(MACHINE)
+	rm -f wlNESKernelTest_Tchem_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
   wlKindModule.o \
@@ -109,10 +117,18 @@ wlGreyTableTest.o: \
   wlGridModule.o \
   wlGreyTableTest.f90
 
-wlNESKernelTest.o: \
+wlNESKernelTest_Tchem.o: \
   wlKindModule.o \
   wlInterpolationModule.o \
   wlOpacityTableModule.o \
   wlIOModuleHDF.o \
   wlGridModule.o \
-  wlNESKernelTest.f90
+  wlNESKernelTest_Tchem.f90
+
+wlNESKernelTest_RhoTYe.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlGridModule.o \
+  wlNESKernelTest_RhoTYe.f90

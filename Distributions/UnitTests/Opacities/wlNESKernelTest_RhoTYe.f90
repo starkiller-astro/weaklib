@@ -20,7 +20,7 @@ PROGRAM wlNESKernelTest
   IMPLICIT NONE
 
 !--------- parameters for creating energy grid 
-  INTEGER, PARAMETER     :: Inte_nPointE = 30
+  INTEGER, PARAMETER     :: Inte_nPointE = 7
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(GridType)         :: Inte_E
@@ -29,28 +29,29 @@ PROGRAM wlNESKernelTest
   TYPE(OpacityTableType) :: OpacityTable
 
 !-------- variables for reading parameters data
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_T, Inte_eta, database
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: r, Inte_rho, Inte_Ye, Inte_T, Inte_TMeV, Inte_cmpe, Inte_eta, database
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
-  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h
+  CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h, ic, jc
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
-  REAL(dp)                            :: Offset_NES, kMeV
+  REAL(dp)                            :: Offset_NES, Offset_cmpe, kMeV, Constant
 
 !-------- output variables ------------------------
-  REAL(dp), DIMENSION(:), ALLOCATABLE   :: Interpolant
+  REAL(dp), DIMENSION(:), ALLOCATABLE   :: Interpolant, Interpolant2
 
 !----------------------------------------
 !   interpolated energy 
 !----------------------------------------
   kMev = 8.61733d-11 ![MeV K^{-1}]
-  Format1 = "(2A12)"
-  Format2 = "(2ES12.3)"
-  Format3 = "(5A12)"
-  Format4 = "(5ES12.3)"
-
-  OPEN(1, FILE = "Inputfile_stand_NESK.d", FORM = "formatted", ACTION = 'read')
-  datasize = 1  ! Vary from different input files
+  Format1 = "(5A12)"
+  Format2 = "(5ES12.3)"
+  Format3 = "(10A12)"
+  Format4 = "(10ES12.3)"
+  Constant = 1.01d20  ! 2*pi/(c^4 * h^3)
+ 
+  OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
+  datasize = 213! Vary from different input files
 
   CALL AllocateGrid( Inte_E, Inte_nPointE )
 
@@ -72,20 +73,28 @@ PROGRAM wlNESKernelTest
 !    interpolated rho, T, Ye
 !---------------------------------------
 
-  ALLOCATE( database( datasize * 2) )
+  ALLOCATE( database( datasize * 5) )
+  ALLOCATE( r( datasize ) )
+  ALLOCATE( Inte_rho( datasize ) )
+  ALLOCATE( Inte_Ye( datasize ) )
   ALLOCATE( Inte_T( datasize ) )
+  ALLOCATE( Inte_TMeV( datasize ) )
+  ALLOCATE( Inte_cmpe( datasize ) )
   ALLOCATE( Inte_eta( datasize ) )
   ALLOCATE( Interpolant( Inte_nPointE ) )
+  ALLOCATE( Interpolant2( Inte_nPointE ) )
 
-  READ( 1, Format1 ) a,b
+  READ( 1, Format1 ) a,b,c,d,e
   READ( 1, Format2 ) database
 
   CLOSE( 1, STATUS = 'keep')  
 
-  DO i = 1, datasize  
-    Inte_T(i) = database(i*2-1)
-    Inte_eta(i) = database(i*2)
-  END DO 
+  DO i = 1, datasize
+    r(i) = database(i*5-4)
+    Inte_rho(i) = database(i*5-3)
+    Inte_T(i) = database(i*5-2)
+    Inte_Ye(i) = database(i*5-1)
+  END DO
 
 !---------------------------------------
 !    read in the reference table
@@ -95,26 +104,44 @@ PROGRAM wlNESKernelTest
   CALL FinalizeHDF( )
 
   Offset_NES = OpacityTable % scatt_NES % Offset
-
+  Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
-  e = ('  e_out(ep) ')
-  f = ('  e_in(e)   ')
-  g = (' R_NESK^0   ')
+  
+  c = (' T (K)      ')
+  e = ('chem_e (MeV)')
+  f = (' T (MeV)    ')
+  g = ('  e_out(ep) ')
+  h = ('  e_in(e)   ')
+  ic= (' R_NESK^0   ')
+  jc= (' R_NESK^1   ')
 
   PRINT*, "Creating Output.d file to store output data ..."
-  OPEN( 10, FILE = "Output.d", FORM = "formatted", ACTION = 'write')
-  WRITE(10, Format3) a,b,e,f,g
 
-  ASSOCIATE( Table  => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
+  OPEN( 10, FILE = "NESOutput100ms.d", FORM = "formatted", ACTION = 'write')
+  WRITE(10, Format3) a,b,c,d,e,f,g,h,ic,jc
+
+  ASSOCIATE( Tablecmpe => OpacityTable % EOSTable % DV % Variables(4) % Values, &
+             Table1 => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
+             Table2 => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,2), &
              Energy => Inte_E % Values )
+
+  CALL LogInterpolateSingleVariable &
+           ( Inte_rho, Inte_T, Inte_Ye, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             (/1,1,0/), Offset_cmpe, &
+             OpacityTable % EOSTable % DV % Variables(4) % Values, &
+             Inte_cmpe  )
 
   DO i = 1, datasize
 
-    buffer1(:) = Inte_T(i) / kMeV
-    PRINT*, 'Temperature in K is ', Inte_T(i) / kMeV
-    buffer2(:) = Inte_eta(i) 
+    Inte_TMeV(i) = Inte_T(i)* kMeV
+    buffer1(:)   = Inte_T(i)
+    Inte_eta(i)  = Inte_cmpe(i) / Inte_TMeV(i)
+    buffer2(:)   = Inte_eta(i) 
 
     DO ii = 1, Inte_nPointE
       buffer3(:) = Energy(ii) ! ep
@@ -125,12 +152,22 @@ PROGRAM wlNESKernelTest
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             LogInterp, Offset_NES, Table, Interpolant )
+             LogInterp, Offset_NES, Table1, Interpolant )
+
+      CALL LogInterpolateSingleVariable &
+           ( Energy, buffer3, buffer1, buffer2, &
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EtaGrid % Values,    &
+             LogInterp, Offset_NES, Table2, Interpolant2 )
   
       DO jj = 1, Inte_nPointE
-        WRITE(10, Format4) Inte_T(i), buffer2(ii), &
+        WRITE(10, Format4) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), &
+                           Inte_cmpe(i), Inte_TMeV(i), &
                            buffer3(ii), Energy(jj),  &              
-                           Interpolant(jj)
+                           Interpolant(jj)*Constant, &
+                           Interpolant2(jj)*Constant
       END DO ! jj
     END DO ! ii
 
