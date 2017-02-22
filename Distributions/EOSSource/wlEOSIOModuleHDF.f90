@@ -224,6 +224,8 @@ CONTAINS
     INTEGER, DIMENSION(4)                         :: buffer
     INTEGER                                       :: nStates, nVariables, i
     INTEGER                                       :: i_count, num_procs
+    INTEGER                                       :: charlen
+    CHARACTER(LEN=120), DIMENSION(7)              :: sendstring
 
     IF ( myid == rootproc ) THEN
     
@@ -259,10 +261,10 @@ CONTAINS
 
     END DO
 
-    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates,                          &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates,                          &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates*32,                          &
+                     MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates*32,                          &
+                     MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates,                      &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates,                      &
@@ -270,19 +272,40 @@ CONTAINS
     CALL MPI_BCAST(EOSTable % TS % LogInterp(:), nStates,                      &
                      MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
 
+
     DO i= 1, EOSTable % nVariables  
       CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:), i_count,    &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     END DO
 
-    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables,            &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables,            &
-                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables*32,            &
+                     MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables*32,            &
+                     MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % DV % Offsets(:), EOSTable % nVariables,          &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,                   &
                    MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
+    sendstring(1) = EOSTable % MD % IDTag(1)
+    sendstring(2) = EOSTable % MD % TableResolution(1)
+    sendstring(3) = EOSTable % MD % NucEOSLink(1)
+    sendstring(4) = EOSTable % MD % LeptonEOSLink(1)
+    sendstring(5) = EOSTable % MD % SourceLink(1)
+    sendstring(6) = EOSTable % MD % WLRevision(1)
+    sendstring(7) = EOSTable % MD % TableLink(1)
+    charlen       = 7 * 120
+
+    CALL MPI_BCAST( sendstring, charlen, &
+                     MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+
+    EOSTable % MD % IDTag(1)           = sendstring(1)
+    EOSTable % MD % TableResolution(1) = sendstring(2)
+    EOSTable % MD % NucEOSLink(1)      = sendstring(3) 
+    EOSTable % MD % LeptonEOSLink(1)   = sendstring(4) 
+    EOSTable % MD % SourceLink(1)      = sendstring(5) 
+    EOSTable % MD % WLRevision(1)      = sendstring(6) 
+    EOSTable % MD % TableLink(1)       = sendstring(7) 
 
   END SUBROUTINE BroadcastEquationOfStateTableParallel
 
@@ -322,6 +345,7 @@ CONTAINS
     EOSTableOut % DV % Repaired(:,:,:) = EOSTableIn % DV % Repaired(:,:,:)
 
     EOSTableOut % TS = EOSTableIn % TS
+    EOSTableOut % MD = EOSTableIn % MD
 
     ASSOCIATE( &
 
