@@ -33,7 +33,7 @@ MODULE wlOpacityFieldsModule
   TYPE, PUBLIC :: OpacityTypeA
     INTEGER :: nOpacities
     INTEGER, DIMENSION(4) :: nPoints
-    REAL(dp)              :: Offset
+    REAL(dp),             DIMENSION(:), ALLOCATABLE :: Offsets
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32),    DIMENSION(:), ALLOCATABLE :: Units
@@ -72,7 +72,7 @@ MODULE wlOpacityFieldsModule
     INTEGER :: nOpacities
     INTEGER :: nMoments
     INTEGER, DIMENSION(4) :: nPoints
-    REAL(dp)              :: Offset
+    REAL(dp),            DIMENSION(:,:), ALLOCATABLE :: Offsets
     CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Units
@@ -98,6 +98,7 @@ MODULE wlOpacityFieldsModule
     INTEGER :: nOpacities
     INTEGER :: nMoments
     INTEGER, DIMENSION(4) :: nPoints
+    REAL(dp),          DIMENSION(:), ALLOCATABLE :: Offsets
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
@@ -146,6 +147,7 @@ CONTAINS
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Species(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
+    ALLOCATE( Opacity % Offsets(nOpacities) )
     ALLOCATE( Opacity % GreyOpacity_Number_FD(nOpacities) )
     ALLOCATE( Opacity % GreyOpacity_Energy_FD(nOpacities) )
     ALLOCATE( Opacity % GreyMoment_Number_FD(nOpacities) )
@@ -192,6 +194,7 @@ CONTAINS
     DEALLOCATE( Opacity % GreyMoment_Number_FD )
     DEALLOCATE( Opacity % GreyMoment_Energy_FD )
     DEALLOCATE( Opacity % Absorptivity )
+    DEALLOCATE( Opacity % Offsets )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Species )
     DEALLOCATE( Opacity % Names )
@@ -215,8 +218,6 @@ CONTAINS
     WRITE(*,'(A6,A13,I10.10)') &
       ' ', 'DOFs       = ', &
       Opacity % nOpacities * PRODUCT( Opacity % nPoints )
-    WRITE(*,'(A6,A13,ES11.4E3)') &
-      ' ', 'Offset     = ', Opacity % Offset
 
     DO i = 1, Opacity % nOpacities
       WRITE(*,*)
@@ -230,6 +231,8 @@ CONTAINS
         ' ', 'Min Value = ', MINVAL( Opacity % Absorptivity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
+      WRITE(*,'(A8,A12,ES12.4E3)') &
+        ' ', 'Offset     = ', Opacity % Offsets(i)
       WRITE(*,*)
       WRITE(*,'(A8,A22,I3.3,A3,A)') &
         ' ', 'GreyOpacity_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
@@ -300,6 +303,7 @@ CONTAINS
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Species(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
+    ALLOCATE( Opacity % Offsets(nOpacities, nMoments) )
     ALLOCATE( Opacity % GreyOpacity_Number_FD(nOpacities) )
     ALLOCATE( Opacity % GreyOpacity_Energy_FD(nOpacities) )
 !    ALLOCATE( Opacity % GreyMoment_Number_FD(nOpacities) )
@@ -348,6 +352,7 @@ CONTAINS
 !    DEALLOCATE( Opacity % GreyMoment_Number_FD )
 !    DEALLOCATE( Opacity % GreyMoment_Energy_FD )
     DEALLOCATE( Opacity % Kernel )
+    DEALLOCATE( Opacity % Offsets )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Species )
     DEALLOCATE( Opacity % Names )
@@ -359,7 +364,7 @@ CONTAINS
 
     TYPE(OpacityTypeB), INTENT(in) :: Opacity
 
-    INTEGER :: i
+    INTEGER :: i, l
 
     WRITE(*,*)
     WRITE(*,'(A4,A)') ' ', 'Opacity Type B'
@@ -374,8 +379,6 @@ CONTAINS
       ' ', 'DOFs       = ', &
       Opacity % nOpacities * Opacity % nMoments &
         * PRODUCT( Opacity % nPoints )
-    WRITE(*,'(A6,A13,ES11.4E3)') &
-      ' ', 'Offset     = ', Opacity % Offset
 
     DO i = 1, Opacity % nOpacities
       WRITE(*,*)
@@ -385,10 +388,19 @@ CONTAINS
         ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
+
+      DO l = 1, Opacity % nMoments
+      WRITE(*,*)
+         WRITE(*,'(A8,A16,I3.3)') &
+           ' ', 'For Moments l = ', l
+         WRITE(*,'(A8,A12,ES12.4E3)') &
+           ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
+         WRITE(*,'(A8,A12,ES12.4E3)') &
+           ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
+         WRITE(*,'(A8,A12,ES12.4E3)') &
+           ' ', 'Offset     = ', Opacity % Offsets(i,l)
+      END DO ! l = nMoment
+
       WRITE(*,*)
       WRITE(*,'(A8,A22,I3.3,A3,A)') &
         ' ', 'GreyOpacity_Number_FD(',i,'): ', TRIM( Opacity % Names(i) )
