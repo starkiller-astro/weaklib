@@ -17,6 +17,7 @@ PROGRAM wlReadOpacityTableTest
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( ) 
 
+  PRINT*
   PRINT*, "Describe OpacityTable"
 
   CALL DescribeOpacityTable( OpacityTable )
