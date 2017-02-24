@@ -209,10 +209,6 @@ CONTAINS
     CALL WriteHDF&
          ( "nOpacities", tempInteger, group_id, datasize1dtemp )
 
-    tempReal(1) = thermEmAb % Offset
-    CALL WriteHDF&
-         ( "Offset", tempReal, group_id, datasize1dtemp )
-
     datasize1dtemp(1) = 4
     CALL WriteHDF&
          ( "nPoints", thermEmAb % nPoints, group_id, datasize1dtemp )
@@ -227,8 +223,12 @@ CONTAINS
     CALL WriteHDF&
          ( "Units", thermEmAb % Units, group_id, datasize1dtemp ) 
 
+    CALL WriteHDF&
+         ( "Offsets", thermEmAb % Offsets, group_id, datasize1dtemp )
+
     datasize1d = thermEmAb % nOpacities 
     datasize4d = thermEmAb % nPoints
+
     CALL OpenGroupHDF( "Absorptivity", .true., group_id, subgroup_id )
     DO i = 1, datasize1d
       CALL Write4dHDF_double&
@@ -278,6 +278,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T)                            :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(2)              :: datasize2d
     INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
     INTEGER(HSIZE_T), DIMENSION(5)              :: datasize5d
     INTEGER                                     :: i
@@ -294,9 +295,9 @@ CONTAINS
     CALL WriteHDF&
          ( "nOpacities", tempInteger, group_id, datasize1dtemp )
 
-    tempReal(1) = scatt_Iso % Offset
+    tempInteger(1) = scatt_Iso % nMoments
     CALL WriteHDF&
-         ( "Offset", tempReal, group_id, datasize1dtemp )
+         ( "nMoments", tempInteger, group_id, datasize1dtemp )
 
     datasize1dtemp(1) = 4
     CALL WriteHDF&
@@ -311,6 +312,10 @@ CONTAINS
 
     CALL WriteHDF&
          ( "Units", scatt_Iso % Units, group_id, datasize1dtemp )
+
+    datasize2d = (/scatt_Iso % nOpacities, scatt_Iso % nMoments/)
+    CALL WriteHDF&
+         ( "Offsets", scatt_Iso % Offsets, group_id, datasize2d )
 
     datasize1d = scatt_Iso % nOpacities
     datasize5d(1:4) = scatt_Iso % nPoints
@@ -528,10 +533,9 @@ CONTAINS
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     thermEmAb % nOpacities = buffer(1)
 
-    CALL ReadHDF( "Offset", bufferReal, group_id, datasize1d )
-    thermEmAb % Offset = bufferReal(1)
-
     datasize1d = buffer(1)
+    CALL ReadHDF( "Offsets", thermEmAb % Offsets, group_id, datasize1d )
+
     Call ReadHDF( "Names", thermEmAb % Names, group_id, datasize1d )
 
     Call ReadHDF( "Units", thermEmAb % Units, group_id, datasize1d )
@@ -592,6 +596,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(2)                   :: datasize2d
     INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
     INTEGER(HSIZE_T), DIMENSION(5)                   :: datasize5d
     INTEGER                                          :: i
@@ -603,8 +608,8 @@ CONTAINS
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     scatt_Iso % nOpacities = buffer(1)
 
-    CALL ReadHDF( "Offset", bufferReal, group_id, datasize1d )
-    scatt_Iso % Offset = bufferReal(1)
+    CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+    scatt_Iso % nMoments   = buffer(1)
 
     datasize1d = buffer(1)
     Call ReadHDF( "Names", scatt_Iso % Names, group_id, datasize1d )
@@ -615,6 +620,9 @@ CONTAINS
 
     datasize1d(1) = 4
     CALL ReadHDF( "nPoints", scatt_Iso % nPoints, group_id, datasize1d )
+
+    datasize2d = (/scatt_Iso % nOpacities, scatt_Iso % nMoments/)
+    CALL ReadHDF( "Offsets", scatt_Iso % Offsets, group_id, datasize2d )
 
     datasize5d(1:4) = scatt_Iso % nPoints
     datasize5d(5) = scatt_Iso % nMoments

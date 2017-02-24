@@ -74,7 +74,8 @@ MODULE wlOpacityTableModule
   USE wlThermoStateModule, ONLY: &
     ThermoStateType, &
     AllocateThermoState, &
-    DeAllocateThermoState  
+    DeAllocateThermoState, &
+    CopyThermoState  
 
   IMPLICIT NONE
   PRIVATE
@@ -123,12 +124,15 @@ CONTAINS
     INTEGER, DIMENSION(4)                 :: nPointsTemp
 
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'Reading wl-EOS-LS220-20-40-100-Lower-T.h5 ... '
+    WRITE(*,*) '  1st Allocate OpacityTable ...          ' 
+    WRITE(*,*) '      Reading EquationOfStateTable  ...  '
+    WRITE(*,*) '      File: EquationOfStateTable.h5  ... '
 
     CALL ReadEquationOfStateTableHDF &
-           ( OpTab % EOSTable, "wl-EOS-LS220-20-40-100-Lower-T.h5" )
+           ( OpTab % EOSTable, "EquationOfStateTable.h5" )
 
     WRITE(*,*) 'Read EOS sucessfully.'
+    WRITE(*,*)
     WRITE(*,*) 'Pass the parameter and allocate OpacityTable ... '
 
     OpTab % nOpacitiesA     = nOpacA
@@ -145,15 +149,9 @@ CONTAINS
     CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
     CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
     CALL AllocateThermoState( OpTab % TS, OpTab % EOSTable % TS % nPoints )
-    OpTab % TS = OpTab % EOSTable % TS
-!    OpTab % TS % Names   = OpTab % EOSTable % TS % Names
-!    OpTab % TS % Units   = OpTab % EOSTable % TS % Units
-!    OpTab % TS % nPoints = OpTab % EOSTable % TS % nPoints
-!    OpTab % TS % LogInterp = OpTab % EOSTable % TS % LogInterp
-!    OpTab % TS % minValues = OpTab % EOSTable % TS % minValues
-!    OpTab % TS % maxValues = OpTab % EOSTable % TS % maxValues
-!    OpTab % TS % States    = OpTab % EOSTable % TS % States   
-!    OpTab % TS % Indices   = OpTab % EOSTable % TS % Indices  
+
+    CALL CopyThermoState( OpTab % TS, OpTab % EOSTable % TS )
+
     ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
 
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
@@ -179,6 +177,7 @@ CONTAINS
     END ASSOCIATE ! nPoints
 
     PRINT*, 'End allocte opacity table.'
+    PRINT*
 
   END SUBROUTINE AllocateOpacityTable
 
