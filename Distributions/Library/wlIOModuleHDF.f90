@@ -30,6 +30,7 @@ MODULE wlIOModuleHDF
 
   INTERFACE ReadHDF
     MODULE PROCEDURE Read1dHDF_double
+    MODULE PROCEDURE Read2dHDF_double
     MODULE PROCEDURE Read3dHDF_double
     MODULE PROCEDURE Read1dHDF_integer
     MODULE PROCEDURE Read3dHDF_integer
@@ -38,6 +39,7 @@ MODULE wlIOModuleHDF
 
   INTERFACE WriteHDF
     MODULE PROCEDURE Write1dHDF_double
+    MODULE PROCEDURE Write2dHDF_double
     MODULE PROCEDURE Write3dHDF_double
     MODULE PROCEDURE Write1dHDF_integer
     MODULE PROCEDURE Write3dHDF_integer
@@ -164,6 +166,55 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Read1dHDF_double
+
+  SUBROUTINE Write2dHDF_double( name, values, group_id, datasize, &
+               desc_option, unit_option)
+
+    CHARACTER(*), INTENT(in)                    :: name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(2), INTENT(in)  :: datasize
+    REAL(dp), DIMENSION(:,:), INTENT(in)          :: values
+
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+
+
+    CALL h5screate_simple_f( 2, datasize, dataspace_id, hdferr )
+
+    CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
+           dataspace_id, dataset_id, hdferr )
+
+    CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
+           values, datasize, hdferr )
+
+    CALL h5sclose_f( dataspace_id, hdferr )
+
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Write2dHDF_double
+
+  SUBROUTINE Read2dHDF_double( name, values, group_id, datasize )
+
+    CHARACTER(*), INTENT(in)                    :: name
+    INTEGER(HID_T)                               :: group_id
+    INTEGER(HSIZE_T), DIMENSION(2), INTENT(in)   :: datasize
+    REAL(dp), DIMENSION(:,:), INTENT(out)          :: values
+
+    INTEGER(HID_T)                               :: dataset_id
+
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, &
+                   values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Read2dHDF_double
+
   
   SUBROUTINE Write3dHDF_double &
                ( name, values, group_id, datasize, desc_option, unit_option )   
