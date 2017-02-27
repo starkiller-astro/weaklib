@@ -367,7 +367,7 @@ PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
    DO i_r = 1, nOpacA  
 
      minvar = MINVAL( OpacityTable % thermEmAb % Absorptivity(i_r) % Values )
-     OpacityTable % thermEmAb % Offsets(i_r) = 2.d0 * ABS( MIN( 0.d0, minvar ) ) + epsilon
+     OpacityTable % thermEmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
 
    END DO
 
@@ -378,7 +378,7 @@ PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
        minvar = MINVAL( OpacityTable % scatt_Iso % Kernel(i_r) &
                        % Values(:,:,:,:,t_m ) )
        OpacityTable % scatt_Iso % Offsets(i_r, t_m) =           &
-                      2.d0 * ABS( MIN( 0.d0, minvar ) ) + epsilon
+                      -2.d0 * MIN( 0.d0, minvar )
 
      END DO
    END DO 
@@ -418,13 +418,11 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
        minvar = MINVAL( OpacityTable % scatt_NES % Kernel(i_rb) &
                        % Values(:,:,:,:,t_m ) )
        OpacityTable % scatt_NES % Offsets(i_rb, t_m) =           &
-                      2.d0 * ABS( MIN( 0.d0, minvar ) ) + epsilon
+                      -2.d0 * MIN( 0.d0, minvar ) 
 
     END DO ! t_m
    END DO ! i_rb
     
-!   OpacityTable % scatt_NES % Offset = 6.0E-2  
-
    END ASSOCIATE ! EnergyGrid
 !----------------------------------------------------------------------
 !      Describe the Table ( give the real physical value )               
@@ -442,7 +440,7 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
 
      OpacityTable % thermEmAb % Absorptivity(i_r) % Values&
      = LOG10( OpacityTable % thermEmAb % Absorptivity(i_r) % &
-              Values + OpacityTable % thermEmAb % Offsets(i_r) )
+              Values + OpacityTable % thermEmAb % Offsets(i_r) + epsilon )
 
 !     OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % Values &
 !     = LOG10 ( OpacityTable % thermEmAb % GreyMoment_Number_FD(i_r) % &
@@ -468,7 +466,7 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
   
       OpacityTable % scatt_Iso % Kernel(i_rb) % Values(:,:,:,:,t_m) &
       = LOG10 ( OpacityTable % scatt_Iso % Kernel(i_rb) % Values(:,:,:,:,t_m) &
-                + OpacityTable % scatt_Iso % Offsets(i_rb,t_m) )
+                + OpacityTable % scatt_Iso % Offsets(i_rb,t_m) + epsilon )
 
 !    OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
 !    = LOG10 ( OpacityTable % scatt_Iso % GreyOpacity_Number_FD(i_rb) % Values &
@@ -486,15 +484,15 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
     DO t_m = 1, nMomB_NES
       OpacityTable % scatt_NES % Kernel(i_rb) % Values(:,:,:,:,t_m) &
       = LOG10 ( OpacityTable % scatt_NES % Kernel(i_rb) % Values(:,:,:,:,t_m) &
-                + OpacityTable % scatt_NES % Offsets(i_rb, t_m) )
+                + OpacityTable % scatt_NES % Offsets(i_rb, t_m) + epsilon )
     END DO
   END DO !i_rb
 
 ! -- write into hdf5 file
 
   CALL InitializeHDF( )
-  WRITE(*,*) 'Write data into file wl-Op-SFHo-25-40-100.h5 '
-  CALL WriteOpacityTableHDF( OpacityTable, "wl-Op-SFHo-25-40-100.h5" )
+  WRITE(*,*) 'Write data into file wl-Op-LS-20-40-100.h5 '
+  CALL WriteOpacityTableHDF( OpacityTable, "wl-Op-LS220-20-40-100.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
