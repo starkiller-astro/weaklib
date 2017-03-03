@@ -1,0 +1,7 @@
+include $(WEAKLIB_DIR)/External/SharedModules/Makefile_SharedModules_ObjectFiles
+include $(WEAKLIB_DIR)/External/SharedModules/Makefile_SharedModules_Dependencies
+include $(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85/Makefile_OpacityBruenn85_ObjectFiles
+include $(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85/Makefile_OpacityBruenn85_Dependencies
+
+Weaklib_External = \
+  $(LIBRARY) $(EOSSOURCE) $(OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYBRUENN85)

@@ -1,0 +1,7 @@
+SHAREDMODULES = \
+  fexp.o \
+  glaquad.o \
+  wlExtNumericalModule.o \
+  wlExtPhysicalConstantsModule.o \
+  wlExtTableFinishingModule.o \
+  GaussianQuadrature.o 

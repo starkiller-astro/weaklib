@@ -122,7 +122,7 @@ PROGRAM wlNESKernelTest
   PRINT*, "Creating Output.d file to store output data ..."
 
   OPEN( 10, FILE = "NESOutput100ms.d", FORM = "formatted", ACTION = 'write')
-  WRITE(10, Format3) a,b,c,d,e,f,g,h,ic,jc
+  WRITE(10, Format3) a,b,c,d,e,f,h,g,ic,jc
 
   ASSOCIATE( Tablecmpe => OpacityTable % EOSTable % DV % Variables(4) % Values, &
              Table1 => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
@@ -146,7 +146,7 @@ PROGRAM wlNESKernelTest
     buffer2(:)   = Inte_eta(i) 
 
     DO ii = 1, Inte_nPointE
-      buffer3(:) = Energy(ii) ! ep
+      buffer3(:) = Energy(ii) ! e
 
       CALL LogInterpolateSingleVariable & 
            ( Energy, buffer3, buffer1, buffer2, & 

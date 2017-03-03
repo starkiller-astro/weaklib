@@ -1,0 +1,4 @@
+VPATH = \
+$(WEAKLIB_DIR)/External/ShareModules: \
+$(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85: \
+..

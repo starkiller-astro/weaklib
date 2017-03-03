@@ -1,4 +1,4 @@
-include ../../../Build/Makefile_Build
+include ../../../../External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
@@ -7,7 +7,8 @@ all: wlOpacityFieldsTest \
      wlEScatteringKernelTest \
      wlGreyTableTest \
      wlNESKernelTest_Tchem \
-     wlNESKernelTest_RhoTYe
+     wlNESKernelTest_RhoTYe \
+     wlNESKernelTest_InteE_RhoTYe
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -57,6 +58,11 @@ wlNESKernelTest_RhoTYe: \
 	$(weaklib) wlNESKernelTest_RhoTYe.o \
         $(LIBRARIES)
 
+wlNESKernelTest_InteE_RhoTYe: \
+	$(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o
+	$(FLINKER) $(FLAGS) -o wlNESKernelTest_InteE_RhoTYe_$(MACHINE) \
+        $(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o \
+        $(LIBRARIES)
 clean:
 	rm -f *.o *.mod *.ld
 
@@ -67,8 +73,9 @@ clobber: clean
 	rm -f wlOpacityPerformanceTest_$(MACHINE)
 	rm -f wlEScatteringKernelTest_$(MACHINE)
 	rm -f wlGreyTableTest_$(MACHINE)
-	rm -f wlNESKernelTest_RhoTYe_$(MACHINE)
 	rm -f wlNESKernelTest_Tchem_$(MACHINE)
+	rm -f wlNESKernelTest_RhoTYe_$(MACHINE)
+	rm -f wlNESKernelTest_InteE_RhoTYe_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
   wlKindModule.o \
@@ -132,3 +139,12 @@ wlNESKernelTest_RhoTYe.o: \
   wlIOModuleHDF.o \
   wlGridModule.o \
   wlNESKernelTest_RhoTYe.f90
+
+wlNESKernelTest_InteE_RhoTYe.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlGridModule.o \
+  wlNESKernelTest_InteE_RhoTYe.f90
+

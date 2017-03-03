@@ -1,0 +1,24 @@
+include ../../../../Build/Makefile_Build
+
+all: wlCreateOpacityTable 
+
+wlCreateOpacityTable: \
+	$(Weaklib_External) wlCreateOpacityTable.o
+	$(FLINKER) $(FLAGS) -o wlCreateOpacityTable_$(MACHINE) \
+	$(Weaklib_External) wlCreateOpacityTable.o \
+	$(LIBRARIES) 
+
+clean:
+	rm -f *.o *.mod *.ld
+
+wlCreateOpacityTable.o: \
+  wlKindModule.o \
+  wlGridModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableModule.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlExtPhysicalConstantsModule.o \
+  wlExtNumericalModule.o \
+  B85.o \
+  GreyVariables.o \
+  wlCreateOpacityTable.f90

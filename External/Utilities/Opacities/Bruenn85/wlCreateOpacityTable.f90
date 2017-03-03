@@ -491,8 +491,8 @@ PRINT*, 'Calculating Scatt_NES Kernel ... '
 ! -- write into hdf5 file
 
   CALL InitializeHDF( )
-  WRITE(*,*) 'Write data into file wl-Op-LS-20-40-100.h5 '
-  CALL WriteOpacityTableHDF( OpacityTable, "wl-Op-LS220-20-40-100.h5" )
+  WRITE(*,*) 'Write data into file wl-Op-SFHo-25-40-100.h5 '
+  CALL WriteOpacityTableHDF( OpacityTable, "wl-Op-SFHo-25-40-100.h5" )
   CALL FinalizeHDF( )
   
   WRITE (*,*) "HDF write successful"
