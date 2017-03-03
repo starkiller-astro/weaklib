@@ -20,7 +20,7 @@ PROGRAM wlNESKernelTest
   IMPLICIT NONE
 
 !--------- parameters for creating energy grid 
-  INTEGER, PARAMETER     :: Inte_nPointE = 7
+  INTEGER, PARAMETER     :: Inte_nPointE = 5
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(GridType)         :: Inte_E
@@ -35,7 +35,7 @@ PROGRAM wlNESKernelTest
   CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h, ic, jc
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
-  REAL(dp)                            :: Offset_NES, Offset_cmpe, kMeV, Constant
+  REAL(dp)                            :: Offset_NES0, Offset_NES1, Offset_cmpe, kMeV, Constant
 
 !-------- output variables ------------------------
   REAL(dp), DIMENSION(:), ALLOCATABLE   :: Interpolant, Interpolant2
@@ -47,8 +47,8 @@ PROGRAM wlNESKernelTest
   Format1 = "(5A12)"
   Format2 = "(5ES12.3)"
   Format3 = "(10A12)"
-  Format4 = "(10ES12.3)"
-  Constant = 1.01d20  ! 2*pi/(c^4 * h^3)
+  Format4 = "(10ES12.3E3)"
+  Constant = 6.28d0 ! 2*pi
  
   OPEN(1, FILE = "Output100ms.d", FORM = "formatted", ACTION = 'read')
   datasize = 213! Vary from different input files
@@ -103,7 +103,9 @@ PROGRAM wlNESKernelTest
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
-  Offset_NES = OpacityTable % scatt_NES % Offset
+  PRINT*,'OpacityTable nPointsTS ', OpacityTable % nPointsTS
+  Offset_NES0 = OpacityTable % scatt_NES % Offsets(1,1)
+  Offset_NES1 = OpacityTable % scatt_NES % Offsets(1,2)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 !--------------------------------------
 !   do interpolation
@@ -133,7 +135,7 @@ PROGRAM wlNESKernelTest
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
              (/1,1,0/), Offset_cmpe, &
-             OpacityTable % EOSTable % DV % Variables(4) % Values, &
+             Tablecmpe, &
              Inte_cmpe  )
 
   DO i = 1, datasize
@@ -152,16 +154,23 @@ PROGRAM wlNESKernelTest
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             LogInterp, Offset_NES, Table1, Interpolant )
+             LogInterp, Offset_NES0, Table1, Interpolant )
 
+      DO jj = 1, Inte_nPointE
+         IF ( Interpolant(jj) .lt. 0.0d0 ) THEN
+         PRINT*, 'ERROR: NEGATIVE R_0 ! '
+         RETURN
+         END IF
+      END DO   
+ 
       CALL LogInterpolateSingleVariable &
            ( Energy, buffer3, buffer1, buffer2, &
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             LogInterp, Offset_NES, Table2, Interpolant2 )
-  
+             LogInterp, Offset_NES1, Table2, Interpolant2 )
+
       DO jj = 1, Inte_nPointE
         WRITE(10, Format4) r(i), Inte_rho(i), Inte_T(i), Inte_Ye(i), &
                            Inte_cmpe(i), Inte_TMeV(i), &

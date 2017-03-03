@@ -126,10 +126,10 @@ PROGRAM wlEScatteringKernelTest
   WRITE(10, Format3) a,b,c,d,e,f,g,h,l,a1,a2,a3,a4
 
   ASSOCIATE( Table1 => OpacityTable % thermEmAb % Absorptivity(1) % Values,&
-             Table4 => OpacityTable % thermEmAb % GreyOpacity_Number_FD(1)% Values,&
-             Table5 => OpacityTable % thermEmAb % GreyOpacity_Energy_FD(1)% Values,&
              Table2 => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,1),&
              Table3 => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,2),&
+             Table4 => OpacityTable % thermEmAb % GreyOpacity_Number_FD(1)% Values,&
+             Table5 => OpacityTable % thermEmAb % GreyOpacity_Energy_FD(1)% Values,&
              Table6 => OpacityTable % scatt_Iso % GreyOpacity_Number_FD(1)% Values(:,:,:,1),&
              Table7 => OpacityTable % scatt_Iso % GreyOpacity_Energy_FD(1)% Values(:,:,:,1),&
              Energy => Inte_E % Values )
