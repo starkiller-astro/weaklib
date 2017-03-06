@@ -4,4 +4,4 @@ SHAREDMODULES = \
   wlExtNumericalModule.o \
   wlExtPhysicalConstantsModule.o \
   wlExtTableFinishingModule.o \
-  GaussianQuadrature.o 
+  GaussianQuadrature.o

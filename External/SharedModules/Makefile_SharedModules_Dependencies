@@ -1,25 +1,19 @@
 fexp.o: \
-  wlKindModule.o \
-  fexp.f90
+  wlKindModule.o 
 
 glaquad.o: \
-  wlKindModule.o \
-  glaquad.f90
+  wlKindModule.o 
 
 wlExtNumericalModule.o: \
-  wlKindModule.o \
-  wlExtNumericalModule.f90
+  wlKindModule.o 
 
 wlExtPhysicalConstantsModule.o: \
   wlKindModule.o \
-  wlExtNumericalModule.o \
-  wlExtPhysicalConstantsModule.f90
+  wlExtNumericalModule.o 
 
 wlExtTableFinishingModule.o:\
   wlKindModule.o \
-  wlInterpolationModule.o \
-  wlExtTableFinishingModule.f90
+  wlInterpolationModule.o 
  
 GaussianQuadrature.o: \
-  wlKindModule.o \
-  GaussianQuadrature.f90 
+  wlKindModule.o 
