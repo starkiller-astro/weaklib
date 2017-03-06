@@ -78,7 +78,7 @@ PROGRAM wlGreyTableTest
   CALL ReadOpacityTableHDF( OpacityTable, "OpTa_Grey_5quad.h5" )
   CALL FinalizeHDF( )
 
-  Offset = OpacityTable % thermEmAb % Offset
+  Offset = OpacityTable % thermEmAb % Offsets(1)
 !--------------------------------------
 !   do interpolation
 !--------------------------------------

@@ -35,7 +35,7 @@ PROGRAM wlEScatteringKernelTest
   CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h,l,a1,a2,a3,a4
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, datasize
-  REAL(dp)                            :: Offset_Em, Offset_ES
+  REAL(dp)                            :: Offset_Em, Offset_ES1, Offset_ES2
   REAL(dp)                            :: fourPi= 4.0*3.1415926
 !-------- output variables ------------------------
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_O, Inte_R0, Inte_R1,&
@@ -107,8 +107,9 @@ PROGRAM wlEScatteringKernelTest
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
-  Offset_Em = OpacityTable % thermEmAb % Offset
-  Offset_ES = OpacityTable % scatt_Iso % Offset
+  Offset_Em = OpacityTable % thermEmAb % Offsets(1)
+  Offset_ES1 = OpacityTable % scatt_Iso % Offsets(1,1)
+  Offset_ES2 = OpacityTable % scatt_Iso % Offsets(1,2)
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
@@ -168,29 +169,29 @@ PROGRAM wlEScatteringKernelTest
              OpacityTable % EOSTable % TS % States(1) % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_ES, Table2, Inte_R0 )
+             LogInterp, Offset_ES1, Table2, Inte_R0 )
 
-    CALL LogInterpolateSingleVariable &
-           ( buffer1, buffer2, buffer3, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_ES, Table6, GONb )
-
-    CALL LogInterpolateSingleVariable &
-           ( buffer1, buffer2, buffer3, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_ES, Table7, GOEb )
-
+!    CALL LogInterpolateSingleVariable &
+!           ( buffer1, buffer2, buffer3, &
+!             OpacityTable % EOSTable % TS % States(1) % Values, &
+!             OpacityTable % EOSTable % TS % States(2) % Values, &
+!             OpacityTable % EOSTable % TS % States(3) % Values, &
+!             LogInterp, Offset_ES, Table6, GONb )
+!
+!    CALL LogInterpolateSingleVariable &
+!           ( buffer1, buffer2, buffer3, &
+!             OpacityTable % EOSTable % TS % States(1) % Values, &
+!             OpacityTable % EOSTable % TS % States(2) % Values, &
+!             OpacityTable % EOSTable % TS % States(3) % Values, &
+!             LogInterp, Offset_ES, Table7, GOEb )
+!
     CALL LogInterpolateSingleVariable &
            ( Energy, buffer1, buffer2, buffer3, &
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(1) % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_ES, Table3, Inte_R1 )
+             LogInterp, Offset_ES2, Table3, Inte_R1 )
 
     DO ii = 1, Inte_nPointE
 

@@ -118,7 +118,7 @@ PROGRAM wlOpacityPerformanceTest
       Ttab => OpTab % EOSTable % TS % States(iT)  % Values, &
       Ytab => OpTab % EOSTable % TS % States(iY)  % Values, &
       Ctab => OpTab % thermEmAb % Absorptivity(1) % Values, &
-      OS   => OpTab % thermEmAb % Offset )
+      OS   => OpTab % thermEmAb % Offsets(1) )
 
   CALL CPU_TIME( tBegin )
 

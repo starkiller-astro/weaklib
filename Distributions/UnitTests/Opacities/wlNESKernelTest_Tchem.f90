@@ -35,7 +35,7 @@ PROGRAM wlNESKernelTest
   CHARACTER(LEN=30)                   :: a,b,c,d,e,f,g,h
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
-  REAL(dp)                            :: Offset_NES, kMeV
+  REAL(dp)                            :: Offset_NES1, Offset_NES2, kMeV
 
 !-------- output variables ------------------------
   REAL(dp), DIMENSION(:), ALLOCATABLE   :: Interpolant, Interpolant2
@@ -95,7 +95,8 @@ PROGRAM wlNESKernelTest
   CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
   CALL FinalizeHDF( )
 
-  Offset_NES = OpacityTable % scatt_NES % Offset
+  Offset_NES1 = OpacityTable % scatt_NES % Offsets(1,1)
+  Offset_NES2 = OpacityTable % scatt_NES % Offsets(1,2)
 
 !--------------------------------------
 !   do interpolation
@@ -109,7 +110,8 @@ PROGRAM wlNESKernelTest
   OPEN( 10, FILE = "Output.d", FORM = "formatted", ACTION = 'write')
   WRITE(10, Format3) a,b,e,f,g, h
 
-  ASSOCIATE( Table  => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
+  ASSOCIATE( Table1 => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
+             Table2 => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,2), &
              Energy => Inte_E % Values )
 
   DO i = 1, datasize
@@ -127,7 +129,7 @@ PROGRAM wlNESKernelTest
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             LogInterp, Offset_NES, Table, Interpolant )
+             LogInterp, Offset_NES1, Table1, Interpolant )
 
       CALL LogInterpolateSingleVariable &
            ( Energy, buffer3, buffer1, buffer2, &
@@ -135,7 +137,7 @@ PROGRAM wlNESKernelTest
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             LogInterp, Offset_NES, Table, Interpolant2 )
+             LogInterp, Offset_NES2, Table2, Interpolant2 )
   
       DO jj = 1, Inte_nPointE
         WRITE(10, Format4) Inte_T(i), buffer2(ii), &
