@@ -1,4 +1,4 @@
-include ../../../Build/Makefile_Build
+include ../../../../External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
@@ -59,9 +59,9 @@ wlNESKernelTest_RhoTYe: \
         $(LIBRARIES)
 
 wlNESKernelTest_InteE_RhoTYe: \
-	$(weaklib) wlNESKernelTest_InteE_RhoTYe.o
+	$(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o
 	$(FLINKER) $(FLAGS) -o wlNESKernelTest_InteE_RhoTYe_$(MACHINE) \
-        $(weaklib) wlNESKernelTest_InteE_RhoTYe.o \
+        $(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o \
         $(LIBRARIES)
 clean:
 	rm -f *.o *.mod *.ld
@@ -146,5 +146,6 @@ wlNESKernelTest_InteE_RhoTYe.o: \
   wlOpacityTableModule.o \
   wlIOModuleHDF.o \
   wlGridModule.o \
+  B85.o \
   wlNESKernelTest_InteE_RhoTYe.f90
 
