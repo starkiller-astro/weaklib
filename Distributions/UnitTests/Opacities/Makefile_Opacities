@@ -8,7 +8,8 @@ all: wlOpacityFieldsTest \
      wlGreyTableTest \
      wlNESKernelTest_Tchem \
      wlNESKernelTest_RhoTYe \
-     wlNESKernelTest_InteE_RhoTYe
+     wlNESKernelTest_InteE_RhoTYe \
+     wlInterpolateABNES
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -63,6 +64,14 @@ wlNESKernelTest_InteE_RhoTYe: \
 	$(FLINKER) $(FLAGS) -o wlNESKernelTest_InteE_RhoTYe_$(MACHINE) \
         $(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o \
         $(LIBRARIES)
+
+wlInterpolateABNES: \
+	$(Weaklib_External) wlInterpolateABNES.o
+	$(FLINKER) $(FLAGS) -o wlInterpolateABNES_$(MACHINE) \
+	$(Weaklib_External) wlInterpolateABNES.o \
+        $(LIBRARIES)
+
+
 clean:
 	rm -f *.o *.mod *.ld
 
@@ -76,6 +85,7 @@ clobber: clean
 	rm -f wlNESKernelTest_Tchem_$(MACHINE)
 	rm -f wlNESKernelTest_RhoTYe_$(MACHINE)
 	rm -f wlNESKernelTest_InteE_RhoTYe_$(MACHINE)
+	rm -f wlInterpolateABNES_$(MACHINE)
 
 wlOpacityFieldsTest.o: \
   wlKindModule.o \
@@ -149,3 +159,11 @@ wlNESKernelTest_InteE_RhoTYe.o: \
   B85.o \
   wlNESKernelTest_InteE_RhoTYe.f90
 
+wlInterpolateABNES.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlGridModule.o \
+  B85.o \
+  wlInterpolateABNES.f90
