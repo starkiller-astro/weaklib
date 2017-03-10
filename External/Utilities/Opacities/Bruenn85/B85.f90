@@ -276,35 +276,40 @@ CONTAINS
 
   CALL NESKernelWithOmega( energygrid, roots, T, chem_e, NESK_ome )
 
-  DO jj = 1, nPointsE
+ 
+  IF ( l == 0 ) THEN
 
-    DO kk = 1, nPointsE
+    DO jj = 1, nPointsE
+      DO kk = 1, nPointsE
 
-    outcome = 0.0_dp
+         outcome = 0.0_dp
+         DO ii = 1, nquad
+           outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii)     
+         END DO
+         NESK( jj, kk ) = UnitConvertConstant * outcome * 0.5_dp
 
-    DO ii = 1, nquad
+      END DO
+    END DO
+  
+  ELSE IF ( l == 1 ) THEN
 
-      IF ( l == 0 ) THEN
+    DO jj = 1, nPointsE
+      DO kk = 1, nPointsE
+         outcome = 0.0_dp
+         DO ii = 1, nquad
+           outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii) * roots(ii)
+         END DO
+         NESK( jj, kk ) = UnitConvertConstant * outcome * 1.5_dp
 
-        outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii)
-
-      ELSE IF ( l == 1 ) THEN
-
-        outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii) * roots(ii)
-
-      END IF
-    END DO ! ii (nquad)
-
-    NESK( jj, kk ) = UnitConvertConstant * outcome
-
+      END DO
     END DO
 
-  END DO
+  END IF
 
   END SUBROUTINE TotalNESKernel
 
-  
-  SUBROUTINE NESKernelWithOmega( energygrid, omega, T, chem_e, nesktab )
+
+  SUBROUTINE NESKernelWithOmega( energygrid, omega, TMeV, chem_e, nesktab )
 !----------------------------------------------------------------------
 ! Purpose:
 !    To compute the neutrino-electron scattering (OUT) kernel 
@@ -317,7 +322,7 @@ CONTAINS
   IMPLICIT NONE
 
     REAL(dp), DIMENSION(:), INTENT(in) :: energygrid, omega
-    REAL(dp), INTENT(in) :: T, chem_e       ! both unit = MeV
+    REAL(dp), INTENT(in) :: TMeV, chem_e       ! both unit = MeV
     REAL(dp), DIMENSION(:,:,:), INTENT(out) :: nesktab
     REAL(dp)             :: tsq, tinv, eta, FEXP, &
                             x1, x2, x2inv, &
@@ -331,10 +336,10 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: delta, y0, I1, I2, I3,&
                                                A, B, C
 
-       tsq = T*T
-      tinv = 1.0/T
+       tsq = TMeV*TMeV
+      tinv = 1.0/TMeV
        eta = chem_e * tinv
-     tpiet = twpi * T                      ! 2*pi*T
+     tpiet = twpi * TMeV                      ! 2*pi*TMeV
      beta1 = ( cv + ca )**2 
      beta2 = ( cv - ca )**2
      beta3 = ca**2 - cv**2
@@ -419,7 +424,7 @@ CONTAINS
                              +2.0*y0(i_ome,i_e1,i_e1)*FA0           &
                              +y0(i_ome,i_e1,i_e1)**2 *FA_           &
                              )                                      &
-               +B(i_ome,i_e1,i_e1)*T                                &
+               +B(i_ome,i_e1,i_e1)*TMeV                                &
                             *(FA0                                   &
                              +y0(i_ome,i_e1,i_e1)*FA_               &
                              )                                      &
@@ -457,7 +462,7 @@ CONTAINS
               /delta(i_ome,i_e1,i_e2)**5                                 &
               *fgamm(i_e1,i_e2)                                          &
               *(A(i_ome,i_e1,i_e2)*tsq*COMBO1                            &
-               +B(i_ome,i_e1,i_e2)*T*COMBO2                              &
+               +B(i_ome,i_e1,i_e2)*TMeV*COMBO2                              &
                +C(i_ome,i_e1,i_e2)*G0                                    &
                )                                                         
                                   
@@ -467,7 +472,7 @@ CONTAINS
               /delta(i_ome,i_e1,i_e2)**5                                 &
               *fgamm(i_e1,i_e2)                                          &
               *(A(i_ome,i_e1,i_e2)*tsq*COMBO1                            &
-               -B(i_ome,i_e2,i_e1)*T*COMBO2                              &
+               -B(i_ome,i_e2,i_e1)*TMeV*COMBO2                              &
                +C(i_ome,i_e2,i_e1)*G0                                    &
                )                                                         
                                                                                 
@@ -491,6 +496,7 @@ CONTAINS
     END DO ! i_ome
 
    END SUBROUTINE NESKernelWithOmega
+
 
    SUBROUTINE ComputeFValue_sameE( eta_y0, FA_, FA0, FA1) 
 
