@@ -10,7 +10,10 @@ function [ E, D, T, Y, Chi ] = readAbsorptionOpacityTable( opacityTableName )
   T = h5read( opacityTableName, '/ThermoState/Temperature' );
   Y = h5read( opacityTableName, '/ThermoState/Electron Fraction' );
   
-  Chi = h5read( opacityTableName, '/thermEmAb/Absorptivity/Electron Capture Absorptivity' );
+  OS = h5read( opacityTableName, '/thermEmAb/Offsets' );
+  
+  Tmp = h5read( opacityTableName, '/thermEmAb/Absorptivity/Electron Capture Absorptivity' );
+  Chi = 10.^(Tmp) - OS;
 
 end
 

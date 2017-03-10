@@ -9,11 +9,11 @@ function [ E, T, Eta, R_0, R_1 ] = readNesScatteringOpacityTable( opacityTableNa
   T   = h5read( opacityTableName, '/ThermoState/Temperature' );
   Eta = h5read( opacityTableName, '/EtaGrid/Values' );
   
-  OS = h5read( opacityTableName, '/scatt_NES/Offset' );
+  OS = h5read( opacityTableName, '/scatt_NES/Offsets' );
   
   Tmp = h5read( opacityTableName, '/scatt_NES/Kernel/Electron non-Iso Kernel Momen' );
-  R_0 = 10.^( Tmp(:,:,:,:,1) ) - OS;
-  R_1 = 10.^( Tmp(:,:,:,:,2) ) - OS;
+  R_0 = 10.^( Tmp(:,:,:,:,1) ) - OS(1);
+  R_1 = 10.^( Tmp(:,:,:,:,2) ) - OS(2);
   
 end
 
