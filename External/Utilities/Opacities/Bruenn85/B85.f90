@@ -254,10 +254,10 @@ CONTAINS
   END FUNCTION TotalElasticScatteringKernel
 
 
-  SUBROUTINE TotalNESKernel( energygrid, T, chem_e, nquad, l, NESK )
+  SUBROUTINE TotalNESKernel( energygrid, TMeV, chem_e, nquad, l, NESK )
 
   REAL(dp), DIMENSION(:), INTENT(in) :: energygrid
-  REAL(dp), INTENT(in)       :: T, chem_e
+  REAL(dp), INTENT(in)       :: TMeV, chem_e
   INTEGER , INTENT(in)       :: nquad, l
   REAL(dp), DIMENSION(:,:), INTENT(out) :: NESK
 
@@ -274,7 +274,7 @@ CONTAINS
 
   CALL gaquad( nquad, roots, weights, -1.0_dp , 1.0_dp )
 
-  CALL NESKernelWithOmega( energygrid, roots, T, chem_e, NESK_ome )
+  CALL NESKernelWithOmega( energygrid, roots, TMeV, chem_e, NESK_ome )
 
  
   IF ( l == 0 ) THEN
