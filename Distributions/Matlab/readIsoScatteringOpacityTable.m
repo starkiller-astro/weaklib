@@ -1,4 +1,4 @@
-function [ E, D, T, Y, R_0, R_1 ] = readIsoScatteringOpacityTable( opacityTableName )
+function [ E, D, T, Y, R_0, R_1, OS ] = readIsoScatteringOpacityTable( opacityTableName )
 
   % Reads HDF5 Opacity Table
 

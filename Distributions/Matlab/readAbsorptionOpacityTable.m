@@ -1,4 +1,4 @@
-function [ E, D, T, Y, Chi ] = readAbsorptionOpacityTable( opacityTableName )
+function [ E, D, T, Y, Chi, OS ] = readAbsorptionOpacityTable( opacityTableName )
 
   % Reads HDF5 Opacity Table
 

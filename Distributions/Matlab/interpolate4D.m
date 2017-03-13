@@ -10,7 +10,7 @@ function [ Interpolant ] = interpolate4D( x1, x2, x3, x4, x11D, x21D, x31D, x41D
     ix4 = find( x41D < x4(i), 1, 'last' );
     
     if (size(ix1,1)*size(ix2,1)*size(ix3,1)*size(ix4,1) ~= 1)
-        disp('Error in interpolate4D!')
+        disp('Error in interpolate4D: Outside table boundary.')
         return
     end
     

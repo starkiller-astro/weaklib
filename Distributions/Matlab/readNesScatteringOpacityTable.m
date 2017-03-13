@@ -1,4 +1,4 @@
-function [ E, T, Eta, R_0, R_1 ] = readNesScatteringOpacityTable( opacityTableName )
+function [ E, T, Eta, R_0, R_1, OS] = readNesScatteringOpacityTable( opacityTableName )
 
   % Reads HDF5 Opacity Table
 
