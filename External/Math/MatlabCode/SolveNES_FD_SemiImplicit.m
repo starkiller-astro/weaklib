@@ -84,6 +84,15 @@ while ( not( done ) )
         = Update_PenalizationMethod2...
             ( Nold, N_Eq, dt, R_In_H, R_Out_H, theta, N_g,...
               ApplyCorrection );
+          
+    case 'SSPRK3'
+        
+      %
+      % Third Order Explicit Runge-Kutta Method:
+      
+      [ Nnew, Iterations(cycle,1) ]...
+        = Update_SSPRK3...
+            ( Nold, dt, R_In_H, R_Out_H, theta, N_g );
 
     otherwise
 
