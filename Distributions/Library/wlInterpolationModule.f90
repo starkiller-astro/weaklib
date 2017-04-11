@@ -15,6 +15,8 @@ MODULE wlInterpolationModule
   PUBLIC ComputeTempFromIntEnergy
   PUBLIC ComputeTempFromEntropy
   PUBLIC EOSTableQuery
+  PUBLIC InterpolateSingleVariable_1D3D
+  PUBLIC InterpolateSingleVariable_2D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -256,6 +258,203 @@ CONTAINS
 
   END SUBROUTINE LogInterpolateSingleVariable_3D
 
+  
+  SUBROUTINE InterpolateSingleVariable_1D3D &
+               ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
+                 Coordinate4, LogInterp, Offset, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x4
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate4
+    INTEGER,  DIMENSION(4),       INTENT(in)  :: LogInterp
+    REAL(dp),                     INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolant
+
+    INTEGER                                   :: i, j, &
+                                                 ix2, ix3, ix4, &
+                                                 il1, il2, il3, il4
+    REAL(dp), DIMENSION(4) :: alpha, delta
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+
+    DO i = 1,SIZE( x2 )
+
+      CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
+      CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(i), il3 )
+      CALL locate( Coordinate4, SIZE( Coordinate4 ), x4(i), il4 )
+
+      IF ( LogInterp(2) == 1 ) THEN
+        delta(2) = LOG10( x2(i) / Coordinate2(il2) ) &
+                     / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
+      ELSE
+        delta(2) = ( x2(i) - Coordinate2(il2) ) &
+                     / ( Coordinate2(il2+1) - Coordinate2(il2) )
+      END IF
+
+      IF ( LogInterp(3) == 1 ) THEN
+        delta(3) = LOG10( x3(i) / Coordinate3(il3) ) &
+                     / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
+      ELSE
+        delta(3) = ( x3(i) - Coordinate3(il3) ) &
+                     / ( Coordinate3(il3+1) - Coordinate3(il3) )
+      END IF
+
+      IF ( LogInterp(4) == 1 ) THEN
+        delta(4) = LOG10( x4(i) / Coordinate4(il4) ) &
+                     / LOG10( Coordinate4(il4+1) / Coordinate4(il4) )
+      ELSE
+        delta(4) = ( x4(i) - Coordinate4(il4) ) &
+                     / ( Coordinate4(il4+1) - Coordinate4(il4) )
+      END IF
+
+      DO j = 1, SIZE( x1 )
+
+        CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(j), il1 )
+
+        IF ( LogInterp(1) == 1 ) THEN
+          delta(1) = LOG10( x1(j) / Coordinate1(il1) ) &
+                      / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
+        ELSE
+          delta(1) = ( x1(j) - Coordinate1(il1) ) &
+                       / ( Coordinate1(il1+1) - Coordinate1(il1) )
+        END IF
+
+         p0000 = ( Table( il1  , il2  , il3  , il4   ) )
+         p0001 = ( Table( il1  , il2  , il3  , il4+1 ) )
+         p0010 = ( Table( il1  , il2  , il3+1, il4   ) )
+         p0011 = ( Table( il1  , il2  , il3+1, il4+1 ) )
+         p0100 = ( Table( il1  , il2+1, il3  , il4   ) )
+         p0101 = ( Table( il1  , il2+1, il3  , il4+1 ) )
+         p0110 = ( Table( il1  , il2+1, il3+1, il4   ) )
+         p0111 = ( Table( il1  , il2+1, il3+1, il4+1 ) )
+         p1000 = ( Table( il1+1, il2  , il3  , il4   ) )
+         p1001 = ( Table( il1+1, il2  , il3  , il4+1 ) )
+         p1010 = ( Table( il1+1, il2  , il3+1, il4   ) )
+         p1011 = ( Table( il1+1, il2  , il3+1, il4+1 ) )
+         p1100 = ( Table( il1+1, il2+1, il3  , il4   ) )
+         p1101 = ( Table( il1+1, il2+1, il3  , il4+1 ) )
+         p1110 = ( Table( il1+1, il2+1, il3+1, il4   ) )
+         p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) )
+
+         Interpolant(j,i) &
+         = 10.d0**( &
+         TetraLinear(p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+         p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+         delta(1), delta(2), delta(3), delta(4) ) ) - Offset
+
+      END DO ! j
+
+    END DO ! i
+
+  END SUBROUTINE InterpolateSingleVariable_1D3D
+
+
+  SUBROUTINE InterpolateSingleVariable_2D2D &
+               ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
+                 Coordinate4, LogInterp, Offset, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x4
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate4
+    INTEGER,  DIMENSION(4),       INTENT(in)  :: LogInterp
+    REAL(dp),                     INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
+
+    INTEGER                                   :: i, j, k,&
+                                                 ix2, ix3, ix4, &
+                                                 il1, il2, il3, il4
+    REAL(dp), DIMENSION(4) :: alpha, delta
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+
+    DO k = 1,SIZE( x3 )
+
+      CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(k), il3 )
+      CALL locate( Coordinate4, SIZE( Coordinate4 ), x4(k), il4 )
+
+      IF ( LogInterp(3) == 1 ) THEN
+        delta(3) = LOG10( x3(k) / Coordinate3(il3) ) &
+                     / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
+      ELSE
+        delta(3) = ( x3(k) - Coordinate3(il3) ) &
+                     / ( Coordinate3(il3+1) - Coordinate3(il3) )
+      END IF
+
+      IF ( LogInterp(4) == 1 ) THEN
+        delta(4) = LOG10( x4(k) / Coordinate4(il4) ) &
+                     / LOG10( Coordinate4(il4+1) / Coordinate4(il4) )
+      ELSE
+        delta(4) = ( x4(k) - Coordinate4(il4) ) &
+                     / ( Coordinate4(il4+1) - Coordinate4(il4) )
+      END IF
+             
+      DO i = 1, SIZE( x2 )
+
+        CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
+
+        IF ( LogInterp(2) == 1 ) THEN
+          delta(2) = LOG10( x2(i) / Coordinate2(il2) ) &
+                     / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
+        ELSE
+          delta(2) = ( x2(i) - Coordinate2(il2) ) &
+                     / ( Coordinate2(il2+1) - Coordinate2(il2) )
+        END IF
+
+        DO j = 1, SIZE( x1 )
+
+          CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(j), il1 )
+
+          IF ( LogInterp(1) == 1 ) THEN
+            delta(1) = LOG10( x1(j) / Coordinate1(il1) ) &
+                       / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
+          ELSE
+            delta(1) = ( x1(j) - Coordinate1(il1) ) &
+                       / ( Coordinate1(il1+1) - Coordinate1(il1) )
+          END IF
+
+          p0000 = ( Table( il1  , il2  , il3  , il4   ) )
+          p0001 = ( Table( il1  , il2  , il3  , il4+1 ) )
+          p0010 = ( Table( il1  , il2  , il3+1, il4   ) )
+          p0011 = ( Table( il1  , il2  , il3+1, il4+1 ) )
+          p0100 = ( Table( il1  , il2+1, il3  , il4   ) )
+          p0101 = ( Table( il1  , il2+1, il3  , il4+1 ) )
+          p0110 = ( Table( il1  , il2+1, il3+1, il4   ) )
+          p0111 = ( Table( il1  , il2+1, il3+1, il4+1 ) )
+          p1000 = ( Table( il1+1, il2  , il3  , il4   ) )
+          p1001 = ( Table( il1+1, il2  , il3  , il4+1 ) )
+          p1010 = ( Table( il1+1, il2  , il3+1, il4   ) )
+          p1011 = ( Table( il1+1, il2  , il3+1, il4+1 ) )
+          p1100 = ( Table( il1+1, il2+1, il3  , il4   ) )
+          p1101 = ( Table( il1+1, il2+1, il3  , il4+1 ) )
+          p1110 = ( Table( il1+1, il2+1, il3+1, il4   ) )
+          p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) ) 
+
+          Interpolant(j,i,k) &
+          = 10.d0**( &
+          TetraLinear(p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+          p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+          delta(1), delta(2), delta(3), delta(4) ) ) - Offset
+
+        END DO ! j 
+
+      END DO ! i
+
+    END DO ! k
+
+  END SUBROUTINE InterpolateSingleVariable_2D2D 
+
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
                ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant )
@@ -401,43 +600,12 @@ CONTAINS
 
       Interpolant(i) &
       = 10.d0**( &
-          (1.0_dp - delta(4)) &
-            * (   (1.0_dp - delta(3)) * &
-                        (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0000   &
-                + (1.0_dp - delta(3)) * &
-                        (1.0_dp - delta(2)) *           delta(1)  * p1000   &
-                + (1.0_dp - delta(3)) * &
-                                  delta(2)  * (1.0_dp - delta(1)) * p0100   &
-                + (1.0_dp - delta(3)) * &
-                                  delta(2)  *           delta(1)  * p1100   &
-                +           delta(3)  * &
-                        (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0010   &
-                +           delta(3)  * &                    
-                        (1.0_dp - delta(2)) *           delta(1)  * p1010   &
-                +           delta(3)  * &
-                                  delta(2)  * (1.0_dp - delta(1)) * p0110   &
-                +           delta(3)  * &
-                                  delta(2)  *           delta(1)  * p1110 ) &
-          +         delta(4)  &
-            * (   (1.0_dp - delta(3)) * &                
-                        (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0001   &
-                + (1.0_dp - delta(3)) * &                    
-                        (1.0_dp - delta(2)) *           delta(1)  * p1001   &
-                + (1.0_dp - delta(3)) * &
-                                  delta(2)  * (1.0_dp - delta(1)) * p0101   &
-                + (1.0_dp - delta(3)) * &
-                                  delta(2)  *           delta(1)  * p1101   &
-                +           delta(3)  * &
-                        (1.0_dp - delta(2)) * (1.0_dp - delta(1)) * p0011   &
-                +           delta(3)  * &
-                        (1.0_dp - delta(2)) *           delta(1)  * p1011   &
-                +           delta(3)  * &
-                                  delta(2)  * (1.0_dp - delta(1)) * p0111   &
-                +           delta(3)  * &
-                                  delta(2)  *           delta(1)  * p1111 ) ) &
-        - Offset
+        TetraLinear(p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+      p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+      delta(1), delta(2), delta(3), delta(4) ) ) - Offset
 
     END DO
+
 
   END SUBROUTINE LogInterpolateSingleVariable_4D
 
@@ -506,6 +674,7 @@ CONTAINS
 
     END DO
 
+    WRITE(*,*) 'TetraLinear   '
   END SUBROUTINE LogInterpolateSingleVariable_4D_Custom
 
 
