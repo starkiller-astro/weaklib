@@ -16,7 +16,7 @@ MODULE wlInterpolationModule
   PUBLIC ComputeTempFromEntropy
   PUBLIC EOSTableQuery
   PUBLIC LogInterpolateSingleVariable_1D3D
-  PUBLIC InterpolateSingleVariable_2D2D
+  PUBLIC LogInterpolateSingleVariable_2D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -365,7 +365,7 @@ CONTAINS
   END SUBROUTINE LogInterpolateSingleVariable_1D3D
 
 
-  SUBROUTINE InterpolateSingleVariable_2D2D &
+  SUBROUTINE LogInterpolateSingleVariable_2D2D &
                ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
                  Coordinate4, LogInterp, Offset, Table, Interpolant )
 
@@ -382,17 +382,18 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
     REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
 
-    INTEGER                                   :: i, j, k,&
-                                                 ix2, ix3, ix4, &
-                                                 il1, il2, il3, il4
-    REAL(dp), DIMENSION(4) :: alpha, delta
-    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
-                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+    INTEGER :: &
+      i, j, k, ix2, ix3, ix4, il1, il2, il3, il4
+    REAL(dp), DIMENSION(4) :: &
+      alpha, delta
+    REAL(dp) :: &
+      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
+      p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
     DO k = 1,SIZE( x3 )
 
-      CALL locate( Coordinate3, SIZE( Coordinate3 ), x3(k), il3 )
-      CALL locate( Coordinate4, SIZE( Coordinate4 ), x4(k), il4 )
+      il3 = Index1D( x3(k), Coordinate3, SIZE( Coordinate3 ) )
+      il4 = Index1D( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
 
       IF ( LogInterp(3) == 1 ) THEN
         delta(3) = LOG10( x3(k) / Coordinate3(il3) ) &
@@ -410,27 +411,27 @@ CONTAINS
                      / ( Coordinate4(il4+1) - Coordinate4(il4) )
       END IF
              
-      DO i = 1, SIZE( x2 )
+      DO j = 1, SIZE( x2 )
 
-        CALL locate( Coordinate2, SIZE( Coordinate2 ), x2(i), il2 )
+        il2 = Index1D( x2(j), Coordinate2, SIZE( Coordinate2 ) )
 
         IF ( LogInterp(2) == 1 ) THEN
-          delta(2) = LOG10( x2(i) / Coordinate2(il2) ) &
+          delta(2) = LOG10( x2(j) / Coordinate2(il2) ) &
                      / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
         ELSE
-          delta(2) = ( x2(i) - Coordinate2(il2) ) &
+          delta(2) = ( x2(j) - Coordinate2(il2) ) &
                      / ( Coordinate2(il2+1) - Coordinate2(il2) )
         END IF
 
-        DO j = 1, SIZE( x1 )
+        DO i = 1, SIZE( x1 )
 
-          CALL locate( Coordinate1, SIZE( Coordinate1 ), x1(j), il1 )
+          il1 = Index1D( x1(i), Coordinate1, SIZE( Coordinate1 ) )
 
           IF ( LogInterp(1) == 1 ) THEN
-            delta(1) = LOG10( x1(j) / Coordinate1(il1) ) &
+            delta(1) = LOG10( x1(i) / Coordinate1(il1) ) &
                        / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
           ELSE
-            delta(1) = ( x1(j) - Coordinate1(il1) ) &
+            delta(1) = ( x1(i) - Coordinate1(il1) ) &
                        / ( Coordinate1(il1+1) - Coordinate1(il1) )
           END IF
 
@@ -451,19 +452,25 @@ CONTAINS
           p1110 = ( Table( il1+1, il2+1, il3+1, il4   ) )
           p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) ) 
 
-          Interpolant(j,i,k) &
-          = 10.d0**( &
-          TetraLinear(p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
-          p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
-          delta(1), delta(2), delta(3), delta(4) ) ) - Offset
-
-        END DO ! j 
-
-      END DO ! i
-
+          Interpolant(i,j,k) &
+            = TetraLinear &
+                (p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                 p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                 delta(1), delta(2), delta(3), delta(4) )
+        END DO ! i
+      END DO ! j
+    END DO ! k
+    
+    DO k =  1,SIZE( x3 )
+      DO j = 1, SIZE( x2 )
+        DO i = 1, SIZE( x1 )
+           Interpolant(i,j,k) &
+          = 10.d0**( Interpolant(i,j,k) ) - Offset
+        END DO ! i
+      END DO ! j
     END DO ! k
 
-  END SUBROUTINE InterpolateSingleVariable_2D2D 
+  END SUBROUTINE LogInterpolateSingleVariable_2D2D 
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
