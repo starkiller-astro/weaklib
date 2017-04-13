@@ -387,14 +387,14 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
 
     INTEGER :: &
-      i, j, k, ix2, ix3, ix4, il1, il2, il3, il4
+      i, j, k, il1, il2, il3, il4
     REAL(dp), DIMENSION(4) :: &
       alpha, delta
     REAL(dp) :: &
-      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
+      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
-    DO k = 1,SIZE( x3 )
+    DO k = 1, SIZE( x3 )
 
       il3 = Index1D( x3(k), Coordinate3, SIZE( Coordinate3 ) )
       il4 = Index1D( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
@@ -458,18 +458,19 @@ CONTAINS
 
           Interpolant(i,j,k) &
             = TetraLinear &
-                (p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
-                 p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
-                 delta(1), delta(2), delta(3), delta(4) )
+                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                  delta(1), delta(2), delta(3), delta(4) )
+
         END DO ! i
       END DO ! j
     END DO ! k
-    
-    DO k =  1,SIZE( x3 )
+
+    DO k = 1,SIZE( x3 )
       DO j = 1, SIZE( x2 )
         DO i = 1, SIZE( x1 )
-           Interpolant(i,j,k) &
-          = 10.d0**( Interpolant(i,j,k) ) - Offset
+          Interpolant(i,j,k) &
+            = 10.d0**( Interpolant(i,j,k) ) - Offset
         END DO ! i
       END DO ! j
     END DO ! k
