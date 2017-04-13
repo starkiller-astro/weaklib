@@ -5,18 +5,22 @@ MODULE wlInterpolationModule
   USE wlDependentVariablesModule
 
   implicit none
+  private
 
-  PUBLIC LogInterpolateSingleVariable
-  PUBLIC LogInterpolateAllVariables
-  PUBLIC LogInterpolateDifferentiateSingleVariable
-  PUBLIC LogInterpolateDifferentiateAllVariables
-  PUBLIC MonotonicityCheck
-  PUBLIC GetGamma1
-  PUBLIC ComputeTempFromIntEnergy
-  PUBLIC ComputeTempFromEntropy
-  PUBLIC EOSTableQuery
-  PUBLIC LogInterpolateSingleVariable_1D3D
-  PUBLIC LogInterpolateSingleVariable_2D2D
+  PUBLIC :: LogInterpolateSingleVariable
+  PUBLIC :: LogInterpolateAllVariables
+  PUBLIC :: LogInterpolateDifferentiateSingleVariable
+  PUBLIC :: LogInterpolateDifferentiateAllVariables
+  PUBLIC :: MonotonicityCheck
+  PUBLIC :: GetGamma1
+  PUBLIC :: ComputeTempFromIntEnergy
+  PUBLIC :: ComputeTempFromIntEnergy_Bisection
+  PUBLIC :: ComputeTempFromIntEnergy_Secant
+  PUBLIC :: ComputeTempFromEntropy
+  PUBLIC :: ComputeTempFromPressure
+  PUBLIC :: EOSTableQuery
+  PUBLIC :: LogInterpolateSingleVariable_1D3D
+  PUBLIC :: LogInterpolateSingleVariable_2D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -1660,6 +1664,194 @@ CONTAINS
     DEALLOCATE( energy_array, rhobuff, yebuff )
 
   END SUBROUTINE ComputeTempFromIntEnergy
+
+
+  SUBROUTINE ComputeTempFromIntEnergy_Bisection &
+    ( D, E, Y, D_table, T_table, Y_table, LogInterp, E_table, Offset, T )
+
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: E
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: T_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y_table
+    INTEGER,  DIMENSION(3),     INTENT(in)  :: LogInterp
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: E_table
+    REAL(dp),                   INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:),     INTENT(out) :: T
+
+    LOGICAL  :: Converged
+    INTEGER  :: i, Iter
+    INTEGER,  PARAMETER :: MaxIter = 128
+    REAL(DP), PARAMETER :: Tol = 1.0d-10
+    REAL(dp), DIMENSION(1) :: a, b, c, ab, E_a, E_b, E_c, f_a, f_b, f_c
+
+    DO i = 1, SIZE( D )
+
+      a = T_table(1)
+      CALL LogInterpolateSingleVariable &
+             ( [ D(i) ] , a, [ Y(i) ], D_table, T_table, Y_table, &
+               LogInterp, Offset, E_table, E_a )
+      f_a = E(i) - E_a
+
+      b = T_table(SIZE(T_table))
+      CALL LogInterpolateSingleVariable &
+             ( [ D(i) ] , b, [ Y(i) ], D_table, T_table, Y_table, &
+               LogInterp, Offset, E_table, E_b )
+      f_b = E(i) - E_b
+
+      IF( ALL( f_a*f_b > 0.0_dp ) )THEN
+        WRITE(*,*)
+        WRITE(*,'(A4,A)') &
+          '', 'Error: ComputeTempFromIntEnergy_Bisection'
+        WRITE(*,'(A6,A20,ES10.4E2,A9,ES10.4E2)') &
+          '', 'No Root Between T = ', a, ' and T = ', b
+        WRITE(*,*)
+        STOP
+      END IF
+
+      ab = b - a
+
+      Converged = .FALSE.
+      Iter      = 0
+      DO WHILE ( .NOT. Converged )
+
+        Iter = Iter + 1
+
+        ab = 0.5_dp * ab
+        c  = a + ab
+
+        CALL LogInterpolateSingleVariable &
+               ( [ D(i) ] , c, [ Y(i) ], D_table, T_table, Y_table, &
+                 LogInterp, Offset, E_table, E_c )
+
+        f_c = E(i) - E_c
+
+        IF( ALL( f_a * f_c < 0.0_dp ) )THEN
+
+          b   = c
+          f_b = f_c
+
+        ELSE
+
+          a   = c
+          f_a = f_c
+
+        END IF
+
+        IF( ALL( ABS( f_c ) / E(i) < Tol ) ) &
+          Converged = .TRUE.
+
+        IF( Iter > MaxIter )THEN
+          WRITE(*,*)
+          WRITE(*,'(A4,A)') &
+            '', 'ComputeTempFromIntEnergy_Bisection'
+          WRITE(*,'(A6,A21,I4.4,A11)') &
+            '', 'No Convergence After ', Iter, ' Iterations'
+          WRITE(*,*)
+        END IF
+
+      END DO
+
+      T(i) = c(1)
+
+    END DO
+
+  END SUBROUTINE ComputeTempFromIntEnergy_Bisection
+
+
+  SUBROUTINE ComputeTempFromIntEnergy_Secant &
+    ( D, E, Y, D_table, T_table, Y_table, LogInterp, E_table, Offset, T )
+
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: E
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: T_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y_table
+    INTEGER,  DIMENSION(3),     INTENT(in)  :: LogInterp
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: E_table
+    REAL(dp),                   INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:),     INTENT(out) :: T
+
+    LOGICAL  :: Converged
+    INTEGER :: i, Iter
+    INTEGER,  PARAMETER :: MaxIter = 128
+    REAL(DP), PARAMETER :: Tol = 1.0d-10
+    REAL(dp), DIMENSION(1) :: T_L, T_H, a, b, c, E_a, E_b, f_a, f_b
+
+    T_L = T_table(1)
+    T_H = T_table(SIZE(T_table))
+
+    DO i = 1, SIZE( D )
+
+      a = T_L
+      CALL LogInterpolateSingleVariable &
+             ( [ D(i) ] , a, [ Y(i) ], D_table, T_table, Y_table, &
+               LogInterp, Offset, E_table, E_a )
+      f_a = E(i) - E_a
+
+      b = T_H
+      CALL LogInterpolateSingleVariable &
+             ( [ D(i) ] , b, [ Y(i) ], D_table, T_table, Y_table, &
+               LogInterp, Offset, E_table, E_b )
+      f_b = E(i) - E_b
+
+      IF( ALL( f_a*f_b > 0.0_dp ) )THEN
+        WRITE(*,*)
+        WRITE(*,'(A4,A)') &
+          '', 'Error: ComputeTempFromIntEnergy_Secant'
+        WRITE(*,'(A6,A20,ES10.4E2,A9,ES10.4E2)') &
+          '', 'No Root Between T = ', a, ' and T = ', b
+        WRITE(*,*)
+        STOP
+      END IF
+
+      Converged = .FALSE.
+      Iter      = 0
+      DO WHILE ( .NOT. Converged )
+
+        Iter = Iter + 1
+
+        IF( ALL( ABS( f_a ) > ABS( f_b ) ) )THEN
+          ! -- Swap (a,b)
+          a = a + b
+          b = a - b
+          a = a - b
+          ! -- Swap (f_a,f_b)
+          f_a = f_a + f_b
+          f_b = f_a - f_b
+          f_a = f_a - f_b
+        END IF
+
+        c = ( b * f_a - a * f_b ) / ( f_a - f_b )
+        b = a; f_b = f_a
+
+        a = c
+        CALL LogInterpolateSingleVariable &
+               ( [ D(i) ] , a, [ Y(i) ], D_table, T_table, Y_table, &
+                 LogInterp, Offset, E_table, E_a )
+        f_a = E(i) - E_a
+
+        IF( ALL( ABS( f_a ) / E(i) < Tol ) ) &
+          Converged = .TRUE.
+
+        IF( Iter > MaxIter )THEN
+          WRITE(*,*)
+          WRITE(*,'(A4,A)') &
+            '', 'ComputeTempFromIntEnergy_Secant'
+          WRITE(*,'(A6,A21,I4.4,A11)') &
+            '', 'No Convergence After ', Iter, ' Iterations'
+          WRITE(*,*)
+        END IF
+
+      END DO
+
+      T(i) = c(1)
+
+    END DO
+
+  END SUBROUTINE ComputeTempFromIntEnergy_Secant
 
 
   SUBROUTINE ComputeTempFromEntropy &
