@@ -14,6 +14,7 @@ MODULE wlInterpolationModule
   PUBLIC :: MonotonicityCheck
   PUBLIC :: GetGamma1
   PUBLIC :: ComputeTempFromIntEnergy
+  PUBLIC :: ComputeTempFromIntEnergy_Lookup
   PUBLIC :: ComputeTempFromIntEnergy_Bisection
   PUBLIC :: ComputeTempFromIntEnergy_Secant
   PUBLIC :: ComputeTempFromEntropy
@@ -101,6 +102,30 @@ CONTAINS
 
     RETURN
   END FUNCTION Index1D
+
+
+  PURE INTEGER FUNCTION Index1D_Lin( x, xx, n )
+
+    REAL(dp), INTENT(in) :: x, xx(n)
+    INTEGER,  INTENT(in) :: n
+
+    Index1D_Lin &
+      = FLOOR( 1 + (n-1)*(x-xx(1))/(xx(n)-xx(1)) + 1.d-12 )
+
+    RETURN
+  END FUNCTION Index1D_Lin
+
+
+  PURE INTEGER FUNCTION Index1D_Log( x, xx, n )
+
+    REAL(dp), INTENT(in) :: x, xx(n)
+    INTEGER,  INTENT(in) :: n
+
+    Index1D_Log &
+      = FLOOR( 1 + (n-1)*LOG10(x/xx(1))/LOG10(xx(n)/xx(1)) + 1.d-12 )
+
+    RETURN
+  END FUNCTION Index1D_Log
 
 
   PURE REAL(dp) FUNCTION TriLinear &
@@ -396,47 +421,56 @@ CONTAINS
 
     DO k = 1, SIZE( x3 )
 
-      il3 = Index1D( x3(k), Coordinate3, SIZE( Coordinate3 ) )
-      il4 = Index1D( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
-
       IF ( LogInterp(3) == 1 ) THEN
-        delta(3) = LOG10( x3(k) / Coordinate3(il3) ) &
-                     / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
+        il3 = Index1D_Log( x3(k), Coordinate3, SIZE( Coordinate3 ) )
+        delta(3) &
+          = LOG10( x3(k) / Coordinate3(il3) ) &
+            / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
-        delta(3) = ( x3(k) - Coordinate3(il3) ) &
-                     / ( Coordinate3(il3+1) - Coordinate3(il3) )
+        il3 = Index1D_Lin( x3(k), Coordinate3, SIZE( Coordinate3 ) )
+        delta(3) &
+          = ( x3(k) - Coordinate3(il3) ) &
+            / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
 
       IF ( LogInterp(4) == 1 ) THEN
-        delta(4) = LOG10( x4(k) / Coordinate4(il4) ) &
-                     / LOG10( Coordinate4(il4+1) / Coordinate4(il4) )
+        il4 = Index1D_Log( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
+        delta(4) &
+          = LOG10( x4(k) / Coordinate4(il4) ) &
+            / LOG10( Coordinate4(il4+1) / Coordinate4(il4) )
       ELSE
-        delta(4) = ( x4(k) - Coordinate4(il4) ) &
-                     / ( Coordinate4(il4+1) - Coordinate4(il4) )
+        il4 = Index1D_Lin( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
+        delta(4) &
+          = ( x4(k) - Coordinate4(il4) ) &
+            / ( Coordinate4(il4+1) - Coordinate4(il4) )
       END IF
              
       DO j = 1, SIZE( x2 )
 
-        il2 = Index1D( x2(j), Coordinate2, SIZE( Coordinate2 ) )
-
         IF ( LogInterp(2) == 1 ) THEN
-          delta(2) = LOG10( x2(j) / Coordinate2(il2) ) &
-                     / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
+          il2 = Index1D_Log( x2(j), Coordinate2, SIZE( Coordinate2 ) )
+          delta(2) &
+            = LOG10( x2(j) / Coordinate2(il2) ) &
+              / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
         ELSE
-          delta(2) = ( x2(j) - Coordinate2(il2) ) &
-                     / ( Coordinate2(il2+1) - Coordinate2(il2) )
+          il2 = Index1D_Lin( x2(j), Coordinate2, SIZE( Coordinate2 ) )
+          delta(2) &
+            = ( x2(j) - Coordinate2(il2) ) &
+              / ( Coordinate2(il2+1) - Coordinate2(il2) )
         END IF
 
         DO i = 1, SIZE( x1 )
 
-          il1 = Index1D( x1(i), Coordinate1, SIZE( Coordinate1 ) )
-
           IF ( LogInterp(1) == 1 ) THEN
-            delta(1) = LOG10( x1(i) / Coordinate1(il1) ) &
-                       / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
+            il1 = Index1D_Log( x1(i), Coordinate1, SIZE( Coordinate1 ) )
+            delta(1) &
+              = LOG10( x1(i) / Coordinate1(il1) ) &
+                / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
           ELSE
-            delta(1) = ( x1(i) - Coordinate1(il1) ) &
-                       / ( Coordinate1(il1+1) - Coordinate1(il1) )
+            il1 = Index1D_Lin( x1(i), Coordinate1, SIZE( Coordinate1 ) )
+            delta(1) &
+              = ( x1(i) - Coordinate1(il1) ) &
+                / ( Coordinate1(il1+1) - Coordinate1(il1) )
           END IF
 
           p0000 = ( Table( il1  , il2  , il3  , il4   ) )
@@ -1665,6 +1699,106 @@ CONTAINS
     DEALLOCATE( energy_array, rhobuff, yebuff )
 
   END SUBROUTINE ComputeTempFromIntEnergy
+
+
+  SUBROUTINE ComputeTempFromIntEnergy_Lookup &
+    ( D, E, Y, D_table, T_table, Y_table, LogInterp, E_table, Offset, T )
+
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: E
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: T_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y_table
+    INTEGER,  DIMENSION(3),     INTENT(in)  :: LogInterp
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: E_table
+    REAL(dp),                   INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:),     INTENT(out) :: T
+
+    INTEGER  :: i, Error
+    INTEGER  :: ilD, ilY, ilE, ilE1, ilE2, ilE3, ilE4, ilEa, ilEb
+    INTEGER  :: nPtsE
+    REAL(dp) :: logE, tmpE
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: ptsD, ptsT, ptsY, ptsE
+
+    DO i = 1, SIZE( D )
+
+      Error = 0
+
+      ilD = Index1D( D(i), D_table, SIZE( D_table ) )
+      ilY = Index1D( Y(i), Y_table, SIZE( Y_table ) )
+
+      logE = LOG10( E(i) + Offset )
+      ilE1 = Index1D( logE, E_table(ilD,  :,ilY  ), SIZE( T_Table ) )
+      ilE2 = Index1D( logE, E_table(ilD+1,:,ilY  ), SIZE( T_Table ) )
+      ilE3 = Index1D( logE, E_table(ilD,  :,ilY+1), SIZE( T_Table ) )
+      ilE4 = Index1D( logE, E_table(ilD+1,:,ilY+1), SIZE( T_Table ) )
+
+      ilEa = MAX( MINVAL( [ilE1,ilE2,ilE3,ilE4] ) - 1, 1 )
+      ilEb = MIN( MAXVAL( [ilE1,ilE2,ilE3,ilE4] ) + 2, SIZE( T_Table ) )
+
+      nPtsE = SIZE( T_Table(ilEa:ilEb) )
+      ALLOCATE( ptsD(nPtsE), ptsT(nPtsE), ptsY(nPtsE), ptsE(nPtsE) )
+      ptsD = D(i)
+      ptsT = T_Table(ilEa:ilEb)
+      ptsY = Y(i)
+
+      CALL LogInterpolateSingleVariable &
+             ( ptsD, ptsT, ptsY, D_Table(ilD:ilD+1), T_Table(ilEa:ilEb), &
+               Y_Table(ilY:ilY+1), LogInterp, Offset, &
+               E_Table(ilD:ilD+1,ilEa:ilEb,ilY:ilY+1), ptsE )
+
+      tmpE = E(i)
+
+      IF( (ptsE(1)-E(i))*(ptsE(nPtsE)-E(i)) > 0.0_DP )THEN
+
+        WRITE(*,*)
+        WRITE(*,'(A4,A)') &
+          '', 'Warning: ComputeTempFromIntEnergy_Lookup'
+        WRITE(*,'(A6,A20,ES10.4E2,A9,ES10.4E2)') &
+          '', 'No Root Between T = ', ptsT(1), ' and T = ', ptsT(nPtsE)
+        WRITE(*,*)
+        WRITE(*,*) '  nPtsE = ', nPtsE
+        WRITE(*,*) '  ptsE  = ', ptsE
+        WRITE(*,*) '    ia  = ', ilEa
+        WRITE(*,*) '    ib  = ', ilEb
+        WRITE(*,*) '    Ta  = ', T_Table(ilEa)
+        WRITE(*,*) '    Tb  = ', T_Table(ilEb)
+        WRITE(*,*) '    Ea  = ', ptsE(1)
+        WRITE(*,*) '    Eb  = ', ptsE(nPtsE)
+        WRITE(*,*) '     i  = ', i
+        WRITE(*,*) '     E  = ', E(i)
+        WRITE(*,*) '     D  = ', D(i)
+        WRITE(*,*) '     Y  = ', Y(i)
+        WRITE(*,*)
+
+        ! --- Reset Energy Density ---
+
+        tmpE = 0.5 * ( ptsE(1) + ptsE(nPtsE) )
+
+        Error = 1
+
+      END IF
+
+      ilE = Index1D( tmpE, ptsE, nPtsE )
+
+      T(i) &
+        = 10.d0**( LOG10( ptsT(ilE) ) &
+                   + LOG10( ptsT(ilE+1)/ptsT(ilE) ) &
+                     * LOG10( (tmpE+Offset)/(ptsE(ilE)+Offset) ) &
+                       / LOG10( (ptsE(ilE+1)+Offset)/(ptsE(ilE)+Offset) ) )
+
+      IF( Error == 1 )THEN
+        WRITE(*,*)
+        WRITE(*,*) '  T = ', T(i)
+        WRITE(*,*)
+      END IF
+
+      DEALLOCATE( ptsD, ptsT, ptsY, ptsE )
+
+    END DO
+
+  END SUBROUTINE ComputeTempFromIntEnergy_Lookup
 
 
   SUBROUTINE ComputeTempFromIntEnergy_Bisection &
