@@ -19,6 +19,7 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromIntEnergy_Secant
   PUBLIC :: ComputeTempFromEntropy
   PUBLIC :: ComputeTempFromPressure
+  PUBLIC :: ComputeTempFromPressure_Bisection
   PUBLIC :: EOSTableQuery
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_2D2D
@@ -1715,6 +1716,7 @@ CONTAINS
     REAL(dp),                   INTENT(in)  :: Offset
     REAL(dp), DIMENSION(:),     INTENT(out) :: T
 
+    LOGICAL, PARAMETER :: Debug = .FALSE.
     INTEGER  :: i, Error
     INTEGER  :: ilD, ilY, ilE, ilE1, ilE2, ilE3, ilE4, ilEa, ilEb
     INTEGER  :: nPtsE
@@ -1752,29 +1754,39 @@ CONTAINS
 
       IF( (ptsE(1)-E(i))*(ptsE(nPtsE)-E(i)) > 0.0_DP )THEN
 
-        WRITE(*,*)
-        WRITE(*,'(A4,A)') &
-          '', 'Warning: ComputeTempFromIntEnergy_Lookup'
-        WRITE(*,'(A6,A20,ES10.4E2,A9,ES10.4E2)') &
-          '', 'No Root Between T = ', ptsT(1), ' and T = ', ptsT(nPtsE)
-        WRITE(*,*)
-        WRITE(*,*) '  nPtsE = ', nPtsE
-        WRITE(*,*) '  ptsE  = ', ptsE
-        WRITE(*,*) '    ia  = ', ilEa
-        WRITE(*,*) '    ib  = ', ilEb
-        WRITE(*,*) '    Ta  = ', T_Table(ilEa)
-        WRITE(*,*) '    Tb  = ', T_Table(ilEb)
-        WRITE(*,*) '    Ea  = ', ptsE(1)
-        WRITE(*,*) '    Eb  = ', ptsE(nPtsE)
-        WRITE(*,*) '     i  = ', i
-        WRITE(*,*) '     E  = ', E(i)
-        WRITE(*,*) '     D  = ', D(i)
-        WRITE(*,*) '     Y  = ', Y(i)
-        WRITE(*,*)
+        IF( Debug )THEN
+          WRITE(*,*)
+          WRITE(*,'(A4,A)') &
+            '', 'Warning: ComputeTempFromIntEnergy_Lookup'
+          WRITE(*,'(A6,A20,ES10.4E2,A9,ES10.4E2)') &
+            '', 'No Root Between T = ', ptsT(1), ' and T = ', ptsT(nPtsE)
+          WRITE(*,*)
+          WRITE(*,*) '  nPtsE = ', nPtsE
+          WRITE(*,*) '  ptsE  = ', ptsE
+          WRITE(*,*) '    ia  = ', ilEa
+          WRITE(*,*) '    ib  = ', ilEb
+          WRITE(*,*) '    Ta  = ', T_Table(ilEa)
+          WRITE(*,*) '    Tb  = ', T_Table(ilEb)
+          WRITE(*,*) '    Ea  = ', ptsE(1)
+          WRITE(*,*) '    Eb  = ', ptsE(nPtsE)
+          WRITE(*,*) '     i  = ', i
+          WRITE(*,*) '     E  = ', E(i)
+          WRITE(*,*) '     D  = ', D(i)
+          WRITE(*,*) '     Y  = ', Y(i)
+          WRITE(*,*)
+        END IF
 
         ! --- Reset Energy Density ---
 
-        tmpE = 0.5 * ( ptsE(1) + ptsE(nPtsE) )
+        IF( E(i) < ptsE(1) .AND. E(i) < ptsE(nPtsE) )THEN
+
+          tmpE = 0.5 * ( ptsE(1) + ptsE(2) )
+
+        ELSE
+
+          tmpE = 0.5 * ( ptsE(nPtsE-1) + ptsE(nPtsE) )
+
+        END IF
 
         Error = 1
 
@@ -1788,7 +1800,7 @@ CONTAINS
                      * LOG10( (tmpE+Offset)/(ptsE(ilE)+Offset) ) &
                        / LOG10( (ptsE(ilE+1)+Offset)/(ptsE(ilE)+Offset) ) )
 
-      IF( Error == 1 )THEN
+      IF( Error == 1 .AND. Debug )THEN
         WRITE(*,*)
         WRITE(*,*) '  T = ', T(i)
         WRITE(*,*)
@@ -2110,6 +2122,102 @@ CONTAINS
   DEALLOCATE( pressure_array, rhobuff, yebuff )
 
   END SUBROUTINE ComputeTempFromPressure
+
+
+  SUBROUTINE ComputeTempFromPressure_Bisection &
+    ( D, P, Y, D_table, T_table, Y_table, LogInterp, P_table, Offset, T )
+
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: P
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: D_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: T_table
+    REAL(dp), DIMENSION(:),     INTENT(in)  :: Y_table
+    INTEGER,  DIMENSION(3),     INTENT(in)  :: LogInterp
+    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: P_table
+    REAL(dp),                   INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:),     INTENT(out) :: T
+
+    LOGICAL  :: Converged
+    INTEGER  :: i, Iter
+    INTEGER,  PARAMETER :: MaxIter = 128
+    REAL(DP), PARAMETER :: Tol = 1.0d-10
+    REAL(dp), DIMENSION(1) :: a, b, c, ab, P_a, P_b, P_c, f_a, f_b, f_c
+
+    DO i = 1, SIZE( D )
+
+      a = T_table(1)
+      CALL LogInterpolateSingleVariable &
+             ( [ D(i) ] , a, [ Y(i) ], D_table, T_table, Y_table, &
+               LogInterp, Offset, P_table, P_a )
+      f_a = P(i) - P_a
+
+      b = T_table(SIZE(T_table))
+      CALL LogInterpolateSingleVariable &
+             ( [ D(i) ] , b, [ Y(i) ], D_table, T_table, Y_table, &
+               LogInterp, Offset, P_table, P_b )
+      f_b = P(i) - P_b
+
+      IF( ALL( f_a*f_b > 0.0_dp ) )THEN
+        WRITE(*,*)
+        WRITE(*,'(A4,A)') &
+          '', 'Warning: ComputeTempFromPressure_Bisection'
+        WRITE(*,'(A6,A27,ES10.4E2,A9,ES10.4E2)') &
+          '', 'No Unique Root Between T = ', a, ' and T = ', b
+        WRITE(*,'(A6,A6,ES10.4E2)') '', 'P_a = ', P_a
+        WRITE(*,'(A6,A6,ES10.4E2)') '', 'P_i = ', P(i)
+        WRITE(*,'(A6,A6,ES10.4E2)') '', 'P_b = ', P_b
+        WRITE(*,*)
+      END IF
+
+      ab = b - a
+
+      Converged = .FALSE.
+      Iter      = 0
+      DO WHILE ( .NOT. Converged )
+
+        Iter = Iter + 1
+
+        ab = 0.5_dp * ab
+        c  = a + ab
+
+        CALL LogInterpolateSingleVariable &
+               ( [ D(i) ] , c, [ Y(i) ], D_table, T_table, Y_table, &
+                 LogInterp, Offset, P_table, P_c )
+
+        f_c = P(i) - P_c
+
+        IF( ALL( f_a * f_c < 0.0_dp ) )THEN
+
+          b   = c
+          f_b = f_c
+
+        ELSE
+
+          a   = c
+          f_a = f_c
+
+        END IF
+
+        IF( ALL( ABS( f_c ) / P(i) < Tol ) .OR. ALL( ab / a < Tol ) ) &
+          Converged = .TRUE.
+
+        IF( Iter > MaxIter )THEN
+          WRITE(*,*)
+          WRITE(*,'(A4,A)') &
+            '', 'ComputeTempFromPressure_Bisection'
+          WRITE(*,'(A6,A21,I4.4,A11)') &
+            '', 'No Convergence After ', Iter, ' Iterations'
+          WRITE(*,*)
+        END IF
+
+      END DO
+
+      T(i) = c(1)
+
+    END DO
+
+  END SUBROUTINE ComputeTempFromPressure_Bisection
 
 
   SUBROUTINE EOSTableQuery &
