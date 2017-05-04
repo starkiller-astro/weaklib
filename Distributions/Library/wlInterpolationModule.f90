@@ -413,62 +413,73 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
 
     INTEGER :: &
-      i, j, k, il1, il2, il3, il4
+      i, j, k, il1, il2, il3, il4, &
+      SizeC1, SizeC2, SizeC3, SizeC4, &
+      SizeX1, SizeX2, SizeX3
     REAL(dp), DIMENSION(4) :: &
       alpha, delta
     REAL(dp) :: &
       p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
-    DO k = 1, SIZE( x3 )
+    SizeX1 = SIZE( x1 )
+    SizeX2 = SIZE( x2 )
+    SizeX3 = SIZE( x3 )
+
+    SizeC1 = SIZE( Coordinate1 )
+    SizeC2 = SIZE( Coordinate2 )
+    SizeC3 = SIZE( Coordinate3 )
+    SizeC4 = SIZE( Coordinate4 )
+
+    DO k = 1, SizeX3
 
       IF ( LogInterp(3) == 1 ) THEN
-        il3 = Index1D_Log( x3(k), Coordinate3, SIZE( Coordinate3 ) )
+        il3 = Index1D_Log( x3(k), Coordinate3, SizeC3 )
         delta(3) &
           = LOG10( x3(k) / Coordinate3(il3) ) &
             / LOG10( Coordinate3(il3+1) / Coordinate3(il3) )
       ELSE
-        il3 = Index1D_Lin( x3(k), Coordinate3, SIZE( Coordinate3 ) )
+        il3 = Index1D_Lin( x3(k), Coordinate3, SizeC3 )
         delta(3) &
           = ( x3(k) - Coordinate3(il3) ) &
             / ( Coordinate3(il3+1) - Coordinate3(il3) )
       END IF
 
       IF ( LogInterp(4) == 1 ) THEN
-        il4 = Index1D_Log( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
+        il4 = Index1D_Log( x4(k), Coordinate4, SizeC4 ) 
         delta(4) &
           = LOG10( x4(k) / Coordinate4(il4) ) &
             / LOG10( Coordinate4(il4+1) / Coordinate4(il4) )
       ELSE
-        il4 = Index1D_Lin( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
+        il4 = Index1D_Lin( x4(k), Coordinate4, SizeC4 ) 
         delta(4) &
           = ( x4(k) - Coordinate4(il4) ) &
             / ( Coordinate4(il4+1) - Coordinate4(il4) )
       END IF
              
-      DO j = 1, SIZE( x2 )
+      DO j = 1, SizeX2
 
         IF ( LogInterp(2) == 1 ) THEN
-          il2 = Index1D_Log( x2(j), Coordinate2, SIZE( Coordinate2 ) )
+          il2 = Index1D_Log( x2(j), Coordinate2, SizeC2 )
           delta(2) &
             = LOG10( x2(j) / Coordinate2(il2) ) &
               / LOG10( Coordinate2(il2+1) / Coordinate2(il2) )
         ELSE
-          il2 = Index1D_Lin( x2(j), Coordinate2, SIZE( Coordinate2 ) )
+          il2 = Index1D_Lin( x2(j), Coordinate2, SizeC2 )
           delta(2) &
             = ( x2(j) - Coordinate2(il2) ) &
               / ( Coordinate2(il2+1) - Coordinate2(il2) )
         END IF
 
-        DO i = 1, SIZE( x1 )
+        DO i = 1, SizeX1
 
           IF ( LogInterp(1) == 1 ) THEN
-            il1 = Index1D_Log( x1(i), Coordinate1, SIZE( Coordinate1 ) )
+            il1 = Index1D_Log( x1(i), Coordinate1, SizeC1 )
             delta(1) &
               = LOG10( x1(i) / Coordinate1(il1) ) &
                 / LOG10( Coordinate1(il1+1) / Coordinate1(il1) )
           ELSE
-            il1 = Index1D_Lin( x1(i), Coordinate1, SIZE( Coordinate1 ) )
+            il1 = Index1D_Lin( x1(i), Coordinate1, SizeC1 )
             delta(1) &
               = ( x1(i) - Coordinate1(il1) ) &
                 / ( Coordinate1(il1+1) - Coordinate1(il1) )
@@ -501,11 +512,13 @@ CONTAINS
       END DO ! j
     END DO ! k
 
-    DO k = 1,SIZE( x3 )
-      DO j = 1, SIZE( x2 )
-        DO i = 1, SIZE( x1 )
+    DO k = 1,SizeX3
+      DO j = 1, SizeX2
+        DO i = 1, SizeX1
+
           Interpolant(i,j,k) &
             = 10.d0**( Interpolant(i,j,k) ) - Offset
+
         END DO ! i
       END DO ! j
     END DO ! k
