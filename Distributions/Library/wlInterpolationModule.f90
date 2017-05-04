@@ -1716,7 +1716,7 @@ CONTAINS
     REAL(dp),                   INTENT(in)  :: Offset
     REAL(dp), DIMENSION(:),     INTENT(out) :: T
 
-    LOGICAL, PARAMETER :: Debug = .FALSE.
+    LOGICAL, PARAMETER :: Debug = .TRUE.
     INTEGER  :: i, Error
     INTEGER  :: ilD, ilY, ilE, ilE1, ilE2, ilE3, ilE4, ilEa, ilEb
     INTEGER  :: nPtsE
@@ -1774,6 +1774,7 @@ CONTAINS
           WRITE(*,*) '     D  = ', D(i)
           WRITE(*,*) '     Y  = ', Y(i)
           WRITE(*,*)
+          STOP
         END IF
 
         ! --- Reset Energy Density ---
