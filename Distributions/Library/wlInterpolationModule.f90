@@ -23,6 +23,7 @@ MODULE wlInterpolationModule
   PUBLIC :: EOSTableQuery
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_2D2D
+  PUBLIC :: LinInterpolateSingleVariable_2D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -417,7 +418,7 @@ CONTAINS
       SizeC1, SizeC2, SizeC3, SizeC4, &
       SizeX1, SizeX2, SizeX3
     REAL(dp), DIMENSION(4) :: &
-      alpha, delta
+      delta
     REAL(dp) :: &
       p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
@@ -523,7 +524,88 @@ CONTAINS
       END DO ! j
     END DO ! k
 
-  END SUBROUTINE LogInterpolateSingleVariable_2D2D 
+  END SUBROUTINE LogInterpolateSingleVariable_2D2D
+
+
+  SUBROUTINE LinInterpolateSingleVariable_2D2D &
+               ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
+                 Coordinate4, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: x4
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate4
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
+
+    INTEGER :: &
+      i, j, k, il1, il2, il3, il4
+    REAL(dp), DIMENSION(4) :: &
+      delta
+    REAL(dp) :: &
+      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+
+    DO k = 1, SIZE( x3 )
+
+      il3 = Index1D( x3(k), Coordinate3, SIZE( Coordinate3 ) )
+      delta(3) &
+        = ( x3(k) - Coordinate3(il3) ) &
+            / ( Coordinate3(il3+1) - Coordinate3(il3) )
+
+      il4 = Index1D( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
+      delta(4) &
+        = ( x4(k) - Coordinate4(il4) ) &
+            / ( Coordinate4(il4+1) - Coordinate4(il4) )
+
+      DO j = 1, SIZE( x2 )
+
+         il2 = Index1D( x2(j), Coordinate2, SIZE( Coordinate2 ) )
+         delta(2) &
+           = ( x2(j) - Coordinate2(il2) ) &
+               / ( Coordinate2(il2+1) - Coordinate2(il2) )
+
+         DO i = 1, SIZE( x1 )
+
+           il1 = Index1D( x1(i), Coordinate1, SIZE( Coordinate1 ) )
+           delta(1) &
+             = ( x1(i) - Coordinate1(il1) ) &
+                 / ( Coordinate1(il1+1) - Coordinate1(il1) )
+
+           p0000 = ( Table( il1  , il2  , il3  , il4   ) )
+           p0001 = ( Table( il1  , il2  , il3  , il4+1 ) )
+           p0010 = ( Table( il1  , il2  , il3+1, il4   ) )
+           p0011 = ( Table( il1  , il2  , il3+1, il4+1 ) )
+           p0100 = ( Table( il1  , il2+1, il3  , il4   ) )
+           p0101 = ( Table( il1  , il2+1, il3  , il4+1 ) )
+           p0110 = ( Table( il1  , il2+1, il3+1, il4   ) )
+           p0111 = ( Table( il1  , il2+1, il3+1, il4+1 ) )
+           p1000 = ( Table( il1+1, il2  , il3  , il4   ) )
+           p1001 = ( Table( il1+1, il2  , il3  , il4+1 ) )
+           p1010 = ( Table( il1+1, il2  , il3+1, il4   ) )
+           p1011 = ( Table( il1+1, il2  , il3+1, il4+1 ) )
+           p1100 = ( Table( il1+1, il2+1, il3  , il4   ) )
+           p1101 = ( Table( il1+1, il2+1, il3  , il4+1 ) )
+           p1110 = ( Table( il1+1, il2+1, il3+1, il4   ) )
+           p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) )
+
+           Interpolant(i,j,k) &
+             = TetraLinear &
+                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                  delta(1), delta(2), delta(3), delta(4) )
+
+         END DO
+
+      END DO
+
+    END DO
+
+  END SUBROUTINE LinInterpolateSingleVariable_2D2D
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
