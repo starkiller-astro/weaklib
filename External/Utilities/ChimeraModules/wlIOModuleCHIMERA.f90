@@ -16,8 +16,8 @@ MODULE wlIOModuleCHIMERA
   USE wlExtEOSWrapperModule, ONLY: wlGetElectronEOS, wlGetFullEOS
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  USE sfho_frdm_composition_module
-  !USE sfhx_frdm_composition_module
+  !USE sfho_frdm_composition_module
+  USE sfhx_frdm_composition_module
   !USE dd2_frdm_composition_module
   !USE iuf_roca_composition_module
   !USE fsg_roca_composition_module
@@ -129,6 +129,8 @@ CONTAINS
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
+    BCKTableSwitch = 1
+
 write(*,*) 'hdf5 table opened'
 
     datasize1d(1) = 1
@@ -155,16 +157,23 @@ write (*,*) 'nVariables', nVariables
 
     nPointsBCK(1) = nPoints(1)
     nPointsBCK(2) = nPoints(2)
-    nPointsBCK(3) = nPoints(3) + 40
+    IF ( BCKTableSwitch == 1 ) THEN
+      nPointsBCK(3) = nPoints(3) + 40
+      write (*,*) 'Expanded table range', nPointsBCK
+    ELSE
+      nPointsBCK(3) = nPoints(3)
+      write (*,*) 'Standard table range', nPoints
+    END IF
 
-write (*,*) 'nPointsBCK', nPointsBCK
-
-    !CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
-    CALL AllocateEquationOfStateTable( EOSTable, nPointsBCK , nVariables )
-write (*,*) 'Expanded EOSTable allocated'
-!write (*,*) 'EOSTable allocated'
-    
-    EOSTable % MD % IDTag = 'wl-EOS-SFHo+HiYeBCK-25-50-100, 5-10-17  '
+    IF ( BCKTableSwitch == 1 ) THEN
+      CALL AllocateEquationOfStateTable( EOSTable, nPointsBCK , nVariables )
+      write (*,*) 'Expanded EOSTable allocated'
+    ELSE
+      CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+      write (*,*) 'Standard EOSTable allocated'
+    END IF
+ 
+    EOSTable % MD % IDTag = 'wl-EOS-SFHx+HiYeBCK-25-50-100, 5-11-17  '
     EOSTable % MD % TableResolution = '25 pts/dec rho, 50 pts/dec, delta ye = .01'
     EOSTable % MD % NucEOSLink = 'Nuc EOS Paper Link'
     EOSTable % MD % LeptonEOSLink = 'Lepton EOS Paper Link'
@@ -204,11 +213,13 @@ write (*,*) 'Buffers read'
     DO i = 0, nPoints(3) - 1
       EOSTable % TS % States(3) % Values(i+1) = yq(i) 
     END DO
-
-    DO i = nPoints(3) + 1, nPointsBCK(3)
-      EOSTable % TS % States(3) % Values(i) = (1.0d-02)*i
+    
+    IF ( BCKTableSwitch == 1 ) THEN
+      DO i = nPoints(3) + 1, nPointsBCK(3)
+        EOSTable % TS % States(3) % Values(i) = (1.0d-02)*i
 write (*,*) 'ye', EOSTable % TS % States(3) % Values(i), i
-    END DO
+      END DO
+    END IF
 !-----------------------------------------------------------
 ! Now that we've written the TS data, we need to fill in the
 ! additional TS metadata, like names, min/max, etc. 
@@ -512,9 +523,9 @@ write(*,*), "yav DV filled"
       END DO
     END DO
 
-write(*,*) "starting bck loop"
+  IF ( BCKTableSwitch == 1 ) THEN 
+ write(*,*) "starting bck loop"
 
-    !DO k = nPoints(3) + 1, nPointsBCK(3)
     DO k = nPointsBCK(3), nPoints(3) + 1, -1
       DO j = 1, nPoints(2)
         DO i = 1, nPoints(1)
@@ -627,6 +638,7 @@ write(*,*) "starting bck loop"
     END DO
   END DO
 write(*,*) 'BCK loop finished'
+END IF
 
 write (*,*) 'nPoints', nPoints
     DO k = 1, nPoints(3) 
@@ -833,7 +845,7 @@ write(*,*) 'binding energy block complete'
       END DO
     END DO
 
-!write(*,*) "starting sfhx-bck merge loop"
+IF ( BCKTableSwitch == 1) THEN
 write(*,*) "starting sfho-bck merge loop"
 !
     k = 60!nPoints(3) 
@@ -903,34 +915,6 @@ write(*,*) 'P-SFHo, P-BCK', pressbuff, press
         END DO
   
 
-!              EOSTable % DV % Variables(1) % Values(i,j,k) &
-!              = (EOSTable % DV % Variables(1) % Values(i,j,k) + press)/2
-!              EOSTable % DV % Variables(2) % Values(i,j,k) &
-!              = (EOSTable % DV % Variables(2) % Values(i,j,k) + entrop)/2
-!              EOSTable % DV % Variables(3) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(3) % Values(i,j,k) + energ)/2
-!              EOSTable % DV % Variables(4) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(4) % Values(i,j,k) + chem_e)/2
-!              EOSTable % DV % Variables(5) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(5) % Values(i,j,k) + chem_p)/2
-!              EOSTable % DV % Variables(6) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(6) % Values(i,j,k) + chem_n)/2
-!              EOSTable % DV % Variables(7) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(7) % Values(i,j,k) + xn_prot)/2
-!              EOSTable % DV % Variables(8) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(8) % Values(i,j,k) + xn_neut)/2
-!              EOSTable % DV % Variables(9) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(9) % Values(i,j,k) + xn_alpha)/2
-!              EOSTable % DV % Variables(10) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(10) % Values(i,j,k) + xn_heavy)/2
-!              EOSTable % DV % Variables(11) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(11) % Values(i,j,k) + z_heavy)/2
-!              EOSTable % DV % Variables(12) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(12) % Values(i,j,k) + a_heavy)/2
-!              EOSTable % DV % Variables(13) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(13) % Values(i,j,k) + be_heavy)/2
-!              EOSTable % DV % Variables(14) % Values(i,j,k) &               
-!              =(EOSTable % DV % Variables(14) % Values(i,j,k) + thermalenergy)/2
     k = 60!nPoints(3) 
     DO j = 1, nPoints(2)
       DO i = 1, nPoints(1)
@@ -989,8 +973,6 @@ write(*,*) 'P-SFHo, P-BCK', pressbuff, press
               EOSTable % DV % Variables(15) % Values(i,j,k) &
               = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
                     * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
-
-
           END IF
       END DO
     END DO
@@ -999,7 +981,7 @@ write(*,*) 'P-SFHo, P-BCK', pressbuff, press
 
 
 write(*,*) 'SFHo-BCK merge loop finished'
-!write(*,*) 'SFHx-BCK merge loop finished'
+END IF
 
     DO l = 1, EOSTable % nVariables
       EOSTable % DV % minValues(l) = MINVAL( EOSTable % DV % Variables(l) % Values )
