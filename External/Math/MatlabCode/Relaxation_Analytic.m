@@ -1,9 +1,9 @@
 clear all
 close all
 
-Model = '001';
+Model = '004';
 
-FileName = [ 'Relaxation_Analytic_' Model '.mat' ];
+FileName = [ 'Relaxation_Analytic_dt_1m7_' Model '.mat' ];
 
 N_g = 40; % Number of Energy Groups
 [ eC, dV, R_In, R_Out, N_Eq ] = InitializeNES( Model, N_g );
@@ -12,8 +12,9 @@ N_g = 40; % Number of Energy Groups
 R_In_H  = R_In  * diag( dV );
 R_Out_H = R_Out * diag( dV );
 
-N_t   = 601;
-Time  = logspace( -10, -3, N_t );
+N_t   = 10001;
+Time = linspace(0.0, 1.0E-3, N_t)';
+% Time  = logspace( -10, -3, N_t );
 
 %
 % Gaussian Initial Condition:

@@ -48,7 +48,7 @@ T2 = ComputeTempFromIntEnergy_Bisection...
 % Stage 3:
 RHS = L_FUN( N2, R_In, R_Out, theta, N_g ) * N2;
 Nnew = c31 .* Nold + c32 .* ( N2 + dt .* RHS );
-intEnew = c31 * intEold + c32 * ( intE2 - ( C_0 / rho ) * dt * ( W' * RHS ) / h3c3 
+intEnew = c31 * intEold + c32 * ( intE2 - ( C_0 / rho ) * dt * ( W' * RHS ) / h3c3 );
 
 % Update Temperature
 Tnew = ComputeTempFromIntEnergy_Bisection...

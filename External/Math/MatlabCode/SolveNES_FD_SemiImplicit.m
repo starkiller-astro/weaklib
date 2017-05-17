@@ -1,29 +1,31 @@
 clear all
 close all
 
-Model = '001';
+Model = '003';
 
-FileName = [ 'SemiImplicit_BackwardEuler_' Model '.mat' ];
+Method = 'PenalizationEuler';
+
+FileName = [ 'SemiImplicit_' Method '_dt_1m7_theta_0_' Model '.mat' ];
 
 N_g = 40; % Number of Energy Groups
+
 [ eC, dV, R_In, R_Out, N_Eq ] = InitializeNES( Model, N_g );
 
 % Multiply Rates with Momentum Space Volume Element:
 R_In_H  = R_In  * diag( dV );
-R_Out_H = R_Out * diag( dV );
+R_Out_H = R_Out * diag( dV ); 
 
 %
 % Computational Parameters:
 t_end  = 1.0d-4;  % [ s ]
 t      = 0.0d-0;  % [ s ]
-dt_max = 1.0d-8;  % [ s ] Maximum time step
-dt     = 1.0d-8;  % [ s ] Initial time step
+dt_max = 1.0d-7;  % [ s ] Maximum time step
+dt     = 1.0d-7;  % [ s ] Initial time step
 alpha  = 1.00;    % Factor to increase time step
 theta  = 0.0;     % Include Fermi blocking with theta = 1.0
 Tol_N  = 1.0d-14; % Tolerance for Newton iterations
-ApplyCorrection = false; % For SIRK2 method
+ApplyCorrection = true; % For SIRK2 method
 
-Method = 'BackwardEuler';
 
 %
 % Gaussian Initial Condition:
@@ -110,7 +112,7 @@ while ( not( done ) )
     done = true;
   end
 
-  if( mod(cycle, 100) == 1 )
+  if( mod(cycle, 10000) == 1 )
     disp( fprintf( '  Cycle = %d, t = %d, dt = %d, ||dN|| = %d ', cycle, t, dt, dN ) );
   end
 

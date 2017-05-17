@@ -1,6 +1,6 @@
 function [ rho, T, Y, eC, dV, R_In, R_Out, N_Eq, int_E ] = InitializeNES_Interp_rhoTYe...
     ( Model, N_g, E1D, D1D, T1D, Y1D, Eta1D, Op, OpOS, ecmpTable, ecmpOS, ...
-      intETable, intEOS)
+      intETable, intEOS, chemmuTable, chemmuOS)
 
 %
 %  Energy Bin Centers:
@@ -48,6 +48,10 @@ switch Model
         N_Eq = 1.0;
 end
 
+T = TMeV/kmev;
+
+N_eq = Update_Neq_FD( rho, T, Y, D1D, T1D, Y1D, chemmuTable, chemmuOS, eC);
+
 % NES in Rates:
 R = ComputeNesRate...
     (eC, eC, rho, TMeV/kmev, Y, E1D, D1D, T1D, Y1D,...
@@ -57,8 +61,6 @@ R_In  = R;
 R_Out = R';
 
 int_E = interpolateEos( rho, TMeV/kmev, Y, D1D, T1D, Y1D, intETable, intEOS); %[erg per gram]
-
-T = TMeV/kmev;
 
 end
 
