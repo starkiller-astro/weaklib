@@ -44,7 +44,7 @@ end
 
 T = TMeV/kmev;
 
-N_eq = Update_Neq_FD( rho, T, Y, D1D, T1D, Y1D, chemmuTable, chemmuOS, eC);
+N_Eq = Update_Neq_FD( rho, T, Y, D1D, T1D, Y1D, chemmuTable, chemmuOS, eC);
 
 % NES in Rates:
 R = ComputeNesRate...
