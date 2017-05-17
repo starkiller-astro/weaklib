@@ -112,7 +112,7 @@ while ( not( done ) )
     done = true;
   end
 
-  if( mod(cycle, 10000) == 1 )
+  if( mod(cycle, 100) == 1 )
     disp( fprintf( '  Cycle = %d, t = %d, dt = %d, ||dN|| = %d ', cycle, t, dt, dN ) );
   end
 

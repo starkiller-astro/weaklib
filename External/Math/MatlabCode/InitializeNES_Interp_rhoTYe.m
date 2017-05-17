@@ -22,28 +22,22 @@ switch Model
         rho = 1.1E14; % g/cm^3
         TMeV = 21.0;  % MeV
         Y    = 0.25;
-        N_Eq = 1.0 ./ ( exp( (eC-145.254)./20.5399 ) + 1.0 );
-        
     case '002'
         rho = 1.1E13; % g/cm^3
         TMeV = 16.0;  % MeV
         Y    = 0.14;
-        N_Eq = 1.0 ./ ( exp( (eC-045.835)./15.9751 ) + 1.0 );
     case '003'
         rho = 1.2E12; % g/cm^3
         TMeV = 7.7;  % MeV
         Y    = 0.12;
-        N_Eq = 1.0 ./ ( exp( (eC-020.183)./07.7141 ) + 1.0 );
     case '004'
         rho = 1.2E11; % g/cm^3
         TMeV = 7.6;  % MeV
         Y    = 0.15;
-        N_Eq = 1.0 ./ ( exp( (eC-009.118)./07.5830 ) + 1.0 );
     case '005'
         rho = 1.2E10; % g/cm^3
         TMeV = 3.1;  % MeV
         Y    = 0.26;
-        N_Eq = 1.0 ./ ( exp( (eC-003.886)./03.1448 ) + 1.0 );
     otherwise
         N_Eq = 1.0;
 end
