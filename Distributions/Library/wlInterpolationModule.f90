@@ -24,7 +24,6 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
-  PUBLIC :: LinInterpolateSingleVariable_2D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -530,7 +529,7 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom &
                ( LogX1, LogX2, LogX3, LogX4, LogCoordsX1, LogCoordsX2, &
-                 LogCoordsX3, LogCoordsX4, Table, Interpolant )
+                 LogCoordsX3, LogCoordsX4, Offset, Table, Interpolant )
 
     REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX1
     REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX2
@@ -540,13 +539,15 @@ CONTAINS
     REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX2
     REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX3
     REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX4
+    REAL(dp),                     INTENT(in)  :: Offset
     REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
     REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
 
-    INTEGER                 :: i, j, k, l, iX1, iX2, iX3, iX4
-    REAL(dp)                :: TMP
-    REAL(dp), DIMENSION(4)  :: dX, ddX
-    REAL(dp), DIMENSION(16) :: W, V
+    INTEGER                 :: i, j, k
+    INTEGER                 :: iX1, iX2, iX3, iX4
+    INTEGER                 :: p1, p2, p3, p4
+    REAL(dp), DIMENSION(4)  :: dX
+    REAL(dp), DIMENSION(0:1,0:1,0:1,0:1) :: p
 
     DO k = 1, SIZE( LogX3 )
 
@@ -555,16 +556,12 @@ CONTAINS
       dX(4) &
         = ( LogX4(k) - LogCoordsX4(iX4) ) &
             / ( LogCoordsX4(iX4+1) - LogCoordsX4(iX4) )
-      ddX(4) &
-        = 1.0_dp - dX(4)
 
       iX3 &
         = Index1D_Lin( LogX3(k), LogCoordsX3, SIZE( LogCoordsX3 ) )
       dX(3) &
         = ( LogX3(k) - LogCoordsX3(iX3) ) &
             / ( LogCoordsX3(iX3+1) - LogCoordsX3(iX3) )
-      ddX(3) &
-        = 1.0_dp - dX(3)
 
       DO j = 1, SIZE( LogX2 )
 
@@ -573,8 +570,6 @@ CONTAINS
         dX(2) &
           = ( LogX2(j) - LogCoordsX2(iX2) ) &
               / ( LogCoordsX2(iX2+1) - LogCoordsX2(iX2) )
-        ddX(2) &
-          = 1.0_dp - dX(2)
 
         DO i = 1, SIZE( LogX1 )
 
@@ -583,138 +578,35 @@ CONTAINS
           dX(1) &
             = ( LogX1(i) - LogCoordsX1(iX1) ) &
                 / ( LogCoordsX1(iX1+1) - LogCoordsX1(iX1) )
-          ddX(1) &
-            = 1.0_dp - dX(1)
 
-          V(1)  = Table( iX1  , iX2  , iX3  , iX4   )
-          V(2)  = Table( iX1  , iX2  , iX3  , iX4+1 )
-          V(3)  = Table( iX1  , iX2  , iX3+1, iX4   )
-          V(4)  = Table( iX1  , iX2  , iX3+1, iX4+1 )
-          V(5)  = Table( iX1  , iX2+1, iX3  , iX4   )
-          V(6)  = Table( iX1  , iX2+1, iX3  , iX4+1 )
-          V(7)  = Table( iX1  , iX2+1, iX3+1, iX4   )
-          V(8)  = Table( iX1  , iX2+1, iX3+1, iX4+1 )
-          V(9)  = Table( iX1+1, iX2  , iX3  , iX4   )
-          V(10) = Table( iX1+1, iX2  , iX3  , iX4+1 )
-          V(11) = Table( iX1+1, iX2  , iX3+1, iX4   )
-          V(12) = Table( iX1+1, iX2  , iX3+1, iX4+1 )
-          V(13) = Table( iX1+1, iX2+1, iX3  , iX4   )
-          V(14) = Table( iX1+1, iX2+1, iX3  , iX4+1 )
-          V(15) = Table( iX1+1, iX2+1, iX3+1, iX4   )
-          V(16) = Table( iX1+1, iX2+1, iX3+1, iX4+1 )
+          DO p4 = 0, 1
+            DO p3 = 0, 1
+              DO p2 = 0, 1
+                DO p1 = 0, 1
 
-          W(1)  = ddX(4)*ddX(3)*ddX(2)*ddX(1)
-          W(2)  =  dX(4)*ddX(3)*ddX(2)*ddX(1)
-          W(3)  = ddX(4)* dX(3)*ddX(2)*ddX(1)
-          W(4)  =  dX(4)* dX(3)*ddX(2)*ddX(1)
-          W(5)  = ddX(4)*ddX(3)* dX(2)*ddX(1)
-          W(6)  =  dX(4)*ddX(3)* dX(2)*ddX(1)
-          W(7)  = ddX(4)* dX(3)* dX(2)*ddX(1)
-          W(8)  =  dX(4)* dX(3)* dX(2)*ddX(1)
-          W(9)  = ddX(4)*ddX(3)*ddX(2)* dX(1)
-          W(10) =  dX(4)*ddX(3)*ddX(2)* dX(1)
-          W(11) = ddX(4)* dX(3)*ddX(2)* dX(1)
-          W(12) =  dX(4)* dX(3)*ddX(2)* dX(1)
-          W(13) = ddX(4)*ddX(3)* dX(2)* dX(1)
-          W(14) =  dX(4)*ddX(3)* dX(2)* dX(1)
-          W(15) = ddX(4)* dX(3)* dX(2)* dX(1)
-          W(16) =  dX(4)* dX(3)* dX(2)* dX(1)
+                  p(p1,p2,p3,p4) = TABLE(iX1+p1,iX2+p2,iX3+p3,iX4+p4)
 
-          TMP = 1.0_dp
-          DO l = 1, 16
-            TMP = TMP * V(l)**W(l)
+                END DO
+              END DO
+            END DO
           END DO
 
-          Interpolant(i,j,k) = TMP
+          Interpolant(i,j,k) &
+            = TetraLinear &
+                ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
+                  p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
+                  p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
+                  p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
+                  dX(1), dX(2), dX(3), dX(4) )
+
+          Interpolant(i,j,k) &
+            = 10**( Interpolant(i,j,k) ) - Offset
 
         END DO ! i
-
       END DO ! j
-
     END DO ! k
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
-
-
-  SUBROUTINE LinInterpolateSingleVariable_2D2D &
-               ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
-                 Coordinate4, Table, Interpolant )
-
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x4
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate4
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
-    REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
-
-    INTEGER :: &
-      i, j, k, il1, il2, il3, il4
-    REAL(dp), DIMENSION(4) :: &
-      delta
-    REAL(dp) :: &
-      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
-      p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
-
-    DO k = 1, SIZE( x3 )
-
-      il3 = Index1D( x3(k), Coordinate3, SIZE( Coordinate3 ) )
-      delta(3) &
-        = ( x3(k) - Coordinate3(il3) ) &
-            / ( Coordinate3(il3+1) - Coordinate3(il3) )
-
-      il4 = Index1D( x4(k), Coordinate4, SIZE( Coordinate4 ) ) 
-      delta(4) &
-        = ( x4(k) - Coordinate4(il4) ) &
-            / ( Coordinate4(il4+1) - Coordinate4(il4) )
-
-      DO j = 1, SIZE( x2 )
-
-         il2 = Index1D( x2(j), Coordinate2, SIZE( Coordinate2 ) )
-         delta(2) &
-           = ( x2(j) - Coordinate2(il2) ) &
-               / ( Coordinate2(il2+1) - Coordinate2(il2) )
-
-         DO i = 1, SIZE( x1 )
-
-           il1 = Index1D( x1(i), Coordinate1, SIZE( Coordinate1 ) )
-           delta(1) &
-             = ( x1(i) - Coordinate1(il1) ) &
-                 / ( Coordinate1(il1+1) - Coordinate1(il1) )
-
-           p0000 = ( Table( il1  , il2  , il3  , il4   ) )
-           p0001 = ( Table( il1  , il2  , il3  , il4+1 ) )
-           p0010 = ( Table( il1  , il2  , il3+1, il4   ) )
-           p0011 = ( Table( il1  , il2  , il3+1, il4+1 ) )
-           p0100 = ( Table( il1  , il2+1, il3  , il4   ) )
-           p0101 = ( Table( il1  , il2+1, il3  , il4+1 ) )
-           p0110 = ( Table( il1  , il2+1, il3+1, il4   ) )
-           p0111 = ( Table( il1  , il2+1, il3+1, il4+1 ) )
-           p1000 = ( Table( il1+1, il2  , il3  , il4   ) )
-           p1001 = ( Table( il1+1, il2  , il3  , il4+1 ) )
-           p1010 = ( Table( il1+1, il2  , il3+1, il4   ) )
-           p1011 = ( Table( il1+1, il2  , il3+1, il4+1 ) )
-           p1100 = ( Table( il1+1, il2+1, il3  , il4   ) )
-           p1101 = ( Table( il1+1, il2+1, il3  , il4+1 ) )
-           p1110 = ( Table( il1+1, il2+1, il3+1, il4   ) )
-           p1111 = ( Table( il1+1, il2+1, il3+1, il4+1 ) )
-
-           Interpolant(i,j,k) &
-             = TetraLinear &
-                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
-                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
-                  delta(1), delta(2), delta(3), delta(4) )
-
-         END DO
-
-      END DO
-
-    END DO
-
-  END SUBROUTINE LinInterpolateSingleVariable_2D2D
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
