@@ -599,12 +599,20 @@ CONTAINS
                   p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
                   dX(1), dX(2), dX(3), dX(4) )
 
-          Interpolant(i,j,k) &
-            = 10**( Interpolant(i,j,k) ) - Offset
-
         END DO ! i
       END DO ! j
     END DO ! k
+
+    DO k = 1, SIZE( LogX3 )
+      DO j = 1, SIZE( LogX2 )
+        DO i = 1, SIZE( LogX1 )
+
+          Interpolant(i,j,k) &
+            = 10**( Interpolant(i,j,k) ) - Offset
+
+        END DO
+      END DO
+    END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
 
