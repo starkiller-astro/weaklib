@@ -584,7 +584,8 @@ CONTAINS
               DO p2 = 0, 1
                 DO p1 = 0, 1
 
-                  p(p1,p2,p3,p4) = TABLE(iX1+p1,iX2+p2,iX3+p3,iX4+p4)
+                  p(p1,p2,p3,p4) &
+                    = TABLE(iX1+p1,iX2+p2,iX3+p3,iX4+p4)
 
                 END DO
               END DO
@@ -603,16 +604,8 @@ CONTAINS
       END DO ! j
     END DO ! k
 
-    DO k = 1, SIZE( LogX3 )
-      DO j = 1, SIZE( LogX2 )
-        DO i = 1, SIZE( LogX1 )
-
-          Interpolant(i,j,k) &
-            = 10**( Interpolant(i,j,k) ) - Offset
-
-        END DO
-      END DO
-    END DO
+    Interpolant(:,:,:) &
+      = 10**( Interpolant(:,:,:) ) - Offset
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
 
