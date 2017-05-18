@@ -23,6 +23,7 @@ MODULE wlInterpolationModule
   PUBLIC :: EOSTableQuery
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_2D2D
+  PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
   PUBLIC :: LinInterpolateSingleVariable_2D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
@@ -525,6 +526,114 @@ CONTAINS
     END DO ! k
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D
+
+
+  SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom &
+               ( LogX1, LogX2, LogX3, LogX4, LogCoordsX1, LogCoordsX2, &
+                 LogCoordsX3, LogCoordsX4, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX4
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX4
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
+
+    INTEGER                 :: i, j, k, l, iX1, iX2, iX3, iX4
+    REAL(dp)                :: TMP
+    REAL(dp), DIMENSION(4)  :: dX, ddX
+    REAL(dp), DIMENSION(16) :: W, V
+
+    DO k = 1, SIZE( LogX3 )
+
+      iX4 &
+        = Index1D_Lin( LogX4(k), LogCoordsX4, SIZE( LogCoordsX4 ) )
+      dX(4) &
+        = ( LogX4(k) - LogCoordsX4(iX4) ) &
+            / ( LogCoordsX4(iX4+1) - LogCoordsX4(iX4) )
+      ddX(4) &
+        = 1.0_dp - dX(4)
+
+      iX3 &
+        = Index1D_Lin( LogX3(k), LogCoordsX3, SIZE( LogCoordsX3 ) )
+      dX(3) &
+        = ( LogX3(k) - LogCoordsX3(iX3) ) &
+            / ( LogCoordsX3(iX3+1) - LogCoordsX3(iX3) )
+      ddX(3) &
+        = 1.0_dp - dX(3)
+
+      DO j = 1, SIZE( LogX2 )
+
+        iX2 &
+          = Index1D_Lin( LogX2(j), LogCoordsX2, SIZE( LogCoordsX2 ) )
+        dX(2) &
+          = ( LogX2(j) - LogCoordsX2(iX2) ) &
+              / ( LogCoordsX2(iX2+1) - LogCoordsX2(iX2) )
+        ddX(2) &
+          = 1.0_dp - dX(2)
+
+        DO i = 1, SIZE( LogX1 )
+
+          iX1 &
+            = Index1D_Lin( LogX1(i), LogCoordsX1, SIZE( LogCoordsX1 ) )
+          dX(1) &
+            = ( LogX1(i) - LogCoordsX1(iX1) ) &
+                / ( LogCoordsX1(iX1+1) - LogCoordsX1(iX1) )
+          ddX(1) &
+            = 1.0_dp - dX(1)
+
+          V(1)  = Table( iX1  , iX2  , iX3  , iX4   )
+          V(2)  = Table( iX1  , iX2  , iX3  , iX4+1 )
+          V(3)  = Table( iX1  , iX2  , iX3+1, iX4   )
+          V(4)  = Table( iX1  , iX2  , iX3+1, iX4+1 )
+          V(5)  = Table( iX1  , iX2+1, iX3  , iX4   )
+          V(6)  = Table( iX1  , iX2+1, iX3  , iX4+1 )
+          V(7)  = Table( iX1  , iX2+1, iX3+1, iX4   )
+          V(8)  = Table( iX1  , iX2+1, iX3+1, iX4+1 )
+          V(9)  = Table( iX1+1, iX2  , iX3  , iX4   )
+          V(10) = Table( iX1+1, iX2  , iX3  , iX4+1 )
+          V(11) = Table( iX1+1, iX2  , iX3+1, iX4   )
+          V(12) = Table( iX1+1, iX2  , iX3+1, iX4+1 )
+          V(13) = Table( iX1+1, iX2+1, iX3  , iX4   )
+          V(14) = Table( iX1+1, iX2+1, iX3  , iX4+1 )
+          V(15) = Table( iX1+1, iX2+1, iX3+1, iX4   )
+          V(16) = Table( iX1+1, iX2+1, iX3+1, iX4+1 )
+
+          W(1)  = ddX(4)*ddX(3)*ddX(2)*ddX(1)
+          W(2)  =  dX(4)*ddX(3)*ddX(2)*ddX(1)
+          W(3)  = ddX(4)* dX(3)*ddX(2)*ddX(1)
+          W(4)  =  dX(4)* dX(3)*ddX(2)*ddX(1)
+          W(5)  = ddX(4)*ddX(3)* dX(2)*ddX(1)
+          W(6)  =  dX(4)*ddX(3)* dX(2)*ddX(1)
+          W(7)  = ddX(4)* dX(3)* dX(2)*ddX(1)
+          W(8)  =  dX(4)* dX(3)* dX(2)*ddX(1)
+          W(9)  = ddX(4)*ddX(3)*ddX(2)* dX(1)
+          W(10) =  dX(4)*ddX(3)*ddX(2)* dX(1)
+          W(11) = ddX(4)* dX(3)*ddX(2)* dX(1)
+          W(12) =  dX(4)* dX(3)*ddX(2)* dX(1)
+          W(13) = ddX(4)*ddX(3)* dX(2)* dX(1)
+          W(14) =  dX(4)*ddX(3)* dX(2)* dX(1)
+          W(15) = ddX(4)* dX(3)* dX(2)* dX(1)
+          W(16) =  dX(4)* dX(3)* dX(2)* dX(1)
+
+          TMP = 1.0_dp
+          DO l = 1, 16
+            TMP = TMP * V(l)**W(l)
+          END DO
+
+          Interpolant(i,j,k) = TMP
+
+        END DO ! i
+
+      END DO ! j
+
+    END DO ! k
+
+  END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
 
 
   SUBROUTINE LinInterpolateSingleVariable_2D2D &
