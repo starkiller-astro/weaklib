@@ -285,6 +285,7 @@ IF ( n_flunk == 0 ) THEN
 !-----------------------------------------------------------------------
 
 ELSE IF ( n_flunk == 1 ) THEN
+
   IF ( ye <= 0.5d0 ) THEN
 
     x_Fe              = DMAX1( ( 1.d0 - 2 * ye )/( 1.d0 - 2.d0 * ye_nnc_nse_min ), epsilon )
@@ -317,7 +318,7 @@ ELSE IF ( n_flunk == 1 ) THEN
 !   only neutrons and alphas
 !-----------------------------------------------------------------------
 
-ELSE IF ( n_flunk == 2  .and.  ye < 0.5d0 ) THEN
+ELSE IF ( n_flunk == 2   ) THEN
 
   IF ( ye < 0.5d0 ) THEN
 
@@ -543,7 +544,7 @@ ph                   = zero
 sh                   = zero
 
 b_energy             = b_sum
-b_hvy                = ( b_sum - xn_net(3) * b(3) )/( DABS( 1.d0 - xn_net(1) - xn_net(2) - xn_net(3) ) + epsilon )
+b_hvy                = SUM( xn_net(4:nnc_nse_bck) * b(4:nnc_nse_bck) ) / ( SUM(xn_net(4:nnc_nse_bck) ) + epsilon )
 eh                   = b_sum  + eh
 pd                   = d * t * a_1_sum
 ed                   = 1.5 * t * a_1_sum
