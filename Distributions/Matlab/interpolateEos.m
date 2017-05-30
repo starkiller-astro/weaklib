@@ -6,6 +6,26 @@ function [ Interpolant ] = interpolateEos( D, T, Y, D1D, T1D, Y1D, V3D, OS )
     iD = find( D1D < D(i), 1, 'last' );
     iT = find( T1D < T(i), 1, 'last' );
     iY = find( Y1D < Y(i), 1, 'last' );
+    
+    if ( size(iD,1)*size(iT,1)*size(iY,1) ~= 1 )
+        disp( 'Error in interpolateEos: Outside table boundary.' )
+        if ( size( iD, 1 ) == 0 )
+            disp( 'Density out of boundary.' )
+            disp('Replaced by the boundary.')
+            iD = 1;
+        end
+        if ( size( iT, 1 ) == 0  )
+            disp('Temperature out of boundary.')
+            disp('Replaced by the boundary.')
+            iT = 1;
+        end
+        if ( size( iY, 1 ) == 0 )
+            disp( 'Electron fraction out of boundary.' )
+            disp('Replaced by the boundary.')
+            iY = 1;
+        end
+%         break
+    end
 
     dD = log10( D(i) / D1D(iD) ) / log10( D1D(iD+1) / D1D(iD) );
     dT = log10( T(i) / T1D(iT) ) / log10( T1D(iT+1) / T1D(iT) );
