@@ -59,18 +59,10 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter, dnormNES ]...
     
     if( abs( dT / Tnew ) < Tol )
       converged = true;
-      dT
     end
-    
-    if( nIter > 1.0E5 )
-        dt
-        pause
-    end
-    
+
   end
-  
-  Tnew
-  Told
+
 % Update Nnew  
   Nnew = A \ ( Nold + dt .* ( GUN  + dC * N_Eqnew ) );
   
