@@ -1,9 +1,9 @@
-function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter ]...
+function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter, dnormNES ]...
     = Update_PenalizationMethod_T_1stOrder...
     ( Nold, N_Eqold, intEold, eC, dV, h3c3, ...
     E, rho, Told, Ye, eosD, eosT, eosY, intE_table, eosOSintE, ...
     Eta, NesR_0, NesOS, Me, eosOS,...
-    chemmuTable, chemmuOS, dt, R_In, R_Out, theta, N_g)
+    chemmuTable, chemmuOS, dt, R_In, R_Out, theta, N_g )
 
   W = eC .* dV;       % [ Energy ^ 4 ] = [ MeV ^ 4 ]
   C_0 = 1.6021773E-6; % convert MeV to erg
@@ -59,6 +59,7 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter ]...
     
     if( abs( dT / Tnew ) < Tol )
       converged = true;
+      dT
     end
     
     if( nIter > 1.0E5 )
@@ -67,7 +68,9 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter ]...
     end
     
   end
-
+  
+  Tnew
+  Told
 % Update Nnew  
   Nnew = A \ ( Nold + dt .* ( GUN  + dC * N_Eqnew ) );
   
@@ -76,5 +79,6 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter ]...
     ( eC, dV, rho, Tnew, Ye, E, eosD, eosT, eosY, ...
     Eta, NesR_0, NesOS, Me, eosOS);
 
+dnormNES = max(max( abs( R_In_H - R_In ) ./ R_In ));
 end
 
