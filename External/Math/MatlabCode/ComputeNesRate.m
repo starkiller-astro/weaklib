@@ -25,7 +25,7 @@ end
 
 % Unit Convertion cm-1 to s-1 and integral over mu'
 c  = 2.99792d+10;  % cm s-1 
-R_0 = R_0 * c * 4 * pi * 2 * pi;  
-% R_0 = R_0 * c * 4 * pi; % Should be this one 
+% R_0 = R_0 * c * 4 * pi * 2 * pi;  
+R_0 = R_0 * c * 4 * pi; % Should be this one 
 end
 
