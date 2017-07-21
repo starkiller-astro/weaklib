@@ -182,8 +182,12 @@ CONTAINS
                 A**(2.0_dp/3.0_dp) * energy**2.0     
     nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
 
-    nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
-                A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
+    IF ( xh == 0.0 ) THEN
+      nucleiTP  = 0.0 
+    ELSE
+      nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
+                  A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
+    END IF
 
     nucleonTP = ( twpi * gf )**2 / h
 
