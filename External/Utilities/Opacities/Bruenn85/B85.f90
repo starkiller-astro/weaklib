@@ -87,7 +87,7 @@ CONTAINS
 !----------------------------------------------------------------------------
 ! Stop the function if any of etapn/rop/ron is negative
 !--------------------------------------------------------------------------- 
-    IF ( ( rop < 0.0_dp ) .or. ( ron < 0.0_dp ) ) THEN
+    IF ( ( rop < zero ) .or. ( ron < zero ) ) THEN
 !    IF ( (etapn < 0.0_dp ) .or. ( rop < 0.0_dp ) .or. ( ron < 0.0_dp ) ) THEN
       WRITE(*,*)'xn - xp is ', xn - xp
       WRITE(*,*)'fexp term is ', FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp 
@@ -98,7 +98,7 @@ CONTAINS
 !-----------------------------------------------------------------------------
 !   j_nuclear(emitni) and chi_nuclear(absorni) 
 !-----------------------------------------------------------------------------
-    IF ( xheavy * npz * nhn == 0.0_dp ) THEN
+    IF ( xheavy * npz * nhn == zero ) THEN
        emitni  = 0.0_dp
       absorni  = 0.0_dp
     ELSE
@@ -119,9 +119,9 @@ CONTAINS
 !------------------------------------------------------------------
 !  Set emitnp + absornp = zero and return if both xn and xp are zero
 !------------------------------------------------------------------
-    IF ( xn == 0.0 .and. xp == 0.0 ) THEN
+    IF ( xn == zero .and. xp == zero ) THEN
       totalECapEm = emitni + absorni
-      WRITE(*,*) 'xn and xp = 0'
+      WRITE(*,*) 'xn and xp = zero'
       RETURN
     END IF
 
@@ -182,8 +182,8 @@ CONTAINS
                 A**(2.0_dp/3.0_dp) * energy**2.0     
     nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
 
-    IF ( xh == 0.0 ) THEN
-      nucleiTP  = 0.0 
+    IF ( xh == zero ) THEN
+      nucleiTP  = 0.0_dp 
     ELSE
       nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
                   A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
@@ -226,6 +226,10 @@ CONTAINS
 
     IF ( ISNAN(ESNucleonKernel_0) .or. ISNAN(ESNucleonKernel_1)  ) THEN
      WRITE(*,*) "ERROR AT B85.f90 MARK 1004 !"
+     WRITE(*,*) "etann is ", etann
+     WRITE(*,*) "etapp is ", etapp
+     WRITE(*,*) "ESNucleonKernel_0 ", ESNucleonKernel_0
+     WRITE(*,*) "ESNucleonKernel_1 ", ESNucleonKernel_1
      STOP
     END IF 
 
@@ -762,7 +766,7 @@ CONTAINS
   nn                 = xn * rho/mpG
   np                 = xp * rho/mnG
 
-  IF ( nn <= zero  .or.  np <= zero ) THEN
+  IF ( nn < zero  .or.  np < zero ) THEN
     WRITE(*,*) "ERROR! nn or np less than zero."
   END IF
 
