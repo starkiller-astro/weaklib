@@ -767,23 +767,31 @@ CONTAINS
   np                 = xp * rho/mnG
 
   IF ( nn < zero  .or.  np < zero ) THEN
-    WRITE(*,*) "ERROR! nn or np less than zero."
+    WRITE(*,*) "ERROR! nn or np less than zero." 
   END IF
 
 !-----------------------------------------------------------------------
 !  etann, etanp (analytic approximation)
 !-----------------------------------------------------------------------
+  IF ( nn == zero ) THEN
+     etann = 0.0_dp
+  ELSE
+     d_n          = nn * 1.d-39
+     efn          = ( hbarc**2/( 2.d+00 * mn ) ) &
+                       * ( 3.d+00 * pi**2 * d_n )**tthird
+     etanndgnt    = 1.5d+00 * ( kMev * T/efn )
+     etann        = nn * etanndgnt/DSQRT( 1.d+00 + etanndgnt**2 )
+  END IF
 
-  d_n          = nn * 1.d-39
-  d_p          = np * 1.d-39
-  efn          = ( hbarc**2/( 2.d+00 * mn ) ) &
-                    * ( 3.d+00 * pi**2 * d_n )**tthird
-  efp          = ( hbarc**2/( 2.d+00 * mp ) ) &
-                    * ( 3.d+00 * pi**2 * d_p )**tthird
-  etanndgnt    = 1.5d+00 * ( kMev * T/efn )
-  etappdgnt    = 1.5d+00 * ( kMev * T/efp )
-  etann        = nn * etanndgnt/DSQRT( 1.d+00 + etanndgnt**2 )
-  etapp        = np * etappdgnt/DSQRT( 1.d+00 + etappdgnt**2 )
+  IF ( np == zero ) THEN
+     etapp = 0.0_dp
+  ELSE
+     d_p          = np * 1.d-39
+     efp          = ( hbarc**2/( 2.d+00 * mp ) ) &
+                       * ( 3.d+00 * pi**2 * d_p )**tthird
+     etappdgnt    = 1.5d+00 * ( kMev * T/efp )
+     etapp        = np * etappdgnt/DSQRT( 1.d+00 + etappdgnt**2 )
+  END IF
 
   END SUBROUTINE etaxx
 
