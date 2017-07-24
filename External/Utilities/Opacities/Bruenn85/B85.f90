@@ -176,7 +176,7 @@ CONTAINS
         N     = A - Z
        Cv0    = half * ( cv_p + cv_n) 
        Cv1    = cv_p - cv_n
-     Npara    = cvel_inv**4.0 * energy**2.0 / h**3.0
+     Npara    = twpi * cvel_inv**4.0 * energy**2.0 / h**3.0
     
     nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
                 A**(2.0_dp/3.0_dp) * energy**2.0     
@@ -216,11 +216,11 @@ CONTAINS
 
     CALL etaxx( rho, T, xn, xp, etann, etapp )
 
-    ESNucleonKernel_0 = (0.5_dp) * nucleonTP * &
+    ESNucleonKernel_0 = (2.0_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
-                          etapp * ( cv_p**2 + 3.0_dp * ca_p**2) )
+                          etapp * ( cv_p**2 + 3.0_dp * ca_p**2) ) 
  
-    ESNucleonKernel_1 = (1.5_dp) * nucleonTP * &
+    ESNucleonKernel_1 = (2.0_dp / 3.0_dp) * nucleonTP * &
                         ( etann * ( cv_n**2 - ca_n**2) + &
                           etapp * ( cv_p**2 - ca_p**2) )
 
