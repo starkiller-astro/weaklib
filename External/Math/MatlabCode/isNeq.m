@@ -15,6 +15,7 @@ if ( isequal( logi, ones( N_g, 1) ) )
     disp( fprintf( 'Is N the equilibrium number density: YES' ) );
 else
     disp( fprintf( 'Is N the equilibrium number density: NO!' ) );
+    disp( fprintf( '      The maximum absolute value of L*N is   %d', max( abs( LN ) ) ) );    
 end
 
 end

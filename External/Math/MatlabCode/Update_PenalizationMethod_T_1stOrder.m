@@ -4,6 +4,9 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter, dnormNES ]...
     E, rho, Told, Ye, eosD, eosT, eosY, intE_table, eosOSintE, ...
     Eta, NesR_0, NesOS, Me, eosOS,...
     chemmuTable, chemmuOS, dt, R_In, R_Out, theta, N_g )
+% this function update N, intE, T, N_Eq, R_In_H, R_Out_H, nIter, dnormNES
+% for changeable tempereature
+% with first order penalization method and newton's method
 
   W = eC .* dV;       % [ Energy ^ 4 ] = [ MeV ^ 4 ]
   C_0 = 1.6021773E-6; % convert MeV to erg

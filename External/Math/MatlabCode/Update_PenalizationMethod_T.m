@@ -21,8 +21,6 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter ]...
 % Implicit Step:
   Nnew = ( eye( N_g ) - dt .* dC ) \ ( Nnew - dt.* dC * N_Eq );
 
-  nIter = 1;
-
 %
 % Update Specific Internal Energy
   RHS     = Nnew - Nold;
@@ -41,6 +39,6 @@ function [ Nnew, intEnew, Tnew, N_Eqnew, R_In_H, R_Out_H, nIter ]...
   N_Eqnew = Update_Neq_FD...
     ( rho, Tnew, Ye, eosD, eosT, eosY, chemTab, chemOS, eC);
 
-
+  nIter = 1;
 end
 

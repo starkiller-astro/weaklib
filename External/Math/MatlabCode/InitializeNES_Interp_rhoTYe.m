@@ -30,6 +30,7 @@ switch Model
         rho = 1.2E12; % g/cm^3
         TMeV = 7.7;  % MeV
         Y    = 0.12;
+%         N_Eq = 1.0 ./ ( exp( (eC-050.183)./07.7141 ) + 1.0 );
     case '004'
         rho = 1.2E11; % g/cm^3
         TMeV = 7.6;  % MeV
@@ -43,7 +44,7 @@ switch Model
 end
 
 T = TMeV/kmev;
-
+% 
 N_Eq = Update_Neq_FD( rho, T, Y, D1D, T1D, Y1D, chemmuTable, chemmuOS, eC);
 
 % NES in Rates:
