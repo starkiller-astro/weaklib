@@ -22,6 +22,7 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromPressure_Bisection
   PUBLIC :: EOSTableQuery
   PUBLIC :: LogInterpolateSingleVariable_1D3D
+  PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
 
@@ -396,6 +397,78 @@ CONTAINS
   END SUBROUTINE LogInterpolateSingleVariable_1D3D
 
 
+  SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom &
+               ( LogX1, LogX2, LogX3, LinX4, LogCoordsX1, LogCoordsX2, &
+                 LogCoordsX3, LinCoordsX4, Offset, Table, Interpolant )
+
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LinX4
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX1
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX2
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX3
+    REAL(dp), DIMENSION(:),       INTENT(in)  :: LinCoordsX4
+    REAL(dp),                     INTENT(in)  :: Offset
+    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolant
+
+    INTEGER :: i, j
+    INTEGER :: iX1, iX2, iX3, iX4
+    INTEGER :: p1, p2, p3, p4
+    REAL(dp), DIMENSION(4) :: dX
+    REAL(dp), DIMENSION(0:1,0:1,0:1,0:1) :: p
+
+    DO j = 1, SIZE( LogX2 )
+
+      iX4   = Index1D_Lin( LinX4(j), LinCoordsX4, SIZE( LinCoordsX4 ) )
+      dX(4) = ( LinX4(j) - LinCoordsX4(iX4) ) &
+              / ( LinCoordsX4(iX4+1) - LinCoordsX4(iX4) )
+
+      iX3   = Index1D_Lin( LogX3(j), LogCoordsX3, SIZE( LogCoordsX3 ) )
+      dX(3) = ( LogX3(j) - LogCoordsX3(iX3) ) &
+              / ( LogCoordsX3(iX3+1) - LogCoordsX3(iX3) )
+
+      iX2   = Index1D_Lin( LogX2(j), LogCoordsX2, SIZE( LogCoordsX2 ) )
+      dX(2) = ( LogX2(j) - LogCoordsX2(iX2) ) &
+              / ( LogCoordsX2(iX2+1) - LogCoordsX2(iX2) )
+
+      DO i = 1, SIZE( LogX1 )
+
+        iX1   = Index1D_Lin( LogX1(i), LogCoordsX1, SIZE( LogCoordsX1 ) )
+        dX(1) = ( LogX1(i) - LogCoordsX1(iX1) ) &
+                / ( LogCoordsX1(iX1+1) - LogCoordsX1(iX1) )
+
+        DO p4 = 0, 1
+          DO p3 = 0, 1
+            DO p2 = 0, 1
+              DO p1 = 0, 1
+
+                p(p1,p2,p3,p4) &
+                  = TABLE(iX1+p1,iX2+p2,iX3+p3,iX4+p4)
+
+              END DO
+            END DO
+          END DO
+        END DO
+
+        Interpolant(i,j) &
+          = TetraLinear &
+              ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
+                p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
+                p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
+                p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
+                dX(1), dX(2), dX(3), dX(4) )
+
+      END DO ! i
+    END DO ! j
+
+    Interpolant(:,:) &
+      = 10**( Interpolant(:,:) ) - Offset
+
+  END SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom
+
+
   SUBROUTINE LogInterpolateSingleVariable_2D2D &
                ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
                  Coordinate4, LogInterp, Offset, Table, Interpolant )
@@ -543,10 +616,10 @@ CONTAINS
     REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
     REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
 
-    INTEGER                 :: i, j, k
-    INTEGER                 :: iX1, iX2, iX3, iX4
-    INTEGER                 :: p1, p2, p3, p4
-    REAL(dp), DIMENSION(4)  :: dX
+    INTEGER :: i, j, k
+    INTEGER :: iX1, iX2, iX3, iX4
+    INTEGER :: p1, p2, p3, p4
+    REAL(dp), DIMENSION(4) :: dX
     REAL(dp), DIMENSION(0:1,0:1,0:1,0:1) :: p
 
     DO k = 1, SIZE( LogX3 )
