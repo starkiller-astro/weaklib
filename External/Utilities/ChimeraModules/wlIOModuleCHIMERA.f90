@@ -187,7 +187,7 @@ CONTAINS
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
-    UpperTableSwitch = 0 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
+    UpperTableSwitch = 2 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
     ElectronSwitch = 0   ! 0 = BCK Electron EOS, 1 = Native Compose EOS
     ClusterSwitch = 0    ! 0 = No light cluster distribution, 1 = light clusters added 
 
@@ -521,20 +521,20 @@ write (*,*) 'proton mass frac(1,1,1)', EOSTable % DV % Variables(7) % Values(1,1
 write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,1)
 
 
-    !DO k = 1, nPoints(3)
-      !DO j = 1, nPoints(2)
-        !DO i = 0, nPoints(1) - 1
-            !xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-            !xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-            !Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
-            !Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
-            !Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
-            !EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel 
-            !EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel 
-        !END DO
-      !END DO
-    !END DO
-!write (*,*) 'light cluster mass fractions added'
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+            Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
+            Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
+            Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
+            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel 
+            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel 
+        END DO
+      END DO
+    END DO
+write (*,*) 'light cluster mass fractions added'
 
 
 write(*,*), "yi DV's filled"
@@ -580,23 +580,23 @@ write(*,*), "yav read"
 write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
 write(*,*), "yav DV filled"
 
-!    DO k = 1, nPoints(3)
-!      DO j = 1, nPoints(2)
-!        DO i = 0, nPoints(1) - 1
-!            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-!            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-!            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
-!            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
+            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
 !             
-!            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
-!
-!            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
-!            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
-!            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
-!            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
-!        END DO
-!      END DO
-!    END DO
+            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
+
+            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
+            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
+            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
+            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
+        END DO
+      END DO
+    END DO
 
   IF ( UpperTableSwitch == 1 ) THEN 
  write(*,*) "starting bck loop"
@@ -805,8 +805,8 @@ write (*,*) 'nPoints', nPoints
 !end do
 !STOP
 
-    BindingTableSwitch = 1 
-    !BindingTableSwitch = 0 
+    !BindingTableSwitch = 1 
+    BindingTableSwitch = 0 
 
 write(*,*) 'starting binding table loops'
     IF ( BindingTableSwitch == 0 ) THEN 
@@ -1315,23 +1315,23 @@ IF ( ClusterSwitch == 1 ) THEN
 write (*,*) 'light cluster mass fractions added'
 END IF
 
-    DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
-        DO i = 0, nPoints(1) - 1
-            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
-            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
-
-            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
-
-            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
-            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
-            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
-            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
-        END DO
-      END DO
-    END DO
+!    DO k = 1, nPoints(3)
+!      DO j = 1, nPoints(2)
+!        DO i = 0, nPoints(1) - 1
+!            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+!            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+!            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
+!            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
+!
+!            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
+!
+!            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
+!            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
+!            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
+!            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
+!        END DO
+!      END DO
+!    END DO
 
     DO l = 1, EOSTable % nVariables
       EOSTable % DV % minValues(l) = MINVAL( EOSTable % DV % Variables(l) % Values )
