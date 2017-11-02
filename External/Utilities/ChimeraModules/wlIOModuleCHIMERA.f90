@@ -16,11 +16,12 @@ MODULE wlIOModuleCHIMERA
   USE wlExtEOSWrapperModule, ONLY: wlGetElectronEOS, wlGetFullEOS
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  !USE sfho_frdm_composition_module
-  USE sfhx_frdm_composition_module
+  USE sfho_frdm_composition_module
+  !USE sfhx_frdm_composition_module
   !USE dd2_frdm_composition_module
   !USE iuf_roca_composition_module
   !USE fsg_roca_composition_module
+  !USE nl3_lala_composition_module
 
   implicit none
 
@@ -29,8 +30,58 @@ MODULE wlIOModuleCHIMERA
   PUBLIC ReadCHIMERAHDF
   PUBLIC ReadComposeTableHDF
   PUBLIC ReadSCTableHDF
+  PUBLIC ExtrapolateTable
 
 CONTAINS
+  
+  SUBROUTINE ExtrapolateTable( yebuff, dvbuff, newye, newdv )
+! takes in 3 (ye, Value) triplets, and one extrapolation Ye, and gives back 
+! extrapolated value
+! solving the matrix equation A*x=b using LAPACK
+! declarations, notice single precision
+    REAL(dp), DIMENSION(3,3) ::     A!A(3,3)
+    REAL(dp), DIMENSION(3)   ::     b!b(3)
+    REAL(dp), DIMENSION(3)   ::     x!b(3)
+    REAL(dp), DIMENSION(3), INTENT(in)   ::     yebuff
+    REAL(dp), DIMENSION(3), INTENT(in)   ::     dvbuff
+    !REAL(dp), INTENT(in)   ::     newye
+    REAL(dp), DIMENSION(39), INTENT(in)   ::     newye
+    !REAL(dp), INTENT(out)   ::    newdv 
+    REAL(dp), DIMENSION(39), INTENT(out)   ::    newdv 
+    INTEGER :: i, j, ok
+    INTEGER, DIMENSION(3) :: pivot    
+! define matrix A
+    A(1,1)=(yebuff(1))**2
+    A(1,2)=yebuff(1)
+    A(1,3)= 1.0d0
+    A(2,1)=(yebuff(2))**2
+    A(2,2)=yebuff(2)
+    A(2,3)= 1.0d0
+    A(3,1)=(yebuff(3))**2
+    A(3,2)=yebuff(3)
+    A(3,3)= 1.0d0
+! define vector b, make b a matrix and you can solve multiple
+! equations with the same A but different b
+    b(1)=dvbuff(1)
+    b(2)=dvbuff(2)
+    b(3)=dvbuff(3)
+! find the solution using the LAPACK routine SGESV
+    call DGESV(3, 1, A, 3, pivot, b, 3, ok)
+! parameters in the order as they appear in the function call
+!    order of matrix A, number of right hand sides (b), matrix A,
+!    leading dimension of A, array that records pivoting, 
+!    result vector b on entry, x on exit, leading dimension of b
+!    return value 
+! print the vector x
+    !do i=1, 3
+    !  write(*,*) 'coefficients', b(i)
+    !end do
+    
+    DO i = 1, 39 
+      newdv(i) = b(1)*(newye(i))**2 + b(2)*newye(i) + b(3) 
+    !  write(*,*) 'newdv(i)',newdv(i)
+    END DO
+  END SUBROUTINE ExtrapolateTable
 
   SUBROUTINE ReadComposeTableHDF( EOSTable, FileName )
     
@@ -39,6 +90,7 @@ CONTAINS
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     CHARACTER(len=*), INTENT(in)                  :: FileName
 
+    REAL(dp), PARAMETER  :: pi        = 3.1415926535897932385d0 ! pi
     INTEGER, DIMENSION(3)                         :: nPoints
     INTEGER, DIMENSION(3)                         :: nPointsBCK
     INTEGER, DIMENSION(1)                         :: nPointsTemp
@@ -54,10 +106,12 @@ CONTAINS
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: aav
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: zav
     INTEGER                                       :: nVariables
-    INTEGER                                       :: i, j, k, l
+    INTEGER                                       :: i, j, k, l, m
     INTEGER                                       :: iHe4
     INTEGER                                       :: BindingTableSwitch
-    INTEGER                                       :: BCKTableSwitch
+    INTEGER                                       :: ElectronSwitch
+    INTEGER                                       :: UpperTableSwitch
+    INTEGER                                       :: ClusterSwitch
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
@@ -83,6 +137,9 @@ CONTAINS
     REAL(dp), DIMENSION(1,3) :: DerivativeU
     REAL(dp), DIMENSION(1,3) :: DerivativeP
     REAL(dp), DIMENSION(1)  :: rhobuff, tbuff, yebuff
+    REAL(dp), DIMENSION(3)  :: yeedge
+    REAL(dp), DIMENSION(3)  :: dvedge
+    REAL(dp), DIMENSION(39)  :: dvbuff, yebuff3
     REAL(dp)  :: rhobuff2, tempbuff2, yebuff2
     REAL(dp), DIMENSION(1)  :: pbuff, ubuff, P1, P2, P1T, P2T, T1, T2, rho1, rho2, U1, U2
     REAL(dp)   :: press       ! pressure
@@ -122,6 +179,7 @@ CONTAINS
     REAL(dp)   :: xalphabuff      ! x alpha buffer for renormalization   
     REAL(dp)   :: xheavybuff      ! x heavy buffer for renormalization   
     REAL(dp)   :: totalmassfrac   ! total mass fraction for renormalization
+    REAL(dp)   :: mu_n, mu_p, mu_a, m_a, B_a, m_p, m_n, k_B, h_bar, x_n, x_a, x_p, x_heavy, loffset
     CHARACTER(len=1) :: flag     ! nuclear eos selection flag
 
     LOGICAL :: fail        ! did EoS fail to converge
@@ -129,7 +187,9 @@ CONTAINS
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
-    BCKTableSwitch = 1
+    UpperTableSwitch = 0 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
+    ElectronSwitch = 0   ! 0 = BCK Electron EOS, 1 = Native Compose EOS
+    ClusterSwitch = 0    ! 0 = No light cluster distribution, 1 = light clusters added 
 
 write(*,*) 'hdf5 table opened'
 
@@ -157,15 +217,15 @@ write (*,*) 'nVariables', nVariables
 
     nPointsBCK(1) = nPoints(1)
     nPointsBCK(2) = nPoints(2)
-    IF ( BCKTableSwitch == 1 ) THEN
-      nPointsBCK(3) = nPoints(3) + 40
+    IF ( UpperTableSwitch .ge. 1 ) THEN
+      nPointsBCK(3) = nPoints(3) + 39
       write (*,*) 'Expanded table range', nPointsBCK
     ELSE
-      nPointsBCK(3) = nPoints(3)
+      !nPointsBCK(3) = nPoints(3)
       write (*,*) 'Standard table range', nPoints
     END IF
 
-    IF ( BCKTableSwitch == 1 ) THEN
+    IF ( UpperTableSwitch .ge. 1) THEN
       CALL AllocateEquationOfStateTable( EOSTable, nPointsBCK , nVariables )
       write (*,*) 'Expanded EOSTable allocated'
     ELSE
@@ -173,14 +233,14 @@ write (*,*) 'nVariables', nVariables
       write (*,*) 'Standard EOSTable allocated'
     END IF
  
-    EOSTable % MD % IDTag = 'wl-EOS-SFHx+HiYeBCK-25-50-100, 5-11-17  '
+    EOSTable % MD % IDTag = 'wl-EOS-SFHo-25-50-100, 11-2-17, no clusters '
     EOSTable % MD % TableResolution = '25 pts/dec rho, 50 pts/dec, delta ye = .01'
     EOSTable % MD % NucEOSLink = 'Nuc EOS Paper Link'
     EOSTable % MD % LeptonEOSLink = 'Lepton EOS Paper Link'
     EOSTable % MD % SourceLink = 'Table Source Link'
     EOSTable % MD % WLRevision = 'Rev'
     EOSTable % MD % TableLink = &
-& 'http://eagle.phys.utk.edu/weaklib/trac/browser/External/Tables/EquationsOfState/wl-EOS-SFHo+HiYeBCK-25-50-100.h5'
+& 'http://eagle.phys.utk.edu/weaklib/trac/browser/External/Tables/EquationsOfState/wl-EOS-SFHo-noBCK-25-50-100.h5'
 
     ALLOCATE( nb(0:(nPoints(1) - 1 ) ), t(0:(nPoints(2) - 1) ), yq( 0:(nPoints(3) - 1 ) ) )
     ALLOCATE( thermo(0:(nThermo(1)*AllPoints(1) - 1)) )
@@ -203,18 +263,16 @@ write (*,*) 'Buffers read'
     DO i = 0, nPoints(1) - 1
       EOSTable % TS % States(1) % Values(i+1) = nb(i) / kfm
     END DO
-!write (*,*) 'rho', EOSTable % TS % States(1) % Values 
 
     DO i = 0, nPoints(2) - 1
       EOSTable % TS % States(2) % Values(i+1) = t(i) / kmev
     END DO
-!write (*,*) 'T'
 
     DO i = 0, nPoints(3) - 1
       EOSTable % TS % States(3) % Values(i+1) = yq(i) 
     END DO
     
-    IF ( BCKTableSwitch == 1 ) THEN
+    IF ( UpperTableSwitch .ge. 1 ) THEN
       DO i = nPoints(3) + 1, nPointsBCK(3)
         EOSTable % TS % States(3) % Values(i) = (1.0d-02)*i
 write (*,*) 'ye', EOSTable % TS % States(3) % Values(i), i
@@ -244,8 +302,11 @@ write(*,*), "Allocate Independent Variable Units "
     EOSTable % TS % minValues(3) = EOSTable % TS % States(3) % Values(1)
     EOSTable % TS % maxValues(1) = EOSTable % TS % States(1) % Values(nPoints(1))
     EOSTable % TS % maxValues(2) = EOSTable % TS % States(2) % Values(nPoints(2))
-    !EOSTable % TS % maxValues(3) = EOSTable % TS % States(3) % Values(nPoints(3))
-    EOSTable % TS % maxValues(3) = EOSTable % TS % States(3) % Values(nPointsBCK(3))
+    IF ( UpperTableSwitch .ge. 1 ) THEN
+      EOSTable % TS % maxValues(3) = EOSTable % TS % States(3) % Values(nPointsBCK(3))
+    ELSE
+      EOSTable % TS % maxValues(3) = EOSTable % TS % States(3) % Values(nPoints(3))
+    END IF
 
     EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
 
@@ -352,6 +413,19 @@ write (*,*) 'entropy(1,1,1)', EOSTable % DV % Variables(2) % Values(1,1,1)
     END DO
 write (*,*) 'energy(1,1,1)', EOSTable % DV % Variables(3) % Values(1,1,1)
 
+  IF ( ElectronSwitch == 1 ) THEN
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+
+          EOSTable % DV % Variables(4) % Values(i+1,j,k) &
+            = thermo((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ) 
+
+        END DO
+      END DO
+    END DO
+  ELSE
+
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
@@ -387,6 +461,7 @@ write (*,*) 'energy(1,1,1)', EOSTable % DV % Variables(3) % Values(1,1,1)
         END DO
       END DO
     END DO
+  END IF
 write (*,*) 'electron chem pot(1,1,1)', EOSTable % DV % Variables(4) % Values(1,1,1)
 
     DO k = 1, nPoints(3)
@@ -446,20 +521,20 @@ write (*,*) 'proton mass frac(1,1,1)', EOSTable % DV % Variables(7) % Values(1,1
 write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,1)
 
 
-    DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
-        DO i = 0, nPoints(1) - 1
-            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-            Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
-            Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
-            Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
-            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel 
-            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel 
-        END DO
-      END DO
-    END DO
-write (*,*) 'light cluster mass fractions added'
+    !DO k = 1, nPoints(3)
+      !DO j = 1, nPoints(2)
+        !DO i = 0, nPoints(1) - 1
+            !xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+            !xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+            !Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
+            !Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
+            !Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
+            !EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel 
+            !EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel 
+        !END DO
+      !END DO
+    !END DO
+!write (*,*) 'light cluster mass fractions added'
 
 
 write(*,*), "yi DV's filled"
@@ -505,25 +580,25 @@ write(*,*), "yav read"
 write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
 write(*,*), "yav DV filled"
 
-    DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
-        DO i = 0, nPoints(1) - 1
-            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
-            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
-             
-            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
+!    DO k = 1, nPoints(3)
+!      DO j = 1, nPoints(2)
+!        DO i = 0, nPoints(1) - 1
+!            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+!            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+!            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
+!            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
+!             
+!            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
+!
+!            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
+!            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
+!            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
+!            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
+!        END DO
+!      END DO
+!    END DO
 
-            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
-            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
-            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
-            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
-        END DO
-      END DO
-    END DO
-
-  IF ( BCKTableSwitch == 1 ) THEN 
+  IF ( UpperTableSwitch == 1 ) THEN 
  write(*,*) "starting bck loop"
 
     DO k = nPointsBCK(3), nPoints(3) + 1, -1
@@ -535,22 +610,38 @@ write(*,*), "yav DV filled"
           tempbuff2 = EOSTable % TS % States(2) % Values(j)
           yebuff2 = EOSTable % TS % States(3) % Values(k)
 
-          IF ( rhobuff2 > 1.0e11 ) THEN
-            EOSTable % DV % Variables(1) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(2) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(3) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(4) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(5) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(6) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(7) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(8) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(9) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(10) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(11) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(12) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(13) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(14) % Values(i,j,k) = 0.
-            EOSTable % DV % Variables(15) % Values(i,j,k) = 0.
+          IF ( rhobuff2 > 3.15e11 ) THEN
+
+            EOSTable % DV % Variables(1) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(1) % Values(i,j,60)
+            EOSTable % DV % Variables(2) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(2) % Values(i,j,60) 
+            EOSTable % DV % Variables(3) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(3) % Values(i,j,60) 
+            EOSTable % DV % Variables(4) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(4) % Values(i,j,60) 
+            EOSTable % DV % Variables(5) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(5) % Values(i,j,60) 
+            EOSTable % DV % Variables(6) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(6) % Values(i,j,60) 
+            EOSTable % DV % Variables(7) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(7) % Values(i,j,60) 
+            EOSTable % DV % Variables(8) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(8) % Values(i,j,60) 
+            EOSTable % DV % Variables(9) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(9) % Values(i,j,60) 
+            EOSTable % DV % Variables(10) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(10) % Values(i,j,60) 
+            EOSTable % DV % Variables(11) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(11) % Values(i,j,60) 
+            EOSTable % DV % Variables(12) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(12) % Values(i,j,60) 
+            EOSTable % DV % Variables(13) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(13) % Values(i,j,60) 
+            EOSTable % DV % Variables(14) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(14) % Values(i,j,60) 
+            EOSTable % DV % Variables(15) % Values(i,j,k) &   
+            = EOSTable % DV % Variables(15) % Values(i,j,60) 
             EOSTable % DV % Repaired(i,j,k) = 2
           ELSE
 
@@ -573,6 +664,16 @@ write(*,*), "yav DV filled"
               EOSTable % DV % Variables(13) % Values(i,j,k) = be_heavy
               EOSTable % DV % Variables(14) % Values(i,j,k) = thermalenergy
           !    EOSTable % DV % Variables(15) % Values(i,j,k) = gamma1
+
+              !IF ( be_heavy .lt. -10.0d0 ) THEN
+                !write(*,*) 'Heavy Binding out of range', be_heavy, rhobuff2, tempbuff2, yebuff2
+                !write(*,*) 'xn_prot', xn_prot
+                !write(*,*) 'xn_neut', xn_neut
+                !write(*,*) 'xn_heavy', xn_heavy
+                !write(*,*) 'xn_alpha', xn_alpha
+                !write(*,*) 'a_heavy', a_heavy
+                !EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0 
+              !END IF
           END IF
         END DO
       END DO
@@ -581,7 +682,7 @@ write(*,*), "yav DV filled"
     DO k = nPointsBCK(3), nPoints(3) + 1, -1
       DO j = 1, nPoints(2)
         DO i = 1, nPoints(1)
-          IF ( rhobuff2 > 1.0e11 ) THEN
+          IF ( rhobuff2 > 3.15e11 ) THEN
             EOSTable % DV % Variables(15) % Values(i,j,k) = 0. 
           ELSE
               rhobuff(1) = EOSTable % TS % States(1) % Values(i)
@@ -699,9 +800,14 @@ write (*,*) 'nPoints', nPoints
 
     CALL compdata_readin
 !do  i = 1, 3162
+!do  i = 1, 2969
 !write(*,*) i, az(i, 1), az(i,2), bind(i) 
 !end do
+!STOP
+
     BindingTableSwitch = 1 
+    !BindingTableSwitch = 0 
+
 write(*,*) 'starting binding table loops'
     IF ( BindingTableSwitch == 0 ) THEN 
 
@@ -713,15 +819,90 @@ write(*,*) 'starting binding table loops'
       END DO
     END DO
 
-    ELSE IF ( BindingTableSwitch == 2 ) THEN 
+  ELSE IF ( BindingTableSwitch == 1 ) THEN
+    !RETURN
+write(*,*) "starting sfho frdm loop"
+!write(*,*) "starting sfhx frdm loop"
+!write(*,*) "starting dd2 frdm loop"
 
+!------------------------------------
+! Start FDRM (SFHo/x, DD2) Binding Energy Read Block
+!------------------------------------
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2) - 1
+        DO i = 1, nPoints(1)
+      !  DO i = 1, nPoints(1) - 1
+          CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+      !    CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
+             IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
+                 - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
+                 - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
+              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+            ELSE
+
+            EOSTable % DV % Variables(13) % Values(i,j,k) &
+            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       &
+               + bind(8077) * xaz(8077) / az(8077,1)    &
+               + bind(8076) * xaz(8076) / az(8076,1)    &
+               + bind(8075) * xaz(8075) / az(8075,1)    &
+               + bind(8074) * xaz(8074) / az(8074,1) )  &
+               / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
+               - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
+               - az(8074,1)*naz(8074)/nb(i-1) )
+!write(*,*) i,j,k,t(j),"Binding Energy=", EOSTable % DV % Variables(13) % Values(i,j,k) 
+          END IF
+        END DO
+write(*,*) i-1,j,k,t(j-1),"Binding Energy=", EOSTable % DV % Variables(13) % Values(i-1,j,k) 
+      END DO
+    END DO
+
+    DO k = 1, nPoints(3)
+        DO i = 1, nPoints(1) 
+      !    CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+           j = nPoints(2) !81
+          !CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
+          CALL sub_dist_grid(81,k,i,xaz,xn,xp,naz,nn,np)
+             IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
+                 - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
+                 - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
+              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+            ELSE
+
+            EOSTable % DV % Variables(13) % Values(i,j,k) &
+            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       & 
+               + bind(8077) * xaz(8077) / az(8077,1)    &
+               + bind(8076) * xaz(8076) / az(8076,1)    &
+               + bind(8075) * xaz(8075) / az(8075,1)    &
+               + bind(8074) * xaz(8074) / az(8074,1) )  &
+               / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
+               - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
+               - az(8074,1)*naz(8074)/nb(i-1) )
+          END IF
+      END DO
+write(*,*) i-1,nPoints(2),k,t(nPoints(2)-1),"Binding Energy max=", EOSTable % DV % Variables(13) % Values(i-1,npoints(2),k)
+    END DO
+
+
+!------------------------------------
+! End FDRM (SFHo/x, DD2) Binding Energy Read Block
+!------------------------------------
+
+  ELSE IF ( BindingTableSwitch == 2 ) THEN
+
+    RETURN
 write(*,*) 'starting roca-maza loops'
 
 !------------------------------------
 ! Start Roca-maza (IUFSU, FSUGold) Binding Energy Read Block
 !------------------------------------
     DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
+      DO j = 1, nPoints(2) - 1
         DO i = 1, nPoints(1)
           !CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
 
@@ -736,7 +917,7 @@ write(*,*) 'starting roca-maza loops'
             ELSE
 
             EOSTable % DV % Variables(13) % Values(i,j,k) &
-            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       & !+ bind(iHe4) * xaz(iHe4) / 4.d0   &     
+            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       &
                + bind(1515) * xaz(1515) / az(1515,1)    &
                + bind(1514) * xaz(1514) / az(1514,1)    &
                + bind(1513) * xaz(1513) / az(1513,1)    &
@@ -749,84 +930,109 @@ write(*,*) 'starting roca-maza loops'
       END DO
     END DO
 
-!------------------------------------
-! END Roca-maza (IUFSU, FSU-Gold) Binding Energy Read Block
-!------------------------------------
-
-    ELSE IF ( BindingTableSwitch == 1 ) THEN
-
-write(*,*) "starting sfho frdm loop"
-!write(*,*) "starting sfhx frdm loop"
-
-!------------------------------------
-! Start FDRM (SFHo/x, DD2) Binding Energy Read Block
-!------------------------------------
     DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2) - 1
-        DO i = 1, nPoints(1)
-      !  DO i = 1, nPoints(1)
-      !DO j = 1, nPoints(2)
-          CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
-      !    CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
-             IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
-                 - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
-                 - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
-              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
-              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
-              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
-              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
-            ELSE
+      DO i = 1, nPoints(1)
+        j = nPoints(2)
+        CALL sub_dist_grid(81,k,i,xaz,xn,xp,naz,nn,np)
+        !CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+        IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(1515,1)*naz(1515)/nb(i-1) &
+             - az(1514,1)*naz(1514)/nb(i-1) - az(1513,1)*naz(1513)/nb(i-1) &
+             - az(1512,1)*naz(1512)/nb(i-1) ) .le. 0.0d0 ) THEN
+          !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+          EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+          EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+          EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+        ELSE
 
-            EOSTable % DV % Variables(13) % Values(i,j,k) &
-            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       & !+ bind(iHe4) * xaz(iHe4) / 4.d0   &     
-               + bind(8077) * xaz(8077) / az(8077,1)    &
-               + bind(8076) * xaz(8076) / az(8076,1)    &
-               + bind(8075) * xaz(8075) / az(8075,1)    &
-               + bind(8074) * xaz(8074) / az(8074,1) )  &
-               / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
-               - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
-               - az(8074,1)*naz(8074)/nb(i-1) )
-          END IF
-        END DO
-write(*,*) i-1,j,k,t(j-1),"Binding Energy=", EOSTable % DV % Variables(13) % Values(i-1,j,k) 
-      END DO
-    END DO
-
-    DO k = 1, nPoints(3)
-        DO i = 1, nPoints(1) 
-      !    CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
-           j = nPoints(2) !81
-          CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
-             IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
-                 - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
-                 - az(8074,1)*naz(8074)/nb(i-1) ) .le. 0.0d0 ) THEN
-              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
-              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
-              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
-              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
-            ELSE
-
-            EOSTable % DV % Variables(13) % Values(i,j,k) &
-            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       & !+ bind(iHe4) * xaz(iHe4) / 4.d0   &     
-               + bind(8077) * xaz(8077) / az(8077,1)    &
-               + bind(8076) * xaz(8076) / az(8076,1)    &
-               + bind(8075) * xaz(8075) / az(8075,1)    &
-               + bind(8074) * xaz(8074) / az(8074,1) )  &
-               / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(8077,1)*naz(8077)/nb(i-1) &
-               - az(8076,1)*naz(8076)/nb(i-1) - az(8075,1)*naz(8075)/nb(i-1) &
-               - az(8074,1)*naz(8074)/nb(i-1) )
-          END IF
+          EOSTable % DV % Variables(13) % Values(i,j,k) &
+          = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       &
+             + bind(1515) * xaz(1515) / az(1515,1)    &
+             + bind(1514) * xaz(1514) / az(1514,1)    &
+             + bind(1513) * xaz(1513) / az(1513,1)    &
+             + bind(1512) * xaz(1512) / az(1512,1) )  &
+             / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(1515,1)*naz(1515)/nb(i-1) &
+             - az(1514,1)*naz(1514)/nb(i-1) - az(1513,1)*naz(1513)/nb(i-1) &
+             - az(1512,1)*naz(1512)/nb(i-1) )
+        END IF
       END DO
 write(*,*) i-1,nPoints(2),k,t(nPoints(2)-1),"Binding Energy max=", EOSTable % DV % Variables(13) % Values(i-1,npoints(2),k)
     END DO
 
-
-write(*,*) 'binding energy block complete' 
 !------------------------------------
-! End FDRM (SFHo/x, DD2) Binding Energy Read Block
+! END Roca-maza (IUFSU, FSU-Gold) Binding Energy Read Block
+!------------------------------------
+
+  ELSE IF ( BindingTableSwitch == 3 ) THEN
+    RETURN
+
+write(*,*) 'starting lalazissis loops'
+
+!------------------------------------
+! Start lalazissis (NL3) Binding Energy Read Block
+!------------------------------------
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2) - 1
+        DO i = 1, nPoints(1)
+          !CALL sub_dist_grid(j,k,i,xaz,xn,xp,naz,nn,np)
+
+          CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+             IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(1318,1)*naz(1318)/nb(i-1) &
+                 - az(1317,1)*naz(1317)/nb(i-1) - az(1316,1)*naz(1316)/nb(i-1) &
+                 - az(1315,1)*naz(1315)/nb(i-1) ) .le. 0.0d0 ) THEN
+              !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+              EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+              EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+              EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+            ELSE
+
+            EOSTable % DV % Variables(13) % Values(i,j,k) &
+            = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       &
+               + bind(1318) * xaz(1318) / az(1318,1)    &
+               + bind(1317) * xaz(1317) / az(1317,1)    &
+               + bind(1316) * xaz(1316) / az(1316,1)    &
+               + bind(1315) * xaz(1315) / az(1315,1) )  &
+               / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(1318,1)*naz(1318)/nb(i-1) &
+               - az(1317,1)*naz(1317)/nb(i-1) - az(1316,1)*naz(1316)/nb(i-1) &
+               - az(1315,1)*naz(1315)/nb(i-1) )
+          END IF
+        END DO
+      END DO
+    END DO
+
+    DO k = 1, nPoints(3)
+      DO i = 1, nPoints(1)
+        j = nPoints(2)
+        CALL sub_dist_grid(81,k,i,xaz,xn,xp,naz,nn,np)
+        !CALL sub_dist_interpol(t(j-1),yq(k-1),nb(i-1),xaz,xn,xp,naz,nn,np,sflag)
+        IF ( ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(1318,1)*naz(1318)/nb(i-1) &
+             - az(1317,1)*naz(1317)/nb(i-1) - az(1316,1)*naz(1316)/nb(i-1) &
+             - az(1315,1)*naz(1315)/nb(i-1) ) .le. 0.0d0 ) THEN
+          !EOSTable % DV % Variables(10) % Values(i,j,k) = 0.0d0
+          EOSTable % DV % Variables(11) % Values(i,j,k) = 1.8d0
+          EOSTable % DV % Variables(12) % Values(i,j,k) = 4.0d0
+          EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+        ELSE
+
+          EOSTable % DV % Variables(13) % Values(i,j,k) &
+          = ( SUM( -bind(:) * xaz(:) / ( az(:,1) ) )       &
+             + bind(1318) * xaz(1318) / az(1318,1)    &
+             + bind(1317) * xaz(1317) / az(1317,1)    &
+             + bind(1316) * xaz(1316) / az(1316,1)    &
+             + bind(1315) * xaz(1315) / az(1315,1) )  &
+             / ( SUM( az(:,1)*naz(:)/nb(i-1) ) - az(1318,1)*naz(1318)/nb(i-1) &
+             - az(1317,1)*naz(1317)/nb(i-1) - az(1316,1)*naz(1316)/nb(i-1) &
+             - az(1315,1)*naz(1315)/nb(i-1) )
+        END IF
+      END DO
+write(*,*) i-1,nPoints(2),k,t(nPoints(2)-1),"Binding Energy max=", EOSTable % DV % Variables(13) % Values(i-1,npoints(2),k)
+    END DO
+
+!------------------------------------
+! END  (NL3) Binding Energy Read Block
 !------------------------------------
 
     END IF
+write(*,*) 'binding energy block complete' 
 
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
@@ -845,9 +1051,11 @@ write(*,*) 'binding energy block complete'
       END DO
     END DO
 
-IF ( BCKTableSwitch == 1) THEN
+IF ( UpperTableSwitch == 1) THEN
 write(*,*) "starting sfho-bck merge loop"
-!
+!write(*,*) "starting sfhx-bck merge loop"
+!write(*,*) "starting dd2-bck merge loop"
+
     k = 60!nPoints(3) 
     DO j = 1, nPoints(2)
       DO i = 1, nPoints(1)
@@ -858,7 +1066,7 @@ write(*,*) "starting sfho-bck merge loop"
        yebuff2 = EOSTable % TS % States(3) % Values(k) 
 
 
-          IF ( rhobuff2 > 1.0e11 ) THEN
+          IF ( rhobuff2 > 3.15e11 ) THEN
             CYCLE
           ELSE
               pressbuff = EOSTable % DV % Variables(1) % Values(i,j,k) 
@@ -908,7 +1116,6 @@ write(*,*) "starting sfho-bck merge loop"
               =(be_heavybuff + be_heavy)/2
               EOSTable % DV % Variables(14) % Values(i,j,k) &               
               =(thermalenergybuff + thermalenergy)/2
-write(*,*) 'P-SFHo, P-BCK', pressbuff, press
 
             END IF
           END DO
@@ -922,7 +1129,7 @@ write(*,*) 'P-SFHo, P-BCK', pressbuff, press
        rhobuff2 = EOSTable % TS % States(1) % Values(i) 
 
 
-          IF ( rhobuff2 > 1.0e11 ) THEN
+          IF ( rhobuff2 > 3.15e11 ) THEN
             CYCLE
           ELSE
               rhobuff(1) = EOSTable % TS % States(1) % Values(i)
@@ -948,8 +1155,7 @@ write(*,*) 'P-SFHo, P-BCK', pressbuff, press
               rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
               END IF
 
-              !IF ( i == nPoints(1) ) THEN
-              IF ( EOSTable % TS % States(1) % Values(i+1) > 1.0e11 ) THEN
+              IF ( EOSTable % TS % States(1) % Values(i+1) > 3.15e11 ) THEN
               P2(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
               rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
               END IF
@@ -977,11 +1183,155 @@ write(*,*) 'P-SFHo, P-BCK', pressbuff, press
       END DO
     END DO
 
-!write(*,*) i,j,k,"Energy=", EOSTable % DV % Variables(3) % Values(i,j,k) 
 
 
 write(*,*) 'SFHo-BCK merge loop finished'
+!write(*,*) 'SFHx-BCK merge loop finished'
+!write(*,*) 'DD2-BCK merge loop finished'
 END IF
+
+IF ( UpperTableSwitch == 2 ) THEN
+write(*,*) 'Upper table extrapolation starting'
+
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+
+          DO k = nPoints(3) + 1, nPointsBCK(3)
+            m = k - 60
+            yebuff3(m) = EOSTable % TS % States(3) % Values(k)
+          END DO
+
+          yeedge(1) = EOSTable % TS % States(3) % Values(58)
+          yeedge(2) = EOSTable % TS % States(3) % Values(59)
+          yeedge(3) = EOSTable % TS % States(3) % Values(60)
+!
+          DO l = 1, 15
+
+            dvedge(1) = EOSTable % DV % Variables(l) % Values(i,j,58)
+            dvedge(2) = EOSTable % DV % Variables(l) % Values(i,j,59)
+            dvedge(3) = EOSTable % DV % Variables(l) % Values(i,j,60)
+!
+            CALL ExtrapolateTable( yeedge, dvedge, yebuff3, dvbuff )
+
+ !           IF ( l == 1 .and. ANY(dvbuff .lt. 0.d0 ) ) THEN 
+ !             write(*,*) 'pressure less than zero', 'rho', EOSTable % TS % States(1) % Values(i)
+ !              write(*,*) 'pressure', dvbuff
+ !           END IF
+
+            DO k = nPoints(3) + 1, nPointsBCK(3)
+              m = k - 60
+              rhobuff2 = EOSTable % TS % States(1) % Values(i)
+              IF ( rhobuff2 > 1.0e14 .or. k > 80 ) THEN
+                EOSTable % DV % Variables(l) % Values(i,j,k) = 0.0d0
+              ELSE
+                EOSTable % DV % Variables(l) % Values(i,j,k) = dvbuff(m)
+              END IF
+            END DO
+          END DO
+
+          END DO 
+        END DO 
+
+
+      !DO j = 1, nPoints(2)
+
+            B_a = 28.295674d0! * ergmev
+            !h_bar = 6.582123234e-22 ! MeV s
+            h_bar = 1.054571800e-27
+            k_B = 1.38064852e-16! % [erg K^{-1}]
+            m_n = 1.674927471e-24! % [g]
+            m_p = 1.672621898e-24! % [g]
+            m_a  = 6.64424e-24! % [g]
+
+      DO k = nPoints(3) + 1, nPointsBCK(3)
+        DO i = 1, nPoints(1)
+          count = nPoints(2)
+          DO j = nPoints(2), 1, -1
+            IF ( ( abs( EOSTable % DV % Variables(7) % Values(i,j,k) - EOSTable % TS % States(3) % Values(k) ) &
+              .lt. 0.1d0 ) .and. ( j == count ) ) THEN
+              count = count - 1
+              CYCLE
+            ELSE 
+              rhobuff2 = EOSTable % TS % States(1) % Values(i)
+              tempbuff2 = EOSTable % TS % States(2) % Values(j)
+
+            !DO k = nPoints(3) + 1, nPointsBCK(3)
+              !m = k - 60
+              IF ( rhobuff2 > 1.0e14 .or. k > 80) THEN
+                CYCLE
+              ELSE
+                !mu_p = ( EOSTable % DV % Variables(5) % Values(i,j,k) ) !+ dmnp )
+                mu_p = ( EOSTable % DV % Variables(5) % Values(i,j,k) + dmnp )
+                mu_n = ( EOSTable % DV % Variables(6) % Values(i,j,k) + dmnp )
+                mu_a = ( 2 * mu_p ) + (2 * mu_n)
+                x_p  = (((k_B * tempbuff2)/(2*pi*(h_bar**2)))**(1.5d0)) &
+                  * (2/rhobuff2) * (m_p**(2.5d0)) * exp( mu_p / (k_B/ergmev * tempbuff2) ) 
+                IF ( x_p > 1 ) THEN 
+                  x_p = 1.0d0
+                END IF
+
+                x_n  = (((k_B * tempbuff2)/(2*pi*(h_bar**2)))**(1.5d0)) &
+                  * (2/rhobuff2) * (m_n**(2.5d0)) * exp( mu_n / (k_B/ergmev * tempbuff2) )
+                IF ( x_n > 1 ) THEN
+                  x_n = 1.0d0
+                END IF
+                x_a = (((k_B * tempbuff2)/(2*pi*(h_bar**2)))**(1.5d0)) &
+                  * (1/rhobuff2) * (m_a**(2.5d0)) * exp( (mu_a + B_a) / (k_B/ergmev * tempbuff2) )
+                IF ( x_a > 1 ) THEN
+                  x_a = 1.0d0
+                END IF
+                x_heavy = 1.0d0 - x_p - x_n - x_a
+                IF ( x_heavy > 1 .or. x_heavy < 0) THEN
+                  x_heavy = 0.0d0
+                END IF
+
+                EOSTable % DV % Variables(7) % Values(i,j,k) = x_p
+                EOSTable % DV % Variables(8) % Values(i,j,k) = x_n
+                EOSTable % DV % Variables(9) % Values(i,j,k) = x_a
+                EOSTable % DV % Variables(10) % Values(i,j,k) = x_heavy
+              END IF
+            END IF
+          END DO
+        END DO 
+      END DO 
+    !END DO 
+      
+END IF
+
+IF ( ClusterSwitch == 1 ) THEN
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+            Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
+            Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
+            Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
+            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel
+            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel
+        END DO
+      END DO
+    END DO
+write (*,*) 'light cluster mass fractions added'
+END IF
+
+    DO k = 1, nPoints(3)
+      DO j = 1, nPoints(2)
+        DO i = 0, nPoints(1) - 1
+            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
+            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
+
+            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
+
+            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
+            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
+            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
+            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
+        END DO
+      END DO
+    END DO
 
     DO l = 1, EOSTable % nVariables
       EOSTable % DV % minValues(l) = MINVAL( EOSTable % DV % Variables(l) % Values )
@@ -1041,7 +1391,7 @@ END IF
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: yav
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: aav
     REAL(dp), DIMENSION(:), ALLOCATABLE           :: zav
-    INTEGER                                       :: nVariables
+    INTEGER                                       :: nVariables, BindingTableSwitch
     INTEGER                                       :: i, j, k, l, TestUnit1, TestUnit2
     INTEGER                                       :: iHe4
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
@@ -1504,6 +1854,20 @@ write (*,*) 'nPoints', nPoints
 
     CALL compdata_readin
 
+    BindingTableSwitch = 0
+
+    IF ( BindingTableSwitch == 0 ) THEN
+
+      DO k = 1, nPoints(3)
+        DO j = 1, nPoints(2)
+          DO i = 1, nPoints(1)
+            EOSTable % DV % Variables(13) % Values(i,j,k) = 0.0d0
+          END DO
+        END DO
+      END DO
+
+    ELSE
+
     DO k = 1, nPoints(3)
 write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
       DO j = 1, nPoints(2)
@@ -1548,7 +1912,7 @@ write(*,*) "binding energy: Ye=", EOSTable % TS % States(3) % Values(k)
         END DO
       END DO
     END DO
-
+    END IF
 
   DO l = 1, 15 !EOSTable % nVariables
     WRITE (*,*) EOSTable % DV % Names(l)
