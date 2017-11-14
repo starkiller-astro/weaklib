@@ -112,6 +112,7 @@ CONTAINS
     INTEGER                                       :: ElectronSwitch
     INTEGER                                       :: UpperTableSwitch
     INTEGER                                       :: ClusterSwitch
+    INTEGER                                       :: RenormSwitch
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
@@ -187,9 +188,11 @@ CONTAINS
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
-    UpperTableSwitch = 2 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
+    UpperTableSwitch = 0 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
     ElectronSwitch = 0   ! 0 = BCK Electron EOS, 1 = Native Compose EOS
-    ClusterSwitch = 0    ! 0 = No light cluster distribution, 1 = light clusters added 
+    ClusterSwitch = 1    ! 0 = No light cluster distribution, 1 = light clusters added 
+    RenormSwitch = 1     ! 0 = No Renormalization of Mass Fractions, 1 = Fractions renormalized to 1
+    BindingTableSwitch = 1 ! 0 = No binding, 1 = SFHo/x, DD2, 2 = IUFSU, FSUGold, 3 = NL3  
 
 write(*,*) 'hdf5 table opened'
 
@@ -233,14 +236,14 @@ write (*,*) 'nVariables', nVariables
       write (*,*) 'Standard EOSTable allocated'
     END IF
  
-    EOSTable % MD % IDTag = 'wl-EOS-SFHo-25-50-100, 11-2-17, no clusters '
+    EOSTable % MD % IDTag = 'wl-EOS-SFHo-25-50-100, 11-13-17, with clusters, renorm'
     EOSTable % MD % TableResolution = '25 pts/dec rho, 50 pts/dec, delta ye = .01'
     EOSTable % MD % NucEOSLink = 'Nuc EOS Paper Link'
     EOSTable % MD % LeptonEOSLink = 'Lepton EOS Paper Link'
     EOSTable % MD % SourceLink = 'Table Source Link'
     EOSTable % MD % WLRevision = 'Rev'
     EOSTable % MD % TableLink = &
-& 'http://eagle.phys.utk.edu/weaklib/trac/browser/External/Tables/EquationsOfState/wl-EOS-SFHo-noBCK-25-50-100.h5'
+& 'http://eagle.phys.utk.edu/weaklib/trac/browser/External/Tables/EquationsOfState/wl-EOS-SFHo-25-50-100.h5'
 
     ALLOCATE( nb(0:(nPoints(1) - 1 ) ), t(0:(nPoints(2) - 1) ), yq( 0:(nPoints(3) - 1 ) ) )
     ALLOCATE( thermo(0:(nThermo(1)*AllPoints(1) - 1)) )
@@ -520,7 +523,7 @@ write (*,*) 'proton mass frac(1,1,1)', EOSTable % DV % Variables(7) % Values(1,1
     END DO
 write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,1)
 
-
+IF ( ClusterSwitch == 1 ) THEN
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
@@ -535,6 +538,7 @@ write (*,*) 'alpha mass frac(1,1,1)', EOSTable % DV % Variables(9) % Values(1,1,
       END DO
     END DO
 write (*,*) 'light cluster mass fractions added'
+END IF
 
 
 write(*,*), "yi DV's filled"
@@ -580,6 +584,7 @@ write(*,*), "yav read"
 write (*,*) 'heavy mass frac(1,1,1)', EOSTable % DV % Variables(10) % Values(1,1,1)
 write(*,*), "yav DV filled"
 
+  IF ( RenormSwitch == 1 ) THEN
     DO k = 1, nPoints(3)
       DO j = 1, nPoints(2)
         DO i = 0, nPoints(1) - 1
@@ -587,7 +592,7 @@ write(*,*), "yav DV filled"
             xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
             xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
             xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
-!             
+             
             totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
 
             EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
@@ -597,6 +602,7 @@ write(*,*), "yav DV filled"
         END DO
       END DO
     END DO
+  END IF
 
   IF ( UpperTableSwitch == 1 ) THEN 
  write(*,*) "starting bck loop"
@@ -806,7 +812,6 @@ write (*,*) 'nPoints', nPoints
 !STOP
 
     !BindingTableSwitch = 1 
-    BindingTableSwitch = 0 
 
 write(*,*) 'starting binding table loops'
     IF ( BindingTableSwitch == 0 ) THEN 
@@ -1223,6 +1228,8 @@ write(*,*) 'Upper table extrapolation starting'
               rhobuff2 = EOSTable % TS % States(1) % Values(i)
               IF ( rhobuff2 > 1.0e14 .or. k > 80 ) THEN
                 EOSTable % DV % Variables(l) % Values(i,j,k) = 0.0d0
+              ELSE IF ( l == 11 .or. l == 12 ) THEN
+                EOSTable % DV % Variables(l) % Values(i,j,k) = abs(dvbuff(m))
               ELSE
                 EOSTable % DV % Variables(l) % Values(i,j,k) = dvbuff(m)
               END IF
@@ -1267,18 +1274,18 @@ write(*,*) 'Upper table extrapolation starting'
                 x_p  = (((k_B * tempbuff2)/(2*pi*(h_bar**2)))**(1.5d0)) &
                   * (2/rhobuff2) * (m_p**(2.5d0)) * exp( mu_p / (k_B/ergmev * tempbuff2) ) 
                 IF ( x_p > 1 ) THEN 
-                  x_p = 1.0d0
+                  x_p = 0.0d0
                 END IF
 
                 x_n  = (((k_B * tempbuff2)/(2*pi*(h_bar**2)))**(1.5d0)) &
                   * (2/rhobuff2) * (m_n**(2.5d0)) * exp( mu_n / (k_B/ergmev * tempbuff2) )
                 IF ( x_n > 1 ) THEN
-                  x_n = 1.0d0
+                  x_n = 0.0d0
                 END IF
                 x_a = (((k_B * tempbuff2)/(2*pi*(h_bar**2)))**(1.5d0)) &
                   * (1/rhobuff2) * (m_a**(2.5d0)) * exp( (mu_a + B_a) / (k_B/ergmev * tempbuff2) )
                 IF ( x_a > 1 ) THEN
-                  x_a = 1.0d0
+                  x_a = 0.0d0
                 END IF
                 x_heavy = 1.0d0 - x_p - x_n - x_a
                 IF ( x_heavy > 1 .or. x_heavy < 0) THEN
@@ -1298,22 +1305,22 @@ write(*,*) 'Upper table extrapolation starting'
       
 END IF
 
-IF ( ClusterSwitch == 1 ) THEN
-    DO k = 1, nPoints(3)
-      DO j = 1, nPoints(2)
-        DO i = 0, nPoints(1) - 1
-            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-            Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
-            Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
-            Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
-            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel
-            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel
-        END DO
-      END DO
-    END DO
-write (*,*) 'light cluster mass fractions added'
-END IF
+!IF ( ClusterSwitch == 1 ) THEN
+!    DO k = 1, nPoints(3)
+!      DO j = 1, nPoints(2)
+!        DO i = 0, nPoints(1) - 1
+!            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
+!            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
+!            Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
+!            Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
+!            Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
+!            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel
+!            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel
+!        END DO
+!      END DO
+!    END DO
+!write (*,*) 'light cluster mass fractions added'
+!END IF
 
 !    DO k = 1, nPoints(3)
 !      DO j = 1, nPoints(2)
