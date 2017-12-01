@@ -547,7 +547,7 @@ CONTAINS
               / ( Coordinate2(il2+1) - Coordinate2(il2) )
         END IF
 
-        DO i = j, SizeX1
+        DO i = 1, j
 
           IF ( LogInterp(1) == 1 ) THEN
             il1 = Index1D_Log( x1(i), Coordinate1, SizeC1 )
@@ -591,14 +591,14 @@ CONTAINS
 
     DO k = 1,SizeX3
       DO j = 1, SizeX2
-        DO i = j, SizeX1
+        DO i = 1, j
 
           Interpolant(i,j,k) &
             = 10.d0**( Interpolant(i,j,k) ) - Offset
 
         END DO ! i
 
-        DO ip = 1, j-1
+        DO ip = j, SizeX1
 
           Interpolant(ip,j,k) &
             = Interpolant(j,ip,k) * &
@@ -659,7 +659,7 @@ CONTAINS
           = ( LogX2(j) - LogCoordsX2(iX2) ) &
               / ( LogCoordsX2(iX2+1) - LogCoordsX2(iX2) )
 
-        DO i = j, SIZE( LogX1 )
+        DO i = 1, j
 
           iX1 &
             = Index1D_Lin( LogX1(i), LogCoordsX1, SIZE( LogCoordsX1 ) )
@@ -696,8 +696,8 @@ CONTAINS
       = 10**( Interpolant(:,:,:) ) - Offset
 
     DO k = 1,SIZE( LogX3 )
-      DO j = 2, SIZE( LogX2 )
-        DO i = 1, j-1
+      DO j = 1, SIZE( LogX2 )
+        DO i = j, SIZE( LogX1 )
 
           Interpolant(i,j,k) &
             = Interpolant(j,i,k) * &
