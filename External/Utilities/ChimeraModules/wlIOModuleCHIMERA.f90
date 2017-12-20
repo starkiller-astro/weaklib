@@ -16,12 +16,12 @@ MODULE wlIOModuleCHIMERA
   USE wlExtEOSWrapperModule, ONLY: wlGetElectronEOS, wlGetFullEOS
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  USE sfho_frdm_composition_module
+  !USE sfho_frdm_composition_module
   !USE sfhx_frdm_composition_module
   !USE dd2_frdm_composition_module
   !USE iuf_roca_composition_module
   !USE fsg_roca_composition_module
-  !USE nl3_lala_composition_module
+  USE nl3_lala_composition_module
 
   implicit none
 
@@ -113,6 +113,7 @@ CONTAINS
     INTEGER                                       :: UpperTableSwitch
     INTEGER                                       :: ClusterSwitch
     INTEGER                                       :: RenormSwitch
+    INTEGER                                       :: LogSwitch
     INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
@@ -188,11 +189,12 @@ CONTAINS
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
-    UpperTableSwitch = 0 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
+    UpperTableSwitch = 2 ! 0 = no extension, 1 = BCK, 2 = Compose table extrapolation
     ElectronSwitch = 0   ! 0 = BCK Electron EOS, 1 = Native Compose EOS
     ClusterSwitch = 1    ! 0 = No light cluster distribution, 1 = light clusters added 
     RenormSwitch = 1     ! 0 = No Renormalization of Mass Fractions, 1 = Fractions renormalized to 1
-    BindingTableSwitch = 1 ! 0 = No binding, 1 = SFHo/x, DD2, 2 = IUFSU, FSUGold, 3 = NL3  
+    BindingTableSwitch = 3 ! 0 = No binding, 1 = SFHo/x, DD2, 2 = IUFSU, FSUGold, 3 = NL3  
+    LogSwitch = 0          ! 0 = No logging, 1 = Logging table dependent variable values 
 
 write(*,*) 'hdf5 table opened'
 
@@ -221,7 +223,8 @@ write (*,*) 'nVariables', nVariables
     nPointsBCK(1) = nPoints(1)
     nPointsBCK(2) = nPoints(2)
     IF ( UpperTableSwitch .ge. 1 ) THEN
-      nPointsBCK(3) = nPoints(3) + 39
+      !nPointsBCK(3) = nPoints(3) + 39
+      nPointsBCK(3) = nPoints(3) + 10
       write (*,*) 'Expanded table range', nPointsBCK
     ELSE
       !nPointsBCK(3) = nPoints(3)
@@ -236,14 +239,14 @@ write (*,*) 'nVariables', nVariables
       write (*,*) 'Standard EOSTable allocated'
     END IF
  
-    EOSTable % MD % IDTag = 'wl-EOS-SFHo-25-50-100, 11-13-17, with clusters, renorm'
+    EOSTable % MD % IDTag = 'wl-EOS-NL3-25-50-100, 12-12-17, with clusters, renorm, 0.7'
     EOSTable % MD % TableResolution = '25 pts/dec rho, 50 pts/dec, delta ye = .01'
     EOSTable % MD % NucEOSLink = 'Nuc EOS Paper Link'
     EOSTable % MD % LeptonEOSLink = 'Lepton EOS Paper Link'
     EOSTable % MD % SourceLink = 'Table Source Link'
     EOSTable % MD % WLRevision = 'Rev'
     EOSTable % MD % TableLink = &
-& 'http://eagle.phys.utk.edu/weaklib/trac/browser/External/Tables/EquationsOfState/wl-EOS-SFHo-25-50-100.h5'
+& 'http://eagle.phys.utk.edu/weaklib/trac/browser/External/Tables/EquationsOfState/wl-EOS-NL3-25-50-100.h5'
 
     ALLOCATE( nb(0:(nPoints(1) - 1 ) ), t(0:(nPoints(2) - 1) ), yq( 0:(nPoints(3) - 1 ) ) )
     ALLOCATE( thermo(0:(nThermo(1)*AllPoints(1) - 1)) )
@@ -811,8 +814,6 @@ write (*,*) 'nPoints', nPoints
 !end do
 !STOP
 
-    !BindingTableSwitch = 1 
-
 write(*,*) 'starting binding table loops'
     IF ( BindingTableSwitch == 0 ) THEN 
 
@@ -825,7 +826,7 @@ write(*,*) 'starting binding table loops'
     END DO
 
   ELSE IF ( BindingTableSwitch == 1 ) THEN
-    !RETURN
+    RETURN
 write(*,*) "starting sfho frdm loop"
 !write(*,*) "starting sfhx frdm loop"
 !write(*,*) "starting dd2 frdm loop"
@@ -968,7 +969,7 @@ write(*,*) i-1,nPoints(2),k,t(nPoints(2)-1),"Binding Energy max=", EOSTable % DV
 !------------------------------------
 
   ELSE IF ( BindingTableSwitch == 3 ) THEN
-    RETURN
+    !RETURN
 
 write(*,*) 'starting lalazissis loops'
 
@@ -1228,8 +1229,8 @@ write(*,*) 'Upper table extrapolation starting'
               rhobuff2 = EOSTable % TS % States(1) % Values(i)
               IF ( rhobuff2 > 1.0e14 .or. k > 80 ) THEN
                 EOSTable % DV % Variables(l) % Values(i,j,k) = 0.0d0
-              ELSE IF ( l == 11 .or. l == 12 ) THEN
-                EOSTable % DV % Variables(l) % Values(i,j,k) = abs(dvbuff(m))
+     !         ELSE IF ( l == 11 .or. l == 12 ) THEN
+     !           EOSTable % DV % Variables(l) % Values(i,j,k) = abs(dvbuff(m))
               ELSE
                 EOSTable % DV % Variables(l) % Values(i,j,k) = dvbuff(m)
               END IF
@@ -1302,64 +1303,103 @@ write(*,*) 'Upper table extrapolation starting'
         END DO 
       END DO 
     !END DO 
+write(*,*) 'point 1'
+    DO k = nPoints(3) + 1, nPointsBCK(3)
+      DO j = 1, nPoints(2)
+        DO i = 1, nPoints(1)
+              rhobuff(1) = EOSTable % TS % States(1) % Values(i)
+              tbuff(1)   = EOSTable % TS % States(2) % Values(j)
+              pbuff(1)   = EOSTable % DV % Variables(1) % Values(i,j,k)
+              ubuff(1)   = EOSTable % DV % Variables(3) % Values(i,j,k)
+              P1(1) = LOG10( EOSTable % DV % Variables(1) % Values(i-1,j,k) )
+              P2(1)= LOG10( EOSTable % DV % Variables(1) % Values(i+1,j,k) )
+              P1T(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j-1,k) )
+              P2T(1)= LOG10( EOSTable % DV % Variables(1) % Values(i,j+1,k) )
+              U1(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j-1,k) )
+              U2(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j+1,k) )
+              rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i-1) )
+              rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i+1) )
+              T1(1) = LOG10( EOSTable % TS % States(2) % Values(j-1) )
+              T2(1) = LOG10( EOSTable % TS % States(2) % Values(j+1) )
+              DerivativeP(1,3) = 0.d0
+              DerivativeU(1,3) = 0.d0
+              DerivativeU(1,1) = 0.d0
+
+              IF ( i == 1 ) THEN
+              P1(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+              rho1(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
+              END IF
+
+              IF ( i == nPoints(1) ) THEN
+              !IF ( EOSTable % TS % States(1) % Values(i+1) > 1.0e11 ) THEN
+              P2(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+              rho2(1) = LOG10( EOSTable % TS % States(1) % Values(i) )
+              END IF
+
+              IF( j == 1 ) THEN
+              P1T(1) = LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+              U1(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j,k) )
+              T1(1) = LOG10( EOSTable % TS % States(2) % Values(j) )
+              END IF
+
+              IF( j == nPoints(2) ) THEN
+              P2T(1)= LOG10( EOSTable % DV % Variables(1) % Values(i,j,k) )
+              U2(1) = LOG10( EOSTable % DV % Variables(3) % Values(i,j,k) )
+              T2(1) = LOG10( EOSTable % TS % States(2) % Values(j) )
+              END IF
+
+              DerivativeP(1,1) = (P2(1) - P1(1))/(rho2(1) - rho1(1)) * (pbuff(1)/rhobuff(1))
+              DerivativeP(1,2) = (P2T(1) - P1T(1))/(T2(1) - T1(1)) * (pbuff(1)/tbuff(1))
+              DerivativeU(1,2) = (U2(1) - U1(1))/(T2(1) - T1(1)) * (ubuff(1)/tbuff(1))
+
+              EOSTable % DV % Variables(15) % Values(i,j,k) &
+              = MAX( ( rhobuff(1) * DerivativeP(1,1) + ( tbuff(1)/(rhobuff(1) + epsilon) ) &
+                    * ((DerivativeP(1,2))**2)/(DerivativeU(1,2)) )/( pbuff(1) + epsilon ), 1.e-31 )
+
+      END DO
+    END DO
+  END DO
       
 END IF
-
-!IF ( ClusterSwitch == 1 ) THEN
-!    DO k = 1, nPoints(3)
-!      DO j = 1, nPoints(2)
-!        DO i = 0, nPoints(1) - 1
-!            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-!            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-!            Yd = MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 3*AllPoints(1) ), 1.e-31 ) ! deuterons
-!            Ytr= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 4*AllPoints(1) ), 1.e-31 ) ! tritons
-!            Yhel= MAX(yi((i + nPoints(1)*(j-1) + TwoPoints(1)*(k-1)) + 5*AllPoints(1) ), 1.e-31 ) ! helium3
-!            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff + Yd + Ytr + 2*Yhel
-!            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff + Yd + 2*Ytr + Yhel
-!        END DO
-!      END DO
-!    END DO
-!write (*,*) 'light cluster mass fractions added'
-!END IF
-
-!    DO k = 1, nPoints(3)
-!      DO j = 1, nPoints(2)
-!        DO i = 0, nPoints(1) - 1
-!            xpbuff = EOSTable % DV % Variables(7) % Values(i+1,j,k) ! xp
-!            xnbuff = EOSTable % DV % Variables(8) % Values(i+1,j,k) ! xn
-!            xalphabuff = EOSTable % DV % Variables(9) % Values(i+1,j,k) ! xalpha
-!            xheavybuff = EOSTable % DV % Variables(10) % Values(i+1,j,k) ! xheavy
-!
-!            totalmassfrac = xpbuff + xnbuff + xalphabuff + xheavybuff
-!
-!            EOSTable % DV % Variables(7) % Values(i+1,j,k) = xpbuff/totalmassfrac
-!            EOSTable % DV % Variables(8) % Values(i+1,j,k) = xnbuff/totalmassfrac
-!            EOSTable % DV % Variables(9) % Values(i+1,j,k) = xalphabuff/totalmassfrac
-!            EOSTable % DV % Variables(10) % Values(i+1,j,k) = xheavybuff/totalmassfrac
-!        END DO
-!      END DO
-!    END DO
+    DO k = nPoints(3) + 1, nPointsBCK(3)
+      DO i = 1, nPoints(1)
+        DO j = 1, nPoints(2)
+          DO l = 1, 15
+            IF ( (l == 3) .or. (l == 4) .or. (l == 5) .or. (l == 6) .or. (l == 13) .or. (l == 14) ) THEN 
+              CYCLE
+            ELSE IF ( EOSTable % DV % Variables(l) % Values(i,j,k) .lt. 0.0d0 ) THEN 
+              EOSTable % DV % Variables(l) % Values(i,j,k) = 0.0d0
+              EOSTable % DV % Repaired(i,j,k) = -1
+            END IF
+          END DO
+        END DO
+      END DO
+    END DO
+write(*,*) 'point 3'
 
     DO l = 1, EOSTable % nVariables
       EOSTable % DV % minValues(l) = MINVAL( EOSTable % DV % Variables(l) % Values )
       EOSTable % DV % maxValues(l) = MAXVAL( EOSTable % DV % Variables(l) % Values )
     END DO
 
-  DO l = 1, 15 !EOSTable % nVariables
-    WRITE (*,*) EOSTable % DV % Names(l)
-    minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
-    WRITE (*,*) "minvar=", minvar
-    EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
-    WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
-    EOSTable % DV % Variables(l) % Values &
-      = LOG10( EOSTable % DV % Variables(l) % Values &
-               + EOSTable % DV % Offsets(l) + epsilon )
+  IF ( LogSwitch == 1 ) THEN
+    DO l = 1, 15 !EOSTable % nVariables
+      WRITE (*,*) EOSTable % DV % Names(l)
+      minvar = MINVAL( EOSTable % DV % Variables(l) % Values )
+      WRITE (*,*) "minvar=", minvar
+      EOSTable % DV % Offsets(l) = -2.d0 * MIN( 0.d0, minvar )
+      WRITE (*,*) "Offset=", EOSTable % DV % Offsets(l)
+      EOSTable % DV % Variables(l) % Values &
+        = LOG10( EOSTable % DV % Variables(l) % Values &
+                 + EOSTable % DV % Offsets(l) + epsilon )
 
-  END DO
+    END DO
+  END IF
+write(*,*) 'point 4'
 
     CALL WriteEquationOfStateTableHDF( EOSTable )
 
-    CALL DescribeEquationOfStateTable( EOSTable )
+    !CALL DescribeEquationOfStateTable( EOSTable )
 
     !CALL CloseFileHDF( file_id )
 
