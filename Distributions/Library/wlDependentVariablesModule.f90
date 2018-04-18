@@ -6,7 +6,7 @@ MODULE wlDependentVariablesModule
   PRIVATE
 
 
-  TYPE :: ValueType
+  TYPE, PUBLIC :: ValueType
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values
   END TYPE
 

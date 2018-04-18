@@ -5,11 +5,11 @@ MODULE wlThermoStateModule
   implicit none
   PRIVATE
 
-  TYPE :: ValueType
+  TYPE, PUBLIC :: ValueType
     REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
   END TYPE
 
-  TYPE :: TSIDType
+  TYPE, PUBLIC :: TSIDType
     INTEGER :: iRho
     INTEGER :: iT
     INTEGER :: iYe
