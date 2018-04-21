@@ -110,8 +110,6 @@ CONTAINS
 
     INTEGER(HID_T)                              :: group_id
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-    INTEGER                                     :: i
-    INTEGER, DIMENSION(1)                       :: buffer
 
     CALL OpenGroupHDF( "Metadata", .false., file_id, group_id )
 
@@ -146,8 +144,6 @@ CONTAINS
     TYPE(MetadataType), INTENT(inout)           :: MD
     INTEGER(HID_T), INTENT(in)                  :: group_id
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-    INTEGER                                     :: i
-    INTEGER, DIMENSION(1)                       :: buffer
 
     datasize1d = 1
     CALL WriteHDF( "IDTag", MD % IDTag(:), &
@@ -221,18 +217,33 @@ CONTAINS
     INTEGER, INTENT(in)                           :: myid ! rank of each processor (MPI)   
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(3)                         :: nPoints
-    INTEGER, DIMENSION(4)                         :: buffer
+    INTEGER, DIMENSION(19)                        :: buffer
     INTEGER                                       :: nStates, nVariables, i
-    INTEGER                                       :: i_count, num_procs
+    INTEGER                                       :: i_count
     INTEGER                                       :: charlen
     CHARACTER(LEN=120), DIMENSION(7)              :: sendstring
 
     IF ( myid == rootproc ) THEN
     
-      buffer(1) = EOSTable % nPoints(1)
-      buffer(2) = EOSTable % nPoints(2)
-      buffer(3) = EOSTable % nPoints(3)
-      buffer(4) = EOSTable % nVariables
+      buffer( 1) = EOSTable % nPoints(1)
+      buffer( 2) = EOSTable % nPoints(2)
+      buffer( 3) = EOSTable % nPoints(3)
+      buffer( 4) = EOSTable % nVariables
+      buffer( 5) = EOSTable % DV % Indices % iPressure
+      buffer( 6) = EOSTable % DV % Indices % iEntropyPerBaryon
+      buffer( 7) = EOSTable % DV % Indices % iInternalEnergyDensity
+      buffer( 8) = EOSTable % DV % Indices % iElectronChemicalPotential
+      buffer( 9) = EOSTable % DV % Indices % iProtonChemicalPotential
+      buffer(10) = EOSTable % DV % Indices % iNeutronChemicalPotential
+      buffer(11) = EOSTable % DV % Indices % iProtonMassFraction
+      buffer(12) = EOSTable % DV % Indices % iNeutronMassFraction
+      buffer(13) = EOSTable % DV % Indices % iAlphaMassFraction
+      buffer(14) = EOSTable % DV % Indices % iHeavyMassFraction
+      buffer(15) = EOSTable % DV % Indices % iHeavyChargeNumber
+      buffer(16) = EOSTable % DV % Indices % iHeavyMassNumber
+      buffer(17) = EOSTable % DV % Indices % iHeavyBindingEnergy
+      buffer(18) = EOSTable % DV % Indices % iThermalEnergy
+      buffer(19) = EOSTable % DV % Indices % iGamma1
 
     END IF
 
@@ -249,6 +260,22 @@ CONTAINS
 
       CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
+      EOSTable % DV % Indices % iPressure                  = buffer( 5)
+      EOSTable % DV % Indices % iEntropyPerBaryon          = buffer( 6)
+      EOSTable % DV % Indices % iInternalEnergyDensity     = buffer( 7)
+      EOSTable % DV % Indices % iElectronChemicalPotential = buffer( 8)
+      EOSTable % DV % Indices % iProtonChemicalPotential   = buffer( 9)
+      EOSTable % DV % Indices % iNeutronChemicalPotential  = buffer(10)
+      EOSTable % DV % Indices % iProtonMassFraction        = buffer(11)
+      EOSTable % DV % Indices % iNeutronMassFraction       = buffer(12)
+      EOSTable % DV % Indices % iAlphaMassFraction         = buffer(13)
+      EOSTable % DV % Indices % iHeavyMassFraction         = buffer(14)
+      EOSTable % DV % Indices % iHeavyChargeNumber         = buffer(15)
+      EOSTable % DV % Indices % iHeavyMassNumber           = buffer(16)
+      EOSTable % DV % Indices % iHeavyBindingEnergy        = buffer(17)
+      EOSTable % DV % Indices % iThermalEnergy             = buffer(18)
+      EOSTable % DV % Indices % iGamma1                    = buffer(19)
+
     END IF
 
     i_count = PRODUCT(EOSTable % nPoints) 
@@ -258,12 +285,11 @@ CONTAINS
     DO i= 1, nStates
       CALL MPI_BCAST(EOSTable % TS % States(i) % Values(:), EOSTable % nPoints(i), &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-
     END DO
 
-    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates*32,                          &
+    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates*32,                       &
                      MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates*32,                          &
+    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates*32,                       &
                      MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates,                      &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
@@ -278,11 +304,15 @@ CONTAINS
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     END DO
 
-    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables*32,            &
+    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables*32,         &
                      MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables*32,            &
+    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables*32,         &
                      MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % DV % Offsets(:), EOSTable % nVariables,          &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % minValues(:), EOSTable % nVariables,        &
+                     MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % maxValues(:), EOSTable % nVariables,        &
                      MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:), i_count,                   &
                    MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
@@ -383,34 +413,49 @@ CONTAINS
 
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPressure, OldiPressure )
+    EOSTableOut % DV % Indices % iPressure = NewiPressure
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiEntropy, OldiEntropy )
+    EOSTableOut % DV % Indices % iEntropyPerBaryon = NewiEntropy
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiIntEnergy, OldiIntEnergy )
+    EOSTableOut % DV % Indices % iInternalEnergyDensity = NewiIntEnergy
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiEChemPot, OldiEChemPot )
+    EOSTableOut % DV % Indices % iElectronChemicalPotential = NewiEChemPot
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPChemPot, OldiPChemPot )
+    EOSTableOut % DV % Indices % iProtonChemicalPotential = NewiPChemPot
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiNChemPot, OldiNChemPot )
+    EOSTableOut % DV % Indices % iNeutronChemicalPotential = NewiNChemPot
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPMassFrac, OldiPMassFrac )
+    EOSTableOut % DV % Indices % iProtonMassFraction = NewiPMassFrac
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiNMassFrac, OldiNMassFrac )
+    EOSTableOut % DV % Indices % iNeutronMassFraction = NewiNMassFrac
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiAMassFrac, OldiAMassFrac )
+    EOSTableOut % DV % Indices % iAlphaMassFraction = NewiAMassFrac
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiHMassFrac, OldiHMassFrac )
+    EOSTableOut % DV % Indices % iHeavyMassFraction = NewiHMassFrac
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiHCharNum, OldiHCharNum )
+    EOSTableOut % DV % Indices % iHeavyChargeNumber = NewiHCharNum
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiHMassNum, OldiHMassNum )
+    EOSTableOut % DV % Indices % iHeavyMassNumber = NewiHMassNum
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiHeavyBE, OldiHeavyBE )
+    EOSTableOut % DV % Indices % iHeavyBindingEnergy = NewiHeavyBE
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiThermEnergy, OldiThermEnergy )
+    EOSTableOut % DV % Indices % iThermalEnergy = NewiThermEnergy
     CALL TransferDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiGamma1, OldiGamma1 )
+    EOSTableOut % DV % Indices % iGamma1 = NewiGamma1
 
     END ASSOCIATE
 
@@ -429,7 +474,7 @@ CONTAINS
     DO i = 1, SIZE(irho)
       DO j = 1, EOSTable % DV % nVariables
         Values(i,j) &
-          = 10**( EOSTable % DV % Variables(j) % Values&
+          = 10.d0**( EOSTable % DV % Variables(j) % Values&
           ( irho(i), iT(i), iYe(i) ) ) -               &
           EOSTable % DV % Offsets(j)
       END DO

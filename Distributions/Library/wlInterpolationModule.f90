@@ -20,6 +20,7 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromEntropy
   PUBLIC :: ComputeTempFromPressure
   PUBLIC :: ComputeTempFromPressure_Bisection
+  PUBLIC :: ComputeTempForVector
   PUBLIC :: EOSTableQuery
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
@@ -1835,6 +1836,79 @@ CONTAINS
     WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
 
   END SUBROUTINE MonotonicityCheck 
+
+ 
+  SUBROUTINE ComputeTempForVector &
+               ( rho, alt, ye, EOSTable, InputFlag, InputMask, Temperature )
+
+    USE wlEquationOfStateTableModule
+
+    REAL(dp), DIMENSION(:), INTENT(in)         :: rho
+    REAL(dp), DIMENSION(:), INTENT(in)         :: alt
+    REAL(dp), DIMENSION(:), INTENT(in)         :: ye
+    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
+    INTEGER, DIMENSION(:), INTENT(in)          :: InputFlag
+    LOGICAL, DIMENSION(:), INTENT(in)          :: InputMask
+    REAL(dp), DIMENSION(:), INTENT(out)        :: Temperature
+
+    INTEGER                                    :: i, ni, nf
+    REAL(dp), DIMENSION(1)                     :: tbuff
+
+    ni = LBOUND( rho, DIM = 1 )
+    nf = UBOUND( rho, DIM = 1 )
+
+    ASSOCIATE( WL_EINT    => EOSTable % DV % Indices % iInternalEnergyDensity, &
+               WL_ENTROPY => EOSTable % DV % Indices % iEntropyPerBaryon,      &
+               WL_PRESS   => EOSTable % DV % Indices % iPressure )
+
+    DO i = ni, nf
+
+      IF ( .not. InputMask(i) ) CYCLE
+
+      IF ( InputFlag(i) == WL_EINT ) THEN
+
+        CALL ComputeTempFromIntEnergy( rho(i), alt(i), ye(i),      &
+           EOSTable % TS % States(1) % Values,                     &
+           EOSTable % TS % States(2) % Values,                     &
+           EOSTable % TS % States(3) % Values,                     &
+           EOSTable % TS % LogInterp,                              &
+           EOSTable % DV % Variables(WL_EINT) % Values(:,:,:),     &
+           EOSTable % DV % Offsets(WL_EINT), tbuff )
+
+      ELSEIF ( InputFlag(i) == WL_ENTROPY ) THEN
+
+        CALL ComputeTempFromEntropy( rho(i), alt(i), ye(i),        &
+           EOSTable % TS % States(1) % Values,                     &
+           EOSTable % TS % States(2) % Values,                     &
+           EOSTable % TS % States(3) % Values,                     &
+           EOSTable % TS % LogInterp,                              &
+           EOSTable % DV % Variables(WL_ENTROPY) % Values(:,:,:),  &
+           EOSTable % DV % Offsets(WL_ENTROPY), tbuff )
+
+      ELSEIF ( InputFlag(i) == WL_PRESS ) THEN
+
+        CALL ComputeTempFromIntEnergy( rho(i), alt(i), ye(i),      &
+           EOSTable % TS % States(1) % Values,                     &
+           EOSTable % TS % States(2) % Values,                     &
+           EOSTable % TS % States(3) % Values,                     &
+           EOSTable % TS % LogInterp,                              &
+           EOSTable % DV % Variables(WL_PRESS) % Values(:,:,:),    &
+           EOSTable % DV % Offsets(WL_PRESS), tbuff )
+
+      ELSE
+
+        WRITE(*,*) "Invalid thermodynamic variable flag in ComputeTempForVector: ", InputMask(i)
+        STOP
+
+      END IF
+      Temperature(i) = tbuff(1) 
+
+    END DO
+
+    END ASSOCIATE
+
+  END SUBROUTINE ComputeTempForVector
+
 
 
   SUBROUTINE ComputeTempFromIntEnergy &

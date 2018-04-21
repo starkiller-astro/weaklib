@@ -17,6 +17,7 @@ wlInterpolationModule.o: \
   wlKindModule.o \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
+  wlEquationOfStateTableModule.o \
   wlInterpolationModule.f90
 
 wlIOModuleHDF.o: \
@@ -24,3 +25,4 @@ wlIOModuleHDF.o: \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
   wlIOModuleHDF.f90
+
