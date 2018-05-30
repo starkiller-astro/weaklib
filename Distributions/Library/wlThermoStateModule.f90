@@ -5,7 +5,7 @@ MODULE wlThermoStateModule
   implicit none
   PRIVATE
 
-  TYPE, PUBLIC :: ValueType
+  TYPE, PUBLIC :: ValueTypeTS
     REAL(dp), ALLOCATABLE, DIMENSION(:) :: Values
   END TYPE
 
@@ -22,7 +22,7 @@ MODULE wlThermoStateModule
     INTEGER, DIMENSION(3) :: LogInterp
     REAL(dp), DIMENSION(3) :: minValues
     REAL(dp), DIMENSION(3) :: maxValues
-    TYPE(ValueType), DIMENSION(3) :: States
+    TYPE(ValueTypeTS), DIMENSION(3) :: States
     TYPE(TSIDType) :: Indices
   END TYPE  
 

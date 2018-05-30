@@ -6,7 +6,7 @@ MODULE wlDependentVariablesModule
   PRIVATE
 
 
-  TYPE, PUBLIC :: ValueType
+  TYPE, PUBLIC :: ValueTypeDV
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values
   END TYPE
 
@@ -38,7 +38,7 @@ MODULE wlDependentVariablesModule
     INTEGER, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired
     REAL(dp), DIMENSION(:), ALLOCATABLE :: minValues
     REAL(dp), DIMENSION(:), ALLOCATABLE :: maxValues
-    TYPE(ValueType), DIMENSION(:), ALLOCATABLE :: Variables 
+    TYPE(ValueTypeDV), DIMENSION(:), ALLOCATABLE :: Variables 
     TYPE(DVIDType) :: Indices
   END TYPE
 
