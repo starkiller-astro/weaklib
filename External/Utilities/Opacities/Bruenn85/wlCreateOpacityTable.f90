@@ -283,7 +283,7 @@ PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
               energy = OpacityTable % EnergyGrid % Values(i_e)
 
               OpacityTable % thermEmAb % Absorptivity(i_r) % Values (i_e, j_rho, k_t, l_ye) &
-                     = totalECapEm(energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
+                     = TotalNuEAbsorption(energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
                        xheavy, xn, xp )
            END DO  !i_e
            
