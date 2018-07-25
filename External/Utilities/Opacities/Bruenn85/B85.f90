@@ -36,8 +36,9 @@ MODULE B85
 
   implicit none
    
-  PUBLIC TotalECapEm, &
+  PUBLIC TotalNuEAbsorption, &
          TotalElasticScatteringKernel, &
+         TotalNuEbarAbsorption, &
          NESKernelWithOmega, &
          TotalNESKernel
 
@@ -45,7 +46,7 @@ CONTAINS
 
 !========================Function=============================
 
-  REAL(dp) FUNCTION TotalECapEm &
+  REAL(dp) FUNCTION TotalNuEAbsorption &
     ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 !------------------------------------------------------------------------------
 ! Purpose:
@@ -120,7 +121,7 @@ CONTAINS
 !  Set emitnp + absornp = zero and return if both xn and xp are zero
 !------------------------------------------------------------------
     IF ( xn == zero .and. xp == zero ) THEN
-      totalECapEm = emitni + absorni
+      TotalNuEAbsorption = emitni + absorni
       WRITE(*,*) 'xn and xp = zero'
       RETURN
     END IF
@@ -133,15 +134,15 @@ CONTAINS
      absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
        emitnp = jnucleon
 
-    totalECapEm = ( emitni + absorni ) + ( emitnp + absornp )
+    TotalNuEAbsorption = ( emitni + absorni ) + ( emitnp + absornp )
 
-    IF ( ISNAN(totalECapEm) ) THEN
-      WRITE(*,*) "totalECapEm is NAN! "
+    IF ( ISNAN(TotalNuEAbsorption) ) THEN
+      WRITE(*,*) "TotalNuEAbsorption is NAN! "
       STOP
     END IF
 
     RETURN
-  END FUNCTION TotalECapEm
+  END FUNCTION TotalNuEAbsorption
 
 
   REAL(dp) FUNCTION TotalElasticScatteringKernel&
@@ -261,6 +262,53 @@ CONTAINS
 
   END FUNCTION TotalElasticScatteringKernel
 
+
+  REAL(dp) FUNCTION TotalNuEbarAbsorption &
+    ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
+!------------------------------------------------------------------------------
+! Purpose:
+!   To compute the electron-type antineutrino absorptivity.
+!   (1) Absorptivity = emissivity + inverse of mean path
+!------------------------------------------------------------------------------
+  IMPLICIT NONE
+
+    REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
+                            xheavy, xn, xp
+
+    REAL(dp) :: TMeV, etanp, etapn, midE, midFep, rop, ron, mpG, mnG, fexp
+    REAL(dp) :: emitnp, absornp
+
+    IF ( energy .ge. (dmnp + chem_e) ) THEN
+      
+      TotalNuEbarAbsorption = 0.0_dp
+
+    ELSE
+
+      TMeV = T * kMeV 
+      mpG  = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
+      mnG  = mn * ergmev * cvel_inv * cvel_inv ! neutron mass [g]
+      rop  = rho * xp / mpG                    ! Approxiation in the  nondegenerate regime
+      ron  = rho * xn / mnG
+
+      midE = (energy - dmnp)**2 * ( 1.0_dp - (me/(energy-dmnp))**2 )
+
+      midFep = 1.0_dp / ( FEXP( (energy-dmnp+chem_e) / TMeV ) + 1.0_dp )
+      absornp = therm1 * rop * midE * (1.0_dp - midFep)
+
+      emitnp  = therm1 * ron * midE * midFep
+
+      TotalNuEbarAbsorption =  emitnp + absornp 
+
+      IF ( ISNAN(TotalNuEbarAbsorption) ) THEN
+        WRITE(*,*) "TotalNuEbarAbsorption is NAN! "
+        STOP
+      END IF
+
+    END IF
+    
+    RETURN
+
+  END FUNCTION TotalNuEbarAbsorption
 
   SUBROUTINE TotalNESKernel( energygrid, TMeV, chem_e, nquad, l, NESK )
 

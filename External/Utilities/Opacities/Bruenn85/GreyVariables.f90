@@ -157,7 +157,7 @@ CONTAINS
 
     DO ii = 1, nquad
 
-      opacity(ii) = totalECapEm(roots(ii), rho, T, Z, A,&
+      opacity(ii) = TotalNuEAbsorption(roots(ii), rho, T, Z, A,&
                       chem_e, chem_n, chem_p, &
                       xheavy, xn, xp )
 
