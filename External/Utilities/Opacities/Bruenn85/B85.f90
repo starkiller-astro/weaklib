@@ -271,7 +271,7 @@ CONTAINS
 
 
   REAL(dp) FUNCTION TotalNuEbarAbsorption &
-    ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
+    ( energy, rho, T, chem_e, xn, xp )
 !------------------------------------------------------------------------------
 ! Purpose:
 !   To compute the electron-type antineutrino absorptivity.
@@ -279,10 +279,9 @@ CONTAINS
 !------------------------------------------------------------------------------
   IMPLICIT NONE
 
-    REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
-                            xheavy, xn, xp
+    REAL(dp), INTENT(in) :: energy, rho, T, chem_e, xn, xp
 
-    REAL(dp) :: TMeV, etanp, etapn, midE, midFep, rop, ron, mpG, mnG, fexp
+    REAL(dp) :: TMeV, midE, midFe, rop, ron, mpG, mnG, fexp
     REAL(dp) :: emitnp, absornp
 
     IF ( energy .lt. (dmnp + me) ) THEN
@@ -299,10 +298,11 @@ CONTAINS
 
       midE = (energy - dmnp)**2 * ( 1.0_dp - (me/(energy-dmnp))**2 )
 
-      midFep = 1.0_dp / ( FEXP( (energy-dmnp+chem_e) / TMeV ) + 1.0_dp )
-      absornp = therm1 * rop * midE * (1.0_dp - midFep)
+      midFe = 1.0_dp / ( FEXP( (energy-dmnp+chem_e) / TMeV ) + 1.0_dp )
 
-      emitnp  = therm1 * ron * midE * midFep
+      absornp = therm1 * rop * midE * (1.0_dp - midFe)
+
+      emitnp  = therm1 * ron * midE * midFe
 
       TotalNuEbarAbsorption =  emitnp + absornp 
 
