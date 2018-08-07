@@ -15,17 +15,23 @@ MODULE B85
 !
 !    CONTAINS:
 !
-!      Function totalECapEm: 
+!      Function TotalNuEAbsorption: 
 !                   gives opacity with np as approximation 
 !
-!      Function totalElasticScatteringKernel: 
+!      Function TotalElasticScatteringKernel: 
 !                   gives isoenergetic scattering kernel with nMoment
 !                   l = 0 or 1
-!                            
+!
+!      Function TotalNuEbarAbsorption:
+!                   gives opacity with np as approximation                   
+!
+!      Routine  TotalNESKernel:
+!                   gives NES kernel
 !
 !    Modules used:
 !      wlKindModule
 !      wlExtPhysicalConstantsModule
+!      wlExtNumericalModule
 !      ( function fexp is called )
 !-----------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
@@ -40,7 +46,8 @@ MODULE B85
          TotalElasticScatteringKernel, &
          TotalNuEbarAbsorption, &
          NESKernelWithOmega, &
-         TotalNESKernel
+         TotalNESKernel, &
+         ProductionAbsorptionKernel
 
 CONTAINS
 
@@ -58,15 +65,15 @@ CONTAINS
     REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
                             xheavy, xn, xp
 
-    REAL(dp) :: TMeV, n, qpri, nhn, npz, etapn, jnucleon, jnuclear, midFe, &
+    REAL(dp)             :: TMeV, N, qpri, nhn, npz, etapn, midFe, &
                             midE, chem_v, mpG, mnG, fexp, &
                             rop, ron, midFexpp, midFep, midEp, midCons
-    REAL(dp) :: emitnp, absornp, emitni, absorni
+    REAL(dp)             :: emitnp, absornp, emitni, absorni
 
-    TMeV   = T * kMeV                         ! kmev = 8.61733d-11 [MeV K^{-1}]
+    TMeV   = T * kMeV 
       N    = A - Z
     qpri   = chem_n - chem_p + 3.0_dp + dmnp  ! [MeV] 3 = energy of the 1f5/2 level 
-    chem_v = chem_e + chem_p - chem_n - dmnp  ! neutrino chemical potential
+    chem_v = chem_e + chem_p - chem_n - dmnp 
     
    
      mpG   = mp * ergmev * cvel_inv * cvel_inv ! proton mass [g]
@@ -97,7 +104,7 @@ CONTAINS
     END IF
 
 !-----------------------------------------------------------------------------
-!   j_nuclear(emitni) and chi_nuclear(absorni) 
+!   emissivity and absorptivity on nuclei
 !-----------------------------------------------------------------------------
     IF ( xheavy * npz * nhn == zero ) THEN
        emitni  = 0.0_dp
@@ -115,7 +122,7 @@ CONTAINS
     END IF
 
 !-----------------------------------------------------------------------------
-!   j_nucleon(emitnp) and chi_nucleon(absornp)
+!   emissivity and absorptivity on nucleons
 !-----------------------------------------------------------------------------
 !------------------------------------------------------------------
 !  Set emitnp + absornp = zero and return if both xn and xp are zero
@@ -130,9 +137,8 @@ CONTAINS
        midE   = (energy+dmnp)**2 &
                  * SQRT( 1.0_dp - ( me / (energy+dmnp) )**2 )
 
-     jnucleon = therm1 * rop * midE * midFe
+      emitnp  = therm1 * rop * midE * midFe
      absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
-       emitnp = jnucleon
 
     TotalNuEAbsorption = ( emitni + absorni ) + ( emitnp + absornp )
 
@@ -142,6 +148,7 @@ CONTAINS
     END IF
 
     RETURN
+
   END FUNCTION TotalNuEAbsorption
 
 
@@ -278,7 +285,7 @@ CONTAINS
     REAL(dp) :: TMeV, etanp, etapn, midE, midFep, rop, ron, mpG, mnG, fexp
     REAL(dp) :: emitnp, absornp
 
-    IF ( energy .ge. (dmnp + chem_e) ) THEN
+    IF ( energy .lt. (dmnp + me) ) THEN
       
       TotalNuEbarAbsorption = 0.0_dp
 
@@ -304,17 +311,23 @@ CONTAINS
         STOP
       END IF
 
+      IF ( TotalNuEbarAbsorption .le. zero ) THEN
+        WRITE(*,*) "TotalNuEbarAbsorption is Negative! "
+        STOP
+      END IF
+
     END IF
     
     RETURN
 
   END FUNCTION TotalNuEbarAbsorption
 
-  SUBROUTINE TotalNESKernel( energygrid, TMeV, chem_e, nquad, l, NESK )
 
-  REAL(dp), DIMENSION(:), INTENT(in) :: energygrid
-  REAL(dp), INTENT(in)       :: TMeV, chem_e
-  INTEGER , INTENT(in)       :: nquad, l
+  SUBROUTINE TotalNESKernel( energygrid, TMeV, chem_e, nquad, l, NESK, species )
+
+  REAL(dp), DIMENSION(:), INTENT(in)    :: energygrid
+  REAL(dp), INTENT(in)                  :: TMeV, chem_e
+  INTEGER , INTENT(in)                  :: nquad, l, species
   REAL(dp), DIMENSION(:,:), INTENT(out) :: NESK
 
   REAL(dp), DIMENSION(nquad) :: roots, weights
@@ -330,7 +343,7 @@ CONTAINS
 
   CALL gaquad( nquad, roots, weights, -1.0_dp , 1.0_dp )
 
-  CALL NESKernelWithOmega( energygrid, roots, TMeV, chem_e, NESK_ome )
+  CALL NESKernelWithOmega( energygrid, roots, TMeV, chem_e, NESK_ome, species )
 
  
   IF ( l == 0 ) THEN
@@ -364,8 +377,23 @@ CONTAINS
 
   END SUBROUTINE TotalNESKernel
 
+  
+  SUBROUTINE ProductionAbsorptionKernel( energygrid, TMeV, chem_e, nquad, l, EPK, species )
 
-  SUBROUTINE NESKernelWithOmega( energygrid, omega, TMeV, chem_e, nesktab )
+  REAL(dp), DIMENSION(:), INTENT(in)    :: energygrid
+  REAL(dp), INTENT(in)                  :: TMeV, chem_e
+  INTEGER , INTENT(in)                  :: nquad, l, species
+  REAL(dp), DIMENSION(:,:), INTENT(out) :: EPK
+
+    REAL(dp)   :: Coeff1, Coeff2
+
+    Coeff1 = ( cv + ca ) * ( cv + ca )
+    Coeff2 = ( cv - ca ) * ( cv - ca )
+
+  END SUBROUTINE ProductionAbsorptionKernel
+
+
+  SUBROUTINE NESKernelWithOmega( energygrid, omega, TMeV, chem_e, nesktab, species )
 !----------------------------------------------------------------------
 ! Purpose:
 !    To compute the neutrino-electron scattering (OUT) kernel 
@@ -374,10 +402,14 @@ CONTAINS
 !                            ( beta1 * I1 + beta2 * I2 + beta3 * I3 )
 !    (2) e == ep
 !    new form of I1,2,3
+!
+!    species = 1 : electron-type neutrino
+!    species = 2 : electron-type antineutrino
 !----------------------------------------------------------------------
   IMPLICIT NONE
 
     REAL(dp), DIMENSION(:), INTENT(in) :: energygrid, omega
+    INTEGER , INTENT(in)               :: species
     REAL(dp), INTENT(in) :: TMeV, chem_e       ! both unit = MeV
     REAL(dp), DIMENSION(:,:,:), INTENT(out) :: nesktab
     REAL(dp)             :: tsq, tinv, eta, FEXP, &
@@ -396,10 +428,16 @@ CONTAINS
       tinv = 1.0/TMeV
        eta = chem_e * tinv
      tpiet = twpi * TMeV                      ! 2*pi*TMeV
-     beta1 = ( cv + ca )**2 
-     beta2 = ( cv - ca )**2
-     beta3 = ca**2 - cv**2
-       D_e = SIZE( energygrid )
+     IF ( species == 1 ) THEN
+       beta1 = ( cv + ca )**2 
+       beta2 = ( cv - ca )**2
+       beta3 = ca**2 - cv**2
+     ELSE IF ( species == 2 ) THEN
+       beta1 = ( cv - ca )**2
+       beta2 = ( cv + ca )**2
+       beta3 = ca**2 - cv**2
+     END IF
+     D_e = SIZE( energygrid )
      D_ome = SIZE( omega )
      log10_sig0  = LOG10(1.764) - 44  ! log10(sig0)            
      log10_cons  = LOG10(half * pi * cvel / ( twpi**3 * me**2 )) + log10_sig0
