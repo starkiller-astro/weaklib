@@ -43,22 +43,24 @@ MODULE B85
   implicit none
    
   PUBLIC TotalNuEAbsorption, &
-         TotalElasticScatteringKernel, &
          TotalNuEbarAbsorption, &
-         NESKernelWithOmega, &
+         TotalIsoScatteringKernel, &
          TotalNESKernel, &
-         ProductionAbsorptionKernel
+         TPAbsorptionKernel
 
 CONTAINS
 
-!========================Function=============================
+!============================== Function ======================================
 
   REAL(dp) FUNCTION TotalNuEAbsorption &
     ( energy, rho, T, Z, A, chem_e, chem_n, chem_p, xheavy, xn, xp )
 !------------------------------------------------------------------------------
 ! Purpose:
-!   To compute the neutrino absorptivity.
+!   To compute the electron-type neutrino absorptivity.
 !   (1) Absorptivity = emissivity + inverse of mean path
+! Ref: 
+!   Mezzacappa & Bruenn(1993) AJ 405
+!   Bruenn(1985) AJSS 58
 !------------------------------------------------------------------------------
   IMPLICIT NONE
 
@@ -152,130 +154,14 @@ CONTAINS
   END FUNCTION TotalNuEAbsorption
 
 
-  REAL(dp) FUNCTION TotalElasticScatteringKernel&
-     ( energy, rho, T, xh, A, Z, xn, xp, l )
-
-!------------------------------------------------------------------------------
-! Purpose:
-!   To compute the zero and first legendre coefs for the neutrino-electron 
-!   elastic scattering kernel. 
-!------------------------------------------------------------------------------
-!-----------------------------------------------------------------------
-!   Input Variables
-!-----------------------------------------------------------------------
-    REAL(dp), INTENT(in) :: energy, rho, T, xh, A, Z, xn, xp
-    INTEGER, INTENT(in)  :: l
-!-----------------------------------------------------------------------
-!   Physical Constants 
-!-----------------------------------------------------------------------
-    REAL(dp)             :: N, nucleiTP, & ! 'TP' for thermal parameter
-                            nucleonTP, nucleiExp, Cv0, Cv1,&
-                            etann, etapp, Npara
-
-!-----------------------------------------------------------------------
-!   Local Variables
-!-----------------------------------------------------------------------   
-
-    REAL(dp) :: ESNucleiKernel_0, ESNucleonKernel_0, &
-                ESNucleiKernel_1, ESNucleonKernel_1, &
-                tempC0, TempC1
-    INTEGER  :: nquad = 20
-
-        N     = A - Z
-       Cv0    = half * ( cv_p + cv_n) 
-       Cv1    = cv_p - cv_n
-     Npara    = twpi * cvel_inv**4.0 * energy**2.0 / h**3.0
-    
-    nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
-                A**(2.0_dp/3.0_dp) * energy**2.0     
-    nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
-
-    IF ( xh == zero ) THEN
-      nucleiTP  = 0.0_dp 
-    ELSE
-      nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
-                  A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
-    END IF
-
-    nucleonTP = ( twpi * gf )**2 / h
-
-!------------------------------
-!  scattering on nuclei
-!------------------------------
-
-    tempC0 = IntegralESNuclei( nucleiExp, 0, nquad )
-    tempC1 = IntegralESNuclei( nucleiExp, 1, nquad )
-
-    ESNucleiKernel_0 = nucleiTP * tempC0 / 2.0_dp
-
-    ESNucleiKernel_1 = nucleiTP * tempC1 * 3.0_dp / 2.0_dp
-
-    IF ( ISNAN(ESNucleiKernel_0) .or. ISNAN(ESNucleiKernel_1)  ) THEN
-     WRITE(*,*) "ERROR AT B85.f90 MARK 1003 !"
-     WRITE(*,*) "nucleiExp is ", nucleiExp
-     WRITE(*,*) "ESNucleiKernel_0 ", ESNucleiKernel_0
-     WRITE(*,*) "ESNucleiKernel_1 ", ESNucleiKernel_1
-     STOP
-    END IF
-
-!--------------------------------------
-!   Scattering on Nucleons
-!-------------------------------------
-
-    CALL etaxx( rho, T, xn, xp, etann, etapp )
-
-    ESNucleonKernel_0 = (2.0_dp) * nucleonTP * &
-                        ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
-                          etapp * ( cv_p**2 + 3.0_dp * ca_p**2) ) 
- 
-    ESNucleonKernel_1 = (2.0_dp / 3.0_dp) * nucleonTP * &
-                        ( etann * ( cv_n**2 - ca_n**2) + &
-                          etapp * ( cv_p**2 - ca_p**2) )
-
-    IF ( ISNAN(ESNucleonKernel_0) .or. ISNAN(ESNucleonKernel_1)  ) THEN
-     WRITE(*,*) "ERROR AT B85.f90 MARK 1004 !"
-     WRITE(*,*) "etann is ", etann
-     WRITE(*,*) "etapp is ", etapp
-     WRITE(*,*) "ESNucleonKernel_0 ", ESNucleonKernel_0
-     WRITE(*,*) "ESNucleonKernel_1 ", ESNucleonKernel_1
-     STOP
-    END IF 
-
-    IF ( l == 0 ) THEN
-    
-     totalElasticScatteringKernel = Npara * ( ESNucleiKernel_0 &
-                                            + ESNucleonKernel_0 )
-
-    ELSE IF ( l == 1) THEN
-
-     totalElasticScatteringKernel = Npara * ( ESNucleiKernel_1 &
-                                            + ESNucleonKernel_1 )
-
-    ELSE
-
-     WRITE(*,*) "ERROR: Unable to provide Legendre Moment with &
-                        l other than 0 and 1 "
-    END IF
-    
-    IF ( ISNAN(totalElasticScatteringKernel) ) THEN
-      WRITE(*,*) "totalElasticScatteringKernel is NAN! "
-      WRITE(*,*) "l is", l
-      WRITE(*,*) "ESNucleiKernel_0 + ESNucleonKernel_0 ", ESNucleiKernel_0+ESNucleonKernel_0 
-      WRITE(*,*) "ESNucleiKernel_1 + ESNucleonKernel_1 ", ESNucleiKernel_1+ESNucleonKernel_1 
-      STOP
-    END IF
-
-    RETURN
-
-  END FUNCTION TotalElasticScatteringKernel
-
-
   REAL(dp) FUNCTION TotalNuEbarAbsorption &
     ( energy, rho, T, chem_e, xn, xp )
 !------------------------------------------------------------------------------
 ! Purpose:
 !   To compute the electron-type antineutrino absorptivity.
 !   (1) Absorptivity = emissivity + inverse of mean path
+! Ref: 
+!   Bruenn(1985) AJSS 58
 !------------------------------------------------------------------------------
   IMPLICIT NONE
 
@@ -323,7 +209,143 @@ CONTAINS
   END FUNCTION TotalNuEbarAbsorption
 
 
+  REAL(dp) FUNCTION TotalIsoScatteringKernel&
+     ( energy, rho, T, xh, A, Z, xn, xp, l )
+!------------------------------------------------------------------------------
+! Purpose:
+!   To compute the zero and first legendre coefs for the any-type neutrino
+!   isoenergetic scattering kernel. 
+!   On both nucleon and nuclei.
+! Ref: 
+!   Mezzacappa & Bruenn(1993) AJ 405
+!   Bruenn(1985) AJSS 58
+!------------------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!   Input Variables
+!-----------------------------------------------------------------------
+  IMPLICIT NONE
+    REAL(dp), INTENT(in) :: energy, rho, T, xh, A, Z, xn, xp
+    INTEGER, INTENT(in)  :: l
+!-----------------------------------------------------------------------
+!   Physical Constants 
+!-----------------------------------------------------------------------
+    REAL(dp)             :: N, nucleiTP, & ! 'TP' for thermal parameter
+                            nucleonTP, nucleiExp, Cv0, Cv1,&
+                            etann, etapp, Npara
+
+!-----------------------------------------------------------------------
+!   Local Variables
+!-----------------------------------------------------------------------   
+
+    REAL(dp) :: ISNucleiKernel_0, ISNucleonKernel_0, &
+                ISNucleiKernel_1, ISNucleonKernel_1, &
+                tempC0, TempC1
+    INTEGER  :: nquad = 20
+
+        N     = A - Z
+       Cv0    = half * ( cv_p + cv_n) 
+       Cv1    = cv_p - cv_n
+     Npara    = twpi * cvel_inv**4.0 * energy**2.0 / h**3.0
+    
+    nucleiExp = 4.0_dp * 4.8_dp * 10**(-6.0_dp) * &
+                A**(2.0_dp/3.0_dp) * energy**2.0     
+    nucleiExp = MAX( nucleiExp, SQRT( TINY( 1.0_dp ) ) )
+
+    IF ( xh == zero ) THEN
+      nucleiTP  = 0.0_dp 
+    ELSE
+      nucleiTP  = ( (twpi*gf)**2 / h ) * ( rho*xh/mbG ) * &
+                  A * ( Cv0 - ( (N-Z)*Cv1 )/(2.0_dp*A) )**2
+    END IF
+
+    nucleonTP = ( twpi * gf )**2 / h
+
+!------------------------------
+!  scattering on nuclei
+!------------------------------
+
+    tempC0 = IntegralESNuclei( nucleiExp, 0, nquad )
+    tempC1 = IntegralESNuclei( nucleiExp, 1, nquad )
+
+    ISNucleiKernel_0 = nucleiTP * tempC0 / 2.0_dp
+
+    ISNucleiKernel_1 = nucleiTP * tempC1 * 3.0_dp / 2.0_dp
+
+    IF ( ISNAN(ISNucleiKernel_0) .or. ISNAN(ISNucleiKernel_1)  ) THEN
+     WRITE(*,*) "ERROR AT B85.f90 MARK 1003 !"
+     WRITE(*,*) "nucleiExp is ", nucleiExp
+     WRITE(*,*) "ISNucleiKernel_0 ", ISNucleiKernel_0
+     WRITE(*,*) "ISNucleiKernel_1 ", ISNucleiKernel_1
+     STOP
+    END IF
+
+!--------------------------------------
+!   Scattering on Nucleons
+!-------------------------------------
+
+    CALL etaxx( rho, T, xn, xp, etann, etapp )
+
+    ISNucleonKernel_0 = (2.0_dp) * nucleonTP * &
+                        ( etann * ( cv_n**2 + 3.0_dp * ca_n**2) + &
+                          etapp * ( cv_p**2 + 3.0_dp * ca_p**2) ) 
+ 
+    ISNucleonKernel_1 = (2.0_dp / 3.0_dp) * nucleonTP * &
+                        ( etann * ( cv_n**2 - ca_n**2) + &
+                          etapp * ( cv_p**2 - ca_p**2) )
+
+    IF ( ISNAN(ISNucleonKernel_0) .or. ISNAN(ISNucleonKernel_1)  ) THEN
+     WRITE(*,*) "ERROR AT B85.f90 MARK 1004 !"
+     WRITE(*,*) "etann is ", etann
+     WRITE(*,*) "etapp is ", etapp
+     WRITE(*,*) "ISNucleonKernel_0 ", ISNucleonKernel_0
+     WRITE(*,*) "ISNucleonKernel_1 ", ISNucleonKernel_1
+     STOP
+    END IF 
+
+    IF ( l == 0 ) THEN
+    
+     TotalIsoScatteringKernel = Npara * ( ISNucleiKernel_0 &
+                                            + ISNucleonKernel_0 )
+
+    ELSE IF ( l == 1) THEN
+
+     TotalIsoScatteringKernel = Npara * ( ISNucleiKernel_1 &
+                                            + ISNucleonKernel_1 )
+
+    ELSE
+
+     WRITE(*,*) "ERROR: Unable to provide Legendre Moment with &
+                        l other than 0 and 1 "
+    END IF
+    
+    IF ( ISNAN(TotalIsoScatteringKernel) ) THEN
+      WRITE(*,*) "TotalIsoScatteringKernel is NAN! "
+      WRITE(*,*) "l is", l
+      WRITE(*,*) "ISNucleiKernel_0 + ISNucleonKernel_0 ", ISNucleiKernel_0+ISNucleonKernel_0 
+      WRITE(*,*) "ISNucleiKernel_1 + ISNucleonKernel_1 ", ISNucleiKernel_1+ISNucleonKernel_1 
+      STOP
+    END IF
+
+    RETURN
+
+  END FUNCTION TotalIsoScatteringKernel
+
+
+!=============================== Routine ======================================
+
+
   SUBROUTINE TotalNESKernel( energygrid, TMeV, chem_e, nquad, l, NESK, species )
+!------------------------------------------------------------------------------
+! Purpose:
+!   To compute the zero and first legendre coefs for the neutrino-
+!   electron scattering kernel for electron-type neutrino and 
+!   antineutrino 
+! Ref: 
+!   Mezzacappa & Bruenn(1993) AJ 410
+!   Bruenn(1985) AJSS 58
+!------------------------------------------------------------------------------
+
+  IMPLICIT NONE
 
   REAL(dp), DIMENSION(:), INTENT(in)    :: energygrid
   REAL(dp), INTENT(in)                  :: TMeV, chem_e
@@ -378,7 +400,13 @@ CONTAINS
   END SUBROUTINE TotalNESKernel
 
   
-  SUBROUTINE ProductionAbsorptionKernel( energygrid, TMeV, chem_e, nquad, l, EPK, species )
+  SUBROUTINE TPAbsorptionKernel( energygrid, TMeV, chem_e, nquad, l, EPK, species )
+!------------------------------------------------------------------------------
+! Purpose:
+!   To compute the zero and first legendre coefs for the thermal production
+!   kernel for electron-type neutrino and antineutrino 
+!------------------------------------------------------------------------------
+  IMPLICIT NONE
 
   REAL(dp), DIMENSION(:), INTENT(in)    :: energygrid
   REAL(dp), INTENT(in)                  :: TMeV, chem_e
@@ -390,7 +418,10 @@ CONTAINS
     Coeff1 = ( cv + ca ) * ( cv + ca )
     Coeff2 = ( cv - ca ) * ( cv - ca )
 
-  END SUBROUTINE ProductionAbsorptionKernel
+  END SUBROUTINE TPAbsorptionKernel
+
+
+!=============================== Private ======================================
 
 
   SUBROUTINE NESKernelWithOmega( energygrid, omega, TMeV, chem_e, nesktab, species )
@@ -405,6 +436,9 @@ CONTAINS
 !
 !    species = 1 : electron-type neutrino
 !    species = 2 : electron-type antineutrino
+! Ref: 
+!   Mezzacappa & Bruenn(1993) AJ 410
+!   Bruenn(1985) AJSS 58
 !----------------------------------------------------------------------
   IMPLICIT NONE
 
