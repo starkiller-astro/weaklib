@@ -1,3 +1,6 @@
 OPACITYBRUENN85 = \
-  B85.o \
+  B85_Absorption.o \
+  B85_scattIso.o \
+  B85_scattNES.o \
+  B85_scattTP.o \
   GreyVariables.o

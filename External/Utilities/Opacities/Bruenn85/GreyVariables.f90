@@ -17,7 +17,8 @@ MODULE GreyVariables
 !-----------------------------------------------------------------------
 
   USE wlKindModule, ONLY: dp
-  USE B85
+  USE B85_Absorption
+  USE B85_scattIso
 
   PUBLIC :: &
     GreyMomentWithGaussianQuadrature,&
@@ -94,7 +95,7 @@ CONTAINS
   END DO ! jj 
 
   IF (debug) THEN
-    WRITE(*,'(A24,F7.1,A2,F7.1,A1)'),&
+    WRITE(*,'(A24,F7.1,A2,F7.1,A1)')&
         " Integration domain is [",lim(1),", ",lim(47),"]"
     print*,"divided into", lim
     PRINT*, "with nquad=", nquad
@@ -103,7 +104,8 @@ CONTAINS
 
   END SUBROUTINE GreyMomentWithGaussianQuadrature
 
-  SUBROUTINE GreyOpacityWithGaussianQuadrature&
+
+  SUBROUTINE GreyOpacityWithGaussianQuadrature_NuEAb&
                   ( nquad, bb, &
                     rho, T, Z, A, chem_e, chem_n,&
                     chem_p, xheavy, xn, xp,&
@@ -177,14 +179,14 @@ CONTAINS
   END DO ! jj 
 
   IF (debug) THEN
-    WRITE(*,'(A24,F7.1,A2,F7.1,A1)'),&
+    WRITE(*,'(A24,F7.1,A2,F7.1,A1)') &
         " Integration domain is [",lim(1),", ",lim(47),"]"
     print*,"divided into", lim
     PRINT*, "with nquad=", nquad
    PRINT*, "and the outcome is", outcome
   END IF
 
-  END SUBROUTINE GreyOpacityWithGaussianQuadrature
+  END SUBROUTINE GreyOpacityWithGaussianQuadrature_NuEAb
 
 
   SUBROUTINE GreyOpacityWithGaussianQuadrature_scattIso&
@@ -237,7 +239,7 @@ CONTAINS
 
     DO ii = 1, nquad
 
-      opacity(ii) = totalElasticScatteringKernel&
+      opacity(ii) = TotalIsoScatteringKernel&
      ( roots(ii), rho, T, xh, A, Z, xn, xp, l )
 
       IF (func == "GreyOpacity_Number ") THEN
@@ -262,7 +264,7 @@ CONTAINS
   END DO ! jj 
 
   IF (debug) THEN
-    WRITE(*,'(A24,F7.1,A2,F7.1,A1)'),&
+    WRITE(*,'(A24,F7.1,A2,F7.1,A1)') &
         " Integration domain is [",lim(1),", ",lim(47),"]"
     print*,"divided into", lim
     PRINT*, "with nquad=", nquad
@@ -274,6 +276,84 @@ CONTAINS
    STOP
   END IF
   END SUBROUTINE GreyOpacityWithGaussianQuadrature_scattIso
+
+
+!  SUBROUTINE GreyOpacityWithGaussianQuadrature_NES&
+!                  ( nquad, bb, &
+!                    TMeV, chem_e, l,&
+!                    outcome, species, func, debug )
+!  INTEGER, INTENT(in)        :: nquad, l, species
+!  REAL(dp), INTENT(in)       :: bb, TMeV, chem_e
+!  CHARACTER(18), INTENT(in)  :: func
+!  LOGICAL, INTENT(in)        :: debug
+!
+!  REAL(dp), INTENT(out)      :: outcome
+!
+!  INTEGER, PARAMETER         :: npiece = 47
+!  REAL(dp), DIMENSION(nquad) :: roots, weights, opacity
+!  REAL(dp), DIMENSION(npiece):: lim
+!  INTEGER                    :: ii, jj
+!  REAL(dp)                   :: llim, ulim
+!
+!  IF (debug) THEN
+!    PRINT*,"Calculating ", func
+!    PRINT*,"with bb =", bb
+!  END IF
+!
+!  outcome = 0.0_dp
+!  lim(1) = 0.0_dp
+!
+!  DO jj = 1,10
+!     lim(jj+1) = lim(jj) + 0.1_dp
+!  END DO
+!  DO jj = 12, 20
+!     lim(jj) = lim(jj-1) + 1.0_dp
+!  END DO
+!  DO jj = 21, 29
+!     lim(jj) = lim(jj-1) + 10.0_dp
+!  END DO
+!  DO jj = 30, 38
+!     lim(jj) = lim(jj-1) + 100.0_dp
+!  END DO
+!  DO jj = 39, 47
+!     lim(jj) = lim(jj-1) + 1000.0_dp
+!  END DO
+!
+!  DO jj = 1,(npiece-1)
+!
+!    llim = lim(jj)
+!    ulim = lim(jj+1)
+!
+!    CALL gaquad( nquad, roots, weights, llim, ulim )
+!
+!      opacity(ii) = totalNESKernel&
+!     ( roots(ii), TMeV, chem_e, l, species )  !!!
+!
+!    DO ii = 1, nquad
+!
+!      IF (func == "GreyOpacity_Number ") THEN
+!
+!        outcome = outcome + weights(ii) * &
+!                  Number_FD( roots(ii), bb) * opacity(ii)
+!
+!      ELSE IF (func == "GreyOpacity_Energy ") THEN
+!
+!        outcome = outcome + weights(ii) * &
+!                  Energy_FD( roots(ii), bb) * opacity(ii)
+!                                                           
+!      END IF
+!    END DO ! ii (nquad)
+!   
+!      IF ( l == 0 ) THEN
+!
+!        outcome = outcome * (4.0*pi)
+!
+!      END IF
+!    
+!  END DO ! jj 
+!
+!  END SUBROUTINE GreyOpacityWithGaussianQuadrature_NES
+
 
 !-------------------------------------------------------
 !    Declear GrayFunctions
