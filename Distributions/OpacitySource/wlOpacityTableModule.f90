@@ -145,6 +145,8 @@ CONTAINS
     OpTab % nMomentsB       = nMomB
     OpTab % nOpacitiesB_NES = nOpacB_NES
     OpTab % nMomentsB_NES   = nMomB_NES
+    OpTab % nOpacitiesB_TP  = nOpacB_TP
+    OpTab % nMomentsB_TP    = nMomB_TP
     OpTab % nOpacitiesC     = nOpacC
     OpTab % nMomentsC       = nMomC
     OpTab % nPointsE        = nPointsE

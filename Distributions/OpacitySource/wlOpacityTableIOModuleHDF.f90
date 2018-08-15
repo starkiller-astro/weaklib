@@ -151,6 +151,10 @@ CONTAINS
     CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_NES, group_id )
     CALL CloseGroupHDF( group_id )
 
+    CALL OpenGroupHDF( "scatt_TP", .true., file_id, group_id )
+    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_TP, group_id )
+    CALL CloseGroupHDF( group_id )
+
     CALL OpenGroupHDF( "scatt_nIso", .true., file_id, group_id )
     CALL WriteOpacityTableTypeCHDF( OpacityTable % scatt_nIso, group_id )
     CALL CloseGroupHDF( group_id )   
@@ -334,9 +338,9 @@ CONTAINS
 
     CALL OpenGroupHDF( "Kernel", .true., group_id, subgroup_id )
     DO i = 1, datasize1d
-      CALL Write5dHDF_double&
-         ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values(:,:,:,:,:),&
-                              subgroup_id, datasize5d )
+     CALL Write5dHDF_double&
+        ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values(:,:,:,:,:),&
+                            subgroup_id, datasize5d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
@@ -657,9 +661,9 @@ CONTAINS
     CALL OpenGroupHDF( "Kernel", .false., group_id, subgroup_id )
     DO i = 1, scatt_Iso % nOpacities
     WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i), ' Kernel ...'
-    CALL Read5dHDF_double&
-         ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values,&
-           subgroup_id, datasize5d )
+   CALL Read5dHDF_double&
+        ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values,&
+          subgroup_id, datasize5d )
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
