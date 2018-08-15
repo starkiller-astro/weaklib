@@ -99,6 +99,14 @@ CONTAINS
     CALL WriteHDF&
          ( "nMomentsB_NES", tempInteger, file_id, datasize1d )
 
+    tempInteger(1) = OpacityTable % nOpacitiesB_TP
+    CALL WriteHDF&
+         ( "nOpacitiesB_TP", tempInteger, file_id, datasize1d )
+
+    tempInteger(1) = OpacityTable % nMomentsB_TP
+    CALL WriteHDF&
+         ( "nMomentsB_TP", tempInteger, file_id, datasize1d )
+ 
     tempInteger(1) = OpacityTable % nOpacitiesC     
     CALL WriteHDF&
          ( "nOpacitiesC", tempInteger, file_id, datasize1d )
@@ -151,6 +159,7 @@ CONTAINS
 
   END SUBROUTINE WriteOpacityTableHDF
 
+
   SUBROUTINE WriteGridHDF( Grid, group_id )
 
     TYPE(GridType), INTENT(in)           :: Grid
@@ -186,6 +195,7 @@ CONTAINS
                               group_id, datasize1d )
 
   END SUBROUTINE WriteGridHDF
+
 
   SUBROUTINE WriteOpacityTableTypeAHDF( thermEmAb, group_id )
 
@@ -237,40 +247,41 @@ CONTAINS
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
-    datasize3d = thermEmAb % nPoints(2:4)
-    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-    CALL WriteHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Number_FD(i) % Values,&
-           subgroup_id, datasize3d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-    CALL WriteHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Energy_FD(i) % Values,&
-           subgroup_id, datasize3d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyMoment_Energy_FD", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-    CALL WriteHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Energy_FD(i) % Values,&
-           subgroup_id, datasize3d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyMoment_Number_FD", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-    CALL WriteHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Number_FD(i) % Values,&
-           subgroup_id, datasize3d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
+!    datasize3d = thermEmAb % nPoints(2:4)
+!    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .true., group_id, subgroup_id )
+!    DO i = 1, datasize1d
+!    CALL WriteHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Number_FD(i) % Values,&
+!           subgroup_id, datasize3d )
+!    END DO
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .true., group_id, subgroup_id )
+!    DO i = 1, datasize1d
+!    CALL WriteHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Energy_FD(i) % Values,&
+!           subgroup_id, datasize3d )
+!    END DO
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyMoment_Energy_FD", .true., group_id, subgroup_id )
+!    DO i = 1, datasize1d
+!    CALL WriteHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Energy_FD(i) % Values,&
+!           subgroup_id, datasize3d )
+!    END DO
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyMoment_Number_FD", .true., group_id, subgroup_id )
+!    DO i = 1, datasize1d
+!    CALL WriteHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Number_FD(i) % Values,&
+!           subgroup_id, datasize3d )
+!    END DO
+!    CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE WriteOpacityTableTypeAHDF
+
 
   SUBROUTINE WriteOpacityTableTypeBHDF( scatt_Iso , group_id )
 
@@ -329,25 +340,26 @@ CONTAINS
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
-    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
-    datasize4d(4) = scatt_Iso % nMoments
-    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-    CALL Write4dHDF_double&
-         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Number_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-    CALL Write4dHDF_double&
-         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Energy_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
+!    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
+!    datasize4d(4) = scatt_Iso % nMoments
+!    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .true., group_id, subgroup_id )
+!    DO i = 1, datasize1d
+!    CALL Write4dHDF_double&
+!         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Number_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .true., group_id, subgroup_id )
+!    DO i = 1, datasize1d
+!    CALL Write4dHDF_double&
+!         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Energy_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO
+!    CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE WriteOpacityTableTypeBHDF
+
 
   SUBROUTINE WriteOpacityTableTypeCHDF( scattn, group_id )
 
@@ -355,6 +367,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
   END SUBROUTINE WriteOpacityTableTypeCHDF
+
 
   SUBROUTINE Write4dHDF_double &
               ( name, values, group_id, datasize, desc_option, unit_option )
@@ -386,6 +399,7 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Write4dHDF_double
+
 
   SUBROUTINE Write5dHDF_double &
               ( name, values, group_id, datasize, desc_option, unit_option )
@@ -430,6 +444,7 @@ CONTAINS
     INTEGER                                       :: nOpacA
     INTEGER                                       :: nOpacB, nMomB
     INTEGER                                       :: nOpacB_NES, nMomB_NES
+    INTEGER                                       :: nOpacB_TP, nMomB_TP
     INTEGER                                       :: nOpacC, nMomC
     INTEGER(HID_T)                                :: file_id
     INTEGER(HID_T)                                :: group_id
@@ -459,6 +474,12 @@ CONTAINS
     CALL ReadHDF( "nMomentsB_NES", buffer, file_id, datasize1d )
     nMomB_NES = buffer(1)
 
+    CALL ReadHDF( "nOpacitiesB_TP", buffer, file_id, datasize1d )
+    nOpacB_TP = buffer(1)
+
+    CALL ReadHDF( "nMomentsB_TP", buffer, file_id, datasize1d )
+    nMomB_TP = buffer(1)
+
     CALL ReadHDF( "nOpacitiesC", buffer, file_id, datasize1d )
     nOpacC = buffer(1)
 
@@ -474,7 +495,8 @@ CONTAINS
     CALL ReadHDF( "nPointsTS", nPointsTS, file_id, datasize1d )
 
     CALL AllocateOpacityTable &
-               ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, nOpacC, nMomC, nPointsE, nPointsEta )  
+               ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
+                 nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta )  
 
     IF( ( OpacityTable % EOSTable % TS % nPoints(1) .EQ. nPointsTS(1) ) .AND. &
         ( OpacityTable % EOSTable % TS % nPoints(2) .EQ. nPointsTS(2) ) .AND. &
@@ -500,6 +522,10 @@ CONTAINS
 
     CALL OpenGroupHDF( "scatt_NES", .false., file_id, group_id )
     CALL ReadOpacityTypeBHDF( OpacityTable % scatt_NES, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "scatt_TP", .false., file_id, group_id )
+    CALL ReadOpacityTypeBHDF( OpacityTable % scatt_TP, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "scatt_nIso", .false., file_id, group_id )
@@ -556,39 +582,40 @@ CONTAINS
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
-    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
-    DO i = 1, thermEmAb % nOpacities
-    CALL ReadHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Number_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO ! nOpacities
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .false., group_id, subgroup_id )
-    DO i = 1, thermEmAb % nOpacities
-    CALL ReadHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Energy_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO ! nOpacities
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyMoment_Number_FD", .false., group_id, subgroup_id )
-    DO i = 1, thermEmAb % nOpacities
-    CALL ReadHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Number_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO ! nOpacities
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyMoment_Energy_FD", .false., group_id, subgroup_id )
-    DO i = 1, thermEmAb % nOpacities
-    CALL ReadHDF&
-         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Energy_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO ! nOpacities
-    CALL CloseGroupHDF( subgroup_id )
+!    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
+!    DO i = 1, thermEmAb % nOpacities
+!    CALL ReadHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Number_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO ! nOpacities
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .false., group_id, subgroup_id )
+!    DO i = 1, thermEmAb % nOpacities
+!    CALL ReadHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyOpacity_Energy_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO ! nOpacities
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyMoment_Number_FD", .false., group_id, subgroup_id )
+!    DO i = 1, thermEmAb % nOpacities
+!    CALL ReadHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Number_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO ! nOpacities
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyMoment_Energy_FD", .false., group_id, subgroup_id )
+!    DO i = 1, thermEmAb % nOpacities
+!    CALL ReadHDF&
+!         ( thermEmAb % Names(i), thermEmAb % GreyMoment_Energy_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO ! nOpacities
+!    CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeAHDF
+
 
   SUBROUTINE ReadOpacityTypeBHDF( scatt_Iso, group_id )
 
@@ -636,27 +663,28 @@ CONTAINS
     END DO ! nOpacities
     CALL CloseGroupHDF( subgroup_id )
 
-    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
-    datasize4d(4)   = scatt_Iso % nMoments
-    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .false., group_id, subgroup_id )
-    DO i = 1, scatt_Iso % nOpacities
-    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
-    CALL Read4dHDF_double&
-         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Energy_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO ! nOpacities
-    CALL CloseGroupHDF( subgroup_id )
-
-    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
-    DO i = 1, scatt_Iso % nOpacities
-    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
-    CALL Read4dHDF_double&
-         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Number_FD(i) % Values,&
-           subgroup_id, datasize4d )
-    END DO ! nOpacities
-    CALL CloseGroupHDF( subgroup_id )
+!    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
+!    datasize4d(4)   = scatt_Iso % nMoments
+!    CALL OpenGroupHDF( "GreyOpacity_Energy_FD", .false., group_id, subgroup_id )
+!    DO i = 1, scatt_Iso % nOpacities
+!    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
+!    CALL Read4dHDF_double&
+!         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Energy_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO ! nOpacities
+!    CALL CloseGroupHDF( subgroup_id )
+!
+!    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
+!    DO i = 1, scatt_Iso % nOpacities
+!    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i)
+!    CALL Read4dHDF_double&
+!         ( scatt_Iso % Names(i), scatt_Iso % GreyOpacity_Number_FD(i) % Values,&
+!           subgroup_id, datasize4d )
+!    END DO ! nOpacities
+!    CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeBHDF
+
 
   SUBROUTINE ReadOpacityTypeCHDF( thermEmAb, group_id )
 
@@ -664,6 +692,7 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
   END SUBROUTINE ReadOpacityTypeCHDF
+
 
   SUBROUTINE Read4dHDF_double( name, values, group_id, datasize )
 
@@ -729,6 +758,5 @@ CONTAINS
     Grid % maxValue = MAXVAL( Grid % Values )
 
   END SUBROUTINE ReadGridHDF
-
 
 END MODULE wlOpacityTableIOModuleHDF

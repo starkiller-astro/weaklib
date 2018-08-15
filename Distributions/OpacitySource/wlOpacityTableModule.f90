@@ -88,6 +88,7 @@ MODULE wlOpacityTableModule
     INTEGER                        :: nOpacitiesA
     INTEGER                        :: nOpacitiesB, nMomentsB
     INTEGER                        :: nOpacitiesB_NES, nMomentsB_NES
+    INTEGER                        :: nOpacitiesB_TP, nMomentsB_TP
     INTEGER                        :: nOpacitiesC, nMomentsC
     INTEGER                        :: nPointsE, nPointsEta
     INTEGER, DIMENSION(3)          :: nPointsTS
@@ -101,6 +102,8 @@ MODULE wlOpacityTableModule
       scatt_Iso  ! -- Isoenergenic Scattering
     TYPE(OpacityTypeB)             :: &
       scatt_NES  ! -- Inelastic Neutrino-Electron Scattering
+    TYPE(OpacityTypeB)             :: &
+      scatt_TP   ! -- Thermal Production
     TYPE(OpacityTypeC)             :: &
       scatt_nIso ! -- Non-Isoenergenic Scattering
   END TYPE OpacityTableType
@@ -112,12 +115,14 @@ MODULE wlOpacityTableModule
 CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
-               ( OpTab, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, nOpacC, nMomC, nPointsE, nPointsEta )
+               ( OpTab, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
+                 nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta )
 
     TYPE(OpacityTableType), INTENT(inout) :: OpTab
     INTEGER, INTENT(in)                   :: nOpacA
     INTEGER, INTENT(in)                   :: nOpacB, nMomB
     INTEGER, INTENT(in)                   :: nOpacB_NES, nMomB_NES
+    INTEGER, INTENT(in)                   :: nOpacB_TP, nMomB_TP
     INTEGER, INTENT(in)                   :: nOpacC, nMomC
     INTEGER, INTENT(in)                   :: nPointsE
     INTEGER, INTENT(in)                   :: nPointsEta
@@ -174,6 +179,10 @@ CONTAINS
            ( OpTab % scatt_NES, nPointsTemp, &
              nMoments = nMomB_NES, nOpacities = nOpacB_NES )
 
+    CALL AllocateOpacity &
+           ( OpTab % scatt_TP, nPointsTemp, &
+             nMoments = nMomB_TP, nOpacities = nOpacB_TP )
+
     END ASSOCIATE ! nPoints
 
     PRINT*, 'End allocte opacity table.'
@@ -192,6 +201,7 @@ CONTAINS
     CALL DeAllocateOpacity( OpTab % thermEmAb )
     CALL DeAllocateOpacity( OpTab % scatt_Iso )
     CALL DeAllocateOpacity( OpTab % scatt_NES )
+    CALL DeAllocateOpacity( OpTab % scatt_TP )
     CALL DeAllocateOpacity( OpTab % scatt_nIso )
 
     CALL DeAllocateThermoState( OpTab % TS )
@@ -249,6 +259,7 @@ CONTAINS
     CALL DescribeOpacity( OpTab % thermEmAb )
     CALL DescribeOpacity( OpTab % scatt_Iso )
     CALL DescribeOpacity( OpTab % scatt_NES )
+    CALL DescribeOpacity( OpTab % scatt_TP )
     CALL DescribeOpacity( OpTab % scatt_nIso )
 
   END SUBROUTINE DescribeOpacityTable
