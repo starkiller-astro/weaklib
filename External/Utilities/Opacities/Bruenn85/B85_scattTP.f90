@@ -1,5 +1,42 @@
 MODULE B85_scattTP
+!-----------------------------------------------------------------------
+!
+!    File:         B85_scattTP.f90
+!    Module:       B85_scattTP
+!    Type:         Module w/ Routines
+!    Author:       R. Chu, Dept. Phys. & Astronomy
+!                  U. Tennesee, Knoxville
+!
+!    Created:      8/16/18
+!
+!    WeakLib ver:  weaklib/External/Utilities/Opacities/Bruenn85
 
+!    Purpose:      The zero and first legendre coefs for the n-type 
+!                  neutrino pair annihilation kernel are computed 
+!                  considering the physics in Bruenn 85.
+!
+!    CONTAINS:     Routine  TPKernel:
+!                         gives thermal production kernel
+!
+!    Input arguments:
+!                  energygrid : neutrino energy array [MeV]
+!                  TMeV       : matter temperature [MeV]
+!                  chem_e     : electron chemical potential 
+!                                      (including rest mass) [MeV]
+!                  nquad      : number of quadarture       
+!                  l          : order of the legendre coefs/moment
+!                  species    : neutrino flavor index    
+!
+!    Output arguments:
+!                  TPK    
+!
+!    Modules used:
+!                  wlKindModule
+!                  wlExtPhysicalConstantsModule
+!                  wlExtNumericalModule
+!                  ( function fexp is called )
+!
+!-----------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
     h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, cvel, ergmev,&

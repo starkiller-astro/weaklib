@@ -1,38 +1,42 @@
 MODULE B85_scattIso
 !-----------------------------------------------------------------------
 !
-!    File:         B85.90
-!    Module:       B85
-!    Type:         Module w/ Functions
+!    File:         B85_scattIso.f90
+!    Module:       B85_scattIso
+!    Type:         Module w/ Funcstions and Routines
 !    Author:       R. Chu, Dept. Phys. & Astronomy
 !                  U. Tennesee, Knoxville
 !
-!    Created:      3/31/16
-!    WeakLib ver:  
+!    Created:      8/16/18
 !
-!    Purpose:
-!      Provides the function need considering the physics in Bruenn 85
+!    WeakLib ver:  weaklib/External/Utilities/Opacities/Bruenn85
 !
-!    CONTAINS:
+!    Purpose:      The zero and first legendre coefs for the n-type neutrino
+!                  isoenergetic scattering on nucleon and nuclei kernel considering  
+!                  the physics in Bruenn 85.
 !
-!      Function TotalNuEAbsorption: 
-!                   gives opacity with np as approximation 
+!    CONTAINS:     Function  TotalIsoScatteringKernel
 !
-!      Function TotalElasticScatteringKernel: 
-!                   gives isoenergetic scattering kernel with nMoment
-!                   l = 0 or 1
+!    Input arguments:
+!                  energy     : neutrino energy [MeV]
+!                  rho        : matter density [g cm^{-3}]
+!                  T          : matter temperature [K]
+!                  xh         : heavy nucleus mass fraction
+!                  A          : heavy nucleus mass number
+!                  Z          : heavy nucleus charge number
+!                  xn         : free neutron mass fraction
+!                  xp         : free proton mass fraction
+!                  l          : order of the legendre coefs/moment
 !
-!      Function TotalNuepAbsorption:
-!                   gives opacity with np as approximation                   
-!
-!      Routine  TotalNESKernel:
-!                   gives NES kernel
+!    Output arguments:
+!                  TotalIsoScatteringKernel
 !
 !    Modules used:
-!      wlKindModule
-!      wlExtPhysicalConstantsModule
-!      wlExtNumericalModule
-!      ( function fexp is called )
+!                  wlKindModule
+!                  wlExtPhysicalConstantsModule
+!                  wlExtNumericalModule
+!                  ( function fexp is called )
+!
 !-----------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
@@ -40,7 +44,7 @@ MODULE B85_scattIso
       cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
   USE wlExtNumericalModule, ONLY: pi, half, twpi, zero, one 
 
-  implicit none
+  IMPLICIT NONE
    
   PUBLIC TotalIsoScatteringKernel
 

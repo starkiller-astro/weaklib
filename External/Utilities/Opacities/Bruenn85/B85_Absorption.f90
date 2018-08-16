@@ -1,4 +1,51 @@
 MODULE B85_Absorption
+!-----------------------------------------------------------------------
+!
+!    File:         B85_Absorption.f90
+!    Module:       B85_Absorption
+!    Type:         Module w/ Functions
+!    Author:       R. Chu, Dept. Phys. & Astronomy
+!                  U. Tennesee, Knoxville
+!
+!    Created:      8/16/18
+!
+!    WeakLib ver:  weaklib/External/Utilities/Opacities/Bruenn85
+!
+!    Purpose:      Provides the function which compute the total 
+!                  absorptivity ( sum of emissivity and the absorptivity 
+!                  mean free path ) of electron type neutrino and 
+!                  antineutrino considering the physics in Bruenn 85.
+!
+!    CONTAINS:     Function TotalNuEAbsorption
+!                  Function TotalNuEbarAbsorption
+!
+!    Input arguments:
+!                  energy     : neutrino energy [MeV]
+!                  rho        : matter density [g cm^{-3}]
+!                  T          : matter temperature [K]
+!                  Z          : heavy nucleus charge number
+!                  A          : heavy nucleus mass number
+!                  chem_e     : electron chemical potential 
+!                                      (including rest mass) [MeV]
+!                  chem_n     : free neutron chemical potential 
+!                                      (excluding rest mass) [MeV]
+!                  chem_p     : free proton chemical potential 
+!                                      (excluding rest mass) [MeV]
+!                  xheavy     : heavy nucleus mass fraction
+!                  xn         : free neutron mass fraction
+!                  xp         : free proton mass fraction
+!
+!    Output arguments:
+!                  TotalNuEAbsorption
+!                  TotalNuEbarAbsorption
+!
+!    Modules used:
+!                  wlKindModule
+!                  wlExtPhysicalConstantsModule
+!                  wlExtNumericalModule
+!                  ( function fexp is called )
+!
+!-----------------------------------------------------------------------
 
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
