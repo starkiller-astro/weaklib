@@ -1,5 +1,5 @@
 MODULE B85_scattTP
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !
 !    File:         B85_scattTP.f90
 !    Module:       B85_scattTP
@@ -10,7 +10,7 @@ MODULE B85_scattTP
 !    Created:      8/16/18
 !
 !    WeakLib ver:  weaklib/External/Utilities/Opacities/Bruenn85
-
+!
 !    Purpose:      The zero and first legendre coefs for the n-type 
 !                  neutrino pair annihilation kernel are computed 
 !                  considering the physics in Bruenn 85.
@@ -36,12 +36,13 @@ MODULE B85_scattTP
 !                  wlExtNumericalModule
 !                  ( function fexp is called )
 !
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
-    h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, cvel, ergmev,&
-      cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
-  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero, one
+        h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, &
+        cvel, ergmev, cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
+  USE wlExtNumericalModule, ONLY: &
+        pi, half, twpi, zero, one
 
   IMPLICIT NONE
 
@@ -49,12 +50,17 @@ MODULE B85_scattTP
 
 CONTAINS
 
-  SUBROUTINE TPKernel( energygrid, TMeV, chem_e, nquad, l, TPK, species )
-!------------------------------------------------------------------------------
+  SUBROUTINE TPKernel &
+               ( energygrid, TMeV, chem_e, nquad, l, TPK, species )
+!---------------------------------------------------------------------
 ! Purpose:
-!   To compute the zero and first legendre coefs for the thermal production
-!   annihilation kernel for electron-type neutrino and antineutrino 
-!------------------------------------------------------------------------------
+!     To compute the zero and first legendre coefs for the thermal 
+!     production annihilation kernel for electron-type neutrino and
+!     antineutrino 
+!
+! Output:
+!     TPK(ep,e) for a given TMeV, chem_e and moment order l
+!---------------------------------------------------------------------
   IMPLICIT NONE
 
   REAL(dp), DIMENSION(:), INTENT(in)    :: energygrid
@@ -67,56 +73,24 @@ CONTAINS
   INTEGER, PARAMETER         :: npiece = 47
   REAL(dp), DIMENSION(nquad) :: roots, weights, midFD
   REAL(dp), DIMENSION(npiece):: lim
-  REAL(dp)                   :: UnitConvertConstant, outcome, llim, ulim
+  REAL(dp)                   :: UnitConvertConstant, outcome, ep, e
 
   UnitConvertConstant = cvel_inv**4.0 / h**3.0 !! double check 
   nPointsE = SIZE(energygrid)
 
-!  ALLOCATE( TPK_Ee( npiece ) )
-!
-!  lim(1) = zero
-!
-!  DO jj = 1,10
-!     lim(jj+1) = lim(jj) + 0.1_dp
-!  END DO
-!  DO jj = 12, 20
-!     lim(jj) = lim(jj-1) + 1.0_dp
-!  END DO
-!  DO jj = 21, 29
-!     lim(jj) = lim(jj-1) + 10.0_dp
-!  END DO
-!  DO jj = 30, 38
-!     lim(jj) = lim(jj-1) + 100.0_dp
-!  END DO
-!  DO jj = 39, 47
-!     lim(jj) = lim(jj-1) + 1000.0_dp !!!!!!!!!!!!!!!!!!!!!!!
-!  END DO
-!
+  TPK = zero
+
   DO jj = 1, nPointsE  ! ep
+    
+    ep = energygrid(jj)
+
     DO kk = 1, nPointsE ! e
+    
+      e = energygrid(kk)
 
-       outcome = zero
+      CALL paircal( e, ep, TMeV, chem_e, l, outcome )
 
-!       DO ii = 1, (npiece-1)
-!
-!         llim = lim(ii)
-!         ulim = lim(ii+1)
-!
-!         CALL gaquad( nquad, roots, weights, llim, ulim )
-!         CALL TPAbsorptionKernelWithElectronEnergy&
-!              ( energygrid(kk), energygrid(jj), roots, TMeV, chem_e, l, TPK_Ee )
-!         CALL TPAK_midFD &
-!              ( energygrid(kk), energygrid(jj), roots, TMeV, chem_e, midFD )
-!  
-!         DO zz = 1, nquad
-!
-!           outcome = outcome + weights(zz) * TPK_Ee(zz) * midFD(zz)
-!
-!         END DO
-!
-!       END DO
-
-      TPK( jj, kk ) = UnitConvertConstant !* outcome 
+      TPK( jj, kk ) = UnitConvertConstant * outcome 
 
     END DO
   END DO
@@ -124,49 +98,85 @@ CONTAINS
   END SUBROUTINE TPKernel
 
 
-  SUBROUTINE TPAbsorptionKernelWithElectronEnergy &
-             ( e, ep, Ee, TMeV, chem_e, l, TPKarr )
+  SUBROUTINE paircal( e, ep, TMeV, chem_e, l, outcome )
+!--------------------------------------------------------------------
+! Purpose:
+!   To integrates the quantities
+!              [1-Fe(Ee)]*[1-Febar(e + ep - Ee)]*Phil(e,ep,Ee)
+!   from 0 to e + ep over Ee.
+!   Ee     : electron energy
+!   Phil   : compute by pair_Phil
+!
+! Input:
+!   e      : neutrino energy [MeV]
+!   ep     : antineutrino energy [MeV]
+!   TMeV   : matter temperature [MeV]
+!   chem_e : electron chemical potential [MeV]
+!   l      : moment order index
+!
+! Output:
+!  outcome : the value of pair annihilation kernal
+!--------------------------------------------------------------------
+  IMPLICIT NONE
+    INTEGER,  INTENT(in)       :: l
+    REAL(dp), INTENT(in)       :: e, ep, TMeV, chem_e
+    REAL(dp), INTENT(out)      :: outcome
 
+    INTEGER, PARAMETER         :: nquad = 30 ! same with Grey nquad
+    INTEGER                    :: ii
+    REAL(dp)                   :: phi, midFe, FEXP
+    REAL(dp), DIMENSION(nquad) :: roots_Ee, weights
+
+    CALL gaquad( nquad, roots_Ee, weights, 0.0_dp, e+ep )
+
+    DO ii = 1, nquad
+
+      CALL pair_midFe( e, ep, roots_Ee(ii), TMeV, chem_e, midFe )
+      CALL pair_Phil( e, ep, roots_Ee(ii), TMeV, chem_e, l, phi )
+
+    END DO
+
+  END SUBROUTINE paircal
+
+
+  SUBROUTINE pair_Phil &
+             ( e, ep, Ee, TMeV, chem_e, l, outcome )
+!--------------------------------------------------------------------
+! Purpose:
+!   To compute Phil(e,ep,Ee) needed by paircal
+!--------------------------------------------------------------------
   IMPLICIT NONE
 
-    REAL(dp), DIMENSION(:), INTENT(in) :: Ee
-    REAL(dp), INTENT(in)               :: e, ep, TMeV, chem_e
-    INTEGER,  INTENT(in)               :: l
-    REAL(dp), DIMENSION(:), INTENT(out) :: TPKarr
+    REAL(dp), INTENT(in)  :: e, ep, Ee, TMeV, chem_e
+    INTEGER,  INTENT(in)  :: l
+    REAL(dp), INTENT(out) :: outcome
 
-    REAL(dp)                   :: Coeff1, Coeff2
-    INTEGER                    :: nEe
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: JI, JII
+    REAL(dp)              :: Coeff1, Coeff2, JI, JII
+    INTEGER               :: nEe
 
-    nEe    = SIZE(Ee)
     Coeff1 = ( cv + ca ) * ( cv + ca )
     Coeff2 = ( cv - ca ) * ( cv - ca )
 
-    ALLOCATE( JI(nEe), JII(nEe) )
+    CALL pair_J( e, ep, Ee, TMeV, chem_e, l, JI )
+    CALL pair_J( ep, e, Ee, TMeV, chem_e, l, JII )
 
-!    CALL ComputeJfuncForTPK( e, ep, Ee, JI )
-!    CALL ComputeJfuncForTPK( ep, e, Ee, JII )
+    outcome = Coeff1 * JI + Coeff2 * JII
 
-    TPKarr = Coeff1 * JI + Coeff2 * JII
-
-    DEALLOCATE( JI, JII)
-
-  END SUBROUTINE TPAbsorptionKernelWithElectronEnergy
+  END SUBROUTINE pair_Phil
 
 
-  SUBROUTINE ComputeJfuncForTPK( ep, e, Ee, TMeV, chem_e, J0I, J0II, J1I, J1II )
+  SUBROUTINE pair_J( e, ep, Ee, TMeV, chem_e, l, J )
 
   IMPLICIT NONE
  
-    REAL(dp), INTENT(in)  :: ep, e, TMeV, chem_e
-    REAL(dp), INTENT(in)  :: Ee
-    !REAL(dp), DIMENSION(:), INTENT(in) :: Ee
-    REAL(dp), INTENT(out) :: J0I, J0II, J1I, J1II
-   ! REAL(dp), DIMENSION(:), INTENT(out) :: J0I, J0II, J1I, J1II
+    INTEGER,  INTENT(in)  :: l
+    REAL(dp), INTENT(in)  :: e, ep, Ee, TMeV, chem_e
+    REAL(dp), INTENT(out) :: J
 
     REAL(dp)  :: w, w2, w3, w4, w5, wp, wp2, wp3, wp4, wp5, wwp, &
                  w_p_wp, w_p_wp2, w_p_wp3, beta, eta
     REAL(dp)  :: coef
+    REAL(dp)  :: J0I, J0II, J1I, J1II
     
       coef     = 1.0_dp !!!!
       w        = e
@@ -229,32 +239,44 @@ CONTAINS
       
       RETURN
 
-  END SUBROUTINE ComputeJfuncForTPK
+  END SUBROUTINE pair_J
 
 
-  SUBROUTINE TPAK_midFD( e1, e2, ee, TMeV, chem_e, midFD ) 
+  SUBROUTINE pair_midFe( e, ep, ee, TMeV, chem_e, outcome ) 
 
   IMPLICIT NONE
+  REAL(dp), INTENT(in)  :: e, ep, ee, TMeV, chem_e
+  REAL(dp), INTENT(out) :: outcome
 
-  REAL(dp), INTENT(in)                :: e1, e2, TMeV, chem_e
-  REAL(dp), DIMENSION(:), INTENT(in)  :: ee
-  REAL(dp), DIMENSION(:), INTENT(out) :: midFD
+  REAL(dp) :: FEXP
 
-  REAL(dp) :: fexp
+  outcome = FEXP( (e+ep)/TMeV ) &
+            / ( (FEXP( (ee-chem_e) / TMeV ) + 1.0_dp) &
+                * (FEXP( (e+ep-ee+chem_e)/TMeV ) + 1.0_dp) )
 
-  midFD = FEXP( (e1+e2)/TMeV ) &
-         / ( (FEXP( (ee-chem_e) / TMeV ) + 1.0_dp) &
-           * (FEXP( (e1+e2-ee+chem_e)/TMeV ) + 1.0_dp) )
-
-  END SUBROUTINE TPAK_midFD  
+  END SUBROUTINE pair_midFe  
 
 
   SUBROUTINE pr_w_gt_wp_e_lt_wp( xl, xu, eta, beta, j0i, j0ii, j1i, j1ii )
-
+!--------------------------------------------------------------------
+!    Purpose:
+!      To integrate for the case w > w', e < w', the quantities
+!
+!          Fe(Ee)*Febar(Enu + Enubar - Ee)*Phi(Enu,Enubar,Ee)
+!
+!      and
+!
+!          [1-Fe(Ee)]*[1-Febar(Enu + Enubar - Ee)]*Phi(Enu,Enubar,Ee)
+!
+!  e       : (electron energy)/kt    (integration variable)
+!  w       : (in beam neutrino energy)/kt
+!  wp      : (out beam neutrino energy)/kt
+!  eta     : (electron chemical potential - mc2)/kt
+!--------------------------------------------------------------------
   IMPLICIT NONE
 
     REAL(dp), INTENT(in)  :: xl, xu, eta, beta
-    REAL(dp), INTENT(out) :: j0i, j0ii, j1i, j1ii
+    REAL(dp), INTENT(inout) :: j0i, j0ii, j1i, j1ii
 
     INTEGER  :: i
     REAL(dp) :: h0i, h0ii, su0i, su0ii, su1i, su1ii, e_mid, e_del,&
@@ -334,7 +356,7 @@ CONTAINS
   IMPLICIT NONE
 
     REAL(dp), INTENT(in)  :: xl, xu, eta, beta
-    REAL(dp), INTENT(out) :: j0i, j0ii, j1i, j1ii
+    REAL(dp), INTENT(inout) :: j0i, j0ii, j1i, j1ii
 
   END SUBROUTINE pr_w_gt_wp_w_lt_e
 
@@ -344,7 +366,7 @@ CONTAINS
   IMPLICIT NONE
 
     REAL(dp), INTENT(in)  :: xl, xu, eta, beta
-    REAL(dp), INTENT(out) :: j0i, j0ii, j1i, j1ii
+    REAL(dp), INTENT(inout) :: j0i, j0ii, j1i, j1ii
 
   END SUBROUTINE pr_w_lt_wp_e_lt_w
 
@@ -354,7 +376,7 @@ CONTAINS
   IMPLICIT NONE
 
     REAL(dp), INTENT(in)  :: xl, xu, eta, beta
-    REAL(dp), INTENT(out) :: j0i, j0ii, j1i, j1ii
+    REAL(dp), INTENT(inout) :: j0i, j0ii, j1i, j1ii
 
   END SUBROUTINE pr_w_lt_wp_e_lt_wp
 
@@ -364,7 +386,7 @@ CONTAINS
   IMPLICIT NONE
 
     REAL(dp), INTENT(in)  :: xl, xu, eta, beta
-    REAL(dp), INTENT(out) :: j0i, j0ii, j1i, j1ii
+    REAL(dp), INTENT(inout) :: j0i, j0ii, j1i, j1ii
 
   END SUBROUTINE pr_w_lt_wp_wp_lt_e
   

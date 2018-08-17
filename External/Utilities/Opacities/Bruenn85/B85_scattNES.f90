@@ -1,5 +1,5 @@
 MODULE B85_scattNES
-!-----------------------------------------------------------------------
+!---------------------------------------------------------------------
 !
 !    File:         B85_scattNES.f90
 !    Module:       B85_scattNES
@@ -35,13 +35,14 @@ MODULE B85_scattNES
 !                  wlExtNumericalModule
 !                  ( function fexp is called )
 !
-!-----------------------------------------------------------------------
+!---------------------------------------------------------------------
 
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
-    h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, cvel, ergmev,&
-      cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
-  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero, one
+      h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, &
+      cvel, ergmev, cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
+  USE wlExtNumericalModule, ONLY: &
+      pi, half, twpi, zero, one
 
   IMPLICIT NONE
 
@@ -49,8 +50,9 @@ MODULE B85_scattNES
 
 CONTAINS
 
-  SUBROUTINE TotalNESKernel( energygrid, TMeV, chem_e, nquad, l, NESK, species )
-!------------------------------------------------------------------------------
+  SUBROUTINE TotalNESKernel &
+               ( energygrid, TMeV, chem_e, nquad, l, NESK, species )
+!---------------------------------------------------------------------
 ! Purpose:
 !   To compute the zero and first legendre coefs for the neutrino-
 !   electron scattering kernel for electron-type neutrino and 
@@ -58,29 +60,29 @@ CONTAINS
 ! Ref: 
 !   Mezzacappa & Bruenn(1993) AJ 410
 !   Bruenn(1985) AJSS 58
-!------------------------------------------------------------------------------
-
+!---------------------------------------------------------------------
   IMPLICIT NONE
 
-  REAL(dp), DIMENSION(:), INTENT(in)    :: energygrid
-  REAL(dp), INTENT(in)                  :: TMeV, chem_e
-  INTEGER , INTENT(in)                  :: nquad, l, species
-  REAL(dp), DIMENSION(:,:), INTENT(out) :: NESK
+  REAL(dp), DIMENSION(:), INTENT(in)      :: energygrid
+  REAL(dp), INTENT(in)                    :: TMeV, chem_e
+  INTEGER , INTENT(in)                    :: nquad, l, species
+  REAL(dp), DIMENSION(:,:), INTENT(out)   :: NESK
 
-  REAL(dp), DIMENSION(nquad) :: roots, weights
+  REAL(dp), DIMENSION(nquad)              :: roots, weights
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: NESK_ome
-  INTEGER                    :: ii, jj, kk, nPointsE
-  REAL(dp)                   :: outcome
-  REAL(dp)                   :: UnitConvertConstant
+  INTEGER                                 :: ii, jj, kk, nPointsE
+  REAL(dp)                                :: outcome
+  REAL(dp)                                :: UnitConvertConstant
 
-  UnitConvertConstant = cvel_inv**4.0 / h**3.0
-  nPointsE = SIZE(energygrid)
+  UnitConvertConstant  =  cvel_inv**4.0 / h**3.0
+  nPointsE             =  SIZE(energygrid)
 
   ALLOCATE( NESK_ome( nquad, nPointsE, nPointsE ) )
 
   CALL gaquad( nquad, roots, weights, -1.0_dp , 1.0_dp )
 
-  CALL NESKernelWithOmega( energygrid, roots, TMeV, chem_e, NESK_ome, species )
+  CALL NESKernelWithOmega &
+         ( energygrid, roots, TMeV, chem_e, NESK_ome, species )
 
  
   IF ( l == 0 ) THEN
@@ -103,7 +105,8 @@ CONTAINS
       DO kk = 1, nPointsE
          outcome = 0.0_dp
          DO ii = 1, nquad
-           outcome = outcome + NESK_ome(ii,jj,kk) * weights(ii) * roots(ii)
+           outcome = outcome &
+                     + NESK_ome(ii,jj,kk) * weights(ii) * roots(ii)
          END DO
          NESK( jj, kk ) = UnitConvertConstant * outcome * 1.5_dp
 
