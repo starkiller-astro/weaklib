@@ -33,6 +33,7 @@ MODULE wlIOModuleHDF
     MODULE PROCEDURE Read2dHDF_double
     MODULE PROCEDURE Read3dHDF_double
     MODULE PROCEDURE Read1dHDF_integer
+    MODULE PROCEDURE Read1dHDF_integer_debug
     MODULE PROCEDURE Read3dHDF_integer
     MODULE PROCEDURE Read1dHDF_string
   END INTERFACE ReadHDF
@@ -373,6 +374,26 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Read1dHDF_integer
+
+  SUBROUTINE Read1dHDF_integer_debug &
+               ( name, values, group_id, datasize, err )
+
+    CHARACTER(*), INTENT(in)                    :: name
+    INTEGER(HID_T)                               :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
+    INTEGER, DIMENSION(:), INTENT(out)           :: values
+    INTEGER, INTENT(out)                          :: err
+    
+    INTEGER(HID_T)                               :: dataset_id
+  
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
+                   values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
+
+    err = hdferr
+
+  END SUBROUTINE Read1dHDF_integer_debug
 
   SUBROUTINE Write1dHDF_string( name, values, group_id, datasize, &
                desc_option, unit_option)
