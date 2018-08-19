@@ -457,6 +457,10 @@ CONTAINS
     INTEGER, DIMENSION(1)                         :: buffer
     CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
 
+    INTEGER                                       :: hdfreadErr
+
+    hdfreadErr = 0
+
     WRITE(*,*) "           File in"
     WRITE(*,*) " Reading ", FileName, " hdf5 file ... "
 
@@ -478,11 +482,25 @@ CONTAINS
     CALL ReadHDF( "nMomentsB_NES", buffer, file_id, datasize1d )
     nMomB_NES = buffer(1)
 
-    CALL ReadHDF( "nOpacitiesB_TP", buffer, file_id, datasize1d )
-    nOpacB_TP = buffer(1)
+    CALL ReadHDF &
+    ( "nOpacitiesB_TP", buffer, file_id, datasize1d, hdfreadErr )
+    IF( hdfreadErr == 0 ) THEN 
+      nOpacB_TP = buffer(1)
+    ELSE
+      nOpacB_TP = 0
+      PRINT*, "hdfreadErr =", hdfreadErr
+      PRINT*, "nOpacB_TP =", nOpacB_TP
+    END IF
 
-    CALL ReadHDF( "nMomentsB_TP", buffer, file_id, datasize1d )
-    nMomB_TP = buffer(1)
+    CALL ReadHDF &
+    ( "nMomentsB_TP", buffer, file_id, datasize1d, hdfreadErr )
+    IF( hdfreadErr == 0 ) THEN 
+      nMomB_TP = buffer(1)
+    ELSE
+      nMomB_TP = 0
+      PRINT*, "hdfreadErr =", hdfreadErr
+      PRINT*, "nMomB_TP =", nMomB_TP
+    END IF
 
     CALL ReadHDF( "nOpacitiesC", buffer, file_id, datasize1d )
     nOpacC = buffer(1)
@@ -516,21 +534,29 @@ CONTAINS
  
     CALL ReadThermoStateHDF( OpacityTable % TS, file_id )
 
-    CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
-    CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
-    CALL CloseGroupHDF( group_id )
+    IF( nOpacA .ne. 0 ) THEN
+      CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
+      CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
+      CALL CloseGroupHDF( group_id )
+    END IF
 
-    CALL OpenGroupHDF( "scatt_Iso", .false., file_id, group_id )
-    CALL ReadOpacityTypeBHDF( OpacityTable % scatt_Iso, group_id )
-    CALL CloseGroupHDF( group_id )
+    IF( nOpacB .ne. 0 ) THEN
+      CALL OpenGroupHDF( "scatt_Iso", .false., file_id, group_id )
+      CALL ReadOpacityTypeBHDF( OpacityTable % scatt_Iso, group_id )
+      CALL CloseGroupHDF( group_id )
+    END IF
 
-    CALL OpenGroupHDF( "scatt_NES", .false., file_id, group_id )
-    CALL ReadOpacityTypeBHDF( OpacityTable % scatt_NES, group_id )
-    CALL CloseGroupHDF( group_id )
+    IF( nOpacB_NES .ne. 0 ) THEN
+      CALL OpenGroupHDF( "scatt_NES", .false., file_id, group_id )
+      CALL ReadOpacityTypeBHDF( OpacityTable % scatt_NES, group_id )
+      CALL CloseGroupHDF( group_id )
+    END IF
 
-    CALL OpenGroupHDF( "scatt_TP", .false., file_id, group_id )
-    CALL ReadOpacityTypeBHDF( OpacityTable % scatt_TP, group_id )
-    CALL CloseGroupHDF( group_id )
+    IF( nOpacB_TP .ne. 0 ) THEN
+      CALL OpenGroupHDF( "scatt_TP", .false., file_id, group_id )
+      CALL ReadOpacityTypeBHDF( OpacityTable % scatt_TP, group_id )
+      CALL CloseGroupHDF( group_id )
+    END IF
 
     CALL OpenGroupHDF( "scatt_nIso", .false., file_id, group_id )
     CALL ReadOpacityTypeCHDF( OpacityTable % scatt_nIso , group_id )
