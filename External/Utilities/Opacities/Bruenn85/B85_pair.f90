@@ -134,7 +134,7 @@ CONTAINS
     DO ii = 1, nquad
 
       CALL pair_midFe( e, ep, roots_Ee(ii), TMeV, chem_e, midFe )
-      CALL pair_Phil( e, ep, roots_Ee(ii), TMeV, chem_e, l, phi )
+      CALL pair_Phil(  e, ep, roots_Ee(ii), l, phi )
 
       outcome = outcome + weights(ii) * midFe * phi
 
@@ -145,14 +145,14 @@ CONTAINS
 
 
   SUBROUTINE pair_Phil &
-             ( e, ep, Ee, TMeV, chem_e, l, outcome )
+             ( e, ep, Ee, l, outcome )
 !--------------------------------------------------------------------
 ! Purpose:
 !   To compute Phil(e,ep,Ee) needed by paircal
 !--------------------------------------------------------------------
   IMPLICIT NONE
 
-    REAL(dp), INTENT(in)  :: e, ep, Ee, TMeV, chem_e
+    REAL(dp), INTENT(in)  :: e, ep, Ee
     INTEGER,  INTENT(in)  :: l
     REAL(dp), INTENT(out) :: outcome
 
@@ -181,13 +181,13 @@ CONTAINS
       IF ( e >= ep ) THEN
       
         CALL pr_w_gt_wp_wp_gt_e( e, ep, Ee, l, J )
-        CALL pr_w_gt_e_e_gt_wp( e, ep, Ee, l, J )
-        CALL pr_w_gt_wp_w_lt_e( e, ep, Ee, l, J )
+        CALL pr_w_gt_e_e_gt_wp ( e, ep, Ee, l, J )
+        CALL pr_w_gt_wp_w_lt_e ( e, ep, Ee, l, J )
         
       ELSE
       
-        CALL pr_w_lt_wp_e_lt_w( e, ep, Ee, l, J )
-        CALL pr_w_lt_e_e_lt_wp( e, ep, Ee, l, J )
+        CALL pr_w_lt_wp_e_lt_w ( e, ep, Ee, l, J )
+        CALL pr_w_lt_e_e_lt_wp ( e, ep, Ee, l, J )
         CALL pr_w_lt_wp_wp_lt_e( e, ep, Ee, l, J )
         
       END IF
@@ -197,17 +197,17 @@ CONTAINS
   END SUBROUTINE pair_J
 
 
-  SUBROUTINE pair_midFe( e, ep, ee, TMeV, chem_e, outcome ) 
+  SUBROUTINE pair_midFe( e, ep, Ee, TMeV, chem_e, outcome ) 
 
   IMPLICIT NONE
-  REAL(dp), INTENT(in)  :: e, ep, ee, TMeV, chem_e
+  REAL(dp), INTENT(in)  :: e, ep, Ee, TMeV, chem_e
   REAL(dp), INTENT(out) :: outcome
 
   REAL(dp) :: FEXP
 
   outcome = FEXP( (e+ep)/TMeV ) &
-            / ( (FEXP( (ee-chem_e) / TMeV ) + 1.0_dp) &
-                * (FEXP( (e+ep-ee+chem_e)/TMeV ) + 1.0_dp) )
+            / ( (FEXP( (Ee-chem_e)      / TMeV ) + 1.0_dp) &
+              * (FEXP( (e+ep-Ee+chem_e) / TMeV ) + 1.0_dp) )
 
   END SUBROUTINE pair_midFe  
 
@@ -223,32 +223,37 @@ CONTAINS
     REAL(dp), INTENT(inout) :: J_a
 
     REAL(dp) :: a0, a1
-    REAL(dp) :: r4_15, r4_3, r8_3, r16_35, r4_5
-    REAL(dp) :: Ee5, Ee4, Ee3, eep, ep2, eep3, eep_2
+    REAL(dp) :: r4_3, r4_5, r4_15, r8_3, r16_35
+    REAL(dp) :: eep, ep2, eep3, eep_2, Ee3, Ee4, Ee5
 
-    Ee3   = Ee  * Ee * Ee
-    Ee4   = Ee3 * Ee
-    Ee5   = Ee4 * Ee 
-    eep   = e   * ep
-    ep2   = ep  * ep
-    eep3  = eep * ep * ep
-    eep_2 = eep * eep
 
-    r4_15  = 4.0_dp  / 15.0_dp
-    r4_3   = 4.0_dp  / 3.0_dp
-    r8_3   = 8.0_dp  / 3.0_dp
-    r16_35 = 16.0_dp / 35.0_dp
-    r4_5   = 4.0_dp  / 5.0_dp
+    eep    =  e   * ep
+    ep2    =  ep  * ep
+    eep3   =  eep * ep * ep
+    eep_2  =  eep * eep
+    Ee3    =  Ee  * Ee * Ee
+    Ee4    =  Ee3 * Ee
+    Ee5    =  Ee4 * Ee 
+
+    r4_3   =  4.0_dp  / 3.0_dp
+    r4_5   =  4.0_dp  / 5.0_dp
+    r4_15  =  4.0_dp  / 15.0_dp
+    r8_3   =  8.0_dp  / 3.0_dp
+    r16_35 =  16.0_dp / 35.0_dp
 
     IF ( l == 0 ) THEN
-      a0  = (r4_15*Ee5 - r4_3*Ee4*ep + r8_3*Ee3*ep*ep) / (e*ep)
-      J_a = J_a + a0
+
+      a0   =  (r4_15*Ee5 - r4_3*Ee4*ep + r8_3*Ee3*ep2) / eep 
+      J_a  =   J_a + a0
+
     ELSE IF ( l == 1 ) THEN
-      a1  = ( r16_35*Ee3*Ee4 - r4_5*Ee3*Ee3*(e+3.0_dp*ep) &
-              + r4_15*Ee5*ep*(13.0_dp*e+18.0_dp*ep) &
-              - r4_3*Ee4*ep2*(4.0_dp*e+3.0_dp*ep) &
-              + r8_3*Ee3*eep3) / eep_2 
-      J_a = J_a + a1 
+
+      a1   =  ( r16_35*Ee3*Ee4 - r4_5*Ee3*Ee3*(e+3.0_dp*ep) &
+               + r4_15*Ee5*ep*(13.0_dp*e+18.0_dp*ep) &
+               - r4_3*Ee4*ep2*(4.0_dp*e+3.0_dp*ep) &
+               + r8_3*Ee3*eep3) / eep_2 
+      J_a  =  J_a + a1 
+
       END IF
 
 
@@ -267,53 +272,55 @@ CONTAINS
     REAL(dp), INTENT(inout) :: J_b
 
     REAL(dp)  :: b0, b1, a0, a1
-    REAL(dp)  :: r8_3, r4_3, r4_15, r16_35, r4_5, &
-                 r12_5, r16_5, r28_5, r28_15, r8_5, &
-                 r8_7, r8_15, r12_35
-    REAL(dp)  :: eep, e2, ep2, e3, e5, ep3, eaep, eaep2, eaep3, &
-                 Ee5, Ee4, Ee3, Ee2, eep_2, eep3, e4, ep4, ep5
+    REAL(dp)  :: r4_3, r4_5, r4_15, r8_3, r8_5, r8_7, r8_15, &
+                 r12_5, r12_35, r16_5, r16_35, r28_5, r28_15
+    REAL(dp)  :: e2, e3, e4, e5, ep2, ep3, ep4, ep5, Ee2, Ee3, &
+                 Ee4, Ee5, eep, eep3, eep_2, eaep, eaep2, eaep3
 
-    r8_3   = 8.0_dp  / 3.0_dp
     r4_3   = 4.0_dp  / 3.0_dp
-    r4_15  = 4.0_dp  / 15.0_dp
     r4_5   = 4.0_dp  / 5.0_dp
-    r16_35 = 16.0_dp / 35.0_dp
-    r12_5  = 12.0_dp / 5.0_dp
-    r16_5  = 16.0_dp / 5.0_dp
-    r28_5  = 28.0_dp / 5.0_dp
-    r28_15 = 28.0_dp / 15.0_dp
+    r4_15  = 4.0_dp  / 15.0_dp
+    r8_3   = 8.0_dp  / 3.0_dp
     r8_5   = 8.0_dp  / 5.0_dp
     r8_7   = 8.0_dp  / 7.0_dp
     r8_15  = 8.0_dp  / 15.0_dp
+    r12_5  = 12.0_dp / 5.0_dp
     r12_35 = 12.0_dp / 35.0_dp
+    r16_5  = 16.0_dp / 5.0_dp
+    r16_35 = 16.0_dp / 35.0_dp
+    r28_5  = 28.0_dp / 5.0_dp
+    r28_15 = 28.0_dp / 15.0_dp
 
-    Ee2   =  Ee * Ee
-    Ee3   =  Ee2 * Ee
-    Ee4   =  Ee3 * Ee
-    Ee5   =  Ee4 * Ee
-    eep   =  e * ep
-    eaep  =  e + ep
-    ep2   =  ep * ep
-    e2    =  e * e
-    e3    =  e2 * e
-    e4    =  e3 * e
-    e5    =  e4 * e
-    ep3   =  ep2 * ep
-    ep4   =  ep3 * ep
-    ep5   =  ep4 * ep
-    eep3  =  eep * ep * ep
-    eaep2 =  eaep * eaep
-    eaep3 =  eaep2 * eaep
-    eep_2 =  eep * eep
+    e2     =  e     * e
+    e3     =  e2    * e
+    e4     =  e3    * e
+    e5     =  e4    * e
+    ep2    =  ep    * ep
+    ep3    =  ep2   * ep
+    ep4    =  ep3   * ep
+    ep5    =  ep4   * ep
+    Ee2    =  Ee    * Ee
+    Ee3    =  Ee2   * Ee
+    Ee4    =  Ee3   * Ee
+    Ee5    =  Ee4   * Ee
+    eep    =  e     * ep
+    eep3   =  eep   * ep * ep
+    eep_2  =  eep   * eep
+    eaep   =  e     + ep
+    eaep2  =  eaep  * eaep
+    eaep3  =  eaep2 * eaep
 
     IF ( l == 0 ) THEN
-      a0  = (r4_15*Ee5 - r4_3*Ee4*ep + r8_3*Ee3*ep*ep) / (e*ep)
+
+      a0   =  (r4_15*Ee5 - r4_3*Ee4*ep + r8_3*Ee3*ep2) / eep
       b0  = ( - a0 + r8_3*Ee2*(e3+ep3) &
                    - r4_3*Ee*eaep2*(ep2-2.0_dp*eep+3.0_dp*e2) &
                    + r4_15*eaep3*(ep2-3.0_dp*eep+6.0_dp*e2) ) &
             / eep 
       J_b = J_b + b0
+
     ELSE IF ( l == 1 ) THEN
+
       a1  = ( r16_35*Ee3*Ee4 - r4_5*Ee3*Ee3*(e+3.0_dp*ep) &
               + r4_15*Ee5*ep*(13.0_dp*e+18.0_dp*ep) &
               - r4_3*Ee4*ep2*(4.0_dp*e+3.0_dp*ep) &
@@ -322,12 +329,13 @@ CONTAINS
               - (r12_5*e5 + r4_3*e4*ep + r4_3*e*ep4 + r12_5*ep5) &
                  * Ee2 &
               + (r16_5*e3*e3 + r28_5*e5*ep + r8_3*e4*ep2 + &
-                          + r28_15*e*ep5 + r8_5*ep3*ep3) &
+                             + r28_15*e*ep5 + r8_5*ep3*ep3) &
                  * Ee &
               - (r8_7*e3*e4 + r16_5*e3*e3*ep + r16_5*e5*ep2 + r4_3*e4*ep3 &
-                         + r8_15*e*ep3*ep3 + r12_35*ep3*ep4) &
+                            + r8_15*e*ep3*ep3 + r12_35*ep3*ep4) &
              ) / eep_2 
       J_b = J_b + b1
+
       END IF
 
 
@@ -346,37 +354,41 @@ CONTAINS
     REAL(dp), INTENT(inout) :: J_c
 
     REAL(dp)   :: c0, c1
-    REAL(dp)   :: r8_3, r8_5, r16_3, r8_7, r16_5, r4_3, &
-                  r28_5, r12_5
-    REAL(dp)   :: e3, e2, eep, ep2, Ee2, ep3
+    REAL(dp)   :: r4_3, r8_3, r8_5, r8_7, r12_5, r16_3, &
+                  r16_5, r28_5
+    REAL(dp)   :: e2, e3, ep2, ep3, Ee2, eep
    
+    r4_3  = 4.0_dp  / 3.0_dp
     r8_3  = 8.0_dp  / 3.0_dp
     r8_5  = 8.0_dp  / 5.0_dp
-    r16_3 = 16.0_dp / 3.0_dp
     r8_7  = 8.0_dp  / 7.0_dp
-    r16_5 = 16.0_dp / 5.0_dp
-    r4_3  = 4.0_dp  / 3.0_dp
-    r28_5 = 28.0_dp / 5.0_dp
     r12_5 = 12.0_dp / 5.0_dp
+    r16_3 = 16.0_dp / 3.0_dp
+    r16_5 = 16.0_dp / 5.0_dp
+    r28_5 = 28.0_dp / 5.0_dp
 
-    Ee2 = Ee * Ee
-    ep2 = ep * ep
-    ep3 = ep2 * ep
-    eep = ep * e
-    e2  = e  * e
-    e3  = e2 * e
+    e2    = e   * e
+    e3    = e2  * e
+    ep2   = ep  * ep
+    ep3   = ep2 * ep
+    Ee2   = Ee  * Ee
+    eep   = ep  * e
+
 
     IF ( l == 0 ) THEN
-      c0  = ( r8_3 * ep2 + 4.0_dp * eep + r8_5 * e2 ) & 
-              * e2 / ep &
+
+      c0  = ( r8_3 * ep2 + 4.0_dp * eep + r8_5 * e2 ) * e2 / ep &
             - ( r16_3 * e2 + 4 * e3 / ep ) * Ee &
             + r8_3 * Ee * Ee * e2 / ep
       J_c = J_c + c0
+
     ELSE IF ( l == 1 ) THEN
+
       c1  = - (r8_7*e3+r16_5*eep*e+r16_5*eep*ep+r4_3*ep3) * e2 /ep2 &
             + (r16_5*e2 + r28_5*eep + r8_3*ep2) * Ee * e2 / ep2 &
             - (r12_5*e + r4_3*ep ) * Ee2 * e2 / ep2  
       J_c = J_c + c1
+
       END IF
 
   END SUBROUTINE pr_w_lt_e_e_lt_wp
@@ -394,24 +406,24 @@ CONTAINS
     REAL(dp), INTENT(inout) :: J_d
 
     REAL(dp)  :: d0, d1
-    REAL(dp)  :: r4_15, r4_3, r8_3, r8_15, r12_35, r28_15, r8_5, &
-                 r12_5
-    REAL(dp)  :: ep4, ep3, ep2, e2, Ee2
+    REAL(dp)  :: r4_3, r4_15, r8_3, r8_5, r8_15, r12_5, &
+                 r12_35, r28_15
+    REAL(dp)  :: ep2, ep3, ep4, e2, Ee2
+
+    r4_3   = 4.0_dp  / 3.0_dp
+    r4_15  = 4.0_dp  / 15.0_dp
+    r8_3   = 8.0_dp  / 3.0_dp
+    r8_5   = 8.0_dp  / 5.0_dp
+    r8_15  = 8.0_dp  / 15.0_dp
+    r12_5  = 12.0_dp / 5.0_dp
+    r12_35 = 12.0_dp / 35.0_dp
+    r28_15 = 28.0_dp / 15.0_dp
 
     ep2 = ep  * ep
     ep3 = ep2 * ep
     ep4 = ep3 * ep
     e2  = e   * e
     Ee2 = Ee  * Ee
-
-    r4_15 = 4.0_dp / 15.0_dp
-    r4_3  = 4.0_dp / 3.0_dp
-    r8_3  = 8.0_dp / 3.0_dp
-    r8_15 = 8.0_dp / 15.0_dp
-    r12_35 = 12.0_dp / 35.0_dp
-    r28_15 = 28.0_dp / 15.0_dp
-    r8_5   = 8.0_dp / 5.0_dp
-    r12_5  = 12.0_dp / 5.0_dp
 
     IF ( l == 0 ) THEN
 
