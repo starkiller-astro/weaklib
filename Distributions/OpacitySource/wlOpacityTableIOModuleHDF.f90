@@ -475,23 +475,23 @@ CONTAINS
     nMomB_NES = buffer(1)
 
     CALL ReadHDF &
-    ( "nOpacitiesB_TP", buffer, file_id, datasize1d, hdfreadErr )
+           ( "nOpacitiesB_TP", buffer, file_id, datasize1d, hdfreadErr )
     IF( hdfreadErr == 0 ) THEN 
       nOpacB_TP = buffer(1)
     ELSE
       nOpacB_TP = 0
-      PRINT*, "hdfreadErr =", hdfreadErr
-      PRINT*, "nOpacB_TP =", nOpacB_TP
+!!$      PRINT*, "hdfreadErr =", hdfreadErr
+!!$      PRINT*, "nOpacB_TP =", nOpacB_TP
     END IF
 
     CALL ReadHDF &
-    ( "nMomentsB_TP", buffer, file_id, datasize1d, hdfreadErr )
+           ( "nMomentsB_TP", buffer, file_id, datasize1d, hdfreadErr )
     IF( hdfreadErr == 0 ) THEN 
       nMomB_TP = buffer(1)
     ELSE
       nMomB_TP = 0
-      PRINT*, "hdfreadErr =", hdfreadErr
-      PRINT*, "nMomB_TP =", nMomB_TP
+!!$      PRINT*, "hdfreadErr =", hdfreadErr
+!!$      PRINT*, "nMomB_TP =", nMomB_TP
     END IF
 
     CALL ReadHDF( "nOpacitiesC", buffer, file_id, datasize1d )
