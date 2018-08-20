@@ -378,20 +378,33 @@ CONTAINS
   SUBROUTINE Read1dHDF_integer_debug &
                ( name, values, group_id, datasize, err )
 
-    CHARACTER(*), INTENT(in)                    :: name
-    INTEGER(HID_T)                               :: group_id
-    INTEGER(HSIZE_T), DIMENSION(1), INTENT(in)   :: datasize
-    INTEGER, DIMENSION(:), INTENT(out)           :: values
-    INTEGER, INTENT(out)                          :: err
-    
-    INTEGER(HID_T)                               :: dataset_id
-  
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
-    CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
-                   values, datasize, hdferr )
-    CALL h5dclose_f( dataset_id, hdferr )
+    CHARACTER(*),     INTENT(in)                :: name
+    INTEGER,          INTENT(out)               :: values(:)
+    INTEGER(HID_T),   INTENT(in)                :: group_id
+    INTEGER(HSIZE_T), INTENT(in)                :: datasize(1)
+    INTEGER,          INTENT(out)               :: err
 
-    err = hdferr
+    LOGICAL                                     :: link_exists
+    INTEGER(HID_T)                              :: dataset_id
+
+    CALL h5lexists_f( group_id, name, link_exists, hdferr )
+
+    IF( link_exists )THEN
+
+      CALL h5dopen_f &
+             ( group_id, name, dataset_id, hdferr )
+      CALL h5dread_f &
+             ( dataset_id, H5T_NATIVE_INTEGER, values, datasize, hdferr )
+      CALL h5dclose_f &
+             ( dataset_id, hdferr )
+
+      err = hdferr
+
+    ELSE
+
+      err = - 1
+
+    END IF
 
   END SUBROUTINE Read1dHDF_integer_debug
 
