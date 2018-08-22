@@ -1,0 +1,17 @@
+CHIMERABRUENN85 = \
+  kind_module.o \
+  gquad.o \
+  physcnst_module.o \
+  numerical_module.o \
+  nes_module.o \
+  array_module.o \
+  edit_module.o \
+  parallel_module.o \
+  pair_module.o \
+  pr_w_gt_wp_e_lt_wp.o \
+  pr_w_gt_wp_lt_e_lt_w.o \
+  pr_w_gt_wp_w_lt_e.o \
+  pr_w_lt_wp_e_lt_w.o \
+  pr_w_lt_wp_e_lt_wp.o \
+  pr_w_lt_wp_wp_lt_e.o \
+  paircal.o
