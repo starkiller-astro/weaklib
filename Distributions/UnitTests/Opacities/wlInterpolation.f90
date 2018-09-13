@@ -181,6 +181,7 @@ PROGRAM wlInterpolation
   CALL OpenGroupHDF( 'ProfileInfo', .true., file_id, group_id )
   datasize1d(1) = Inte_E % nPoints
   CALL WriteHDF( "Energy", Inte_E % Values(:), group_id, datasize1d ) 
+  datasize1d(1) = datasize
   CALL WriteHDF( "Radius", Inte_r, group_id, datasize1d )
   CALL WriteHDF( "Density", Inte_rho, group_id, datasize1d )
   CALL WriteHDF( "Temperature", Inte_T, group_id, datasize1d )
@@ -188,12 +189,12 @@ PROGRAM wlInterpolation
   CALL CloseGroupHDF( group_id )
 
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
-  datasize2d(1) = datasize 
-  datasize2d(2) = Inte_E % nPoints
+  datasize2d(2) = datasize 
+  datasize2d(1) = Inte_E % nPoints
   CALL WriteHDF( "EmAb_Electron", InterpolantEm1, group_id, datasize2d )
-  CALL WriteHDF( "EmAb_AntiElec", InterpolantEm2, group_id, datasize2d )
+  CALL WriteHDF( "EmAb_ElecAnti", InterpolantEm2, group_id, datasize2d )
   CALL WriteHDF( "ES_Electron", InterpolantES1, group_id, datasize2d )
-  CALL WriteHDF( "ES_AntiElec", InterpolantES2, group_id, datasize2d )
+  CALL WriteHDF( "ES_ElecAnti", InterpolantES2, group_id, datasize2d )
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
