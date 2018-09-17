@@ -116,7 +116,7 @@ PROGRAM wlInterpolation
   CALL FinalizeHDF( )
 
   Offset_Em = OpacityTable % thermEmAb % Offsets
-  Offset_ES = OpacityTable % scatt_Iso % Offsets(1,:)
+  Offset_ES = OpacityTable % scatt_Iso % Offsets(:,1)
 
 !--------------------------------------
 !   do interpolation
