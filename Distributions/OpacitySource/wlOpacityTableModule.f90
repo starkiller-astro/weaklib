@@ -187,7 +187,7 @@ CONTAINS
 
     END ASSOCIATE ! nPoints
 
-    PRINT*, 'End allocte opacity table.'
+    PRINT*, 'End allocate opacity table.'
     PRINT*
 
   END SUBROUTINE AllocateOpacityTable
