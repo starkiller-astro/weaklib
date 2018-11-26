@@ -10,7 +10,6 @@ USE kind_module
 USE numerical_module, ONLY : zero
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, pi
 
-USE edit_module, ONLY : nlog
 USE parallel_module, ONLY : myid
 
 !-----------------------------------------------------------------------

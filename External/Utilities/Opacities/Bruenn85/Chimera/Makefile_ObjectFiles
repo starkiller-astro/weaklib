@@ -1,12 +1,25 @@
 CHIMERABRUENN85 = \
+  $(ChimeraShare) \
+  $(ChimeraTP) \
+  $(ChimeraIS) \
+  $(ChimeraNES) \
+  $(ChimeraAB)
+
+ChimeraShare = \
   kind_module.o \
   gquad.o \
-  physcnst_module.o \
   numerical_module.o \
-  nes_module.o \
+  physcnst_module.o \
   array_module.o \
-  edit_module.o \
   parallel_module.o \
+  ff.o \
+  PRB_CNTL_MODULE.o \
+  POLYLOG_MODULE.o \
+  n_difcs.o \
+  vector_functions.o  
+  
+ChimeraTP = \
+  nes_module.o \
   pair_module.o \
   pr_w_gt_wp_e_lt_wp.o \
   pr_w_gt_wp_lt_e_lt_w.o \
@@ -14,4 +27,29 @@ CHIMERABRUENN85 = \
   pr_w_lt_wp_e_lt_w.o \
   pr_w_lt_wp_e_lt_wp.o \
   pr_w_lt_wp_wp_lt_e.o \
-  paircal.o
+  paircal_weaklib.o
+
+ChimeraIS = \
+  etaxx.o \
+  cc_difcs.o \
+  nc_weak_mag.o \
+  scatical_weaklib.o 
+
+ChimeraNES = \
+  w_gt_wp_e_gt_wp.o \
+  w_gt_wp_e_lt_wp.o \
+  w_gt_wp_e_to_inf.o \
+  w_lt_wp_e_gt_wp.o \
+  w_lt_wp_e_lt_wp.o \
+  w_lt_wp_e_to_inf.o \
+  sctlgndv.o \
+  scatergn_weaklib.o  
+
+ChimeraAB = \
+ abemfrnpetanp.o \
+ abemfrnp.o \
+ cc_weak_mag.o \
+ abem_cal_weaklib.o \
+ abemnc_weaklib.o \
+ abemrgn_weaklib.o
+

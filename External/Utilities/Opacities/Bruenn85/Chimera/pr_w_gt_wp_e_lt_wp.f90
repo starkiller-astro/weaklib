@@ -124,6 +124,8 @@ e_del              = half * ( xu - xl )
 !  Integrate
 !-----------------------------------------------------------------------
 
+CALL gquad( nleg, xe, wte, nleg )
+
 DO i = 1,nleg
 
   e_var            = xe(i) * e_del

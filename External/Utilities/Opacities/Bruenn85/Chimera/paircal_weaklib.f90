@@ -1,13 +1,10 @@
-SUBROUTINE paircal( enu, enubar, cmpe, t, j0i, j0ii, j1i, j1ii )
+SUBROUTINE paircal_weaklib( enu, enubar, cmpe, t, j0i, j0ii, j1i, j1ii )
 !-----------------------------------------------------------------------
 !
-!    File:         paircal
-!    Module:       paircal
-!    Type:         Subprogram
-!    Author:       S. W. Bruenn, Dept of Physics, FAU,
-!                  Boca Raton, FL 33431-0991
+!    Author:       R. Chu, Dept. Phys. & Astronomy
+!                  U. Tennesee, Knoxville
 !
-!    Date:         7/5/03
+!    Created:      10/23/18
 !
 !    Purpose:
 !      To integrates the quantities
@@ -48,10 +45,6 @@ SUBROUTINE paircal( enu, enubar, cmpe, t, j0i, j0ii, j1i, j1ii )
 !
 !    Variables that must be passed through common:
 !      none
-!
-!    Include files:
-!  kind_module, numerical_module, physcnst_module
-!  nes_module
 !
 !-----------------------------------------------------------------------
 
@@ -164,4 +157,4 @@ j1ii               = coef * j1ii
 
 
 RETURN
-END SUBROUTINE paircal
+END SUBROUTINE paircal_weaklib
