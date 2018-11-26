@@ -39,8 +39,9 @@ MODULE B85_pair
 !--------------------------------------------------------------------
   USE wlKindModule, ONLY: dp
   USE wlExtPhysicalConstantsModule, ONLY: &
-        h, kMeV, therm1, therm2, dmnp, me, mbG, mp, mn, cvel_inv, &
-        cvel, ergmev, cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca
+        h, kMeV, therm1, therm2, therm3, dmnp, me, mbG, mp, mn, cvel_inv, &
+        cvel, ergmev, cv_p, cv_n, ca_p, ca_n, gf, hbarc, cv, ca, &
+        Gw, hbar
   USE wlExtNumericalModule, ONLY: &
         pi, half, twpi, zero, one
 
@@ -73,9 +74,8 @@ CONTAINS
   INTEGER, PARAMETER         :: npiece = 47
   REAL(dp), DIMENSION(nquad) :: roots, weights, midFD
   REAL(dp), DIMENSION(npiece):: lim
-  REAL(dp)                   :: UnitConvertConstant, outcome, ep, e
+  REAL(dp)                   :: outcome, ep, e
 
-  UnitConvertConstant = cvel_inv**4.0 / h**3.0  
   nPointsE = SIZE(energygrid)
 
   TPK = zero
@@ -88,9 +88,9 @@ CONTAINS
     
       e = energygrid(kk)
 
-      CALL paircal( e, ep, TMeV, chem_e, l, outcome )
+      CALL pair_cal( e, ep, TMeV, chem_e, l, outcome )
 
-      TPK( jj, kk ) = UnitConvertConstant * outcome 
+      TPK( jj, kk ) = therm3 * outcome 
 
     END DO
   END DO
@@ -98,7 +98,7 @@ CONTAINS
   END SUBROUTINE TPKernel
 
 
-  SUBROUTINE paircal( e, ep, TMeV, chem_e, l, outcome )
+  SUBROUTINE pair_cal( e, ep, TMeV, chem_e, l, outcome )
 !--------------------------------------------------------------------
 ! Purpose:
 !   To integrates the quantities
@@ -141,7 +141,7 @@ CONTAINS
     END DO
 
 
-  END SUBROUTINE paircal
+  END SUBROUTINE pair_cal
 
 
   SUBROUTINE pair_Phil &

@@ -99,7 +99,7 @@ CONTAINS
     if(z.gt.28.0)                  npz = 8.0
     
     
-!    etapn = rho * ( xn - xp ) / ( mbG * ( FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp ) )
+!    etapn = rho * ( xn - xp ) / ( mbG * ( FEXP( (chem_n-chem_p)/TMeV ) - one ) )
      rop   = rho * xp / mpG !Approxiation in the nondegenerate regime
      ron   = rho * xn / mnG 
 
@@ -109,7 +109,7 @@ CONTAINS
     IF ( ( rop < zero ) .or. ( ron < zero ) ) THEN
 !    IF ( (etapn < 0.0_dp ) .or. ( rop < 0.0_dp ) .or. ( ron < 0.0_dp ) ) THEN
       WRITE(*,*)'xn - xp is ', xn - xp
-      WRITE(*,*)'fexp term is ', FEXP( (chem_n-chem_p)/TMeV ) - 1.0_dp
+      WRITE(*,*)'fexp term is ', FEXP( (chem_n-chem_p)/TMeV ) - one
       WRITE(*,*)'chem_n - chem_p is ', chem_n - chem_p 
       STOP 
     END IF
@@ -122,14 +122,14 @@ CONTAINS
       absorni  = zero
     ELSE
        midEp   = (energy+qpri)**2 * SQRT( & 
-                  MAX( 1.0_dp - ( me / (energy+qpri) )**2, 0.0_dp ) )     
+                  MAX( one - ( me / (energy+qpri) )**2, 0.0_dp ) )     
       midFexpp = FEXP( (energy+qpri-chem_e) / TMeV )
-       midFep  = 1.0_dp / ( midFexpp + 1.0_dp )
+       midFep  = one / ( midFexpp + one )
       midCons  = therm2 * rho * xheavy * npz * nhn * midEp / (mbG * A)
        emitni  = midCons * midFep 
       absorni  = midCons &
                  * FEXP( (chem_n + dmnp - chem_p - qpri) /TMeV ) &
-                 * ( 1.0_dp - midFep) 
+                 * ( one - midFep) 
     END IF
 
 !---------------------------------------------------------------------
@@ -145,12 +145,12 @@ CONTAINS
       RETURN
     END IF
 
-      midFe   = 1.0_dp &
-                / ( FEXP( (energy+dmnp-chem_e) / TMeV ) + 1.0_dp )
+      midFe   = one &
+                / ( FEXP( (energy+dmnp-chem_e) / TMeV ) + one )
        midE   = (energy+dmnp)**2 &
-                * SQRT( 1.0_dp - ( me / (energy+dmnp) )**2 )
+                * SQRT( one - ( me / (energy+dmnp) )**2 )
       emitnp  = therm1 * rop * midE * midFe
-     absornp  = therm1 * ron * midE * ( 1.0_dp - midFe )
+     absornp  = therm1 * ron * midE * ( one - midFe )
 
     TotalNuEAbsorption = ( emitni + absorni ) + ( emitnp + absornp )
 
@@ -194,12 +194,12 @@ CONTAINS
       ron     = rho * xn / mnG
 
       midE    = (energy - dmnp)**2 &
-                * ( 1.0_dp - (me/(energy-dmnp))**2 )
+                * ( one - (me/(energy-dmnp))**2 )
 
-      midFe   = 1.0_dp &
-                / ( FEXP( (energy-dmnp+chem_e) / TMeV ) + 1.0_dp )
+      midFe   = one &
+                / ( FEXP( (energy-dmnp+chem_e) / TMeV ) + one )
 
-      absornp = therm1 * rop * midE * (1.0_dp - midFe)
+      absornp = therm1 * rop * midE * (one - midFe)
 
       emitnp  = therm1 * ron * midE * midFe
 
