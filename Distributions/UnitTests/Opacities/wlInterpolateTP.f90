@@ -56,6 +56,9 @@ PROGRAM wlInterpolateTP
 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP
 
+  CHARACTER(LEN=30)                       :: outfilename = &
+                                             'IntepolateTPOutput.h5'
+
 !-------- local variables -------------------------
   REAL(dp)                            :: outcome_TP1, root2p, root2n
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
@@ -126,7 +129,7 @@ PROGRAM wlInterpolateTP
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "wl-Op-SFHo-15-25-50-Chimera-NESTP.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, "wl-Op-SFHo-15-25-50-Chimera-TP-electronOne-momentTwo.h5" )
   CALL FinalizeHDF( )
 
   Offset_TP   = OpacityTable % scatt_TP  % Offsets(1,1)
@@ -195,7 +198,7 @@ PROGRAM wlInterpolateTP
 !   write out
 !--------------------------------------
   CALL InitializeHDF( )
-  CALL OpenFileHDF( 'IntepolateTPOutput.h5', .true., file_id )
+  CALL OpenFileHDF( outfilename, .true., file_id )
 
   CALL OpenGroupHDF( 'ProfileInfo', .true., file_id, group_id )
   datasize1d(1) = Inte_E % nPoints
@@ -222,7 +225,7 @@ PROGRAM wlInterpolateTP
   CALL CloseFileHDF( file_id )
   CALL FinalizeHDF( )
 
-  PRINT*, 'Result was written into IntepolateTPOutput.h5 file.'
+  PRINT*, 'Result was written into ',outfilename
 
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, Inte_TMeV)
   DEALLOCATE( Inte_cmpe, database )
