@@ -1,5 +1,6 @@
-SUBROUTINE abem_cal_weaklib( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-& cmpe, absornp, emitnp, ye_cube, nez )
+SUBROUTINE abem_cal_weaklib &
+           ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
+             cmpe, absornp, emitnp, nez )
 !-----------------------------------------------------------------------
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
@@ -20,7 +21,8 @@ SUBROUTINE abem_cal_weaklib( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cm
 !                   when chemical potential data are not available
 !
 !    Input arguments:
-!  n             : neutrino type (1, e-neutrino; 2, e-antineutrino; 3, t-neutrino)
+!  n             : neutrino type 
+!                  (1, e-neutrino; 2, e-antineutrino; 3, t-neutrino)
 !  e_in          : neutrino energy [MeV]
 !  rho           : matter density [g cm^{-3}]
 !  t             : matter temperature [K]
@@ -29,21 +31,24 @@ SUBROUTINE abem_cal_weaklib( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cm
 !  xh            : heavy nucleus mass fraction
 !  ah            : heavy nucleus mass number
 !  zh            : heavy nucleus charge number
-!  cmpn          : free neutron chemical potential (excluding rest mass) [MeV]
-!  cmpp          : free proton chemical potential (excluding rest mass) [MeV]
-!  cmpe          : electron chemical potential (including rest mass) [MeV]
-!  ye_cube       : electron fraction 
+!  cmpn          : free neutron chemical potential 
+!                  (excluding rest mass) [MeV]
+!  cmpp          : free proton chemical potential
+!                  (excluding rest mass) [MeV]
+!  cmpe          : electron chemical potential
+!                  (including rest mass) [MeV]
 !
 !    Output arguments:
 !  absor         : absorption inverse mean free path (/cm)
-!  emitnp        : emission inverse mean free path (/cm)!  
+!  emitnp        : emission inverse mean free path (/cm)  
 !
 !-----------------------------------------------------------------------
 
 USE kind_module, ONLY: double
-USE numerical_module, ONLY: zero, one, epsilon, pi
-USE physcnst_module, ONLY: cvel, hbar, gv, ga, mn, mp, me, Gw, kmev,    &
-& dmnp, rmu
+USE numerical_module, ONLY: &
+      zero, one, epsilon, pi
+USE physcnst_module, ONLY: &
+      cvel, hbar, gv, ga, mn, mp, me, Gw, kmev, dmnp, rmu
 
 IMPLICIT none
 
@@ -54,10 +59,10 @@ IMPLICIT none
 INTEGER, INTENT(in)          :: n             ! neutrino flavor index
 INTEGER, INTENT(in)          :: nez           ! number of energy groups
 
-REAL(double), DIMENSION(nez), INTENT(in) :: e_in ! zone centered incoming neutrino energy [MeV]
+REAL(double), DIMENSION(nez), INTENT(in) :: e_in 
+                            ! zone centered incoming neutrino energy [MeV]
 REAL(double), INTENT(in)    :: rho           ! density (g/cm^3)
 REAL(double), INTENT(in)    :: t             ! temperature [K]
-REAL(double), INTENT(in)    :: ye_cube       ! electron fraction at the cube corner
 REAL(double), INTENT(in)    :: xneut         ! free neutron mass fraction
 REAL(double), INTENT(in)    :: xprot         ! free proton mass fraction
 REAL(double), INTENT(in)    :: xh            ! heavy nuclei mass fraction
@@ -71,8 +76,10 @@ REAL(double), INTENT(in)    :: cmpe          ! electron chemical porential
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), DIMENSION(nez), INTENT(out) :: absornp ! inverse mean free path for absorption on free nucleons
-REAL(double), DIMENSION(nez), INTENT(out) :: emitnp  ! inverse mean free path for emission from free nucleons
+REAL(double), DIMENSION(nez), INTENT(out) :: absornp 
+                 ! inverse mean free path for absorption on free nucleons
+REAL(double), DIMENSION(nez), INTENT(out) :: emitnp 
+                 ! inverse mean free path for emission from free nucleons
 
 !-----------------------------------------------------------------------
 !        Local variables
@@ -82,16 +89,12 @@ LOGICAL                    :: i_abemetanp
 
 INTEGER                    :: k             ! energy group index
 
-REAL(double)               :: xneutp        ! free neutron mass fraction
-REAL(double)               :: xprotp        ! free proton mass fraction
+REAL(double), PARAMETER    :: x_min = 1.d-30 
+                           ! minimum mass fraction fraction
+REAL(double), PARAMETER    :: rho_etanp = 1.d+10 
+                           ! minimum density to comopute approximate 
+                           ! nucleon blocking factors
 
-REAL(double)               :: tmev          ! temperature [MeV]
-
-REAL(double), PARAMETER    :: x_min = 1.d-30 ! minimum mass fraction fraction
-REAL(double), PARAMETER    :: rho_etanp = 1.d+10 ! minimum density to comopute approximate nucleon blocking factors
-
-xneutp             = xneut
-xprotp             = xprot
 i_abemetanp        = .true.
 
 !-----------------------------------------------------------------------
@@ -110,8 +113,11 @@ i_abemetanp        = .true.
 !-----------------------------------------------------------------------
 
     DO k = 1,nez
-      CALL abemfrnpetanp( n, e_in(k), rho, t, xneutp, xprotp, cmpn, cmpp, &
-&      cmpe, absornp(k), emitnp(k) )
+
+      CALL abemfrnpetanp &
+           ( n, e_in(k), rho, t, xneut, xprot, cmpn, cmpp, &
+             cmpe, absornp(k), emitnp(k) )
+
     END DO ! k = 1,nez
   ELSE
 
@@ -121,8 +127,11 @@ i_abemetanp        = .true.
 !-----------------------------------------------------------------------
 
     DO k = 1,nez 
-      CALL abemfrnp( n, e_in(k), rho, t, xneutp, xprotp, cmpe, absornp(k),&
-&      emitnp(k) )
+
+      CALL abemfrnp &
+      ( n, e_in(k), rho, t, xneut, xprot, cmpe, &
+        absornp(k), emitnp(k) )
+
     END DO ! k = 1, nez
   END IF ! i_abemetanp
 
