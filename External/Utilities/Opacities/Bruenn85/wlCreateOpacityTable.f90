@@ -12,10 +12,9 @@ PROGRAM wlCreateOpacityTable
 !      Existing EoS table is readin. 
 !      Function were created to fill OpacityTable and Chimera
 !      routines were called.
-!!   
+! 
 !    CONTAINS:
 !    
-!
 !    Modules used:
 !
 !---------------------------------------------------------------------
@@ -68,10 +67,10 @@ IMPLICIT NONE
    INTEGER                 :: nOpacA = 0
    INTEGER                 :: nOpacB = 0
    INTEGER                 :: nMomB  = 0
-   INTEGER                 :: nOpacB_NES = 2
-   INTEGER                 :: nMomB_NES  = 1
-   INTEGER                 :: nOpacB_TP  = 1
-   INTEGER                 :: nMomB_TP   = 1
+   INTEGER                 :: nOpacB_NES = 0 !2
+   INTEGER                 :: nMomB_NES  = 0 !2
+   INTEGER                 :: nOpacB_TP  = 2 !2
+   INTEGER                 :: nMomB_TP   = 2 !2
    INTEGER                 :: nOpacC = 0
    INTEGER                 :: nMomC  = 0
 !---------------------------------------------------------------------
@@ -84,7 +83,7 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eta grid limits
 !---------------------------------------------------------------------
-   INTEGER                 :: nPointsEta = 20!100
+   INTEGER                 :: nPointsEta = 100
    REAL(dp), PARAMETER     :: Etamin = 1.0d-8
    REAL(dp), PARAMETER     :: Etamax = 2.5d03
 
@@ -94,11 +93,11 @@ IMPLICIT NONE
    REAL(dp)                :: energy, rho, T, TMeV, ye, Z, A, &
                               chem_e, chem_n, chem_p, xheavy, xn, &
                               xp, xhe, bb, eta, minvar 
-   REAL(dp), DIMENSION(nPointsE) :: absor, emit, cok 
-   INTEGER, PARAMETER      :: nquad = 30
-   REAL(dp), DIMENSION(nPointsE, nPointsE) :: NESK
-   REAL(dp), DIMENSION(nPointsE, nPointsE) :: TPK
-   REAL(dp)                :: j0i, j0ii, j1i, j1ii, bufferTP
+   REAL(dp), DIMENSION(nPointsE) :: absor, emit 
+   REAL(dp), DIMENSION(nPointsE,2) :: cok 
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
+   REAL(dp)                :: j0i, j0ii, j1i, j1ii
+   REAL(dp)                :: buffer1, buffer2
 
    CALL idate(today)
    CALL itime(now)
@@ -116,6 +115,8 @@ IMPLICIT NONE
 
 ! -- Set OpacityTableTypeA thermEmAb  
 
+   IF( nOpacA .gt. 0 ) THEN
+
    OpacityTable % thermEmAb % nOpacities = nOpacA
 
    OpacityTable % thermEmAb % nPoints(1) = nPointsE
@@ -123,18 +124,20 @@ IMPLICIT NONE
    OpacityTable % thermEmAb % nPoints(2:4) = OpacityTable % nPointsTS
 
    OpacityTable % thermEmAb % Names = &
-                                (/'Electron Capture  Chimera    ', &
-                                  'AntiElec Capture  Chimera    '/)  
+                                (/'Electron Capture             ', &
+                                  'AntiElec Capture             '/)  
 
    OpacityTable % thermEmAb % Species = &
-                                (/'Electron Neutrino           ', &  
+                                (/'Electron Neutrino           ',  &  
                                   'Electron Antineutrino       '/)
 
    OpacityTable % thermEmAb % Units = &
-                                (/'Per Centimeter              ', &
+                                (/'Per Centimeter              ',  &
                                   'Per Centimeter              '/) 
 
+   END IF
 ! -- Set OpacityTableTypeB scatt_Iso
+   IF( nOpacB .gt. 0 ) THEN
 
    OpacityTable % scatt_Iso % nOpacities = nOpacB
    
@@ -145,18 +148,20 @@ IMPLICIT NONE
    OpacityTable % scatt_Iso % nPoints(2:4) = OpacityTable % nPointsTS
 
    OpacityTable % scatt_Iso % Names = &
-                                (/'Electron Iso-scattering Chime', &
-                                  'AntiElec Iso-scattering Chime'/)
+                                (/'Electron Iso-scattering      ', &
+                                  'AntiElec Iso-scattering      '/)
 
    OpacityTable % scatt_Iso % Species = &
-                                (/'Electron Neutrino           ', &
+                                (/'Electron Neutrino           ',  &
                                   'Electron AntiNeutrino       '/)
 
    OpacityTable % scatt_Iso % Units = &
-                                (/'Per Centimeter              ', &
+                                (/'Per Centimeter              ',  &
                                   'Per Centimeter              '/)
+   END IF
 
 ! -- Set OpacityTableTypeB scatt_NES
+   IF( nOpacB_NES .gt. 0 ) THEN
 
    OpacityTable % scatt_NES % nOpacities = nOpacB_NES
 
@@ -168,22 +173,23 @@ IMPLICIT NONE
    OpacityTable % scatt_NES % nPoints(4) = nPointsEta
 
    OpacityTable % scatt_NES % Names = &
-                                (/'Electron NES Kernel Moment Ch', &
-                                  'Antielec NES Kernel Moment Ch'/)
+                                (/'NES Kernel Moment H0i H0ii   ', &
+                                  'NES Kernel Moment H1i H1ii   '/)
 
    OpacityTable % scatt_NES % Species = &
-                                (/'Electron Neutrino           ', &
-                                  'Electron AntiNeutrino       '/)
+                                (/'H0i and H0ii                ',  &
+                                  'H1i and H1ii                '/)
 
    OpacityTable % scatt_NES % Units = &
-                                (/'Per Centimeter Per MeV^3    ', &
+                                (/'Per Centimeter Per MeV^3    ',  &
                                   'Per Centimeter Per MeV^3    '/)
-
+   END IF
 ! -- Set OpacityTableTypeB scatt_TP
 
+   IF( nOpacB_TP .gt. 0 ) THEN
    OpacityTable % scatt_TP % nOpacities = nOpacB_TP
 
-   OpacityTable % scatt_TP % nMoments = nMomB_TP
+   OpacityTable % scatt_TP % nMoments   = nMomB_TP
 
    OpacityTable % scatt_TP % nPoints(1) = nPointsE
    OpacityTable % scatt_TP % nPoints(2) = nPointsE
@@ -191,14 +197,17 @@ IMPLICIT NONE
    OpacityTable % scatt_TP % nPoints(4) = nPointsEta
 
    OpacityTable % scatt_TP % Names = &
-                                (/'Pair P. Kernel Momen Chimera'/)
+                                (/'Pair A. Kernel Mome J0i J0ii',&
+                                  'Pair A. Kernel Mome J1i J1ii'/)
 
    OpacityTable % scatt_TP % Species = &
-                                (/'Electron Neutrino-Antineutri'/)
+                                (/'J0i and J0ii                ', &
+                                  'J1i and J1ii                '/)
 
    OpacityTable % scatt_TP % Units = &
-                                (/'Per Centimeter Per MeV^3    '/)
-
+                                (/'Per Centimeter Per MeV^3    ',&
+                                  'Per Centimeter Per MeV^3    '/)
+   END IF
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
@@ -259,7 +268,8 @@ PRINT*, 'Filling OpacityTable ...'
        DVar    => OpacityTable % EOSTable % DV % Variables  )
 
 !-----------------  ECAPEM -------------------- 
-   PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
+  IF( nOpacA .gt. 0 ) THEN
+  PRINT*, 'Calculating thermEmAb and Elastic Scattering Kernel ...'
 
    DO l_ye = 1, OpacityTable % nPointsTS(iYe)
    
@@ -324,68 +334,20 @@ PRINT*, 'Filling OpacityTable ...'
          DO i_r = 1, nOpacA
           
              iaefnp = 1
-!  iaefnp   : emission and absorption of e-neutrinos and e-antineutrinos
-!   on free neutrons and protons switch.
-!
-!     iaefnp = 0: emission and absorption of e-neutrinos and
-!      e-antineutrinos on free neutrons and protons turned off.
-!     iaefnp = 1: emission and absorption of e-neutrinos and
-!      e-antineutrinos on free neutrons and protons turned on.
              i_aeps = 0
-!  i_aeps   : emission and aborption of e-neutrinos and e-antineutrinos
-!   on free neutrons and protons phase space switch.
-!
-!     i_aeps = 0: emission and absorption of e-neutrinos and
-!      e-antineutrinos on free neutrons and protons are computed
-!      assuming no recoil, or thermal motions, and approximate
-!      nucleon phase space blocking.
-!     iaefnp = 1: emission and absorption of e-neutrinos and
-!      e-antineutrinos on free neutrons and protons are computed
-!      taking into account recoil, thermal motions, and nucleon
-!      phase space blocking.
              rhoaefnp = HUGE(1.d0) ! (?) 
-!  rhoaefnp : density above which emission and absorption of e-neutrinos
-!   and e-antineutrinos on free neutrons and protons is turned off.
              iaence = 1
-!  iaence   : emission and absorption of e-neutrinos on nuclei as given
-!   by the FFN prescription  switch
-!
-!     iaence = 0: emission and absorption of e-neutrinos on nuclei as
-!      given by the FFN prescription turned off.
-!     iaence = 1: emission and absorption of e-neutrinos on nuclei as
-!      given by the FFN prescription turned on.
              edmpe = 3.d0
-!  edmpe    : difference between the mean excited state energy of the
-!   daughter nucleus and that of the parent nucleus [MeV].
              iaenca = 1 
-!  iaenca   : emission and absorption of e-antineutrinos on nuclei as
-!   given by the FFN prescription  switch
-!
-!     iaenca = 0: emission and absorption of e-antineutrinos on nuclei as
-!      given by the FFN prescription turned off.
-!     iaenca = 1: emission and absorption of e-antineutrinos on nuclei as
-!      given by the FFN prescription turned on.
              edmpa = 3.d0
-!  edmpa    : difference between the mean excited state energy of the
-!   daughter nucleus and that of  the parent nucleus [MeV].
              iaenct = 0
-!  iaenct: emission and absorption of e-neutrinos on nuclei as given by
-!   the NSE-folded tabular data for Hix et al (2003)
-!
-!     iaenct  = 0: emission and absorption of e-neutrinos on nuclei as
-!      given by the tabular data is turned off.
-!     iaenct  = 1: emission and absorption of e-neutrinos on nuclei as
-!      given by the tabular data is turned on.
              roaenct = TINY(1.d0)
-!  roaenct: density above which emission and absorption of e-neutrinos on
-!   nuclei as given by Hix et al (2003) is turned off.
 
              CALL abemrgn_weaklib &
                   ( i_r, OpacityTable % EnergyGrid % Values, &
                     rho, T, xn, xp, xheavy, &
                     A, Z, chem_n, chem_p, chem_e, & 
-                    absor, emit, &
-                    ye, nPointsE )
+                    absor, emit, ye, nPointsE )
 
              DO i_e = 1, OpacityTable % nPointsE
                 OpacityTable % thermEmAb % Absorptivity(i_r) % &
@@ -393,23 +355,22 @@ PRINT*, 'Filling OpacityTable ...'
                 = absor(i_e) + emit(i_e)
              END DO  !i_e
 
-          ! i_r = 1 = iNue for Eletron-type neutrino Chimera 
-          ! i_r = 2 = iNuebar for Eletron-type antineutrino Chimera 
-          
          END DO !i_r
 
 !----------------  Scatt_Iso -----------------------
          DO i_rb = 1, nOpacB
+
+           CALL scatical_weaklib &
+           ( i_rb, OpacityTable % EnergyGrid % Values, &
+             nPointsE, rho, T, xn, xp, xhe, xheavy, A, Z, cok )
+
            DO t_m = 1, nMomB
 
-             CALL scatical_weaklib &
-             ( i_rb, t_m-1, OpacityTable % EnergyGrid % Values, &
-               nPointsE, rho, T, xn, xp, xhe, xheavy, A, Z, cok )
-
              OpacityTable % scatt_Iso % Kernel(i_rb) % Values &
-             ( :, j_rho, k_t, l_ye, t_m )  = cok 
+             ( :, j_rho, k_t, l_ye, t_m )  = cok(:,t_m) 
 
            END DO !t_m         
+
          END DO !i_rb
 
        END DO  !j_rho
@@ -431,13 +392,11 @@ PRINT*, 'Filling OpacityTable ...'
                       -2.d0 * MIN( 0.d0, minvar )
      END DO
    END DO 
-
+   END IF
 !----------------  Scatt_NES -----------------------
-
+  IF( nOpacB_NES .gt. 0 ) THEN
   PRINT*, 'Calculating Scatt_NES Kernel ... '
 
-  DO i_rb = 1, nOpacB_NES
-    DO t_m = 1, nMomB_NES 
       DO i_eta = 1, nPointsEta
        
         eta = OpacityTable % EtaGrid % Values(i_eta)
@@ -446,39 +405,48 @@ PRINT*, 'Filling OpacityTable ...'
 
           T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
-          chem_e = TMeV * eta
 
-          CALL scatergn_weaklib&
-              ( i_rb, t_m-1, nPointsE, OpacityTable % EnergyGrid % Values, TMeV, chem_e, NESK )
+          CALL scatergn_weaklib &
+               ( nPointsE, OpacityTable % EnergyGrid % Values, &
+                 TMeV, eta, H0i, H0ii, H1i, H1ii )
 
-          DO i_e = 1, nPointsE
-          
-            DO i_ep = 1, nPointsE
-             
-              OpacityTable % scatt_NES % Kernel(i_rb) % Values &
-                           ( i_ep, i_e, k_t, i_eta, t_m)       &
-               = NESK(i_e, i_ep) ! NESK was saved as NESK(e,ep)
- 
-            END DO ! i_ep
-          END DO ! i_e
+          OpacityTable % scatt_NES % Kernel(1) % Values &
+               ( :, :, k_t, i_eta, 1)       &
+          = H0i(:,:) ! H0i was saved as H0i(e,ep)
+
+          OpacityTable % scatt_NES % Kernel(1) % Values &
+               ( :, :, k_t, i_eta, 2)       &
+          = H0ii(:,:) ! H0ii was saved as H0ii(e,ep)
+
+          OpacityTable % scatt_NES % Kernel(2) % Values &
+               ( :, :, k_t, i_eta, 1)       &
+          = H1i(:,:) ! H1i was saved as H1i(e,ep)
+          OpacityTable % scatt_NES % Kernel(2) % Values &
+               ( :, :, k_t, i_eta, 2)       &
+          = H1ii(:,:) ! H1ii was saved as H1ii(e,ep)
+
         END DO  !k_t
+
       END DO !i_eta
 
 !------- scatt_NES % Offsets
+    DO i_rb = 1, nOpacB_NES
+      DO t_m = 1, nMomB_NES
+
        minvar = MINVAL( OpacityTable % scatt_NES % Kernel(i_rb) &
                        % Values(:,:,:,:,t_m ) )
-       OpacityTable % scatt_NES % Offsets(i_rb, t_m) =           &
+       OpacityTable % scatt_NES % Offsets(i_rb, t_m) =          &
                       -2.d0 * MIN( 0.d0, minvar ) 
 
     END DO ! t_m
   END DO ! i_rb
+  END IF
     
 !----------------  Scatt_TP -----------------------
 
+  IF( nOpacB_TP .gt. 0 ) THEN
   PRINT*, 'Calculating Scatt_TP Kernel ... '
 
-  DO i_rb = 1, nOpacB_TP 
-    DO t_m = 1, nMomB_TP 
       DO i_eta = 1, nPointsEta
    
         eta = OpacityTable % EtaGrid % Values(i_eta)
@@ -493,30 +461,43 @@ PRINT*, 'Filling OpacityTable ...'
           
             DO i_ep = 1, nPointsE
              
-             CALL paircal_weaklib( OpacityTable % EnergyGrid % Values(i_e), &
-                           OpacityTable % EnergyGrid % Values(i_ep), &
-                           chem_e, T, j0i, j0ii, j1i, j1ii )
+             CALL paircal_weaklib &
+                  ( OpacityTable % EnergyGrid % Values(i_e),  &
+                    OpacityTable % EnergyGrid % Values(i_ep), &
+                    chem_e, T, j0i, j0ii, j1i, j1ii )
 
-             bufferTP = j0i + j0ii
+             OpacityTable % scatt_TP % Kernel(1) % Values  &
+                          ( i_ep, i_e, k_t, i_eta, 1 )       &
+              = j0i
 
-             OpacityTable % scatt_TP % Kernel(i_rb) % Values &
-                          ( i_ep, i_e, k_t, i_eta, t_m)       &
-              = bufferTP
- 
+             OpacityTable % scatt_TP % Kernel(1) % Values  &
+                          ( i_ep, i_e, k_t, i_eta, 2 )       &
+              = j0ii
+
+             OpacityTable % scatt_TP % Kernel(2) % Values  &
+                          ( i_ep, i_e, k_t, i_eta, 1 )       &
+              = j1i
+
+             OpacityTable % scatt_TP % Kernel(2) % Values  &
+                          ( i_ep, i_e, k_t, i_eta, 2 )       &
+              = j1ii
+
             END DO ! i_ep
           END DO ! i_e
         END DO  !k_t
       END DO !i_eta
 
 !------- scatt_TP % Offsets
+  DO i_rb = 1, nOpacB_TP
+    DO t_m = 1, nMomB_TP
+
        minvar = MINVAL( OpacityTable % scatt_TP % Kernel(i_rb) &
                        % Values(:,:,:,:,t_m ) )
        OpacityTable % scatt_TP % Offsets(i_rb, t_m) =          &
                       -2.d0 * MIN( 0.d0, minvar ) 
-
     END DO ! t_m
-
   END DO ! i_rb
+  END IF
 
    END ASSOCIATE ! rho-T-Ye
 !---------------------------------------------------------------------
