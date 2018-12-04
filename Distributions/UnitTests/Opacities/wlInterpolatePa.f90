@@ -1,4 +1,4 @@
-PROGRAM wlInterpolateTP
+PROGRAM wlInterpolatePa
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
@@ -21,7 +21,7 @@ PROGRAM wlInterpolateTP
     AllocateGrid, &
     DescribeGrid, &
     MakeLogGrid
-  USE wlExtPhysicalConstantsModule, ONLY: kMeV, cvel, h
+  USE wlExtPhysicalConstantsModule, ONLY: kMeV, ca, cv 
   USE wlExtNumericalModule, ONLY: pi, half, twpi, zero
   USE HDF5
 
@@ -44,7 +44,8 @@ PROGRAM wlInterpolateTP
   CHARACTER(LEN=30)                   :: a
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
-  REAL(dp)                            :: Offset_cmpe, Offset_TP
+  REAL(dp)                            :: Offset_cmpe 
+  REAL(dp), DIMENSION(2)              :: Offset_TP
   
 !-------- variables for output ------------------------
   INTEGER(HID_T)                          :: file_id, group_id
@@ -57,13 +58,17 @@ PROGRAM wlInterpolateTP
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'IntepolateTPOutput.h5'
+                                             'InterpolatedPaOutput.h5'
 
 !-------- local variables -------------------------
   REAL(dp)                            :: outcome_TP1, root2p, root2n
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
-  REAL(dp), DIMENSION(Inte_nPointE)   :: bufferArr1
+  REAL(dp), DIMENSION(Inte_nPointE)   :: J0i
+  REAL(dp), DIMENSION(Inte_nPointE)   :: J0ii
+  REAL(dp), DIMENSION(Inte_nPointE)   :: TP0
   REAL(dp), DIMENSION(Inte_nPointE)   :: roots, widths
+  REAL(dp)                            :: cpar1 = (cv+ca)**2
+  REAL(dp)                            :: cpar2 = (cv-ca)**2
 
 !----------------------------------------
 !   interpolated energy 
@@ -129,19 +134,21 @@ PROGRAM wlInterpolateTP
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "wl-Op-SFHo-15-25-50-Chimera-TP-electronOne-momentTwo.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, &
+       "wl-Op-SFHo-15-25-50-E40-B85-Pa.h5" )
   CALL FinalizeHDF( )
 
-  Offset_TP   = OpacityTable % scatt_TP  % Offsets(1,1)
+  Offset_TP   = OpacityTable % scatt_TP  % Offsets(1,1:2)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
   
-  ASSOCIATE( TableTP   => OpacityTable % scatt_TP  % Kernel(1) % Values(:,:,:,:,1), &
-             Tablecmpe => OpacityTable % EOSTable % DV % Variables(4) % Values, &
-             Energy    => Inte_E  % Values )
+  ASSOCIATE( TableTPJ0i  => OpacityTable % scatt_TP  % Kernel(1) % Values(:,:,:,:,1), &
+             TableTPJ0ii => OpacityTable % scatt_TP  % Kernel(1) % Values(:,:,:,:,2), &
+             Tablecmpe   => OpacityTable % EOSTable % DV % Variables(4) % Values, &
+             Energy      => Inte_E  % Values )
 
   CALL LogInterpolateSingleVariable &
            ( Inte_rho, Inte_T, Inte_Ye, &
@@ -168,7 +175,17 @@ PROGRAM wlInterpolateTP
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_TP  , TableTP  , bufferArr1 )
+             (/1,1,1,1/), Offset_TP(1)  , TableTPJ0i  , J0i )
+
+      CALL LogInterpolateSingleVariable &
+           ( Energy, buffer3, buffer1, buffer2, & ! interpolate ep
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EtaGrid % Values,    &
+             (/1,1,1,1/), Offset_TP(2)  , TableTPJ0ii  , J0ii )
+
+      TP0 = cpar1 * J0i + cpar2 * J0ii
 
       outcome_TP1  = zero
 
@@ -179,12 +196,12 @@ PROGRAM wlInterpolateTP
         root2p = root2p * EXP( - (roots(jj-1)+Energy(ii) ) / Inte_TMeV(i) )
         root2n = root2n * EXP( - (roots(jj  )+Energy(ii) ) / Inte_TMeV(i) )
 
-        outcome_TP1  = outcome_TP1  + bufferArr1(jj-1) * root2p &
-                                    + bufferArr1(jj)   * root2n
+        outcome_TP1  = outcome_TP1  + TP0(jj-1) * root2p &
+                                    + TP0(jj)   * root2n
       END DO ! jj
 
       SumTP  (ii,i) = outcome_TP1
-      InterpolantTP(:,ii,i) = bufferArr1 
+      InterpolantTP(:,ii,i) = TP0 
 
     END DO ! ii
     
@@ -231,4 +248,4 @@ PROGRAM wlInterpolateTP
   DEALLOCATE( Inte_cmpe, database )
   DEALLOCATE( InterpolantTP )
 
-END PROGRAM wlInterpolateTP
+END PROGRAM wlInterpolatePa
