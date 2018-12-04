@@ -53,22 +53,25 @@ PROGRAM wlInterpolatePa
   INTEGER(HSIZE_T), DIMENSION(2)          :: datasize2d
   INTEGER(HSIZE_T), DIMENSION(3)          :: datasize3d
 
-  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantTP
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantTP_nue
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantTP_nuebar
 
-  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP_nue, SumTP_nuebar
 
   CHARACTER(LEN=30)                       :: outfilename = &
                                              'InterpolatedPaOutput.h5'
 
 !-------- local variables -------------------------
-  REAL(dp)                            :: outcome_TP1, root2p, root2n
+  REAL(dp)                            :: root2p, root2n
+  REAL(dp)                            :: sum_TP0_nue, sum_TP0_nuebar
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   REAL(dp), DIMENSION(Inte_nPointE)   :: J0i
   REAL(dp), DIMENSION(Inte_nPointE)   :: J0ii
-  REAL(dp), DIMENSION(Inte_nPointE)   :: TP0
+  REAL(dp), DIMENSION(Inte_nPointE)   :: TP0_nue
+  REAL(dp), DIMENSION(Inte_nPointE)   :: TP0_nuebar
   REAL(dp), DIMENSION(Inte_nPointE)   :: roots, widths
-  REAL(dp)                            :: cpar1 = (cv+ca)**2
-  REAL(dp)                            :: cpar2 = (cv-ca)**2
+  REAL(dp)                            :: cparp = (cv+ca)**2
+  REAL(dp)                            :: cparn = (cv-ca)**2
 
 !----------------------------------------
 !   interpolated energy 
@@ -116,8 +119,10 @@ PROGRAM wlInterpolatePa
   ALLOCATE( Inte_Ye ( datasize ) )
   ALLOCATE( Inte_TMeV ( datasize ) )
   ALLOCATE( Inte_cmpe ( datasize ) )
-  ALLOCATE( SumTP  ( Inte_nPointE, datasize ) )
-  ALLOCATE( InterpolantTP  ( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( SumTP_nue  ( Inte_nPointE, datasize ) )
+  ALLOCATE( SumTP_nuebar  ( Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantTP_nue  ( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantTP_nuebar( Inte_nPointE, Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
   WRITE(*, Format3 ) database
@@ -185,9 +190,11 @@ PROGRAM wlInterpolatePa
              OpacityTable % EtaGrid % Values,    &
              (/1,1,1,1/), Offset_TP(2)  , TableTPJ0ii  , J0ii )
 
-      TP0 = cpar1 * J0i + cpar2 * J0ii
+      TP0_nue    = cparp * J0i + cparn * J0ii
+      TP0_nuebar = cparn * J0i + cparp * J0ii
 
-      outcome_TP1  = zero
+      sum_TP0_nue     = zero
+      sum_TP0_nuebar  = zero
 
       DO jj = 2, Inte_nPointE ! ep(jj)
 
@@ -196,12 +203,19 @@ PROGRAM wlInterpolatePa
         root2p = root2p * EXP( - (roots(jj-1)+Energy(ii) ) / Inte_TMeV(i) )
         root2n = root2n * EXP( - (roots(jj  )+Energy(ii) ) / Inte_TMeV(i) )
 
-        outcome_TP1  = outcome_TP1  + TP0(jj-1) * root2p &
-                                    + TP0(jj)   * root2n
+        sum_TP0_nue     = sum_TP0_nue  + TP0_nue(jj-1) * root2p &
+                                       + TP0_nue(jj)   * root2n
+
+        sum_TP0_nuebar  = sum_TP0_nuebar  + TP0_nuebar(jj-1) * root2p &
+                                          + TP0_nuebar(jj)   * root2n
+
       END DO ! jj
 
-      SumTP  (ii,i) = outcome_TP1
-      InterpolantTP(:,ii,i) = TP0 
+      SumTP_nue(ii,i) = sum_TP0_nue
+      SumTP_nuebar(ii,i) = sum_TP0_nuebar
+
+      InterpolantTP_nue(:,ii,i) = TP0_nue 
+      InterpolantTP_nuebar(:,ii,i) = TP0_nuebar
 
     END DO ! ii
     
@@ -230,13 +244,16 @@ PROGRAM wlInterpolatePa
   CALL OpenGroupHDF( 'OpacitiesIMFP', .true., file_id, group_id )
   datasize2d(2) = datasize
   datasize2d(1) = Inte_E % nPoints
-  CALL WriteHDF( "TP_Electron", SumTP, group_id, datasize2d )
+  CALL WriteHDF( "TP_Electron", SumTP_nue, group_id, datasize2d )
+  CALL WriteHDF( "TP_ElecAnti", SumTP_nuebar, group_id, datasize2d )
   CALL CloseGroupHDF( group_id )
 
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
   datasize3d(3) = datasize
   datasize3d(1:2) = Inte_E % nPoints
-  CALL WriteHDF( "TP_Electron", InterpolantTP, group_id, datasize3d )
+  CALL WriteHDF( "TP_Electron", InterpolantTP_nue, group_id, datasize3d )
+  CALL WriteHDF( "TP_ElecAnti", &
+          InterpolantTP_nuebar, group_id, datasize3d )
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
@@ -246,6 +263,7 @@ PROGRAM wlInterpolatePa
 
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, Inte_TMeV)
   DEALLOCATE( Inte_cmpe, database )
-  DEALLOCATE( InterpolantTP )
+  DEALLOCATE( SumTP_nue, SumTP_nuebar )
+  DEALLOCATE( InterpolantTP_nue, InterpolantTP_nuebar )
 
 END PROGRAM wlInterpolatePa

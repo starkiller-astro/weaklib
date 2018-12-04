@@ -21,7 +21,7 @@ PROGRAM wlInterpolateNES
     AllocateGrid, &
     DescribeGrid, &
     MakeLogGrid
-  USE wlExtPhysicalConstantsModule, ONLY: kMeV, cvel, h
+  USE wlExtPhysicalConstantsModule, ONLY: kMeV, ca, cv
   USE wlExtNumericalModule, ONLY: pi, half, twpi, zero
   USE HDF5
 
@@ -44,29 +44,32 @@ PROGRAM wlInterpolateNES
   CHARACTER(LEN=30)                   :: a
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
-  REAL(dp)                            :: Offset_NES1, Offset_NES2
   REAL(dp)                            :: Offset_cmpe
-  
+  REAL(dp), DIMENSION(2)              :: Offset_NES
+   
 !-------- variables for output ------------------------
   INTEGER(HID_T)                          :: file_id, group_id
   INTEGER(HSIZE_T)                        :: datasize1d(1)
   INTEGER(HSIZE_T), DIMENSION(2)          :: datasize2d
   INTEGER(HSIZE_T), DIMENSION(3)          :: datasize3d
 
-  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE   :: InterpolantNES1, &
-                                               InterpolantNES2
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE   :: InterpolantNES_nue, &
+                                               InterpolantNES_nuebar
 
-  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumNES1, SumNES2
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumNES_nue, SumNES_nuebar
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'IntepolateNESOutput.h5'
+                                             'InterpolatedNESOutput.h5'
 
 !-------- local variables -------------------------
-  REAL(dp)                            :: outcome_NES1, outcome_NES2, &
+  REAL(dp)                            :: sum_NES_nue, sum_NES_nuebar, &
                                          root2p, root2n
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
-  REAL(dp), DIMENSION(Inte_nPointE)   :: bufferArr1, bufferArr2, bufferArr3
+  REAL(dp), DIMENSION(Inte_nPointE)   :: H0i, H0ii 
+  REAL(dp), DIMENSION(Inte_nPointE)   :: NES0_nue 
+  REAL(dp), DIMENSION(Inte_nPointE)   :: NES0_nuebar 
   REAL(dp), DIMENSION(Inte_nPointE)   :: roots, widths
-  REAL(dp), PARAMETER                 :: UnitConvert = 1.0d0
+  REAL(dp)                            :: cparp = (cv+ca)**2
+  REAL(dp)                            :: cparn = (cv-ca)**2
 
 !----------------------------------------
 !   interpolated energy 
@@ -114,10 +117,10 @@ PROGRAM wlInterpolateNES
   ALLOCATE( Inte_Ye ( datasize ) )
   ALLOCATE( Inte_TMeV ( datasize ) )
   ALLOCATE( Inte_cmpe ( datasize ) )
-  ALLOCATE( SumNES1( Inte_nPointE, datasize ) )
-  ALLOCATE( SumNES2( Inte_nPointE, datasize ) )
-  ALLOCATE( InterpolantNES1( Inte_nPointE, Inte_nPointE, datasize ) )
-  ALLOCATE( InterpolantNES2( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( SumNES_nue( Inte_nPointE, datasize ) )
+  ALLOCATE( SumNES_nuebar( Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantNES_nue( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantNES_nuebar( Inte_nPointE, Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
   WRITE(*, Format3 ) database
@@ -135,19 +138,18 @@ PROGRAM wlInterpolateNES
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-         "wl-Op-SFHo-15-25-50-Chimera-NES-electronTwo-momentTwo.h5" )
+         "wl-Op-SFHo-15-25-50-E40-B85-NES.h5" )
   CALL FinalizeHDF( )
 
-  Offset_NES1 = OpacityTable % scatt_NES % Offsets(1,1)
-  Offset_NES2 = OpacityTable % scatt_NES % Offsets(2,1)
+  Offset_NES = OpacityTable % scatt_NES % Offsets(1,1:2)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
   
-  ASSOCIATE( TableNES1 => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
-             TableNES2 => OpacityTable % scatt_NES % Kernel(2) % Values(:,:,:,:,1), &
+  ASSOCIATE( TableNES_H0i => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
+             TableNES_H0ii => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,2), &
              Tablecmpe => OpacityTable % EOSTable % DV % Variables(4) % Values, &
              Energy    => Inte_E  % Values )
 
@@ -176,7 +178,7 @@ PROGRAM wlInterpolateNES
              OpacityTable % EnergyGrid % Values, & ! e
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_NES1, TableNES1, bufferArr1 )
+             (/1,1,1,1/), Offset_NES(1), TableNES_H0i, H0i )
 
       CALL LogInterpolateSingleVariable &
            ( Energy, buffer3, buffer1, buffer2, &
@@ -184,26 +186,30 @@ PROGRAM wlInterpolateNES
              OpacityTable % EnergyGrid % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_NES2, TableNES2, bufferArr2 )
+             (/1,1,1,1/), Offset_NES(2), TableNES_H0ii, H0ii )
 
-      outcome_NES1 = zero
-      outcome_NES2 = zero
+      NES0_nue = cparp * H0i + cparn * H0ii
+      NES0_nuebar = cparn * H0i + cparp * H0ii
+
+      sum_NES_nue = zero
+      sum_NES_nuebar = zero
 
       DO jj = 2, ii ! ep(jj)
 
         root2p = roots(jj-1) * roots(jj-1) * widths(jj) * 0.5_dp
         root2n = roots(jj) * roots(jj) * widths(jj) * 0.5_dp
-!        root2p = root2p * EXP( (-roots(jj-1)+Energy(ii) ) / Inte_TMeV(i) )
-!        root2n = root2n * EXP( (-roots(jj  )+Energy(ii) ) / Inte_TMeV(i) )
 
-        outcome_NES1 = outcome_NES1 + bufferArr1(jj-1) * root2p &
-                                    + bufferArr1(jj)   * root2n
-        outcome_NES2 = outcome_NES2 + bufferArr2(jj-1) * root2p &
-                                    + bufferArr2(jj)   * root2n
+        sum_NES_nue = sum_NES_nue + NES0_nue(jj-1) * root2p &
+                                  + NES0_nue(jj)   * root2n
+        sum_NES_nuebar = sum_NES_nuebar + NES0_nuebar(jj-1) * root2p &
+                                        + NES0_nuebar(jj)   * root2n
       END DO ! jj
 
-      SumNES1(ii,i) = outcome_NES1 * UnitConvert
-      SumNES2(ii,i) = outcome_NES2 * UnitConvert
+      SumNES_nue(ii,i) = sum_NES_nue
+      SumNES_nuebar(ii,i) = sum_NES_nuebar
+
+      InterpolantNES_nue(:,ii,i) = NES0_nue
+      InterpolantNES_nuebar(:,ii,i) = NES0_nuebar
 
     END DO ! ii
     
@@ -232,15 +238,15 @@ PROGRAM wlInterpolateNES
   CALL OpenGroupHDF( 'OpacitiesIMFP', .true., file_id, group_id )
   datasize2d(2) = datasize
   datasize2d(1) = Inte_E % nPoints
-  CALL WriteHDF( "NES_Electron", SumNES1, group_id, datasize2d )
-  CALL WriteHDF( "NES_ElecAnti", SumNES2, group_id, datasize2d )
+  CALL WriteHDF( "NES_Electron", SumNES_nue, group_id, datasize2d )
+  CALL WriteHDF( "NES_ElecAnti", SumNES_nuebar, group_id, datasize2d )
   CALL CloseGroupHDF( group_id )
 
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
   datasize3d(3) = datasize
   datasize3d(1:2) = Inte_E % nPoints
-  CALL WriteHDF( "NES_Electron", InterpolantNES1, group_id, datasize3d )
-  CALL WriteHDF( "NES_ElecAnti", InterpolantNES2, group_id, datasize3d )
+  CALL WriteHDF( "NES_Electron", InterpolantNES_nue, group_id, datasize3d )
+  CALL WriteHDF( "NES_ElecAnti", InterpolantNES_nuebar, group_id, datasize3d )
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
@@ -250,6 +256,6 @@ PROGRAM wlInterpolateNES
 
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, Inte_TMeV)
   DEALLOCATE( Inte_cmpe, database )
-  DEALLOCATE( InterpolantNES1, InterpolantNES2 )
+  DEALLOCATE( InterpolantNES_nue, InterpolantNES_nuebar )
 
 END PROGRAM wlInterpolateNES
