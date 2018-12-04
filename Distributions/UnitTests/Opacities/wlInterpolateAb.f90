@@ -54,7 +54,7 @@ PROGRAM wlInterpolateAb
                                              InterpolantEm2
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'IntepolateAbOutput.h5'
+                                            'InterpolatedAbOutput.h5'
 !----------------------------------------
 !   interpolated energy 
 !----------------------------------------
@@ -110,7 +110,8 @@ PROGRAM wlInterpolateAb
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "wl-Op-SFHo-15-25-50-Chimera-AbEm-electronTwo.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, &
+          "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
   CALL FinalizeHDF( )
 
   Offset_Em = OpacityTable % thermEmAb % Offsets
