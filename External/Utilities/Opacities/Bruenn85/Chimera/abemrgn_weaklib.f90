@@ -96,7 +96,7 @@ REAL(double), DIMENSION(nez)  :: absrnp, absrnc, emisnp, emisnc
 
   CALL abem_cal_weaklib &
         ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-          cmpe, absrnp, emisnp, ye, nez )
+          cmpe, absrnp, emisnp, nez )
 
 !--------------------------------------------------------------------
 !  n-neutrino - nuclei absorption and emission inverse mean free

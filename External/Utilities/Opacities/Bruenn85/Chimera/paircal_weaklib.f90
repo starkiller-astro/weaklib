@@ -1,19 +1,22 @@
-SUBROUTINE paircal_weaklib( enu, enubar, cmpe, t, j0i, j0ii, j1i, j1ii )
+SUBROUTINE paircal_weaklib &
+           ( enu, enubar, cmpe, t, j0i, j0ii, j1i, j1ii )
 !-----------------------------------------------------------------------
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
-!                  U. Tennesee, Knoxville
+!                  U. Tennessee, Knoxville
 !
-!    Created:      10/23/18
+!    Created:      10/23/2018
 !
 !    Purpose:
 !      To integrates the quantities
 !
 !          Fe(Ee)*Febar(Enu + Enubar - Ee)*Phi(Enu,Enubar,Ee)
 !
-!      and
+!      for production and
 !
 !      [1-Fe(Ee)]*[1-Febar(Enu + Enubar - Ee)]*Phi(Enu,Enubar,Ee)
+!
+!      for annihilation.
 !
 !  Fe                   : electron occupation number
 !  Febar                : positron occupation number
@@ -155,6 +158,6 @@ j0ii               = coef * j0ii
 j1i                = coef * j1i
 j1ii               = coef * j1ii
 
-
 RETURN
+
 END SUBROUTINE paircal_weaklib

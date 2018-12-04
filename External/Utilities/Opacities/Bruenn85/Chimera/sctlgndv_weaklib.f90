@@ -1,14 +1,11 @@
-SUBROUTINE sctlgndv( e_in, e_out, eta, hin0i, hin0ii, hot0i, hot0ii, hin1i, &
-& hin1ii, hot1i, hot1ii )
+SUBROUTINE sctlgndv_weaklib &
+           ( e_in, e_out, eta, hot0i, hot0ii, hot1i, hot1ii )
 !-----------------------------------------------------------------------
 !
-!    File:         sctlgndv
-!    Module:       sctlgndv
-!    Type:         Subprogram
-!    Author:       S. W. Bruenn, Dept of Physics, FAU,
-!                  Boca Raton, FL 33431-0991
+!    Author:   R. Chu, Dept. Phys. & Astronomy
+!              U. Tennessee, Knoxville
 !
-!    Date:         4/20/97
+!    Created:  12/04/2018
 !
 !    Purpose:
 !      To integrate the quantities
@@ -38,12 +35,8 @@ SUBROUTINE sctlgndv( e_in, e_out, eta, hin0i, hin0ii, hot0i, hot0ii, hin1i, &
 !  eta              :     (electron chemical potential - mc2)/kt
 !
 !    Output arguments:
-!  hin0i            : zero moment of the "i" in neutrino scattering function
-!  hin0ii           : zero moment of the "ii" in neutrino scattering function
 !  hot0i            : zero moment of the "i" out neutrino scattering function
 !  hot0ii           : zero moment of the "ii" out neutrino scattering function
-!  hin1i            : first moment of the "i" in neutrino scattering function
-!  hin1ii           : first moment of the "ii" in neutrino scattering function
 !  hot1i            : first moment of the "i" out neutrino scattering function
 !  hot1ii           : first moment of the "ii" out neutrino scattering function
 !
@@ -76,12 +69,8 @@ REAL(double), INTENT(in)    :: e_out         ! zone centered incoming neutrino e
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(out)   :: hin0i         ! zero moment of incoming scattering function type i
-REAL(double), INTENT(out)   :: hin0ii        ! zero moment of incoming scattering function type ii
 REAL(double), INTENT(out)   :: hot0i         ! zero moment of outgoing scattering function type i
 REAL(double), INTENT(out)   :: hot0ii        ! zero moment of outgoing scattering function type ii
-REAL(double), INTENT(out)   :: hin1i         ! first moment of incoming scattering function type i
-REAL(double), INTENT(out)   :: hin1ii        ! first moment of incoming scattering function type ii
 REAL(double), INTENT(out)   :: hot1i         ! first moment of outgoing scattering function type i
 REAL(double), INTENT(out)   :: hot1ii        ! first moment of outgoing scattering function type ii
 
@@ -132,12 +121,8 @@ wp6                = wp * wp5
 wwp                = w * wp
 w2pwp2             = half * ( w2 + wp2 )
 
-hin0i              = zero
-hin0ii             = zero
 hot0i              = zero
 hot0ii             = zero
-hin1i              = zero
-hin1ii             = zero
 hot1i              = zero
 hot1ii             = zero
 h0i                = zero
@@ -196,10 +181,6 @@ IF ( w >= wp ) THEN
   hot0ii           = h0ii
   hot1i            = h1i
   hot1ii           = h1ii
-  hin0i            = h0i  * exd
-  hin0ii           = h0ii * exd
-  hin1i            = h1i  * exd
-  hin1ii           = h1ii * exd
   
   RETURN
 
@@ -250,10 +231,6 @@ ELSE
   END IF
 
   exd              = fexp(w_wp)
-  hin0i            = h0i
-  hin0ii           = h0ii
-  hin1i            = h1i
-  hin1ii           = h1ii
   hot0i            = h0i  * exd
   hot0ii           = h0ii * exd
   hot1i            = h1i  * exd
@@ -262,4 +239,4 @@ ELSE
 END IF
  
 RETURN
-END SUBROUTINE sctlgndv
+END SUBROUTINE sctlgndv_weaklib

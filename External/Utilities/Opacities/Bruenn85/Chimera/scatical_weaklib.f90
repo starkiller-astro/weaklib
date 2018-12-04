@@ -1,40 +1,15 @@
-SUBROUTINE scatical_weaklib( n, im, egrid, nez, rho, t, xn, xp, xhe, xh, ah, zh, cok )
-!-----------------------------------------------------------------------
+SUBROUTINE scatical_weaklib &
+           ( n, egrid, nez, rho, t, xn, xp, xhe, xh, ah, zh, cok )
+!--------------------------------------------------------------------
 !
-!    Author:       R. Chu, Dept. Phys. & Astronomy
-!                  U. Tennesee, Knoxville
+!    Author:  R. Chu, Dept. Phys. & Astronomy
+!             U. Tennesee, Knoxville
 !
-!    Created:      10/23/18
+!    Created: 10/23/18
 !
 !    Purpose:
-!      To calculate the zero and first legendre coefs for the n-type isoenergetic
-!       scattering functions.
-!
-!      These are included in the multi-group diffusion equations, which
-!       have the form
-!
-!            pis1 = -yt*( dpsi0/dr - a1w*psi0 - c1w)
-!
-!            dpsi0/dt/! + d(r2*psi1)/dr/3./r2 = xw + yw*psi0 + zw*dpsi0/dr
-!
-!       where
-!
-!            1/yt = zltot = jw + yaw - b1w
-!            xw   = jw + c0w + b0w*c1w*yt
-!            yw   = -jw - yaw + a0w + b0w*a1w*yt
-!            zw   = -b0w*yt
-!
-!      Neutrino-nucleus (nucleon) isoenergetic scattering contributes to the
-!       terms a0w,a1w, b0w, b1w, c0w, c1w as follows:
-!
-!            b1w  =  K w2 [ sct1(w) - sct0(w) ]
-!
-!       where
-!
-!            K    = 2*pi/! * 1/(hc)**3
-!
-!       and where sct0(w) and sct1(w) are the zero and first Legendre moments
-!        for neutrino-nucleus (nucleon) iso-energetic scattering.
+!      To calculate the zero and first legendre coefs for the 
+!      n-type isoenergetic scattering functions.
 !
 !    Subprograms called:
 !      etaxx, scatiicr
@@ -42,7 +17,6 @@ SUBROUTINE scatical_weaklib( n, im, egrid, nez, rho, t, xn, xp, xhe, xh, ah, zh,
 !    Input arguments:
 !
 !   n         : neutrino type (1, e-neutrino; 2, e-antineutrino)
-!   im        : moment order  (0, zeroth moment, 1, first moment)
 !   egrid     : energy grid
 !   nez       : size of energy grid
 !   rho       : matter density [g cm^{-3}]
@@ -58,12 +32,7 @@ SUBROUTINE scatical_weaklib( n, im, egrid, nez, rho, t, xn, xp, xhe, xh, ah, zh,
 !
 !   cok       : neutrino-nucleus scattering kerneal
 !  
-!    Other arguments:
-!
-!   coh       : b1w  =  K w2 [ sct1(w) - sct0(w) ] = rmdnns + rmdnps + rmdnhes + rmdnhs
-!   cohb      : b1w  =  K w2 [ sct1(w) - sct0(w) ] = rmdnbns + rmdnbps + rmdnhes + rmdnhs
-!
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------
 
 USE kind_module, ONLY: double
 USE numerical_module, ONLY: zero, half, twothd, one, epsilon, pi
@@ -71,72 +40,107 @@ USE physcnst_module, ONLY: Gw, mp, hbar, cvel, cv, ga, rmu
 
 IMPLICIT NONE
 
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !        Input variables.
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
-INTEGER,      INTENT(in)     :: n             ! neutrino flavor index
-INTEGER,      INTENT(in)     :: im            ! moment order index
-INTEGER,      INTENT(in)     :: nez           ! number of energy groups
-REAL(double), INTENT(in)     :: rho           ! density [g cm^{-3}]
-REAL(double), INTENT(in)     :: t             ! temperature [K]
-REAL(double), INTENT(in)     :: xn            ! neutron mass fraction
-REAL(double), INTENT(in)     :: xp            ! proton mass fraction
-REAL(double), INTENT(in)     :: xhe           ! helium mass fraction
-REAL(double), INTENT(in)     :: xh            ! heavy nucleus mass fraction
-REAL(double), INTENT(in)     :: ah            ! heavy nucleus mass number
-REAL(double), INTENT(in)     :: zh            ! heavy nucleus charge number
-REAL(double), DIMENSION(nez), INTENT(in) :: egrid ! neutrino energy grid[MeV] 
+INTEGER,      INTENT(in)     :: n       ! neutrino flavor index
+INTEGER,      INTENT(in)     :: nez     ! number of energy groups
+REAL(double), INTENT(in)     :: rho     ! density [g cm^{-3}]
+REAL(double), INTENT(in)     :: t       ! temperature [K]
+REAL(double), INTENT(in)     :: xn      ! neutron mass fraction
+REAL(double), INTENT(in)     :: xp      ! proton mass fraction
+REAL(double), INTENT(in)     :: xhe     ! helium mass fraction
+REAL(double), INTENT(in)     :: xh      ! heavy nucleus mass fraction
+REAL(double), INTENT(in)     :: ah      ! heavy nucleus mass number
+REAL(double), INTENT(in)     :: zh      ! heavy nucleus charge number
+REAL(double), DIMENSION(nez), INTENT(in) :: egrid 
+                                        ! neutrino energy grid[MeV] 
 
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !        Output variables.
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
-REAL(double), INTENT(out), DIMENSION(nez) :: cok  ! scattering kernel
-
-!-----------------------------------------------------------------------
+REAL(double), INTENT(out), DIMENSION(nez,2) :: cok 
+                                  ! legendre coefs scattering kernel
+                                  !  cok(:,1) - zeroth
+                                  !  cok(:,2) - first
+!--------------------------------------------------------------------
 !        Local variables
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 REAL(double), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6
 REAL(double), PARAMETER      :: cc = ( 2.d0 * pi )/( cvel * ( 2.d0 * pi * hbar * cvel )**3 ) * ( 4.d0 * pi ) * g2
 
-REAL(double), PARAMETER      :: hvp =  one - cv               ! proton vector coupling constant
-REAL(double), PARAMETER      :: hap =  0.5d0 * ga             ! proton axial vector coupling constant
-REAL(double), PARAMETER      :: hvn = -0.5d0                  ! neutron vector coupling constant
-REAL(double), PARAMETER      :: han = -0.5d0 * ga             ! neutron axial vector coupling constant
-REAL(double), PARAMETER      :: cv0 =  half * ( hvp + hvn )   ! coupling constant
-REAL(double), PARAMETER      :: cv1 =  hvp - hvn              ! coupling constant
+REAL(double), PARAMETER      :: hvp =  one - cv  
+                             ! proton vector coupling constant
+REAL(double), PARAMETER      :: hap =  0.5d0 * ga   
+                             ! proton axial vector coupling constant
+REAL(double), PARAMETER      :: hvn = -0.5d0 
+                             ! neutron vector coupling constant
+REAL(double), PARAMETER      :: han = -0.5d0 * ga       
+                             ! neutron axial vector coupling constant
+REAL(double), PARAMETER      :: cv0 =  half * ( hvp + hvn ) 
+                             ! coupling constant
+REAL(double), PARAMETER      :: cv1 =  hvp - hvn      
+                             ! coupling constant
 
-REAL(double), PARAMETER      :: ap0 =  hvp**2 + 3.d0 * hap**2 ! proton zero moment coupling constant
-REAL(double), PARAMETER      :: ap1 =  hvp**2 - hap**2        ! proton first moment coupling constant
-REAL(double), PARAMETER      :: an0 =  hvn**2 + 3.d0 * han**2 ! neutron zero moment coupling constant
-REAL(double), PARAMETER      :: an1 =  hvn**2 - han**2        ! neutron first moment coupling constant
+REAL(double), PARAMETER      :: ap0 =  hvp**2 + 3.d0 * hap**2 
+                             ! proton zero moment coupling constant
+REAL(double), PARAMETER      :: ap1 =  hvp**2 - hap**2   
+                             ! proton first moment coupling constant
+REAL(double), PARAMETER      :: an0 =  hvn**2 + 3.d0 * han**2
+                             ! neutron zero moment coupling constant
+REAL(double), PARAMETER      :: an1 =  hvn**2 - han**2    
+                             ! neutron first moment coupling constant
 
-REAL(double)                 :: eeche         ! helium opacity calculation
-REAL(double)                 :: eche          ! helium opacity calculation
-REAL(double)                 :: eche2         ! helium opacity calculation
-REAL(double)                 :: eche3         ! helium opacity calculation
-REAL(double)                 :: b0he          ! helium opacity calculation
-REAL(double)                 :: saghe         ! helium opacity calculation
-REAL(double)                 :: sbghe         ! helium opacity calculation
+REAL(double)                 :: eeche        
+                             ! helium opacity calculation
+REAL(double)                 :: eche          
+                             ! helium opacity calculation
+REAL(double)                 :: eche2         
+                             ! helium opacity calculation
+REAL(double)                 :: eche3         
+                             ! helium opacity calculation
+REAL(double)                 :: b0he          
+                             ! helium opacity calculation
+REAL(double)                 :: saghe         
+                             ! helium opacity calculation
+REAL(double)                 :: sbghe         
+                             ! helium opacity calculation
 
-REAL(double)                 :: eec           ! heavy nucleus opacity calculation
-REAL(double)                 :: ec            ! heavy nucleus opacity calculation
-REAL(double)                 :: ec2           ! heavy nucleus opacity calculation
-REAL(double)                 :: ec3           ! heavy nucleus opacity calculation
-REAL(double)                 :: b0h           ! heavy nucleus opacity calculation
-REAL(double)                 :: sag           ! heavy nucleus opacity calculation
-REAL(double)                 :: sbg           ! heavy nucleus opacity calculation
-REAL(double)                 :: xnh           ! heavy nucleus opacity calculation
+REAL(double)                 :: eec           
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: ec            
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: ec2           
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: ec3          
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: b0h           
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: sag           
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: sbg           
+                             ! heavy nucleus opacity calculation
+REAL(double)                 :: xnh          
+                             ! heavy nucleus opacity calculation
 
-REAL(double)                 :: aisov         ! vector coupling constant
-REAL(double), PARAMETER      :: aisosc = cv0  ! vector coupling constant
-REAL(double), PARAMETER      :: a01 = cv0 * cv0 ! vector coupling constant
-REAL(double)                 :: a02           ! coupling constant
-REAL(double)                 :: e2            ! neutrino energy squared
-REAL(double)                 :: etann         ! neutron number corrected for blocking
-REAL(double)                 :: xnn           ! neutron number corrected for blocking
-REAL(double)                 :: etapp         ! proton number corrected for blocking
+REAL(double)                 :: aisov         
+                             ! vector coupling constant
+REAL(double), PARAMETER      :: aisosc = cv0  
+                             ! vector coupling constant
+REAL(double), PARAMETER      :: a01 = cv0 * cv0 
+                             ! vector coupling constant
+REAL(double)                 :: a02           
+                             ! coupling constant
+REAL(double)                 :: e2            
+                             ! neutrino energy squared
+REAL(double)                 :: etann         
+                             ! neutron number corrected for blocking
+REAL(double)                 :: xnn           
+                             ! neutron number corrected for blocking
+REAL(double)                 :: etapp         
+                             ! proton number corrected for blocking
 REAL(double)                 :: xnp           ! proton number corrected for blocking
 REAL(double)                 :: xnhe          ! helium number
 REAL(double)                 :: xheaa         ! heavy nucleus number * a_he^2
@@ -167,15 +171,13 @@ REAL(double), DIMENSION(nez) :: rmdnhes1 ! mfp^-1 for neutrino-helium scattering
 REAL(double), DIMENSION(nez) :: rmdnhs   ! mfp^-1 for neutrino-heavy nucleus scattering
 REAL(double), DIMENSION(nez) :: rmdnhs0  ! mfp^-1 for neutrino-heavy nucleus scattering
 REAL(double), DIMENSION(nez) :: rmdnhs1  ! mfp^-1 for neutrino-heavy nucleus scattering
-REAL(double), DIMENSION(nez) :: coh     ! sum of above for neutrinos
-REAL(double), DIMENSION(nez) :: cohb    ! sum of above for antineutrinos
 
 INTEGER                           :: k             ! energy loop counter
 INTEGER                           :: nezl          ! local energy loop extent (nez or nez+nezext)
 
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !  Initialize  mfp^-1
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
 rmdnps             = zero
 rmdnns             = zero
@@ -183,8 +185,6 @@ rmdnbps            = zero
 rmdnbns            = zero
 rmdnhes            = zero
 rmdnhs             = zero
-coh                = zero
-cohb               = zero
 rmdnps0            = zero
 rmdnns0            = zero
 rmdnbps0           = zero
@@ -198,15 +198,15 @@ rmdnbns1           = zero
 rmdnhes1           = zero
 rmdnhs1            = zero
 
-!-----------------------------------------------------------------------
+!!-------------------------------------------------------------------
 !!  Calculate the weak magnetism corrections
-!!-----------------------------------------------------------------------
+!!-------------------------------------------------------------------
 !
 !CALL nc_weak_mag( unuloc, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
 !
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !  Quatities needed to compute the scattering functions.
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
 CALL etaxx( rho, t, xn, xp, etann, etapp )
 xnn              = etann
@@ -218,9 +218,9 @@ xhaa             = xnh * ah * ah
 b0he             = 1.21d-5
 b0h              = 4.80d-6 * ( ah )**twothd
  
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !  Zero neutrino-nucleus scattering rate if ah and zh below 1.d-10
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
 IF ( ah < 1.d-10  .or.  zh < 1.d-10 ) THEN
   a02            = zero
@@ -233,9 +233,9 @@ DO k = 1, nez
 
   e2             = egrid(k) * egrid(k) 
 
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !  Quantities needed to compute the coherent scattering on helium.
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
  
   eche           = 4.d0 * b0he * e2
   eche2          = eche * eche
@@ -251,9 +251,10 @@ DO k = 1, nez
     sbghe        = ( eche2 - 1.5d0 * eche + 1.d0 - ( 0.5d0 * eche + 1.d0 ) * eeche )/ eche3
   END IF ! eche < 0.1
 
-!-----------------------------------------------------------------------
-!  Quantities needed to compute the coherent scattering on heavy nuclei.
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
+!  Quantities needed to compute the coherent scattering on heavy 
+!  nuclei.
+!--------------------------------------------------------------------
 
   ec             = 4.d0 * b0h * e2
   ec2            = ec * ec
@@ -269,9 +270,9 @@ DO k = 1, nez
     sbg          = ( ec2 - 1.5d0 * ec + 1.d0 - ( 0.5d0 * ec + 1.d0 ) * eec )/ec3
   END IF ! ec < 0.1d0
 
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !  Inverse mean free paths for coherent scattering.
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
   rmdnps0(k)     = cc * e2 * xnp * ap0
   rmdnns0(k)     = cc * e2 * xnn * an0
@@ -292,9 +293,9 @@ DO k = 1, nez
   rmdnhes(k)     = rmdnhes0(k) + rmdnhes1(k)
   rmdnhs(k)      = rmdnhs0(k)  + rmdnhs1(k)
 
-!!-----------------------------------------------------------------------
+!!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
-!!-----------------------------------------------------------------------
+!!-------------------------------------------------------------------
 !
 !  CALL scatiicr( rho, t, egrid(k), xh, ah, zh, ciicr )
 !
@@ -302,10 +303,10 @@ DO k = 1, nez
 !  rmdnhs0(k)     = rmdnhs0(k) * ciicr
 !  rmdnhs1(k)     = rmdnhs1(k) * ciicr
 !
-!!-----------------------------------------------------------------------
+!!-------------------------------------------------------------------
 !!  Weak magnetism corrections for neutrino and antineutrino neutron and
 !!   proton scattering.
-!!-----------------------------------------------------------------------
+!!-------------------------------------------------------------------
 !
 !  rmdnps0 (k)    = rmdnps0 (k) * xi_p_wm (k)
 !  rmdnns0 (k)    = rmdnns0 (k) * xi_n_wm (k)
@@ -322,28 +323,21 @@ DO k = 1, nez
 
 END DO ! k = 1, nezl
 
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 !  Coherent (net) scattering inverse mean free path
-!-----------------------------------------------------------------------
+!--------------------------------------------------------------------
 
 SELECT CASE (n)
-  CASE (1)
-     SELECT CASE (im)
-       CASE (0)
-         cok = rmdnps0  + rmdnns0  + rmdnhes0 + rmdnhs0
-       CASE (1)
-         cok = rmdnps1  + rmdnns1  + rmdnhes1 + rmdnhs1
-     END SELECT
-  CASE (2)
-     SELECT CASE (im)
-       CASE (0)
-         cok = rmdnbps0 + rmdnbns0 + rmdnhes0 + rmdnhs0
-       CASE (1)
-         cok = rmdnbps1 + rmdnbns1 + rmdnhes1 + rmdnhs1
-     END SELECT
+  CASE (1) ! e-neutrino
+     cok(:,1) = rmdnps0  + rmdnns0  + rmdnhes0 + rmdnhs0
+     cok(:,2) = rmdnps1  + rmdnns1  + rmdnhes1 + rmdnhs1
+  CASE (2) ! e-antineutrino
+     cok(:,1) = rmdnbps0 + rmdnbns0 + rmdnhes0 + rmdnhs0
+     cok(:,2) = rmdnbps1 + rmdnbns1 + rmdnhes1 + rmdnhs1
   CASE DEFAULT
-        cok = zero
+     cok = zero
 END SELECT
 
 RETURN
+
 END SUBROUTINE scatical_weaklib
