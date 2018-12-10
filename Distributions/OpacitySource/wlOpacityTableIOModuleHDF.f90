@@ -59,9 +59,45 @@ MODULE wlOpacityTableIOModuleHDF
   INTEGER :: hdferr
 
   PUBLIC WriteOpacityTableHDF
+  PUBLIC WriteOpacityTableHDF_EmAb
   PUBLIC ReadOpacityTableHDF
+  PUBLIC ReadOpacityTableHDF_EmAb
+
 
 CONTAINS
+
+  SUBROUTINE WriteOpacityTableHDF_EmAb( OpacityTable, FileName )
+ 
+    TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
+    CHARACTER(len=*), INTENT(in)                :: FileName
+
+    INTEGER(HID_T)                              :: file_id
+    INTEGER(HID_T)                              :: group_id
+
+    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+    INTEGER, DIMENSION(1)                       :: tempInteger
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+   
+    CALL OpenFileHDF( FileName, .true., file_id )
+
+    datasize1d(1) = 1
+
+    CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
+    CALL WriteGridHDF( OpacityTable % EnergyGrid, group_id )
+    CALL CloseGroupHDF( group_id )
+  
+    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+    CALL WriteThermoStateHDF( OpacityTable % TS, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .true., file_id, group_id )
+    CALL WriteOpacityTableTypeAHDF_EmAb( OpacityTable % thermEmAb, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL CloseFileHDF( file_id )
+
+  END SUBROUTINE WriteOpacityTableHDF_EmAb
+
 
   SUBROUTINE WriteOpacityTableHDF( OpacityTable, FileName )
  
@@ -191,6 +227,44 @@ CONTAINS
     CALL WriteHDF( "Values",    Grid % Values(:), group_id, datasize1d )
 
   END SUBROUTINE WriteGridHDF
+
+
+  SUBROUTINE WriteOpacityTableTypeAHDF_EmAb( thermEmAb, group_id )
+
+    TYPE(OpacityTypeA), INTENT(in)              :: thermEmAb
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+    INTEGER(HSIZE_T)                            :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d   
+    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+    INTEGER, DIMENSION(1)                       :: tempInteger
+    REAL(dp), DIMENSION(1)                      :: tempReal
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
+    INTEGER(HID_T)                              :: subgroup_id
+    
+    datasize1dtemp(1) = thermEmAb % nOpacities
+    CALL WriteHDF&
+         ( "Units", thermEmAb % Units, group_id, datasize1dtemp ) 
+
+    CALL WriteHDF&
+         ( "Offsets", thermEmAb % Offsets, group_id, datasize1dtemp )
+
+    datasize1d = thermEmAb % nOpacities 
+    datasize4d = thermEmAb % nPoints
+
+    CALL Write4dHDF_double &
+         ( 'Electron Neutrino', thermEmAb % Absorptivity(1) % Values(:,:,:,:),&
+                              group_id, datasize4d )
+
+    CALL Write4dHDF_double &
+         ( 'Electron Antineutrino', thermEmAb % Absorptivity(2) % Values(:,:,:,:),&
+                              group_id, datasize4d )
+  
+  END SUBROUTINE WriteOpacityTableTypeAHDF_EmAb
 
 
   SUBROUTINE WriteOpacityTableTypeAHDF( thermEmAb, group_id )
@@ -427,6 +501,92 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Write5dHDF_double
+
+
+  SUBROUTINE ReadOpacityTableHDF_EmAb( OpacityTable, FileName )
+ 
+    TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
+    CHARACTER(len=*),       INTENT(in)          :: FileName
+
+    INTEGER, DIMENSION(3)                         :: nPointsTS
+    INTEGER                                       :: nPointsE
+    INTEGER                                       :: nPointsEta
+    INTEGER                                       :: nOpacA
+    INTEGER                                       :: nOpacB, nMomB
+    INTEGER                                       :: nOpacB_NES, nMomB_NES
+    INTEGER                                       :: nOpacB_TP, nMomB_TP
+    INTEGER(HID_T)                                :: file_id
+    INTEGER(HID_T)                                :: group_id
+    INTEGER(HID_T)                                :: subgroup_id
+    INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)                :: datasize4d
+    INTEGER, DIMENSION(1)                         :: buffer
+    CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
+
+    INTEGER                                       :: hdfreadErr
+
+    hdfreadErr = 0
+
+    WRITE(*,*) "           File in"
+    WRITE(*,*) " Reading ", FileName, " hdf5 file ... "
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
+    CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
+    nPointsE = buffer(1)
+    CALL CloseGroupHDF( group_id )
+
+    CALL AllocateOpacityTable &
+           ( OpacityTable, 2, 0, 0, 0, 0, &
+             0, 0, 0, 0, nPointsE, 0 )
+   
+!    IF( hdfreadErr == 0 ) THEN
+
+      WRITE(*,*) "Now read-in EmAb table"
+      CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
+      CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
+      CALL CloseGroupHDF( group_id )
+
+      CALL OpenGroupHDF &
+             ( "EmAb_CorrectedAbsorption", .false., file_id, group_id )
+
+      datasize1d(1) = 2
+      CALL ReadHDF( "Offsets", &
+             OpacityTable % thermEmAb % Offsets, &
+             group_id, datasize1d )
+
+      CALL ReadHDF( "Units", &
+             OpacityTable % thermEmAb % Units, &
+             group_id, datasize1d )
+
+      datasize4d(1) = nPointsE
+      datasize4d(2:4) = OpacityTable % TS % nPoints
+
+      OpacityTable % thermEmAb % Names(1) = "Electron Neutrino";
+      OpacityTable % thermEmAb % Species(1) = "Electron Neutrino";
+      CALL Read4dHDF_double &
+         ( "Electron Neutrino", &
+            OpacityTable % thermEmAb % Absorptivity(1) % Values, &
+            group_id, datasize4d )
+
+     OpacityTable % thermEmAb % Names(2) = "Electron Antnieutrino";
+     OpacityTable % thermEmAb % Species(2) = "Electron Antnieutrino";
+      CALL Read4dHDF_double &
+         ( "Electron Antineutrino", &
+            OpacityTable % thermEmAb % Absorptivity(2) % Values, &
+            group_id, datasize4d )
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+!    ELSE 
+!      WRITE(*,*) "ERROR!"
+!      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
+!      CALL CloseFileHDF( file_id )
+!      STOP
+!    END IF
+
+  END SUBROUTINE ReadOpacityTableHDF_EmAb
 
 
   SUBROUTINE ReadOpacityTableHDF( OpacityTable, FileName )
