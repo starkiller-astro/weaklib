@@ -63,7 +63,8 @@ CONTAINS
       RETURN
     END IF
 
-    ScaleFactor =  EXP( LOG( UpperBound / LowerBound ) / DBLE( nPoints - 1 ) )
+    ScaleFactor &
+      = EXP( LOG( UpperBound / LowerBound ) / DBLE( nPoints - 1 ) )
 
     Grid(1) = LowerBound
 

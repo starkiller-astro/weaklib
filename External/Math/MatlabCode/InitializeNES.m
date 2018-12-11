@@ -16,23 +16,34 @@ function [ eC, dV, R_In, R_Out, N_Eq ] = InitializeNES( Model, N_g )
   % NES in Rates:
   [ R ] = ReadData2D( ['../Data/NES_RATES_R_In___' Model '.dat'], N_g, N_g );
   
-  R_In  = R;
-  R_Out = R';
-  
   switch Model
     case '001'
-      N_Eq = 1.0 ./ ( exp( (eC-145.254)./20.5399 ) + 1.0 );
+      kT = 20.5399;
+      N_Eq = 1.0 ./ ( exp( (eC-145.254) ./ kT ) + 1.0 );
     case '002'
-      N_Eq = 1.0 ./ ( exp( (eC-045.835)./15.9751 ) + 1.0 );
+      kT = 15.9751;
+      N_Eq = 1.0 ./ ( exp( (eC-045.835) ./ kT ) + 1.0 );
     case '003'
-      N_Eq = 1.0 ./ ( exp( (eC-020.183)./07.7141 ) + 1.0 );
+      kT = 07.7141;
+      N_Eq = 1.0 ./ ( exp( (eC-020.183) ./ kT ) + 1.0 );
     case '004'
-      N_Eq = 1.0 ./ ( exp( (eC-009.118)./07.5830 ) + 1.0 );
+      kT = 07.5830;
+      N_Eq = 1.0 ./ ( exp( (eC-009.118) ./ kT ) + 1.0 );
     case '005'
-      N_Eq = 1.0 ./ ( exp( (eC-003.886)./03.1448 ) + 1.0 );
+      kT = 03.1448;
+      N_Eq = 1.0 ./ ( exp( (eC-003.886) ./ kT ) + 1.0 );
     otherwise
       N_Eq = 1.0;
   end
-
+  
+  R_In  = R;
+  for j = 1 : N_g
+    for i = 1 : N_g
+      if( i < j )
+        R_In(i,j) = R_In(j,i)*exp( (eC(j)-eC(i))/kT );
+      end
+    end
+  end
+  R_Out = R_In';
 end
 

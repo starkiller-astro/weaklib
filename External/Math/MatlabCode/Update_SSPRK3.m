@@ -11,13 +11,13 @@ function [ Nnew, nIter ]...
 
   % Stage 1:
   N1...
-    = Nold + dt .* L_FUN( Nold, R_In, R_Out, theta, N_g ) * Nold;
+    = ( eye( N_g ) + dt .* L_FUN( Nold, R_In, R_Out, theta, N_g ) ) * Nold;
   % Stage 2:
   N2...
-    = c21 .* Nold + c22 .* ( N1 + dt .* L_FUN( N1, R_In, R_Out, theta, N_g ) * N1 );
+    = c21 .* Nold + c22 .* ( ( eye( N_g ) + dt .* L_FUN( N1, R_In, R_Out, theta, N_g ) ) * N1 );
   % Stage 3:
   Nnew...
-    = c31 .* Nold + c32 .* ( N2 + dt .* L_FUN( N2, R_In, R_Out, theta, N_g ) * N2 );
+    = c31 .* Nold + c32 .* ( ( eye( N_g ) + dt .* L_FUN( N2, R_In, R_Out, theta, N_g ) ) * N2 );
 
 end
 

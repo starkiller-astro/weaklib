@@ -115,30 +115,36 @@ MODULE wlOpacityTableModule
 CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
-               ( OpTab, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
-                 nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta )
+    ( OpTab, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
+      nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta, &
+      Verbose_Option )
 
-    TYPE(OpacityTableType), INTENT(inout) :: OpTab
-    INTEGER, INTENT(in)                   :: nOpacA
-    INTEGER, INTENT(in)                   :: nOpacB, nMomB
-    INTEGER, INTENT(in)                   :: nOpacB_NES, nMomB_NES
-    INTEGER, INTENT(in)                   :: nOpacB_TP, nMomB_TP
-    INTEGER, INTENT(in)                   :: nOpacC, nMomC
-    INTEGER, INTENT(in)                   :: nPointsE
-    INTEGER, INTENT(in)                   :: nPointsEta
-    INTEGER, DIMENSION(4)                 :: nPointsTemp
+    TYPE(OpacityTableType), INTENT(inout)        :: OpTab
+    INTEGER,                INTENT(in)           :: nOpacA
+    INTEGER,                INTENT(in)           :: nOpacB, nMomB
+    INTEGER,                INTENT(in)           :: nOpacB_NES, nMomB_NES
+    INTEGER,                INTENT(in)           :: nOpacB_TP, nMomB_TP
+    INTEGER,                INTENT(in)           :: nOpacC, nMomC
+    INTEGER,                INTENT(in)           :: nPointsE
+    INTEGER,                INTENT(in)           :: nPointsEta
+    LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
-    WRITE(*,*)
-    WRITE(*,*) '  1st Allocate OpacityTable ...          ' 
-    WRITE(*,*) '      Reading EquationOfStateTable  ...  '
-    WRITE(*,*) '      File: EquationOfStateTable.h5  ... '
+    LOGICAL :: Verbose
+    INTEGER :: nPointsTemp(4)
+
+    IF( PRESENT( Verbose_Option ) )THEN
+      Verbose = Verbose_Option
+    ELSE
+      Verbose = .FALSE.
+    END IF
+
+    IF( Verbose )THEN
+      WRITE(*,'(A4,A9,A)') &
+        '', 'Reading: ', TRIM( 'EquationOfStateTable.h5' )
+    END IF
 
     CALL ReadEquationOfStateTableHDF &
            ( OpTab % EOSTable, "EquationOfStateTable.h5" )
-
-    WRITE(*,*) 'Read EOS sucessfully.'
-    WRITE(*,*)
-    WRITE(*,*) 'Pass the parameter and allocate OpacityTable ... '
 
     OpTab % nOpacitiesA     = nOpacA
     OpTab % nOpacitiesB     = nOpacB
@@ -193,12 +199,23 @@ CONTAINS
   END SUBROUTINE AllocateOpacityTable
 
 
-  SUBROUTINE DeAllocateOpacityTable( OpTab )
+  SUBROUTINE DeAllocateOpacityTable( OpTab, Verbose_Option )
 
     TYPE(OpacityTableType) :: OpTab
+    LOGICAL, OPTIONAL      :: Verbose_Option
+
+    LOGICAL :: Verbose
     
-    WRITE(*,*)
-    WRITE(*,*) 'DeAllocate OpacityTable'
+    IF( PRESENT( Verbose_Option ) )THEN
+      Verbose = Verbose_Option
+    ELSE
+      Verbose = .FALSE.
+    END IF
+
+    IF( Verbose )THEN
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') ,'', 'Deallocating Opacity Table'
+    END IF
 
     CALL DeAllocateOpacity( OpTab % thermEmAb )
     CALL DeAllocateOpacity( OpTab % scatt_Iso )

@@ -589,32 +589,41 @@ CONTAINS
   END SUBROUTINE ReadOpacityTableHDF_EmAb
 
 
-  SUBROUTINE ReadOpacityTableHDF( OpacityTable, FileName )
+  SUBROUTINE ReadOpacityTableHDF( OpacityTable, FileName, Verbose_Option )
  
-    TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
-    CHARACTER(len=*),       INTENT(in)          :: FileName
+    TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
+    CHARACTER(len=*),       INTENT(in)           :: FileName
+    LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
-    INTEGER, DIMENSION(3)                         :: nPointsTS
-    INTEGER                                       :: nPointsE
-    INTEGER                                       :: nPointsEta
-    INTEGER                                       :: nOpacA
-    INTEGER                                       :: nOpacB, nMomB
-    INTEGER                                       :: nOpacB_NES, nMomB_NES
-    INTEGER                                       :: nOpacB_TP, nMomB_TP
-    INTEGER                                       :: nOpacC, nMomC
-    INTEGER(HID_T)                                :: file_id
-    INTEGER(HID_T)                                :: group_id
-    INTEGER(HID_T)                                :: subgroup_id
-    INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
-    INTEGER, DIMENSION(1)                         :: buffer
-    CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
+    CHARACTER(LEN=32) :: buffer_string(1)
+    LOGICAL           :: Verbose
+    INTEGER           :: nPointsTS(3)
+    INTEGER           :: nPointsE
+    INTEGER           :: nPointsEta
+    INTEGER           :: nOpacA
+    INTEGER           :: nOpacB, nMomB
+    INTEGER           :: nOpacB_NES, nMomB_NES
+    INTEGER           :: nOpacB_TP, nMomB_TP
+    INTEGER           :: nOpacC, nMomC
+    INTEGER           :: buffer(1)
+    INTEGER           :: hdfreadErr
+    INTEGER(HID_T)    :: file_id
+    INTEGER(HID_T)    :: group_id
+    INTEGER(HID_T)    :: subgroup_id
+    INTEGER(HSIZE_T)  :: datasize1d(1)
 
-    INTEGER                                       :: hdfreadErr
+    IF( PRESENT( Verbose_Option ) )THEN
+      Verbose = Verbose_Option
+    ELSE
+      Verbose = .FALSE.
+    END IF
 
     hdfreadErr = 0
 
-    WRITE(*,*) "           File in"
-    WRITE(*,*) " Reading ", FileName, " hdf5 file ... "
+    IF( Verbose )THEN
+      WRITE(*,*)
+      WRITE(*,'(A4,A9,A)') '', 'Reading: ', TRIM( FileName )
+    END IF
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
@@ -670,7 +679,8 @@ CONTAINS
 
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
-             nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta )  
+             nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta, &
+             Verbose_Option = Verbose_Option )  
 
     ASSOCIATE &
       ( nPointsTS_EOS => OpacityTable % EOSTable % TS % nPoints )
@@ -759,12 +769,16 @@ CONTAINS
     datasize4d = thermEmAb % nPoints
 
     CALL OpenGroupHDF( "Absorptivity", .false., group_id, subgroup_id )
+
     DO i = 1, thermEmAb % nOpacities
-    WRITE (*,*) 'Reading', ' ', thermEmAb % Names(i), ' Absorptivity ...'
-    CALL Read4dHDF_double&
-         ( thermEmAb % Names(i), thermEmAb % Absorptivity(i) % Values,&
-           subgroup_id, datasize4d )
+
+      CALL Read4dHDF_double &
+             ( thermEmAb % Names(i), &
+               thermEmAb % Absorptivity(i) % Values, &
+               subgroup_id, datasize4d )
+
     END DO ! nOpacities
+
     CALL CloseGroupHDF( subgroup_id )
 
 !    CALL OpenGroupHDF( "GreyOpacity_Number_FD", .false., group_id, subgroup_id )
@@ -840,12 +854,16 @@ CONTAINS
     datasize5d(5) = scatt_Iso % nMoments
 
     CALL OpenGroupHDF( "Kernel", .false., group_id, subgroup_id )
+
     DO i = 1, scatt_Iso % nOpacities
-    WRITE (*,*) 'Reading', ' ', scatt_Iso % Names(i), ' Kernel ...'
-   CALL Read5dHDF_double&
-        ( scatt_Iso % Names(i), scatt_Iso % Kernel(i) % Values,&
-          subgroup_id, datasize5d )
+
+      CALL Read5dHDF_double &
+             ( scatt_Iso % Names(i), &
+               scatt_Iso % Kernel(i) % Values, &
+               subgroup_id, datasize5d )
+
     END DO ! nOpacities
+
     CALL CloseGroupHDF( subgroup_id )
 
 !    datasize4d(1:3) = scatt_Iso % nPoints(2:4)
@@ -920,7 +938,6 @@ CONTAINS
     INTEGER, DIMENSION(1)                       :: buffer
     CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
 
-    PRINT*,'Reading Grid'
     datasize1d(1) = 1
     Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
     Grid % Name = buffer_string(1)
