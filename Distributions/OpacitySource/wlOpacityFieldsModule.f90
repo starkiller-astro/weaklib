@@ -30,6 +30,15 @@ MODULE wlOpacityFieldsModule
     REAL(dp), DIMENSION(:,:,:,:), ALLOCATABLE :: Values
   END type ValueType_4D
 
+  TYPE, PUBLIC :: OpacityTypeEmAb
+    INTEGER                         :: nOpacities
+    INTEGER                         :: nPoints(4)
+    CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
+    CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
+    REAL(dp),           ALLOCATABLE :: Offsets(:)
+    TYPE(ValueType_4D), ALLOCATABLE :: Absorptivity(:)
+  END TYPE OpacityTypeEmAb
+
   TYPE, PUBLIC :: OpacityTypeA
     INTEGER :: nOpacities
     INTEGER, DIMENSION(4) :: nPoints
@@ -110,6 +119,7 @@ MODULE wlOpacityFieldsModule
   PUBLIC :: DescribeOpacity
 
   INTERFACE AllocateOpacity
+    MODULE PROCEDURE AllocateOpacityTypeEmAb
     MODULE PROCEDURE AllocateOpacityTypeA
     MODULE PROCEDURE AllocateOpacityTypeB
     MODULE PROCEDURE AllocateOpacityTypeC
@@ -128,6 +138,15 @@ MODULE wlOpacityFieldsModule
   END INTERFACE DescribeOpacity
 
 CONTAINS
+
+
+  SUBROUTINE AllocateOpacityTypeEmAb( Opacity, nPoints, nOpacities )
+
+    TYPE(OpacityTypeEmAb), INTENT(inout) :: Opacity
+    INTEGER,               INTENT(in)    :: nPoints(4)
+    INTEGER,               INTENT(in)    :: nOpacities
+
+  END SUBROUTINE AllocateOpacityTypeEmAb
 
 
   SUBROUTINE AllocateOpacityTypeA( Opacity, nPoints, nOpacities )

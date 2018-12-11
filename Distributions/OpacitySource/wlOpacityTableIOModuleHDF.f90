@@ -38,6 +38,7 @@ MODULE wlOpacityTableIOModuleHDF
     OpacityTableType,             &
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:&
+    OpacityTypeEmAb,              &
     OpacityTypeA,                 &
     OpacityTypeB,                 &
     OpacityTypeC
@@ -59,24 +60,32 @@ MODULE wlOpacityTableIOModuleHDF
   INTEGER :: hdferr
 
   PUBLIC WriteOpacityTableHDF
-  PUBLIC WriteOpacityTableHDF_EmAb
+  PUBLIC WriteOpacityTableHDF_New
   PUBLIC ReadOpacityTableHDF
-  PUBLIC ReadOpacityTableHDF_EmAb
+  PUBLIC ReadOpacityTableHDF_New
 
 
 CONTAINS
 
-  SUBROUTINE WriteOpacityTableHDF_EmAb( OpacityTable, FileName )
+  SUBROUTINE WriteOpacityTableHDF_New &
+    ( OpacityTable, FileName, WriteOpacity_EmAb_Option )
  
-    TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
-    CHARACTER(len=*), INTENT(in)                :: FileName
+    TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
+    CHARACTER(len=*),       INTENT(in)           :: FileName
+    LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_EmAb_Option
 
-    INTEGER(HID_T)                              :: file_id
-    INTEGER(HID_T)                              :: group_id
+    LOGICAL           :: WriteOpacity_EmAb
+    CHARACTER(LEN=32) :: tempString(1)
+    INTEGER           :: tempInteger(1)
+    INTEGER(HID_T)    :: file_id
+    INTEGER(HID_T)    :: group_id
+    INTEGER(HSIZE_T)  :: datasize1d(1)
 
-    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
-    INTEGER, DIMENSION(1)                       :: tempInteger
-    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    IF( PRESENT( WriteOpacity_EmAb_Option ) )THEN
+      WriteOpacity_EmAb = WriteOpacity_EmAb_Option
+    ELSE
+      WriteOpacity_EmAb = .FALSE.
+    END IF
    
     CALL OpenFileHDF( FileName, .true., file_id )
 
@@ -90,13 +99,28 @@ CONTAINS
     CALL WriteThermoStateHDF( OpacityTable % TS, group_id )
     CALL CloseGroupHDF( group_id )
 
-    CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeAHDF_EmAb( OpacityTable % thermEmAb, group_id )
-    CALL CloseGroupHDF( group_id )
+    IF( WriteOpacity_EmAb )THEN
+
+      IF( .NOT. ALLOCATED( OpacityTable % EmAb % Names ) )THEN
+
+        ! --- Insert Appropriate Reaction ---
+        WRITE(*,'(A4,A)') &
+          '', 'OpacityTable % EmAb not allocated.  Write Skipped.'
+
+      ELSE
+
+        CALL OpenGroupHDF &
+               ( "EmAb_CorrectedAbsorption", .true., file_id, group_id )
+        CALL WriteOpacityTableHDF_EmAb( OpacityTable % EmAb, group_id )
+        CALL CloseGroupHDF( group_id )
+
+      END IF
+
+    END IF
 
     CALL CloseFileHDF( file_id )
 
-  END SUBROUTINE WriteOpacityTableHDF_EmAb
+  END SUBROUTINE WriteOpacityTableHDF_New
 
 
   SUBROUTINE WriteOpacityTableHDF( OpacityTable, FileName )
@@ -104,98 +128,98 @@ CONTAINS
     TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
     CHARACTER(len=*), INTENT(in)                :: FileName
 
-    INTEGER(HID_T)                              :: file_id
-    INTEGER(HID_T)                              :: group_id
-
-    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
-    INTEGER, DIMENSION(1)                       :: tempInteger
-    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-   
-    CALL OpenFileHDF( FileName, .true., file_id )
-
-    datasize1d(1) = 1
-
-    tempInteger(1) = OpacityTable % nOpacitiesA
-    CALL WriteHDF&
-         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nOpacitiesB 
-    CALL WriteHDF&
-         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
-  
-    tempInteger(1) = OpacityTable % nMomentsB     
-    CALL WriteHDF&
-         ( "nMomentsB", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nOpacitiesB_NES
-    CALL WriteHDF&
-         ( "nOpacitiesB_NES", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nMomentsB_NES
-    CALL WriteHDF&
-         ( "nMomentsB_NES", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nOpacitiesB_TP
-    CALL WriteHDF&
-         ( "nOpacitiesB_TP", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nMomentsB_TP
-    CALL WriteHDF&
-         ( "nMomentsB_TP", tempInteger, file_id, datasize1d )
- 
-    tempInteger(1) = OpacityTable % nOpacitiesC     
-    CALL WriteHDF&
-         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nMomentsC   
-    CALL WriteHDF&
-         ( "nMomentsC", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nPointsE  
-    CALL WriteHDF&
-         ( "nPointsE", tempInteger, file_id, datasize1d )
-
-    tempInteger(1) = OpacityTable % nPointsEta
-    CALL WriteHDF&
-         ( "nPointsEta", tempInteger, file_id, datasize1d )
-
-    datasize1d = 3
-    CALL WriteHDF&
-         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
-
-    CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
-    CALL WriteGridHDF( OpacityTable % EnergyGrid, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "EtaGrid", .true., file_id, group_id )
-    CALL WriteGridHDF( OpacityTable % EtaGrid, group_id )
-    CALL CloseGroupHDF( group_id )
-  
-    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-    CALL WriteThermoStateHDF( OpacityTable % TS, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "thermEmAb", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeAHDF( OpacityTable % thermEmAb, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "scatt_Iso", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_Iso, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "scatt_NES", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_NES, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "scatt_TP", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_TP, group_id )
-    CALL CloseGroupHDF( group_id )
-
-    CALL OpenGroupHDF( "scatt_nIso", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeCHDF( OpacityTable % scatt_nIso, group_id )
-    CALL CloseGroupHDF( group_id )   
-
-    CALL CloseFileHDF( file_id )
+!!$    INTEGER(HID_T)                              :: file_id
+!!$    INTEGER(HID_T)                              :: group_id
+!!$
+!!$    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+!!$    INTEGER, DIMENSION(1)                       :: tempInteger
+!!$    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+!!$   
+!!$    CALL OpenFileHDF( FileName, .true., file_id )
+!!$
+!!$    datasize1d(1) = 1
+!!$
+!!$    tempInteger(1) = OpacityTable % nOpacitiesA
+!!$    CALL WriteHDF&
+!!$         ( "nOpacitiesA", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nOpacitiesB 
+!!$    CALL WriteHDF&
+!!$         ( "nOpacitiesB", tempInteger, file_id, datasize1d )
+!!$  
+!!$    tempInteger(1) = OpacityTable % nMomentsB     
+!!$    CALL WriteHDF&
+!!$         ( "nMomentsB", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nOpacitiesB_NES
+!!$    CALL WriteHDF&
+!!$         ( "nOpacitiesB_NES", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nMomentsB_NES
+!!$    CALL WriteHDF&
+!!$         ( "nMomentsB_NES", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nOpacitiesB_TP
+!!$    CALL WriteHDF&
+!!$         ( "nOpacitiesB_TP", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nMomentsB_TP
+!!$    CALL WriteHDF&
+!!$         ( "nMomentsB_TP", tempInteger, file_id, datasize1d )
+!!$ 
+!!$    tempInteger(1) = OpacityTable % nOpacitiesC     
+!!$    CALL WriteHDF&
+!!$         ( "nOpacitiesC", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nMomentsC   
+!!$    CALL WriteHDF&
+!!$         ( "nMomentsC", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nPointsE  
+!!$    CALL WriteHDF&
+!!$         ( "nPointsE", tempInteger, file_id, datasize1d )
+!!$
+!!$    tempInteger(1) = OpacityTable % nPointsEta
+!!$    CALL WriteHDF&
+!!$         ( "nPointsEta", tempInteger, file_id, datasize1d )
+!!$
+!!$    datasize1d = 3
+!!$    CALL WriteHDF&
+!!$         ( "nPointsTS", OpacityTable % nPointsTS, file_id, datasize1d )
+!!$
+!!$    CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
+!!$    CALL WriteGridHDF( OpacityTable % EnergyGrid, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$
+!!$    CALL OpenGroupHDF( "EtaGrid", .true., file_id, group_id )
+!!$    CALL WriteGridHDF( OpacityTable % EtaGrid, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$  
+!!$    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+!!$    CALL WriteThermoStateHDF( OpacityTable % TS, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$
+!!$    CALL OpenGroupHDF( "thermEmAb", .true., file_id, group_id )
+!!$    CALL WriteOpacityTableTypeAHDF( OpacityTable % thermEmAb, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$
+!!$    CALL OpenGroupHDF( "scatt_Iso", .true., file_id, group_id )
+!!$    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_Iso, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$
+!!$    CALL OpenGroupHDF( "scatt_NES", .true., file_id, group_id )
+!!$    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_NES, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$
+!!$    CALL OpenGroupHDF( "scatt_TP", .true., file_id, group_id )
+!!$    CALL WriteOpacityTableTypeBHDF( OpacityTable % scatt_TP, group_id )
+!!$    CALL CloseGroupHDF( group_id )
+!!$
+!!$    CALL OpenGroupHDF( "scatt_nIso", .true., file_id, group_id )
+!!$    CALL WriteOpacityTableTypeCHDF( OpacityTable % scatt_nIso, group_id )
+!!$    CALL CloseGroupHDF( group_id )   
+!!$
+!!$    CALL CloseFileHDF( file_id )
 
   END SUBROUTINE WriteOpacityTableHDF
 
@@ -229,42 +253,32 @@ CONTAINS
   END SUBROUTINE WriteGridHDF
 
 
-  SUBROUTINE WriteOpacityTableTypeAHDF_EmAb( thermEmAb, group_id )
+  SUBROUTINE WriteOpacityTableHDF_EmAb( EmAb, group_id )
 
-    TYPE(OpacityTypeA), INTENT(in)              :: thermEmAb
-    INTEGER(HID_T), INTENT(in)                  :: group_id
+    TYPE(OpacityTypeEmAb), INTENT(in) :: EmAb
+    INTEGER(HID_T),        INTENT(in) :: group_id
 
-    INTEGER(HSIZE_T)                            :: datasize1d
-    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d   
-    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
-    INTEGER                                     :: i
-    INTEGER, DIMENSION(1)                       :: buffer
+    INTEGER(HSIZE_T) :: datasize1d(1)
+    INTEGER(HSIZE_T) :: datasize4d(4)
 
-    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
-    INTEGER, DIMENSION(1)                       :: tempInteger
-    REAL(dp), DIMENSION(1)                      :: tempReal
-    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
-    INTEGER(HID_T)                              :: subgroup_id
-    
-    datasize1dtemp(1) = thermEmAb % nOpacities
-    CALL WriteHDF&
-         ( "Units", thermEmAb % Units, group_id, datasize1dtemp ) 
+    datasize1d = EmAb % nOpacities
+    CALL WriteHDF &
+           ( "Units", EmAb % Units, group_id, datasize1d ) 
 
-    CALL WriteHDF&
-         ( "Offsets", thermEmAb % Offsets, group_id, datasize1dtemp )
+    CALL WriteHDF &
+           ( "Offsets", EmAb % Offsets, group_id, datasize1d )
 
-    datasize1d = thermEmAb % nOpacities 
-    datasize4d = thermEmAb % nPoints
+    datasize4d = EmAb % nPoints
 
     CALL Write4dHDF_double &
-         ( 'Electron Neutrino', thermEmAb % Absorptivity(1) % Values(:,:,:,:),&
-                              group_id, datasize4d )
+           ( TRIM( EmAb % Names(1) ), &
+             EmAb % Absorptivity(1) % Values(:,:,:,:), group_id, datasize4d )
 
     CALL Write4dHDF_double &
-         ( 'Electron Antineutrino', thermEmAb % Absorptivity(2) % Values(:,:,:,:),&
-                              group_id, datasize4d )
+           ( TRIM( EmAb % Names(2) ), &
+             EmAb % Absorptivity(2) % Values(:,:,:,:), group_id, datasize4d )
   
-  END SUBROUTINE WriteOpacityTableTypeAHDF_EmAb
+  END SUBROUTINE WriteOpacityTableHDF_EmAb
 
 
   SUBROUTINE WriteOpacityTableTypeAHDF( thermEmAb, group_id )
@@ -503,10 +517,12 @@ CONTAINS
   END SUBROUTINE Write5dHDF_double
 
 
-  SUBROUTINE ReadOpacityTableHDF_EmAb( OpacityTable, FileName )
+  SUBROUTINE ReadOpacityTableHDF_New &
+    ( OpacityTable, FileName, ReadOpacity_EmAb_Option )
  
-    TYPE(OpacityTableType), INTENT(inout)       :: OpacityTable
-    CHARACTER(len=*),       INTENT(in)          :: FileName
+    TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
+    CHARACTER(len=*),       INTENT(in)           :: FileName
+    LOGICAL,                INTENT(in), OPTIONAL :: ReadOpacity_EmAb_Option
 
     INTEGER, DIMENSION(3)                         :: nPointsTS
     INTEGER                                       :: nPointsE
@@ -548,33 +564,31 @@ CONTAINS
       CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
       CALL CloseGroupHDF( group_id )
 
+      ! --- IF( ReadOpacity_EmAb )THEN
+
       CALL OpenGroupHDF &
              ( "EmAb_CorrectedAbsorption", .false., file_id, group_id )
 
       datasize1d(1) = 2
-      CALL ReadHDF( "Offsets", &
-             OpacityTable % thermEmAb % Offsets, &
-             group_id, datasize1d )
+      CALL ReadHDF &
+             ( "Offsets", OpacityTable % EmAb % Offsets, group_id, datasize1d )
 
-      CALL ReadHDF( "Units", &
-             OpacityTable % thermEmAb % Units, &
-             group_id, datasize1d )
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % EmAb % Units,   group_id, datasize1d )
 
       datasize4d(1) = nPointsE
       datasize4d(2:4) = OpacityTable % TS % nPoints
 
-      OpacityTable % thermEmAb % Names(1) = "Electron Neutrino";
-      OpacityTable % thermEmAb % Species(1) = "Electron Neutrino";
+      OpacityTable % EmAb % Names(1) = "Electron Neutrino";
       CALL Read4dHDF_double &
-         ( "Electron Neutrino", &
-            OpacityTable % thermEmAb % Absorptivity(1) % Values, &
-            group_id, datasize4d )
+             ( TRIM( OpacityTable % EmAb % Names(1) ), &
+               OpacityTable % EmAb % Absorptivity(1) % Values, &
+               group_id, datasize4d )
 
-     OpacityTable % thermEmAb % Names(2) = "Electron Antnieutrino";
-     OpacityTable % thermEmAb % Species(2) = "Electron Antnieutrino";
+      OpacityTable % EmAb % Names(2) = "Electron Antineutrino";
       CALL Read4dHDF_double &
          ( "Electron Antineutrino", &
-            OpacityTable % thermEmAb % Absorptivity(2) % Values, &
+            OpacityTable % EmAb % Absorptivity(2) % Values, &
             group_id, datasize4d )
       CALL CloseGroupHDF( group_id )
 
@@ -586,7 +600,7 @@ CONTAINS
 !      STOP
 !    END IF
 
-  END SUBROUTINE ReadOpacityTableHDF_EmAb
+  END SUBROUTINE ReadOpacityTableHDF_New
 
 
   SUBROUTINE ReadOpacityTableHDF( OpacityTable, FileName, Verbose_Option )
@@ -595,145 +609,145 @@ CONTAINS
     CHARACTER(len=*),       INTENT(in)           :: FileName
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
-    CHARACTER(LEN=32) :: buffer_string(1)
-    LOGICAL           :: Verbose
-    INTEGER           :: nPointsTS(3)
-    INTEGER           :: nPointsE
-    INTEGER           :: nPointsEta
-    INTEGER           :: nOpacA
-    INTEGER           :: nOpacB, nMomB
-    INTEGER           :: nOpacB_NES, nMomB_NES
-    INTEGER           :: nOpacB_TP, nMomB_TP
-    INTEGER           :: nOpacC, nMomC
-    INTEGER           :: buffer(1)
-    INTEGER           :: hdfreadErr
-    INTEGER(HID_T)    :: file_id
-    INTEGER(HID_T)    :: group_id
-    INTEGER(HID_T)    :: subgroup_id
-    INTEGER(HSIZE_T)  :: datasize1d(1)
-
-    IF( PRESENT( Verbose_Option ) )THEN
-      Verbose = Verbose_Option
-    ELSE
-      Verbose = .FALSE.
-    END IF
-
-    hdfreadErr = 0
-
-    IF( Verbose )THEN
-      WRITE(*,*)
-      WRITE(*,'(A4,A9,A)') '', 'Reading: ', TRIM( FileName )
-    END IF
-
-    CALL OpenFileHDF( FileName, .false., file_id )
-
-    datasize1d(1) = 1
-    CALL ReadHDF( "nOpacitiesA", buffer, file_id, datasize1d )
-    nOpacA = buffer(1)   
-
-    CALL ReadHDF( "nOpacitiesB", buffer, file_id, datasize1d )
-    nOpacB = buffer(1)
-
-    CALL ReadHDF( "nMomentsB", buffer, file_id, datasize1d )
-    nMomB = buffer(1)
-
-    CALL ReadHDF( "nOpacitiesB_NES", buffer, file_id, datasize1d )
-    nOpacB_NES = buffer(1)
-
-    CALL ReadHDF( "nMomentsB_NES", buffer, file_id, datasize1d )
-    nMomB_NES = buffer(1)
-
-    CALL ReadHDF &
-           ( "nOpacitiesB_TP", buffer, file_id, datasize1d, hdfreadErr )
-    IF( hdfreadErr == 0 ) THEN 
-      nOpacB_TP = buffer(1)
-    ELSE
-      nOpacB_TP = 0
+!!$    CHARACTER(LEN=32) :: buffer_string(1)
+!!$    LOGICAL           :: Verbose
+!!$    INTEGER           :: nPointsTS(3)
+!!$    INTEGER           :: nPointsE
+!!$    INTEGER           :: nPointsEta
+!!$    INTEGER           :: nOpacA
+!!$    INTEGER           :: nOpacB, nMomB
+!!$    INTEGER           :: nOpacB_NES, nMomB_NES
+!!$    INTEGER           :: nOpacB_TP, nMomB_TP
+!!$    INTEGER           :: nOpacC, nMomC
+!!$    INTEGER           :: buffer(1)
+!!$    INTEGER           :: hdfreadErr
+!!$    INTEGER(HID_T)    :: file_id
+!!$    INTEGER(HID_T)    :: group_id
+!!$    INTEGER(HID_T)    :: subgroup_id
+!!$    INTEGER(HSIZE_T)  :: datasize1d(1)
+!!$
+!!$    IF( PRESENT( Verbose_Option ) )THEN
+!!$      Verbose = Verbose_Option
+!!$    ELSE
+!!$      Verbose = .FALSE.
+!!$    END IF
+!!$
+!!$    hdfreadErr = 0
+!!$
+!!$    IF( Verbose )THEN
+!!$      WRITE(*,*)
+!!$      WRITE(*,'(A4,A9,A)') '', 'Reading: ', TRIM( FileName )
+!!$    END IF
+!!$
+!!$    CALL OpenFileHDF( FileName, .false., file_id )
+!!$
+!!$    datasize1d(1) = 1
+!!$    CALL ReadHDF( "nOpacitiesA", buffer, file_id, datasize1d )
+!!$    nOpacA = buffer(1)   
+!!$
+!!$    CALL ReadHDF( "nOpacitiesB", buffer, file_id, datasize1d )
+!!$    nOpacB = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nMomentsB", buffer, file_id, datasize1d )
+!!$    nMomB = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nOpacitiesB_NES", buffer, file_id, datasize1d )
+!!$    nOpacB_NES = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nMomentsB_NES", buffer, file_id, datasize1d )
+!!$    nMomB_NES = buffer(1)
+!!$
+!!$    CALL ReadHDF &
+!!$           ( "nOpacitiesB_TP", buffer, file_id, datasize1d, hdfreadErr )
+!!$    IF( hdfreadErr == 0 ) THEN 
+!!$      nOpacB_TP = buffer(1)
+!!$    ELSE
+!!$      nOpacB_TP = 0
 !!$      PRINT*, "hdfreadErr =", hdfreadErr
 !!$      PRINT*, "nOpacB_TP =", nOpacB_TP
-    END IF
-
-    CALL ReadHDF &
-           ( "nMomentsB_TP", buffer, file_id, datasize1d, hdfreadErr )
-    IF( hdfreadErr == 0 ) THEN 
-      nMomB_TP = buffer(1)
-    ELSE
-      nMomB_TP = 0
+!!$    END IF
+!!$
+!!$    CALL ReadHDF &
+!!$           ( "nMomentsB_TP", buffer, file_id, datasize1d, hdfreadErr )
+!!$    IF( hdfreadErr == 0 ) THEN 
+!!$      nMomB_TP = buffer(1)
+!!$    ELSE
+!!$      nMomB_TP = 0
 !!$      PRINT*, "hdfreadErr =", hdfreadErr
 !!$      PRINT*, "nMomB_TP =", nMomB_TP
-    END IF
-
-    CALL ReadHDF( "nOpacitiesC", buffer, file_id, datasize1d )
-    nOpacC = buffer(1)
-
-    CALL ReadHDF( "nMomentsC", buffer, file_id, datasize1d )
-    nMomC = buffer(1)
-
-    CALL ReadHDF( "nPointsE", buffer, file_id, datasize1d )
-    nPointsE = buffer(1)
-
-    CALL ReadHDF( "nPointsEta", buffer, file_id, datasize1d )
-    nPointsEta = buffer(1)
-
-    CALL ReadHDF( "nPointsTS", nPointsTS, file_id, datasize1d )
-
-    CALL AllocateOpacityTable &
-           ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
-             nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta, &
-             Verbose_Option = Verbose_Option )  
-
-    ASSOCIATE &
-      ( nPointsTS_EOS => OpacityTable % EOSTable % TS % nPoints )
-
-    IF( ALL( nPointsTS_EOS .EQ. nPointsTS ) )THEN
-
-      CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
-      CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
-      CALL CloseGroupHDF( group_id )
-
-      CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
-      CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
-      CALL CloseGroupHDF( group_id )
- 
-      CALL ReadThermoStateHDF( OpacityTable % TS, file_id )
-
-      IF( nOpacA .ne. 0 ) THEN
-        CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
-        CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
-        CALL CloseGroupHDF( group_id )
-      END IF
-
-      IF( nOpacB .ne. 0 ) THEN
-        CALL OpenGroupHDF( "scatt_Iso", .false., file_id, group_id )
-        CALL ReadOpacityTypeBHDF( OpacityTable % scatt_Iso, group_id )
-        CALL CloseGroupHDF( group_id )
-      END IF
-
-      IF( nOpacB_NES .ne. 0 ) THEN
-        CALL OpenGroupHDF( "scatt_NES", .false., file_id, group_id )
-        CALL ReadOpacityTypeBHDF( OpacityTable % scatt_NES, group_id )
-        CALL CloseGroupHDF( group_id )
-      END IF
-
-      IF( nOpacB_TP .ne. 0 ) THEN
-        CALL OpenGroupHDF( "scatt_TP", .false., file_id, group_id )
-        CALL ReadOpacityTypeBHDF( OpacityTable % scatt_TP, group_id )
-        CALL CloseGroupHDF( group_id )
-      END IF
-
-      CALL OpenGroupHDF( "scatt_nIso", .false., file_id, group_id )
-      CALL ReadOpacityTypeCHDF( OpacityTable % scatt_nIso , group_id )
-      CALL CloseGroupHDF( group_id )
-
-      CALL CloseFileHDF( file_id )
-    
-    ELSE 
-      WRITE(*,*) "ERROR!"
-      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
-      STOP
-    END IF
-
-    END ASSOCIATE ! nPointsTS_EOS
+!!$    END IF
+!!$
+!!$    CALL ReadHDF( "nOpacitiesC", buffer, file_id, datasize1d )
+!!$    nOpacC = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nMomentsC", buffer, file_id, datasize1d )
+!!$    nMomC = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nPointsE", buffer, file_id, datasize1d )
+!!$    nPointsE = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nPointsEta", buffer, file_id, datasize1d )
+!!$    nPointsEta = buffer(1)
+!!$
+!!$    CALL ReadHDF( "nPointsTS", nPointsTS, file_id, datasize1d )
+!!$
+!!$    CALL AllocateOpacityTable &
+!!$           ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
+!!$             nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta, &
+!!$             Verbose_Option = Verbose_Option )  
+!!$
+!!$    ASSOCIATE &
+!!$      ( nPointsTS_EOS => OpacityTable % EOSTable % TS % nPoints )
+!!$
+!!$    IF( ALL( nPointsTS_EOS .EQ. nPointsTS ) )THEN
+!!$
+!!$      CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
+!!$      CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
+!!$      CALL CloseGroupHDF( group_id )
+!!$
+!!$      CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
+!!$      CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
+!!$      CALL CloseGroupHDF( group_id )
+!!$ 
+!!$      CALL ReadThermoStateHDF( OpacityTable % TS, file_id )
+!!$
+!!$      IF( nOpacA .ne. 0 ) THEN
+!!$        CALL OpenGroupHDF( "thermEmAb", .false., file_id, group_id )
+!!$        CALL ReadOpacityTypeAHDF( OpacityTable % thermEmAb, group_id )
+!!$        CALL CloseGroupHDF( group_id )
+!!$      END IF
+!!$
+!!$      IF( nOpacB .ne. 0 ) THEN
+!!$        CALL OpenGroupHDF( "scatt_Iso", .false., file_id, group_id )
+!!$        CALL ReadOpacityTypeBHDF( OpacityTable % scatt_Iso, group_id )
+!!$        CALL CloseGroupHDF( group_id )
+!!$      END IF
+!!$
+!!$      IF( nOpacB_NES .ne. 0 ) THEN
+!!$        CALL OpenGroupHDF( "scatt_NES", .false., file_id, group_id )
+!!$        CALL ReadOpacityTypeBHDF( OpacityTable % scatt_NES, group_id )
+!!$        CALL CloseGroupHDF( group_id )
+!!$      END IF
+!!$
+!!$      IF( nOpacB_TP .ne. 0 ) THEN
+!!$        CALL OpenGroupHDF( "scatt_TP", .false., file_id, group_id )
+!!$        CALL ReadOpacityTypeBHDF( OpacityTable % scatt_TP, group_id )
+!!$        CALL CloseGroupHDF( group_id )
+!!$      END IF
+!!$
+!!$      CALL OpenGroupHDF( "scatt_nIso", .false., file_id, group_id )
+!!$      CALL ReadOpacityTypeCHDF( OpacityTable % scatt_nIso , group_id )
+!!$      CALL CloseGroupHDF( group_id )
+!!$
+!!$      CALL CloseFileHDF( file_id )
+!!$    
+!!$    ELSE 
+!!$      WRITE(*,*) "ERROR!"
+!!$      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
+!!$      STOP
+!!$    END IF
+!!$
+!!$    END ASSOCIATE ! nPointsTS_EOS
 
   END SUBROUTINE ReadOpacityTableHDF
 

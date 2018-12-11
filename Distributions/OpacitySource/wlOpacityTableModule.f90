@@ -56,6 +56,7 @@ MODULE wlOpacityTableModule
     DeallocateGrid, &
     DescribeGrid
   USE wlOpacityFieldsModule, ONLY: &
+    OpacityTypeEmAb, &
     OpacityTypeA, &
     OpacityTypeB, &
     OpacityTypeC, &
@@ -96,16 +97,16 @@ MODULE wlOpacityTableModule
     TYPE(GridType)                 :: EtaGrid     ! -- eletron chemical potential / kT
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
-    TYPE(OpacityTypeA)             :: &
-      thermEmAb  ! -- Thermal Emission and Absorption
+    TYPE(OpacityTypeEmAb)          :: &
+      EmAb       ! -- Corrected Absorption Opacity
     TYPE(OpacityTypeB)             :: &
-      scatt_Iso  ! -- Isoenergenic Scattering
+      Scat_Iso   ! -- Isoenergenic Scattering
     TYPE(OpacityTypeB)             :: &
-      scatt_NES  ! -- Inelastic Neutrino-Electron Scattering
+      Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeB)             :: &
-      scatt_TP   ! -- Thermal Production
+      Scat_Pair  ! -- Pair Production
     TYPE(OpacityTypeC)             :: &
-      scatt_nIso ! -- Non-Isoenergenic Scattering
+      Scat_nIso  ! -- Non-Isoenergenic Scattering
   END TYPE OpacityTableType
 
   PUBLIC :: AllocateOpacityTable
@@ -170,25 +171,24 @@ CONTAINS
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
 
     CALL AllocateOpacity &
-           ( OpTab % thermEmAb, nPointsTemp, &
-             nOpacities = nOpacA )
+           ( OpTab % EmAb, nPointsTemp, nOpacities = nOpacA )
 
     CALL AllocateOpacity &
-           ( OpTab % scatt_Iso, nPointsTemp, &
+           ( OpTab % Scat_Iso, nPointsTemp, &
              nMoments = nMomB, nOpacities = nOpacB )
 
     CALL AllocateOpacity &
-           ( OpTab % scatt_nIso, nPointsTemp, &
+           ( OpTab % Scat_nIso, nPointsTemp, &
              nMoments = nMomC, nOpacities = nOpacC )
   
     nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(2), nPointsEta]
 
     CALL AllocateOpacity &
-           ( OpTab % scatt_NES, nPointsTemp, &
+           ( OpTab % Scat_NES, nPointsTemp, &
              nMoments = nMomB_NES, nOpacities = nOpacB_NES )
 
     CALL AllocateOpacity &
-           ( OpTab % scatt_TP, nPointsTemp, &
+           ( OpTab % Scat_Pair, nPointsTemp, &
              nMoments = nMomB_TP, nOpacities = nOpacB_TP )
 
     END ASSOCIATE ! nPoints
@@ -217,11 +217,11 @@ CONTAINS
       WRITE(*,'(A4,A)') ,'', 'Deallocating Opacity Table'
     END IF
 
-    CALL DeAllocateOpacity( OpTab % thermEmAb )
-    CALL DeAllocateOpacity( OpTab % scatt_Iso )
-    CALL DeAllocateOpacity( OpTab % scatt_NES )
-    CALL DeAllocateOpacity( OpTab % scatt_TP )
-    CALL DeAllocateOpacity( OpTab % scatt_nIso )
+!    CALL DeAllocateOpacity( OpTab % EmAb ) ! --- Fixme ---
+    CALL DeAllocateOpacity( OpTab % Scat_Iso )
+    CALL DeAllocateOpacity( OpTab % Scat_NES )
+    CALL DeAllocateOpacity( OpTab % Scat_Pair )
+    CALL DeAllocateOpacity( OpTab % Scat_nIso )
 
     CALL DeAllocateThermoState( OpTab % TS )
 
@@ -270,16 +270,15 @@ CONTAINS
     END DO
 
     END ASSOCIATE ! TS
-    
 
     CALL DescribeGrid( OpTab % EnergyGrid )
     CALL DescribeGrid( OpTab % EtaGrid )
 
-    CALL DescribeOpacity( OpTab % thermEmAb )
-    CALL DescribeOpacity( OpTab % scatt_Iso )
-    CALL DescribeOpacity( OpTab % scatt_NES )
-    CALL DescribeOpacity( OpTab % scatt_TP )
-    CALL DescribeOpacity( OpTab % scatt_nIso )
+!    CALL DescribeOpacity( OpTab % EmAb ) ! --- Fixme ---
+    CALL DescribeOpacity( OpTab % Scat_Iso )
+    CALL DescribeOpacity( OpTab % Scat_NES )
+    CALL DescribeOpacity( OpTab % Scat_Pair )
+    CALL DescribeOpacity( OpTab % Scat_nIso )
 
   END SUBROUTINE DescribeOpacityTable
 
