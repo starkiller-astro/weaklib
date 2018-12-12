@@ -63,7 +63,7 @@ MODULE wlOpacityFieldsModule
     REAL(dp), DIMENSION(:,:,:,:,:), ALLOCATABLE :: Values
   END type ValueType_5D
 
-  TYPE, PUBLIC :: OpacityTypeB
+  TYPE, PUBLIC :: OpacityTypeScat
     INTEGER :: nOpacities
     INTEGER :: nMoments
     INTEGER, DIMENSION(4) :: nPoints
@@ -72,7 +72,7 @@ MODULE wlOpacityFieldsModule
     CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Species
     CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Units
     TYPE(ValueType_5D),  DIMENSION(:), ALLOCATABLE :: Kernel
-  END TYPE
+  END TYPE OpacityTypeScat
 
 !---------------------------------------------
 !
@@ -102,19 +102,19 @@ MODULE wlOpacityFieldsModule
 
   INTERFACE AllocateOpacity
     MODULE PROCEDURE AllocateOpacityTypeEmAb
-    MODULE PROCEDURE AllocateOpacityTypeB
+    MODULE PROCEDURE AllocateOpacityTypeScat
     MODULE PROCEDURE AllocateOpacityTypeC
   END INTERFACE AllocateOpacity
 
   INTERFACE DeallocateOpacity
     MODULE PROCEDURE DeallocateOpacityTypeEmAb
-    MODULE PROCEDURE DeallocateOpacityTypeB
+    MODULE PROCEDURE DeallocateOpacityTypeScat
     MODULE PROCEDURE DeallocateOpacityTypeC
   END INTERFACE DeallocateOpacity
 
   INTERFACE DescribeOpacity
     MODULE PROCEDURE DescribeOpacityTypeEmAb
-    MODULE PROCEDURE DescribeOpacityTypeB
+    MODULE PROCEDURE DescribeOpacityTypeScat
     MODULE PROCEDURE DescribeOpacityTypeC
   END INTERFACE DescribeOpacity
 
@@ -198,9 +198,9 @@ CONTAINS
   END SUBROUTINE DescribeOpacityTypeEmAb
 
 
-  SUBROUTINE AllocateOpacityTypeB( Opacity, nPoints, nMoments, nOpacities )
+  SUBROUTINE AllocateOpacityTypeScat( Opacity, nPoints, nMoments, nOpacities )
 
-    TYPE(OpacityTypeB), INTENT(inout) :: &
+    TYPE(OpacityTypeScat), INTENT(inout) :: &
       Opacity
     INTEGER, DIMENSION(4), INTENT(in) :: &
       nPoints
@@ -228,12 +228,12 @@ CONTAINS
 
     END DO
 
-  END SUBROUTINE AllocateOpacityTypeB
+  END SUBROUTINE AllocateOpacityTypeScat
 
 
-  SUBROUTINE DeallocateOpacityTypeB( Opacity )
+  SUBROUTINE DeallocateOpacityTypeScat( Opacity )
 
-    TYPE(OpacityTypeB), INTENT(inout) :: Opacity
+    TYPE(OpacityTypeScat), INTENT(inout) :: Opacity
 
     INTEGER :: i
 
@@ -247,12 +247,12 @@ CONTAINS
     DEALLOCATE( Opacity % Species )
     DEALLOCATE( Opacity % Names )
 
-  END SUBROUTINE DeallocateOpacityTypeB
+  END SUBROUTINE DeallocateOpacityTypeScat
 
 
-  SUBROUTINE DescribeOpacityTypeB( Opacity )
+  SUBROUTINE DescribeOpacityTypeScat( Opacity )
 
-    TYPE(OpacityTypeB), INTENT(in) :: Opacity
+    TYPE(OpacityTypeScat), INTENT(in) :: Opacity
 
     INTEGER :: i, l
 
@@ -294,7 +294,7 @@ CONTAINS
     END DO
     WRITE(*,*)
 
-  END SUBROUTINE DescribeOpacityTypeB
+  END SUBROUTINE DescribeOpacityTypeScat
 
 
   SUBROUTINE AllocateOpacityTypeC( Opacity, nPoints, nMoments, nOpacities )

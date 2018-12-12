@@ -27,7 +27,7 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:&
     OpacityTypeEmAb,              &
-    OpacityTypeB,                 &
+    OpacityTypeScat,                 &
     OpacityTypeC
   USE wlIOModuleHDF, ONLY:        &
     ReadHDF,                      &
@@ -190,15 +190,15 @@ CONTAINS
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Scat_Iso", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeBHDF( OpacityTable % Scat_Iso, group_id )
+    CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Iso, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Scat_NES", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeBHDF( OpacityTable % Scat_NES, group_id )
+    CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_NES, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Scat_Pair", .true., file_id, group_id )
-    CALL WriteOpacityTableTypeBHDF( OpacityTable % Scat_Pair, group_id )
+    CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Pair, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Scat_nIso", .true., file_id, group_id )
@@ -256,20 +256,20 @@ CONTAINS
 
     datasize4d = EmAb % nPoints
 
-    CALL Write4dHDF_double &
+    CALL WriteHDF &
            ( TRIM( EmAb % Names(1) ), &
              EmAb % Absorptivity(1) % Values(:,:,:,:), group_id, datasize4d )
 
-    CALL Write4dHDF_double &
+    CALL WriteHDF &
            ( TRIM( EmAb % Names(2) ), &
              EmAb % Absorptivity(2) % Values(:,:,:,:), group_id, datasize4d )
   
   END SUBROUTINE WriteOpacityTableHDF_EmAb
 
 
-  SUBROUTINE WriteOpacityTableTypeBHDF( Scat_Iso , group_id )
+  SUBROUTINE WriteOpacityTableHDF_Scat( Scat_Iso , group_id )
 
-    TYPE(OpacityTypeB), INTENT(in)              :: Scat_Iso
+    TYPE(OpacityTypeScat), INTENT(in)              :: Scat_Iso
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T)                            :: datasize1d
@@ -318,13 +318,13 @@ CONTAINS
 
     CALL OpenGroupHDF( "Kernel", .true., group_id, subgroup_id )
     DO i = 1, datasize1d
-     CALL Write5dHDF_double&
+     CALL WriteHDF&
         ( Scat_Iso % Names(i), Scat_Iso % Kernel(i) % Values(:,:,:,:,:),&
                             subgroup_id, datasize5d )
     END DO
     CALL CloseGroupHDF( subgroup_id )
 
-  END SUBROUTINE WriteOpacityTableTypeBHDF
+  END SUBROUTINE WriteOpacityTableHDF_Scat
 
 
   SUBROUTINE WriteOpacityTableTypeCHDF( scattn, group_id )
@@ -333,70 +333,6 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
   END SUBROUTINE WriteOpacityTableTypeCHDF
-
-
-  SUBROUTINE Write4dHDF_double &
-              ( name, values, group_id, datasize, desc_option, unit_option )
-
-    CHARACTER(*), INTENT(in)                    :: name
-    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
-    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), DIMENSION(4), INTENT(in)  :: datasize
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)      :: values
-   
-    INTEGER(HID_T)                              :: dataset_id
-    INTEGER(HID_T)                              :: dataspace_id
-    INTEGER(HID_T)                              :: atype_id
-    INTEGER(HID_T)                              :: attr_id
-    INTEGER(SIZE_T)                             :: attr_len
-    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
-   
-    CALL h5screate_simple_f( 4, datasize, dataspace_id, hdferr )
-
-    CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
-           dataspace_id, dataset_id, hdferr )
-
-    CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
-           values, datasize, hdferr )
-
-    CALL h5sclose_f( dataspace_id, hdferr ) 
-
-    CALL h5dclose_f( dataset_id, hdferr )
-
-  END SUBROUTINE Write4dHDF_double
-
-
-  SUBROUTINE Write5dHDF_double &
-              ( name, values, group_id, datasize, desc_option, unit_option )
-
-    CHARACTER(*), INTENT(in)                    :: name
-    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
-    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), DIMENSION(5), INTENT(in)  :: datasize
-    REAL(dp), DIMENSION(:,:,:,:,:), INTENT(in)  :: values
-
-    INTEGER(HID_T)                              :: dataset_id
-    INTEGER(HID_T)                              :: dataspace_id
-    INTEGER(HID_T)                              :: atype_id
-    INTEGER(HID_T)                              :: attr_id
-    INTEGER(SIZE_T)                             :: attr_len
-    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
-
-    CALL h5screate_simple_f( 5, datasize, dataspace_id, hdferr )
-
-    CALL h5dcreate_f( group_id, name, H5T_NATIVE_DOUBLE, &
-           dataspace_id, dataset_id, hdferr )
-
-    CALL h5dwrite_f( dataset_id, H5T_NATIVE_DOUBLE, &
-           values, datasize, hdferr )
-
-    CALL h5sclose_f( dataspace_id, hdferr )
-
-    CALL h5dclose_f( dataset_id, hdferr )
-
-  END SUBROUTINE Write5dHDF_double
 
 
   SUBROUTINE ReadOpacityTableHDF_New &
@@ -462,13 +398,13 @@ CONTAINS
       datasize4d(2:4) = OpacityTable % TS % nPoints
 
       OpacityTable % EmAb % Names(1) = "Electron Neutrino";
-      CALL Read4dHDF_double &
+      CALL ReadHDF &
              ( TRIM( OpacityTable % EmAb % Names(1) ), &
                OpacityTable % EmAb % Absorptivity(1) % Values, &
                group_id, datasize4d )
 
       OpacityTable % EmAb % Names(2) = "Electron Antineutrino";
-      CALL Read4dHDF_double &
+      CALL ReadHDF &
          ( "Electron Antineutrino", &
             OpacityTable % EmAb % Absorptivity(2) % Values, &
             group_id, datasize4d )
@@ -601,19 +537,19 @@ CONTAINS
 
       IF( nOpacB .ne. 0 ) THEN
         CALL OpenGroupHDF( "Scat_Iso", .false., file_id, group_id )
-        CALL ReadOpacityTypeBHDF( OpacityTable % Scat_Iso, group_id )
+        CALL ReadOpacityTypeScatHDF( OpacityTable % Scat_Iso, group_id )
         CALL CloseGroupHDF( group_id )
       END IF
 
       IF( nOpacB_NES .ne. 0 ) THEN
         CALL OpenGroupHDF( "Scat_NES", .false., file_id, group_id )
-        CALL ReadOpacityTypeBHDF( OpacityTable % Scat_NES, group_id )
+        CALL ReadOpacityTypeScatHDF( OpacityTable % Scat_NES, group_id )
         CALL CloseGroupHDF( group_id )
       END IF
 
       IF( nOpacB_TP .ne. 0 ) THEN
         CALL OpenGroupHDF( "Scat_Pair", .false., file_id, group_id )
-        CALL ReadOpacityTypeBHDF( OpacityTable % Scat_Pair, group_id )
+        CALL ReadOpacityTypeScatHDF( OpacityTable % Scat_Pair, group_id )
         CALL CloseGroupHDF( group_id )
       END IF
 
@@ -666,7 +602,7 @@ CONTAINS
 
     DO i = 1, EmAb % nOpacities
 
-      CALL Read4dHDF_double &
+      CALL ReadHDF &
              ( EmAb % Names(i), &
                EmAb % Absorptivity(i) % Values, &
                subgroup_id, datasize4d )
@@ -678,9 +614,9 @@ CONTAINS
   END SUBROUTINE ReadOpacityTypeEmAbHDF
 
 
-  SUBROUTINE ReadOpacityTypeBHDF( Scat_Iso, group_id )
+  SUBROUTINE ReadOpacityTypeScatHDF( Scat_Iso, group_id )
 
-    TYPE(OpacityTypeB),INTENT(inout)                 :: Scat_Iso
+    TYPE(OpacityTypeScat),INTENT(inout)                 :: Scat_Iso
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
@@ -719,7 +655,7 @@ CONTAINS
 
     DO i = 1, Scat_Iso % nOpacities
 
-      CALL Read5dHDF_double &
+      CALL ReadHDF &
              ( Scat_Iso % Names(i), &
                Scat_Iso % Kernel(i) % Values, &
                subgroup_id, datasize5d )
@@ -728,7 +664,7 @@ CONTAINS
 
     CALL CloseGroupHDF( subgroup_id )
 
-  END SUBROUTINE ReadOpacityTypeBHDF
+  END SUBROUTINE ReadOpacityTypeScatHDF
 
 
   SUBROUTINE ReadOpacityTypeCHDF( EmAb, group_id )
@@ -737,38 +673,6 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
   END SUBROUTINE ReadOpacityTypeCHDF
-
-
-  SUBROUTINE Read4dHDF_double( name, values, group_id, datasize )
-
-    CHARACTER(*), INTENT(in)                    :: name
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), DIMENSION(4), INTENT(in)  :: datasize
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(out)   :: values
-   
-    INTEGER(HID_T)                               :: dataset_id
- 
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
-    CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
-    CALL h5dclose_f( dataset_id, hdferr )
-
-  END SUBROUTINE Read4dHDF_double
-
-
-  SUBROUTINE Read5dHDF_double( name, values, group_id, datasize )
-
-    CHARACTER(*), INTENT(in)                    :: name
-    INTEGER(HID_T)                              :: group_id
-    INTEGER(HSIZE_T), DIMENSION(5), INTENT(in)  :: datasize
-    REAL(dp), DIMENSION(:,:,:,:,:), INTENT(out) :: values
-
-    INTEGER(HID_T)                               :: dataset_id
-
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
-    CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
-    CALL h5dclose_f( dataset_id, hdferr )
-
-  END SUBROUTINE Read5dHDF_double
 
 
   SUBROUTINE ReadGridHDF( Grid, group_id )

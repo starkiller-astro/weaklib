@@ -23,7 +23,7 @@ MODULE wlOpacityTableModule
 !
 !                e- + p/A <--> v_e + n/A*
 !
-! OpacityType B for  ISO( e, rho, T, Ye, l)
+! OpacityType Scat for  ISO( e, rho, T, Ye, l)
 !                        
 !                v_i/anti(v_i) + A --> v_i/anti(v_i) + A 
 !                v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
@@ -44,7 +44,7 @@ MODULE wlOpacityTableModule
     DescribeGrid
   USE wlOpacityFieldsModule, ONLY: &
     OpacityTypeEmAb, &
-    OpacityTypeB, &
+    OpacityTypeScat, &
     OpacityTypeC, &
     AllocateOpacity, &
     DeallocateOpacity, &
@@ -85,11 +85,11 @@ MODULE wlOpacityTableModule
     TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
-    TYPE(OpacityTypeB)             :: &
+    TYPE(OpacityTypeScat)             :: &
       Scat_Iso   ! -- Isoenergenic Scattering
-    TYPE(OpacityTypeB)             :: &
+    TYPE(OpacityTypeScat)             :: &
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
-    TYPE(OpacityTypeB)             :: &
+    TYPE(OpacityTypeScat)             :: &
       Scat_Pair  ! -- Pair Production
     TYPE(OpacityTypeC)             :: &
       Scat_nIso  ! -- Non-Isoenergenic Scattering
