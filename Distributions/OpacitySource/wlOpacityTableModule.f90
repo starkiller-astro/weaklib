@@ -13,26 +13,13 @@ MODULE wlOpacityTableModule
 !    Purpose:
 !      Allocate/DeAllocate table for opacity considered EoS table.
 !
-!   
-!
-!    CONTAINS:
-!    
-!
-!    Modules used:
-!       wlKindModule
-!       HDF5
-!       wlGridModule, ONLY: EnergyGridType 
-!       wlEquationOfStateTableModule
-!       wlIOModuleHDF
-!       wlEOSIOModuleHDF, ONLY: ReadEquationOfStateTableHDF
-!
 !-----------------------------------------------------------------------
 !  NOTE: Only Type A interaction applied. Type B and Type C interaction 
 !        needs to be added for future use.
 !-----------------------------------------------------------------------
 !                         Three Opacity Type
 !
-! OpacityType A for  ABEM( rho, T, Ye, E)
+! OpacityType EmAb for  ABEM( rho, T, Ye, E)
 !
 !                e- + p/A <--> v_e + n/A*
 !
@@ -57,7 +44,6 @@ MODULE wlOpacityTableModule
     DescribeGrid
   USE wlOpacityFieldsModule, ONLY: &
     OpacityTypeEmAb, &
-    OpacityTypeA, &
     OpacityTypeB, &
     OpacityTypeC, &
     AllocateOpacity, &
@@ -217,7 +203,7 @@ CONTAINS
       WRITE(*,'(A4,A)') ,'', 'Deallocating Opacity Table'
     END IF
 
-!    CALL DeAllocateOpacity( OpTab % EmAb ) ! --- Fixme ---
+    CALL DeAllocateOpacity( OpTab % EmAb ) 
     CALL DeAllocateOpacity( OpTab % Scat_Iso )
     CALL DeAllocateOpacity( OpTab % Scat_NES )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
@@ -274,7 +260,7 @@ CONTAINS
     CALL DescribeGrid( OpTab % EnergyGrid )
     CALL DescribeGrid( OpTab % EtaGrid )
 
-!    CALL DescribeOpacity( OpTab % EmAb ) ! --- Fixme ---
+    CALL DescribeOpacity( OpTab % EmAb ) 
     CALL DescribeOpacity( OpTab % Scat_Iso )
     CALL DescribeOpacity( OpTab % Scat_NES )
     CALL DescribeOpacity( OpTab % Scat_Pair )
