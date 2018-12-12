@@ -64,14 +64,13 @@ MODULE wlOpacityFieldsModule
   END type ValueType_5D
 
   TYPE, PUBLIC :: OpacityTypeScat
-    INTEGER :: nOpacities
-    INTEGER :: nMoments
-    INTEGER, DIMENSION(4) :: nPoints
-    REAL(dp),            DIMENSION(:,:), ALLOCATABLE :: Offsets
-    CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Names
-    CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Species
-    CHARACTER(LEN=32),   DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(ValueType_5D),  DIMENSION(:), ALLOCATABLE :: Kernel
+    INTEGER                         :: nOpacities
+    INTEGER                         :: nMoments
+    INTEGER                         :: nPoints(4)
+    CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
+    CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
+    REAL(dp),           ALLOCATABLE :: Offsets(:,:)
+    TYPE(ValueType_5D), ALLOCATABLE :: Kernel(:)
   END TYPE OpacityTypeScat
 
 !---------------------------------------------
@@ -200,13 +199,10 @@ CONTAINS
 
   SUBROUTINE AllocateOpacityTypeScat( Opacity, nPoints, nMoments, nOpacities )
 
-    TYPE(OpacityTypeScat), INTENT(inout) :: &
-      Opacity
-    INTEGER, DIMENSION(4), INTENT(in) :: &
-      nPoints
-    INTEGER, INTENT(in) :: &
-      nMoments, &
-      nOpacities
+    INTEGER,               INTENT(in)    :: nMoments
+    INTEGER,               INTENT(in)    :: nOpacities
+    INTEGER,               INTENT(in)    :: nPoints(4)
+    TYPE(OpacityTypeScat), INTENT(inout) :: Opacity
 
     INTEGER :: i
 
@@ -215,7 +211,6 @@ CONTAINS
     Opacity % nPoints    = nPoints
 
     ALLOCATE( Opacity % Names(nOpacities) )
-    ALLOCATE( Opacity % Species(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
     ALLOCATE( Opacity % Offsets(nOpacities, nMoments) )
     ALLOCATE( Opacity % Kernel(nOpacities) )
@@ -244,7 +239,6 @@ CONTAINS
     DEALLOCATE( Opacity % Kernel )
     DEALLOCATE( Opacity % Offsets )
     DEALLOCATE( Opacity % Units )
-    DEALLOCATE( Opacity % Species )
     DEALLOCATE( Opacity % Names )
 
   END SUBROUTINE DeallocateOpacityTypeScat
@@ -274,8 +268,6 @@ CONTAINS
       WRITE(*,*)
       WRITE(*,'(A6,A8,I3.3,A3,A)') &
         ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Units     = ', TRIM( Opacity % Units(i) )
 

@@ -64,13 +64,13 @@ IMPLICIT NONE
 
    INTEGER*4 today(3), now(3)    
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpacA = 2
+   INTEGER                 :: nOpacA = 0
    INTEGER                 :: nOpacB = 0
    INTEGER                 :: nMomB  = 0
    INTEGER                 :: nOpacB_NES = 0 !2
    INTEGER                 :: nMomB_NES  = 0 !2
-   INTEGER                 :: nOpacB_TP  = 0 !2
-   INTEGER                 :: nMomB_TP   = 0 !2
+   INTEGER                 :: nOpacB_TP  = 2 !2
+   INTEGER                 :: nMomB_TP   = 2 !2
    INTEGER                 :: nOpacC = 0
    INTEGER                 :: nMomC  = 0
 !---------------------------------------------------------------------
@@ -144,10 +144,6 @@ IMPLICIT NONE
    OpacityTable % Scat_Iso % nPoints(2:4) = OpacityTable % nPointsTS
 
    OpacityTable % Scat_Iso % Names = &
-                                (/'Electron Iso-scattering      ', &
-                                  'AntiElec Iso-scattering      '/)
-
-   OpacityTable % Scat_Iso % Species = &
                                 (/'Electron Neutrino           ',  &
                                   'Electron AntiNeutrino       '/)
 
@@ -172,10 +168,6 @@ IMPLICIT NONE
                                 (/'NES Kernel Moment H0i H0ii   ', &
                                   'NES Kernel Moment H1i H1ii   '/)
 
-   OpacityTable % Scat_NES % Species = &
-                                (/'H0i and H0ii                ',  &
-                                  'H1i and H1ii                '/)
-
    OpacityTable % Scat_NES % Units = &
                                 (/'Per Centimeter Per MeV^3    ',  &
                                   'Per Centimeter Per MeV^3    '/)
@@ -195,10 +187,6 @@ IMPLICIT NONE
    OpacityTable % Scat_Pair % Names = &
                                 (/'Pair A. Kernel Mome J0i J0ii',&
                                   'Pair A. Kernel Mome J1i J1ii'/)
-
-   OpacityTable % Scat_Pair % Species = &
-                                (/'J0i and J0ii                ', &
-                                  'J1i and J1ii                '/)
 
    OpacityTable % Scat_Pair % Units = &
                                 (/'Per Centimeter Per MeV^3    ',&
@@ -547,7 +535,32 @@ PRINT*, 'Filling OpacityTable ...'
          ( OpacityTable, "temp_EmAb.h5", WriteOpacity_EmAb_Option = .true. )
     CALL FinalizeHDF( )
   END IF
-  
+
+  IF( nOpacB > 0 ) THEN
+    CALL InitializeHDF( )
+    WRITE(*,*) 'Write Iso data into file temp_Iso.h5 '
+    CALL WriteOpacityTableHDF_New &
+         ( OpacityTable, "temp_Iso.h5", WriteOpacity_Iso_Option = .true. )
+    CALL FinalizeHDF( )
+  END IF
+ 
+  IF( nOpacB_NES > 0 ) THEN
+    CALL InitializeHDF( )
+    WRITE(*,*) 'Write Iso data into file temp_NES.h5 '
+    CALL WriteOpacityTableHDF_New &
+         ( OpacityTable, "temp_NES.h5", WriteOpacity_NES_Option = .true. )
+    CALL FinalizeHDF( )
+  END IF
+
+  IF( nOpacB_TP > 0 ) THEN
+    CALL InitializeHDF( )
+    WRITE(*,*) 'Write Iso data into file temp_Pair.h5 '
+    CALL WriteOpacityTableHDF_New &
+         ( OpacityTable, "temp_Pair.h5", WriteOpacity_Pair_Option = .true. )
+    CALL FinalizeHDF( )
+  END IF
+
+ 
   WRITE (*,*) "HDF write successful"
 
   !=============================================================

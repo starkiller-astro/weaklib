@@ -15,7 +15,6 @@ PROGRAM wlInterpolateAb
     OpenGroupHDF, &
     CloseGroupHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
-    ReadOpacityTableHDF, &
     ReadOpacityTableHDF_New
   USE wlGridModule, ONLY: &
     GridType, &
@@ -112,7 +111,7 @@ PROGRAM wlInterpolateAb
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF_New( OpacityTable, &
-          "temp.h5" )
+          "temp_EmAb.h5" )
 !          "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
   CALL FinalizeHDF( )
 
