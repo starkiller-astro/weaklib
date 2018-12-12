@@ -46,32 +46,26 @@ PROGRAM wlOpacityFieldsTest
 
   ! -- Absorptivity -- 
 
-  ASSOCIATE( thermEmAb => OpacityTable % thermEmAb )
+  ASSOCIATE( EmAb => OpacityTable % EmAb )
 
-  thermEmAb % Names &
-    = [ 'Electron Capture Absoptivity    ', &
-        'Electron Capture Absoptivity    ', &
-        'Electron Capture Absoptivity    ', &
-        'Electron Capture Absoptivity    ' ]
-
-  thermEmAb % Species &
+  EmAb % Names &
     = [ 'Electron Neutrino               ', &
         'Electron Antineutrino           ', &
         'Mu/Tau Neutrino                 ', &
         'Mu/Tau Antineutrino             ' ]
 
-  thermEmAb % Units &
+  EmAb % Units &
     = [ 'Per Centimeter                  ', &
         'Per Centimeter                  ', &
         'Per Centimeter                  ', &
         'Per Centimeter                  ' ]
 
-  ASSOCIATE( Chi_Nu_e => thermEmAb % Absorptivity(iNu_e) % Values )
+  ASSOCIATE( Chi_Nu_e => EmAb % Absorptivity(iNu_e) % Values )
 
-  DO iY = 1, thermEmAb % nPoints(4)
-    DO iT = 1, thermEmAb % nPoints(3)
-      DO iD = 1, thermEmAb % nPoints(2)
-        DO iE = 1, thermEmAb % nPoints(1)
+  DO iY = 1, EmAb % nPoints(4)
+    DO iT = 1, EmAb % nPoints(3)
+      DO iD = 1, EmAb % nPoints(2)
+        DO iE = 1, EmAb % nPoints(1)
 
           Chi_Nu_e(iE,iD,iT,iY) = 1.0_dp
 
@@ -82,29 +76,29 @@ PROGRAM wlOpacityFieldsTest
 
   END ASSOCIATE ! Chi_Nu_e
 
-  END ASSOCIATE ! thermEmAb
+  END ASSOCIATE ! EmAb
 
   ! -- Inelastic Scattering --
 
-  ASSOCIATE( scatt_Iso => OpacityTable % scatt_Iso )
+  ASSOCIATE( Scat_Iso => OpacityTable % Scat_Iso )
 
-  scatt_Iso % Names &
+  Scat_Iso % Names &
     = [ 'Elastic Scattering on Nuclei  ' ]
 
-  scatt_Iso % Species &
+  Scat_Iso % Species &
     = [ 'Electron Neutrino             ' ]
 
-  scatt_Iso % Units &
+  Scat_Iso % Units &
     = [ 'Per Centimeter                ' ]
 
 
-  ASSOCIATE( Sig_Nu_e => scatt_Iso % Kernel(iNu_e) % Values )
+  ASSOCIATE( Sig_Nu_e => Scat_Iso % Kernel(iNu_e) % Values )
 
-  DO il = 1, scatt_Iso % nMoments
-    DO iY = 1, scatt_Iso % nPoints(4)
-      DO iT = 1, scatt_Iso % nPoints(3)
-        DO iD = 1, scatt_Iso % nPoints(2)
-          DO iE = 1, scatt_Iso % nPoints(1)
+  DO il = 1, Scat_Iso % nMoments
+    DO iY = 1, Scat_Iso % nPoints(4)
+      DO iT = 1, Scat_Iso % nPoints(3)
+        DO iD = 1, Scat_Iso % nPoints(2)
+          DO iE = 1, Scat_Iso % nPoints(1)
 
             Sig_Nu_e(iE,iD,iT,iY,il) = 2.0_dp
     
@@ -116,29 +110,29 @@ PROGRAM wlOpacityFieldsTest
 
   END ASSOCIATE ! Sig_Nu_e
 
-  END ASSOCIATE ! scatt_Iso
+  END ASSOCIATE ! Scat_Iso
 
   ! -- Elastic Scattering --
 
-  ASSOCIATE( scatt_nIso => OpacityTable % scatt_nIso )
+  ASSOCIATE( Scat_nIso => OpacityTable % Scat_nIso )
 
-  scatt_nIso % Names &
+  Scat_nIso % Names &
     = [ 'Inelastic Scattering on Elect.' ]
 
-  scatt_nIso % Species &
+  Scat_nIso % Species &
     = [ 'Electron Neutrino             ' ]
 
-  scatt_nIso % Units &
+  Scat_nIso % Units &
     = [ 'Per Centimeter Per MeV**3     ' ]
 
-  ASSOCIATE( Sig_Nu_e => scatt_nIso % Kernel(iNu_e) % Values )
+  ASSOCIATE( Sig_Nu_e => Scat_nIso % Kernel(iNu_e) % Values )
 
-  DO il = 1, scatt_nIso % nMoments
-    DO iY = 1, scatt_nIso % nPoints(4)
-      DO iT = 1, scatt_nIso % nPoints(3)
-        DO iD = 1, scatt_nIso % nPoints(2)
-          DO iEp = 1, scatt_nIso % nPoints(1)
-            DO iE = 1, scatt_nIso % nPoints(1)
+  DO il = 1, Scat_nIso % nMoments
+    DO iY = 1, Scat_nIso % nPoints(4)
+      DO iT = 1, Scat_nIso % nPoints(3)
+        DO iD = 1, Scat_nIso % nPoints(2)
+          DO iEp = 1, Scat_nIso % nPoints(1)
+            DO iE = 1, Scat_nIso % nPoints(1)
 
               Sig_Nu_e(iE,iEp,iD,iT,iY,il) = 3.0_dp
 
@@ -151,7 +145,7 @@ PROGRAM wlOpacityFieldsTest
 
   END ASSOCIATE ! Sig_Nu_e
 
-  END ASSOCIATE ! scatt_nIso
+  END ASSOCIATE ! Scat_nIso
 
   CALL DescribeOpacityTable( OpacityTable )
 

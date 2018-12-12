@@ -7,14 +7,14 @@ PROGRAM wlReadOpacityTableTest
     InitializeHDF, &
     FinalizeHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
-    ReadOpacityTableHDF
+    ReadOpacityTableHDF_New
 
   IMPLICIT NONE
 
   TYPE(OpacityTableType) :: OpacityTable
 
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, "OpacityTable.h5" )
+  CALL ReadOpacityTableHDF_New( OpacityTable, "temp.h5" )
   CALL FinalizeHDF( ) 
 
   PRINT*

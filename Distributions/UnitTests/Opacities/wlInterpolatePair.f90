@@ -1,4 +1,4 @@
-PROGRAM wlInterpolatePa
+PROGRAM wlInterpolatePair
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
@@ -143,15 +143,15 @@ PROGRAM wlInterpolatePa
        "wl-Op-SFHo-15-25-50-E40-B85-Pa.h5" )
   CALL FinalizeHDF( )
 
-  Offset_TP   = OpacityTable % scatt_TP  % Offsets(1,1:2)
+  Offset_TP   = OpacityTable % Scat_Pair  % Offsets(1,1:2)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
   
-  ASSOCIATE( TableTPJ0i  => OpacityTable % scatt_TP  % Kernel(1) % Values(:,:,:,:,1), &
-             TableTPJ0ii => OpacityTable % scatt_TP  % Kernel(1) % Values(:,:,:,:,2), &
+  ASSOCIATE( TableTPJ0i  => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,:,:,1), &
+             TableTPJ0ii => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,:,:,2), &
              Tablecmpe   => OpacityTable % EOSTable % DV % Variables(4) % Values, &
              Energy      => Inte_E  % Values )
 
@@ -266,4 +266,4 @@ PROGRAM wlInterpolatePa
   DEALLOCATE( SumTP_nue, SumTP_nuebar )
   DEALLOCATE( InterpolantTP_nue, InterpolantTP_nuebar )
 
-END PROGRAM wlInterpolatePa
+END PROGRAM wlInterpolatePair

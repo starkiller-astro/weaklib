@@ -2,15 +2,12 @@ include ../../../../External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
-     wlOpacityInterpolationTest \
      wlOpacityPerformanceTest \
-     wlEScatteringKernelTest \
-     wlNESKernelTest_Tchem \
-     wlNESKernelTest_RhoTYe \
-     wlNESKernelTest_InteE_RhoTYe \
-     wlInterpolateABNES \
-     wlBruenn85Interpolation \
-     wlInterpolation
+     wlInterpolation \
+     wlInterpolateAb \
+     wlInterpolateIso \
+     wlInterpolateNES \
+     wlInterpolatePair
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -24,52 +21,16 @@ wlReadOpacityTableTest: \
 	$(weaklib) wlReadOpacityTableTest.o \
 	$(LIBRARIES)
 
-wlOpacityInterpolationTest: \
-	$(weaklib) wlOpacityInterpolationTest.o
-	$(FLINKER) $(FLAGS) -o wlOpacityInterpolationTest_$(MACHINE) \
-	$(weaklib) wlOpacityInterpolationTest.o \
-	$(LIBRARIES)
-
 wlOpacityPerformanceTest: \
 	$(weaklib) wlOpacityPerformanceTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityPerformanceTest_$(MACHINE) \
 	$(weaklib) wlOpacityPerformanceTest.o \
 	$(LIBRARIES)
 
-wlEScatteringKernelTest: \
-	$(weaklib) wlEScatteringKernelTest.o
-	$(FLINKER) $(FLAGS) -o wlEScatteringKernelTest_$(MACHINE) \
-	$(weaklib) wlEScatteringKernelTest.o \
-	$(LIBRARIES)
-
 wlGreyTableTest: \
 	$(weaklib) wlGreyTableTest.o
 	$(FLINKER) $(FLAGS) -o wlGreyTableTest_$(MACHINE) \
 	$(weaklib) wlGreyTableTest.o \
-	$(LIBRARIES)
-
-wlNESKernelTest_Tchem: \
-	$(weaklib) wlNESKernelTest_Tchem.o
-	$(FLINKER) $(FLAGS) -o wlNESKernelTest_Tchem_$(MACHINE) \
-	$(weaklib) wlNESKernelTest_Tchem.o \
-	$(LIBRARIES)
-
-wlNESKernelTest_RhoTYe: \
-	$(Weaklib_External) wlNESKernelTest_RhoTYe.o
-	$(FLINKER) $(FLAGS) -o wlNESKernelTest_RhoTYe_$(MACHINE) \
-	$(Weaklib_External) wlNESKernelTest_RhoTYe.o \
-        $(LIBRARIES)
-
-wlNESKernelTest_InteE_RhoTYe: \
-	$(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o
-	$(FLINKER) $(FLAGS) -o wlNESKernelTest_InteE_RhoTYe_$(MACHINE) \
-        $(Weaklib_External) wlNESKernelTest_InteE_RhoTYe.o \
-        $(LIBRARIES)
-
-wlBruenn85Interpolation: \
-	$(Weaklib_External) wlBruenn85Interpolation.o
-	$(FLINKER) $(FLAGS) -o wlBruenn85Interpolation_$(MACHINE) \
-	$(Weaklib_External) wlBruenn85Interpolation.o \
 	$(LIBRARIES)
 
 wlInterpolation: \
@@ -84,12 +45,6 @@ wlInterpolateAb: \
         $(Weaklib_External) wlInterpolateAb.o \
         $(LIBRARIES)
 
-wlInterpolation: \
-	$(Weaklib_External) wlInterpolation.o
-	$(FLINKER) $(FLAGS) -o wlInterpolation_$(MACHINE) \
-	$(Weaklib_External) wlInterpolation.o \
-        $(LIBRARIES)
-
 wlInterpolateIso: \
         $(Weaklib_External) wlInterpolateIso.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateIso_$(MACHINE) \
@@ -102,10 +57,10 @@ wlInterpolateNES: \
         $(Weaklib_External) wlInterpolateNES.o \
         $(LIBRARIES)
 
-wlInterpolatePa: \
-        $(Weaklib_External) wlInterpolatePa.o
-	$(FLINKER) $(FLAGS) -o wlInterpolatePa_$(MACHINE) \
-        $(Weaklib_External) wlInterpolatePa.o \
+wlInterpolatePair: \
+        $(Weaklib_External) wlInterpolatePair.o
+	$(FLINKER) $(FLAGS) -o wlInterpolatePair_$(MACHINE) \
+        $(Weaklib_External) wlInterpolatePair.o \
         $(LIBRARIES)
 
 clean:
@@ -113,165 +68,3 @@ clean:
 
 clobber: clean
 	rm -f *_$(MACHINE)
-
-wlOpacityFieldsTest.o: \
-  wlKindModule.o \
-  wlOpacityTableModule.o \
-  wlOpacityFieldsModule.o \
-  wlGridModule.o \
-  wlOpacityFieldsTest.f90
-
-wlReadOpacityTableTest.o: \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlReadOpacityTableTest.f90
-
-wlOpacityInterpolationTest.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlGridModule.o \
-  wlOpacityInterpolationTest.f90
-
-wlOpacityPerformanceTest.o: \
-  wlKindModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlInterpolationModule.o \
-  wlOpacityPerformanceTest.f90
-
-wlEScatteringKernelTest.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  wlEScatteringKernelTest.f90
-
-wlGreyTableTest.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlGridModule.o \
-  wlGreyTableTest.f90
-
-wlNESKernelTest_Tchem.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  wlNESKernelTest_Tchem.f90
-
-wlNESKernelTest_RhoTYe.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  wlNESKernelTest_RhoTYe.f90
-
-wlNESKernelTest_InteE_RhoTYe.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  B85.o \
-  wlNESKernelTest_InteE_RhoTYe.f90
-
-wlInterpolateABNES.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  B85.o \
-  wlInterpolateABNES.f90
-
-wlOpacityFieldsTest.o: \
-  wlKindModule.o \
-  wlOpacityTableModule.o \
-  wlOpacityFieldsModule.o \
-  wlGridModule.o \
-  wlOpacityFieldsTest.f90
-
-wlReadOpacityTableTest.o: \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlReadOpacityTableTest.f90
-
-wlOpacityInterpolationTest.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlGridModule.o \
-  wlOpacityInterpolationTest.f90
-
-wlOpacityPerformanceTest.o: \
-  wlKindModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlInterpolationModule.o \
-  wlOpacityPerformanceTest.f90
-
-wlEScatteringKernelTest.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  wlEScatteringKernelTest.f90
-
-wlGreyTableTest.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlOpacityTableIOModuleHDF.o \
-  wlGridModule.o \
-  wlGreyTableTest.f90
-
-wlNESKernelTest_Tchem.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  wlNESKernelTest_Tchem.f90
-
-wlNESKernelTest_RhoTYe.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  wlNESKernelTest_RhoTYe.f90
-
-wlNESKernelTest_InteE_RhoTYe.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  B85.o \
-  wlNESKernelTest_InteE_RhoTYe.f90
-
-wlInterpolateABNES.o: \
-  wlKindModule.o \
-  wlInterpolationModule.o \
-  wlOpacityTableModule.o \
-  wlIOModuleHDF.o \
-  wlGridModule.o \
-  B85.o \
-  wlInterpolateABNES.f90

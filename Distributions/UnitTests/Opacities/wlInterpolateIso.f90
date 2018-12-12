@@ -115,14 +115,14 @@ PROGRAM wlInterpolateIso
            "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5" )
   CALL FinalizeHDF( )
 
-  Offset_ES(1,:) = OpacityTable % scatt_Iso % Offsets(1,1:2)
+  Offset_ES(1,:) = OpacityTable % Scat_Iso % Offsets(1,1:2)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
 
-  ASSOCIATE( TableES10  => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,1), &
-             TableES11  => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,2), &
+  ASSOCIATE( TableES10  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,:,:,:,1), &
+             TableES11  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,:,:,:,2), &
               Energy   => Inte_E % Values )
 
   DO i = 1, datasize

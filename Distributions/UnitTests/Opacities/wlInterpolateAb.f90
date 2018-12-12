@@ -15,7 +15,8 @@ PROGRAM wlInterpolateAb
     OpenGroupHDF, &
     CloseGroupHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
-    ReadOpacityTableHDF
+    ReadOpacityTableHDF, &
+    ReadOpacityTableHDF_New
   USE wlGridModule, ONLY: &
     GridType, &
     AllocateGrid, &
@@ -54,7 +55,7 @@ PROGRAM wlInterpolateAb
                                              InterpolantEm2
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                            'InterpolatedAbOutput.h5'
+                                            'InterpolatedAbOutputC.h5'
 !----------------------------------------
 !   interpolated energy 
 !----------------------------------------
@@ -110,18 +111,19 @@ PROGRAM wlInterpolateAb
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, &
-          "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
+  CALL ReadOpacityTableHDF_New( OpacityTable, &
+          "temp.h5" )
+!          "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
   CALL FinalizeHDF( )
 
-  Offset_Em = OpacityTable % thermEmAb % Offsets
+  Offset_Em = OpacityTable % EmAb % Offsets
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
 
-  ASSOCIATE( TableEm1  => OpacityTable % thermEmAb % Absorptivity(1) % Values, &
-             TableEm2  => OpacityTable % thermEmAb % Absorptivity(2) % Values, &
+  ASSOCIATE( TableEm1  => OpacityTable % EmAb % Absorptivity(1) % Values, &
+             TableEm2  => OpacityTable % EmAb % Absorptivity(2) % Values, &
               Energy   => Inte_E % Values )
 
   DO i = 1, datasize

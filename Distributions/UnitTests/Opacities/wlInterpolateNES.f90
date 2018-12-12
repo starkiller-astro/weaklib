@@ -58,7 +58,7 @@ PROGRAM wlInterpolateNES
 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumNES_nue, SumNES_nuebar
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'InterpolatedNESOutput.h5'
+                                             'InterpolatedNESOutputC.h5'
 
 !-------- local variables -------------------------
   REAL(dp)                            :: sum_NES_nue, sum_NES_nuebar, &
@@ -138,18 +138,18 @@ PROGRAM wlInterpolateNES
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-         "wl-Op-SFHo-15-25-50-E40-B85-NES.h5" )
+         "wl-Op-SFHo-15-25-50-E40-B85-NES-E5.h5" )
   CALL FinalizeHDF( )
 
-  Offset_NES = OpacityTable % scatt_NES % Offsets(1,1:2)
+  Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:2)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
   
-  ASSOCIATE( TableNES_H0i => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,1), &
-             TableNES_H0ii => OpacityTable % scatt_NES % Kernel(1) % Values(:,:,:,:,2), &
+  ASSOCIATE( TableNES_H0i => OpacityTable % Scat_NES % Kernel(1) % Values(:,:,:,:,1), &
+             TableNES_H0ii => OpacityTable % Scat_NES % Kernel(1) % Values(:,:,:,:,2), &
              Tablecmpe => OpacityTable % EOSTable % DV % Variables(4) % Values, &
              Energy    => Inte_E  % Values )
 
@@ -194,7 +194,7 @@ PROGRAM wlInterpolateNES
       sum_NES_nue = zero
       sum_NES_nuebar = zero
 
-      DO jj = 2, ii ! ep(jj)
+      DO jj = 2, ii!Inte_nPointE ! ep(jj)
 
         root2p = roots(jj-1) * roots(jj-1) * widths(jj) * 0.5_dp
         root2n = roots(jj) * roots(jj) * widths(jj) * 0.5_dp

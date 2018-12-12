@@ -115,17 +115,17 @@ PROGRAM wlInterpolation
   CALL ReadOpacityTableHDF( OpacityTable, "wl-Op-SFHo-15-25-50-AbIs.h5" )
   CALL FinalizeHDF( )
 
-  Offset_Em = OpacityTable % thermEmAb % Offsets
-  Offset_ES = OpacityTable % scatt_Iso % Offsets(:,1)
+  Offset_Em = OpacityTable % EmAb % Offsets
+  Offset_ES = OpacityTable % Scat_Iso % Offsets(:,1)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
 
-  ASSOCIATE( TableEm1  => OpacityTable % thermEmAb % Absorptivity(1) % Values, &
-             TableEm2  => OpacityTable % thermEmAb % Absorptivity(2) % Values, &
-             TableES1  => OpacityTable % scatt_Iso % Kernel(1) % Values(:,:,:,:,1), &
-             TableES2  => OpacityTable % scatt_Iso % Kernel(2) % Values(:,:,:,:,1), &
+  ASSOCIATE( TableEm1  => OpacityTable % EmAb % Absorptivity(1) % Values, &
+             TableEm2  => OpacityTable % EmAb % Absorptivity(2) % Values, &
+             TableES1  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,:,:,:,1), &
+             TableES2  => OpacityTable % Scat_Iso % Kernel(2) % Values(:,:,:,:,1), &
               Energy   => Inte_E % Values )
 
   DO i = 1, datasize

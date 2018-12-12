@@ -24,7 +24,7 @@ PROGRAM wlOpacityPerformanceTest
     nPoints = 2**20
   REAL(dp) :: &
     tBegin, &
-    tEnd
+    tEND
   REAL(dp), DIMENSION(nPoints) :: &
     E, D, T, Y, &
     rndm_E, &
@@ -65,71 +65,71 @@ PROGRAM wlOpacityPerformanceTest
   CALL RANDOM_SEED( SIZE = n_rndm )
   CALL RANDOM_NUMBER( rndm_E )
 
-  associate &
+  ASSOCIATE &
     ( minE => OpTab % EnergyGrid % MinValue, &
       maxE => OpTab % EnergyGrid % MaxValue )
 
   E(:) = 10**( LOG10(minE) + ( LOG10(maxE) - LOG10(minE) ) * rndm_E )
 
-  end associate
+  END ASSOCIATE
 
   ! --- Initialize Density Points ---
 
   CALL RANDOM_SEED( SIZE = n_rndm )
   CALL RANDOM_NUMBER( rndm_D )
 
-  associate &
+  ASSOCIATE &
     ( minD => OpTab % EOSTable % TS % MinValues(iD), &
       maxD => OpTab % EOSTable % TS % MaxValues(iD) )
 
   D(:) = 10**( LOG10(minD) + ( LOG10(maxD) - LOG10(minD) ) * rndm_D )
 
-  end associate
+  END ASSOCIATE
 
   ! --- Initialize Temperature Points ---
 
   CALL RANDOM_SEED( SIZE = n_rndm )
   CALL RANDOM_NUMBER( rndm_T )
 
-  associate &
+  ASSOCIATE &
     ( minT => OpTab % EOSTable % TS % MinValues(iT), &
       maxT => OpTab % EOSTable % TS % MaxValues(iT) )
 
   T(:) = 10**( LOG10(minT) + ( LOG10(maxT) - LOG10(minT) ) * rndm_T )
 
-  end associate
+  END ASSOCIATE
 
   ! --- Initialize Electron Fraction Points ---
 
   CALL RANDOM_SEED( SIZE = n_rndm )
   CALL RANDOM_NUMBER( rndm_Y )
 
-  associate &
+  ASSOCIATE &
     ( minY => OpTab % EOSTable % TS % MinValues(iY), &
       maxY => OpTab % EOSTable % TS % MaxValues(iY) )
 
   Y(:) = minY + ( maxY - minY ) * rndm_Y
 
-  end associate
+  END ASSOCIATE
 
-  associate &
-    ( Etab => OpTab % EnergyGrid % Values, &
+  ASSOCIATE &
+    ( Etab => OpTab % EnergyGrid % Values,                  &
       Dtab => OpTab % EOSTable % TS % States(iD)  % Values, &
       Ttab => OpTab % EOSTable % TS % States(iT)  % Values, &
       Ytab => OpTab % EOSTable % TS % States(iY)  % Values, &
-      Ctab => OpTab % thermEmAb % Absorptivity(1) % Values, &
-      OS   => OpTab % thermEmAb % Offsets(1) )
+      Ctab => OpTab % EmAb % Absorptivity(1) % Values, &
+      OS   => OpTab % EmAb % Offsets(1) )
 
   CALL CPU_TIME( tBegin )
 
   CALL LogInterpolateSingleVariable &
          ( E, D, T, Y, Etab, Dtab, Ttab, Ytab, LogInterp, OS, Ctab, Interpolant1 )
 
-  CALL CPU_TIME( tEnd )
+  CALL CPU_TIME( tEND )
 
   WRITE(*,*)
   WRITE(*,'(A4,A40,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_4D: ', tEnd - tBegin
+    '', 'LogInterpolateSingleVariable_4D: ', tEND - tBegin
   WRITE(*,*)
 
   CALL CPU_TIME( tBegin )
@@ -137,14 +137,14 @@ PROGRAM wlOpacityPerformanceTest
   CALL LogInterpolateSingleVariable &
          ( E, D, T, Y, Etab, Dtab, Ttab, Ytab, OS, Ctab, Interpolant2 )
 
-  CALL CPU_TIME( tEnd )
+  CALL CPU_TIME( tEND )
 
   WRITE(*,*)
   WRITE(*,'(A4,A40,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_4D_Custom: ', tEnd - tBegin
+    '', 'LogInterpolateSingleVariable_4D_Custom: ', tEND - tBegin
   WRITE(*,*)
 
-  end associate
+  END ASSOCIATE
 
   WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant2 ) )
 
