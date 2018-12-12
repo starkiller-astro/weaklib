@@ -13,7 +13,7 @@ MODULE wlOpacityFieldsModule
 
 !---------------------------------------------
 !
-! OpacityTypeA (Emission / Absorption)
+! OpacityTypeEmAb (Emission / Absorption)
 !   Dependency ( E, rho, T, Ye )
 !     E:   Neutrino Energy
 !     rho: Mass Density
@@ -38,16 +38,6 @@ MODULE wlOpacityFieldsModule
     REAL(dp),           ALLOCATABLE :: Offsets(:)
     TYPE(ValueType_4D), ALLOCATABLE :: Absorptivity(:)
   END TYPE OpacityTypeEmAb
-
-  TYPE, PUBLIC :: OpacityTypeA
-    INTEGER :: nOpacities
-    INTEGER :: nPoints(4)
-    CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
-    CHARACTER(LEN=32),  ALLOCATABLE :: Species(:)
-    CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
-    REAL(dp),           ALLOCATABLE :: Offsets(:)
-    TYPE(ValueType_4D), ALLOCATABLE :: Absorptivity(:)
-  END TYPE
 
 !---------------------------------------------
 !

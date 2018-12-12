@@ -200,7 +200,7 @@ CONTAINS
 
     IF( Verbose )THEN
       WRITE(*,*)
-      WRITE(*,'(A4,A)') ,'', 'Deallocating Opacity Table'
+      WRITE(*,'(A4,A)') '', 'Deallocating Opacity Table'
     END IF
 
     CALL DeAllocateOpacity( OpTab % EmAb ) 

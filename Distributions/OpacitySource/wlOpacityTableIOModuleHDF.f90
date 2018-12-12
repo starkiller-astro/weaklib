@@ -27,7 +27,6 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:&
     OpacityTypeEmAb,              &
-    OpacityTypeA,                 &
     OpacityTypeB,                 &
     OpacityTypeC
   USE wlIOModuleHDF, ONLY:        &
@@ -266,56 +265,6 @@ CONTAINS
              EmAb % Absorptivity(2) % Values(:,:,:,:), group_id, datasize4d )
   
   END SUBROUTINE WriteOpacityTableHDF_EmAb
-
-
-  SUBROUTINE WriteOpacityTableTypeAHDF( EmAb, group_id )
-
-    TYPE(OpacityTypeA), INTENT(in)              :: EmAb
-    INTEGER(HID_T), INTENT(in)                  :: group_id
-
-    INTEGER(HSIZE_T)                            :: datasize1d
-    INTEGER(HSIZE_T), DIMENSION(3)              :: datasize3d   
-    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
-    INTEGER                                     :: i
-    INTEGER, DIMENSION(1)                       :: buffer
-
-    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
-    INTEGER, DIMENSION(1)                       :: tempInteger
-    REAL(dp), DIMENSION(1)                      :: tempReal
-    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
-    INTEGER(HID_T)                              :: subgroup_id
-    
-    datasize1dtemp(1) = 1
-    tempInteger(1) = EmAb % nOpacities
-    CALL WriteHDF&
-         ( "nOpacities", tempInteger, group_id, datasize1dtemp )
-
-    datasize1dtemp(1) = 4
-    CALL WriteHDF&
-         ( "nPoints", EmAb % nPoints, group_id, datasize1dtemp )
-
-    datasize1dtemp(1) = EmAb % nOpacities
-    CALL WriteHDF&
-         ( "Names", EmAb % Names, group_id, datasize1dtemp ) 
-
-    CALL WriteHDF&
-         ( "Units", EmAb % Units, group_id, datasize1dtemp ) 
-
-    CALL WriteHDF&
-         ( "Offsets", EmAb % Offsets, group_id, datasize1dtemp )
-
-    datasize1d = EmAb % nOpacities 
-    datasize4d = EmAb % nPoints
-
-    CALL OpenGroupHDF( "Absorptivity", .true., group_id, subgroup_id )
-    DO i = 1, datasize1d
-      CALL Write4dHDF_double&
-         ( EmAb % Names(i), EmAb % Absorptivity(i) % Values(:,:,:,:),&
-                              subgroup_id, datasize4d )
-    END DO
-    CALL CloseGroupHDF( subgroup_id )
-
-  END SUBROUTINE WriteOpacityTableTypeAHDF
 
 
   SUBROUTINE WriteOpacityTableTypeBHDF( Scat_Iso , group_id )
