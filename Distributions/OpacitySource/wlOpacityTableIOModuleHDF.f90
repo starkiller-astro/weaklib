@@ -53,7 +53,8 @@ CONTAINS
 
   SUBROUTINE WriteOpacityTableHDF_New &
     ( OpacityTable, FileName, WriteOpacity_EmAb_Option, &
-      WriteOpacity_Iso_Option, WriteOpacity_NES_Option, WriteOpacity_Pair_Option )
+      WriteOpacity_Iso_Option, WriteOpacity_NES_Option, &
+      WriteOpacity_Pair_Option )
  
     TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
     CHARACTER(len=*),       INTENT(in)           :: FileName
@@ -300,30 +301,77 @@ CONTAINS
 
 
   SUBROUTINE ReadOpacityTableHDF_New &
-    ( OpacityTable, FileName, ReadOpacity_EmAb_Option )
+    ( OpacityTable, FileName, ReadOpacity_EmAb_Option, &
+      ReadOpacity_Iso_Option, ReadOpacity_NES_Option,  &
+      ReadOpacity_Pair_Option )
  
-    TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
-    CHARACTER(len=*),       INTENT(in)           :: FileName
-    LOGICAL,                INTENT(in), OPTIONAL :: ReadOpacity_EmAb_Option
+    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_EmAb_Option
+    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_Iso_Option
+    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_NES_Option
+    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_Pair_Option
+    CHARACTER(len=*),       INTENT(in)             :: FileName
+    TYPE(OpacityTableType), INTENT(inout)          :: OpacityTable
 
-    INTEGER, DIMENSION(3)                         :: nPointsTS
-    INTEGER                                       :: nPointsE
-    INTEGER                                       :: nPointsEta
-    INTEGER                                       :: nOpacA
-    INTEGER                                       :: nOpacB, nMomB
-    INTEGER                                       :: nOpacB_NES, nMomB_NES
-    INTEGER                                       :: nOpacB_TP, nMomB_TP
-    INTEGER(HID_T)                                :: file_id
-    INTEGER(HID_T)                                :: group_id
-    INTEGER(HID_T)                                :: subgroup_id
-    INTEGER(HSIZE_T), DIMENSION(1)                :: datasize1d
-    INTEGER(HSIZE_T), DIMENSION(4)                :: datasize4d
-    INTEGER, DIMENSION(1)                         :: buffer
-    CHARACTER(LEN=32), DIMENSION(1)               :: buffer_string
-
-    INTEGER                                       :: hdfreadErr
+    LOGICAL            :: ReadOpacity_EmAb
+    LOGICAL            :: ReadOpacity_Iso
+    LOGICAL            :: ReadOpacity_NES
+    LOGICAL            :: ReadOpacity_Pair
+    INTEGER            :: nPointsE
+    INTEGER            :: nPointsEta
+    INTEGER            :: nOpacA
+    INTEGER            :: nOpacB, nMomB
+    INTEGER            :: nOpacB_NES, nMomB_NES
+    INTEGER            :: nOpacB_TP, nMomB_TP
+    INTEGER            :: hdfreadErr
+    INTEGER            :: buffer(1)
+    INTEGER(HID_T)     :: file_id
+    INTEGER(HID_T)     :: group_id
+    INTEGER(HID_T)     :: subgroup_id
+    INTEGER(HSIZE_T)   :: datasize1d(1)
+    INTEGER(HSIZE_T)   :: datasize2d(2)
+    INTEGER(HSIZE_T)   :: datasize4d(4)
+    INTEGER(HSIZE_T)   :: datasize5d(5)
+    CHARACTER(LEN=32)  :: buffer_string(1)
 
     hdfreadErr = 0
+
+    IF( PRESENT( ReadOpacity_EmAb_Option ) )THEN
+      ReadOpacity_EmAb = ReadOpacity_EmAb_Option
+      nOpacA = 2
+    ELSE
+      ReadOpacity_EmAb = .FALSE.
+      nOpacA = 0
+    END IF
+
+    IF( PRESENT( ReadOpacity_Iso_Option ) )THEN
+      ReadOpacity_Iso = ReadOpacity_Iso_Option
+      nOpacB = 2
+      nMomB  = 2
+    ELSE
+      ReadOpacity_Iso = .FALSE.
+      nOpacB = 0
+      nMomB  = 0
+    END IF
+
+    IF( PRESENT( ReadOpacity_NES_Option ) )THEN
+      ReadOpacity_NES = ReadOpacity_NES_Option
+      nOpacB_NES = 2
+      nMomB_NES  = 2
+    ELSE
+      ReadOpacity_NES = .FALSE.
+      nOpacB_NES = 0
+      nMomB_NES  = 0
+    END IF
+
+       IF( PRESENT( ReadOpacity_Pair_Option ) )THEN
+      ReadOpacity_Pair = ReadOpacity_Pair_Option
+      nOpacB_TP = 2
+      nMomB_TP  = 2
+    ELSE
+      ReadOpacity_Pair = .FALSE.
+      nOpacB_TP = 0
+      nMomB_TP  = 0
+    END IF
 
     WRITE(*,*) "           File in"
     WRITE(*,*) " Reading ", FileName, " hdf5 file ... "
@@ -335,18 +383,32 @@ CONTAINS
     nPointsE = buffer(1)
     CALL CloseGroupHDF( group_id )
 
-    CALL AllocateOpacityTable &
-           ( OpacityTable, 2, 0, 0, 0, 0, &
-             0, 0, 0, 0, nPointsE, 0 )
-   
-!    IF( hdfreadErr == 0 ) THEN
-
-      WRITE(*,*) "Now read-in EmAb table"
-      CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
-      CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
+    IF( ReadOpacity_NES .OR. ReadOpacity_Pair ) THEN
+      CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
+      CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
+      nPointsEta = buffer(1)
       CALL CloseGroupHDF( group_id )
+    ELSE
+      nPointsEta = 0
+    END IF
 
-      ! --- IF( ReadOpacity_EmAb )THEN
+    CALL AllocateOpacityTable &
+           ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
+             nOpacB_TP, nMomB_TP, 0, 0, nPointsE, nPointsEta )
+   
+    IF( hdfreadErr .NE. 0 ) THEN
+      WRITE(*,*) "ERROR!"
+      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
+      CALL CloseFileHDF( file_id )
+      STOP
+    END IF
+
+    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
+    CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    IF( ReadOpacity_EmAb )THEN
+      WRITE(*,*) "Now read-in EmAb table"
 
       CALL OpenGroupHDF &
              ( "EmAb_CorrectedAbsorption", .false., file_id, group_id )
@@ -374,13 +436,46 @@ CONTAINS
             group_id, datasize4d )
       CALL CloseGroupHDF( group_id )
 
-      CALL CloseFileHDF( file_id )
-!    ELSE 
-!      WRITE(*,*) "ERROR!"
-!      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
-!      CALL CloseFileHDF( file_id )
-!      STOP
-!    END IF
+    END IF ! ReadOpacity_EmAb
+
+    IF( ReadOpacity_NES ) THEN
+      WRITE(*,*) "Now read-in NES table"
+
+      CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
+      CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
+      CALL CloseGroupHDF( group_id )    
+
+      CALL OpenGroupHDF &
+             ( "NES_MomentsComponents", .false., file_id, group_id )
+
+      datasize2d(1:2) = 2
+      CALL ReadHDF &
+             ( "Offsets", OpacityTable % Scat_NES % Offsets, group_id, datasize2d )
+
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_NES % Units,   group_id, datasize2d )
+
+      datasize5d(1:2) = nPointsE
+      datasize4d(3)   = OpacityTable % TS % nPoints(2) !! fix me
+      datasize5d(4)   = OpacityTable % EtaGrid % nPoints
+      datasize5d(5)   = nMomB_NES
+
+      OpacityTable % Scat_NES % Names(1) = "NES Kernel Moment H0i H0ii";
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_NES % Names(1) ), &
+               OpacityTable % Scat_NES % Kernel(1) % Values, &
+               group_id, datasize5d )
+
+      OpacityTable % Scat_NES % Names(2) = "NES Kernel Moment H1i H1ii";
+      CALL ReadHDF &
+         ( TRIM( OpacityTable % Scat_NES % Names(2) ), &
+            OpacityTable % Scat_NES % Kernel(2) % Values, &
+            group_id, datasize5d )
+      CALL CloseGroupHDF( group_id )
+
+    END IF ! ReadOpacity_NES
+
+    CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadOpacityTableHDF_New
 

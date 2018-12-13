@@ -85,8 +85,8 @@ PROGRAM wlOpacityFieldsTest
   Scat_Iso % Names &
     = [ 'Elastic Scattering on Nuclei  ' ]
 
-  Scat_Iso % Species &
-    = [ 'Electron Neutrino             ' ]
+!  Scat_Iso % Species &
+!    = [ 'Electron Neutrino             ' ]
 
   Scat_Iso % Units &
     = [ 'Per Centimeter                ' ]

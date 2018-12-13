@@ -2,7 +2,6 @@ include ../../../../External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
-     wlOpacityPerformanceTest \
      wlInterpolation \
      wlInterpolateAb \
      wlInterpolateIso \

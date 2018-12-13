@@ -14,7 +14,9 @@ PROGRAM wlReadOpacityTableTest
   TYPE(OpacityTableType) :: OpacityTable
 
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF_New( OpacityTable, "temp.h5" )
+  CALL ReadOpacityTableHDF_New &
+          ( OpacityTable, "temp_EmAb.h5", &
+            ReadOpacity_EmAb_Option = .TRUE. )
   CALL FinalizeHDF( ) 
 
   PRINT*

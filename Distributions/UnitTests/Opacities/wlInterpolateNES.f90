@@ -15,7 +15,7 @@ PROGRAM wlInterpolateNES
     OpenGroupHDF, &
     CloseGroupHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
-    ReadOpacityTableHDF
+    ReadOpacityTableHDF_New
   USE wlGridModule, ONLY: &
     GridType, &
     AllocateGrid, &
@@ -137,8 +137,9 @@ PROGRAM wlInterpolateNES
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, &
-         "wl-Op-SFHo-15-25-50-E40-B85-NES-E5.h5" )
+  CALL ReadOpacityTableHDF_New( OpacityTable, &
+         "temp_NES.h5", ReadOpacity_NES_Option = .TRUE. )
+!         "wl-Op-SFHo-15-25-50-E40-B85-NES-E5.h5" )
   CALL FinalizeHDF( )
 
   Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:2)
@@ -194,7 +195,7 @@ PROGRAM wlInterpolateNES
       sum_NES_nue = zero
       sum_NES_nuebar = zero
 
-      DO jj = 2, ii!Inte_nPointE ! ep(jj)
+      DO jj = 2, ii! Inte_nPointE ! ep(jj)
 
         root2p = roots(jj-1) * roots(jj-1) * widths(jj) * 0.5_dp
         root2n = roots(jj) * roots(jj) * widths(jj) * 0.5_dp
