@@ -378,7 +378,15 @@ CONTAINS
 
     CALL OpenFileHDF( FileName, .false., file_id )
 
+    IF( hdfreadErr .NE. 0 ) THEN
+      WRITE(*,*) "ERROR!"
+      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
+      CALL CloseFileHDF( file_id )
+      STOP
+    END IF
+
     CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
+!   CALL h5dsget_num_scales
     CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
     nPointsE = buffer(1)
     CALL CloseGroupHDF( group_id )
@@ -396,13 +404,6 @@ CONTAINS
            ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
              nOpacB_TP, nMomB_TP, 0, 0, nPointsE, nPointsEta )
    
-    IF( hdfreadErr .NE. 0 ) THEN
-      WRITE(*,*) "ERROR!"
-      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
-      CALL CloseFileHDF( file_id )
-      STOP
-    END IF
-
     CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
     CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
     CALL CloseGroupHDF( group_id )
