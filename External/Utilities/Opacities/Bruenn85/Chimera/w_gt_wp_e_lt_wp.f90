@@ -14,10 +14,6 @@ SUBROUTINE w_gt_wp_e_lt_wp( xl, xu, eta, h0i, h0ii, h1i, h1ii )
 !
 !          f(e)*(1.-f(e+w-wp))*hl  (l = i,ii)
 !
-!      and
-!
-!          f(e+w-wp)*(1.-f(e))*hl  (l = i,ii)
-!
 !  e        : (electron energy)/kt    (integration variable)
 !  w        : (in beam neutrino energy)/kt
 !  wp       : (out beam neutrino energy)/kt

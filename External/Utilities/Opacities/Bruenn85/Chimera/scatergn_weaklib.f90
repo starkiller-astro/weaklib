@@ -8,7 +8,35 @@ SUBROUTINE scatergn_weaklib &
 !    Created:      12/04/2018
 !
 !    Purpose:
+!      To compute the neutrino-electron scattering function elements
+!      h0i/h1i and h1i/h1ii (zeroth and first order), which have the 
+!      forms
 !
+!      h0i/h1i   = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLi(w,w')
+!   
+!      h1ii/h1ii = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLii(w,w') 
+!
+!--------------------------------------------------------------------
+!
+!    The Legendre moments of the neutrino-electron scattering functions
+!    are given by
+!
+!      phiLout = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) 
+!                  * cnes1(n)*houtLi(w,w') + cnes2(n)*houtLii(w,w')
+!
+!    where
+!
+!      houtLi(w,w') = Int{ de * Fe(e) * [1 - F(e + w - w')]
+!                                     * hLo(e,w,w') }
+!
+!                   = (kT)**6 
+!                   * Int{ d(e/kT) * Fe(e/kT) 
+!                          * [1 - F(e/kT + w/kT - w'/kT)] 
+!                          * hLo(e/kT,w/kT,w'/kT) }
+!
+!    and houtLii(w,w') is defined likewise.
+! 
+!    The integrations are performed in subroutine sctgldnv_weaklib.
 !
 !-------------------------------------------------------------------
 
@@ -51,7 +79,7 @@ REAL(double)                :: enuout        ! outgoing neutrino energy/tmev
 REAL(double), PARAMETER     :: coc = 2.d0 * ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**3 * hbar * cvel )
 REAL(double)                :: cxct          ! coc*t**6
 REAL(double)                :: cxc           ! cxc/egrid**2
-
+REAL(double)                 :: fexp          ! exponential function
 REAL(double)                :: hout0i        ! zero moment of outgoing scattering function type i
 REAL(double)                :: hout0ii       ! zero moment of outgoing scattering function type ii
 REAL(double)                :: hout1i        ! first moment of outgoing scattering function type i
@@ -66,6 +94,7 @@ REAL(double), DIMENSION(nez,nez) :: scate_1ii ! first moment of electron scateri
 REAL(double), DIMENSION(nez,nez) :: scatp_1i  ! first moment of positron scatering, type i
 REAL(double), DIMENSION(nez,nez) :: scatp_1ii ! first moment of positron scatering, type ii
 
+EXTERNAL fexp
 !--------------------------------------------------------------------
 !--------------------------------------------------------------------
 
@@ -84,7 +113,7 @@ scatp_1ii(:,:)       = zero
 !--------------------------------------------------------------------
 
   cxct             = coc * (tmev)**6
-
+!!!???????????
 
 !--------------------------------------------------------------------
 !  cxc has dimensions of 1 /[ energy length ]
@@ -96,6 +125,7 @@ scatp_1ii(:,:)       = zero
       cxc            = cxct/wk2(k)
       enuin          = egrid(k)/tmev
 
+!     DO kp = 1,nez !!! fix me
       DO kp = 1,k
 
         enuout       = egrid(kp)/tmev
@@ -103,15 +133,15 @@ scatp_1ii(:,:)       = zero
         CALL sctlgndv_weaklib &
              ( enuin, enuout, eta, hout0i, hout0ii, hout1i, hout1ii )
 
-        scate_0i (k,kp) = hout0i * cxc/wk2(kp)
+        scate_0i (k,kp) = hout0i * cxc/wk2(kp) 
         scate_0ii(k,kp) = hout0ii* cxc/wk2(kp)
-        scate_0i (kp,k) = scate_0i (k,kp) 
-        scate_0ii(kp,k) = scate_0ii(k,kp)
+        scate_0i (kp,k) = scate_0i (k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
+        scate_0ii(kp,k) = scate_0ii(k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
 
         scate_1i (k,kp) = hout1i * cxc/wk2(kp)
         scate_1ii(k,kp) = hout1ii* cxc/wk2(kp)
-        scate_1i (kp,k) = scate_1i (k,kp)
-        scate_1ii(kp,k) = scate_1ii(k,kp)
+        scate_1i (kp,k) = scate_1i (k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
+        scate_1ii(kp,k) = scate_1ii(k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
 
 
       END DO ! kp = 1,k

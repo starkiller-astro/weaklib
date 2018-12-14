@@ -67,10 +67,10 @@ IMPLICIT NONE
    INTEGER                 :: nOpacA = 0
    INTEGER                 :: nOpacB = 0
    INTEGER                 :: nMomB  = 0
-   INTEGER                 :: nOpacB_NES = 0 !2
-   INTEGER                 :: nMomB_NES  = 0 !2
-   INTEGER                 :: nOpacB_TP  = 2 !2
-   INTEGER                 :: nMomB_TP   = 2 !2
+   INTEGER                 :: nOpacB_NES = 2 !2
+   INTEGER                 :: nMomB_NES  = 2 !2
+   INTEGER                 :: nOpacB_TP  = 0 !2
+   INTEGER                 :: nMomB_TP   = 0 !2
    INTEGER                 :: nOpacC = 0
    INTEGER                 :: nMomC  = 0
 !---------------------------------------------------------------------
@@ -396,18 +396,18 @@ PRINT*, 'Filling OpacityTable ...'
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, k_t, i_eta, 1)       &
-          = H0i(:,:) ! H0i was saved as H0i(e,ep)
+          = TRANSPOSE(H0i(:,:)) ! H0i was saved as H0i(e,ep)
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, k_t, i_eta, 2)       &
-          = H0ii(:,:) ! H0ii was saved as H0ii(e,ep)
+          = TRANSPOSE(H0ii(:,:)) ! H0ii was saved as H0ii(e,ep)
 
           OpacityTable % Scat_NES % Kernel(2) % Values &
                ( :, :, k_t, i_eta, 1)       &
-          = H1i(:,:) ! H1i was saved as H1i(e,ep)
+          = TRANSPOSE(H1i(:,:)) ! H1i was saved as H1i(e,ep)
           OpacityTable % Scat_NES % Kernel(2) % Values &
                ( :, :, k_t, i_eta, 2)       &
-          = H1ii(:,:) ! H1ii was saved as H1ii(e,ep)
+          = TRANSPOSE(H1ii(:,:)) ! H1ii was saved as H1ii(e,ep)
 
         END DO  !k_t
 

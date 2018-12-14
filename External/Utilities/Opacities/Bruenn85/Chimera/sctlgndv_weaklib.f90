@@ -10,11 +10,7 @@ SUBROUTINE sctlgndv_weaklib &
 !    Purpose:
 !      To integrate the quantities
 !
-!          f(e)*(1.-f(e+w-wp))*hl  (l = i,ii)
-!
-!      and
-!
-!          f(e+w-wp)*(1.-f(e))*hl  (l = i,ii)
+!          f(e)*(1.-f(e+w-wp))*hl  (l = i,ii) (out)
 !
 !  e                :     (electron energy)/kt    (integration variable)
 !  w                :     (in beam neutrino energy)/kt
@@ -40,15 +36,6 @@ SUBROUTINE sctlgndv_weaklib &
 !  hot1i            : first moment of the "i" out neutrino scattering function
 !  hot1ii           : first moment of the "ii" out neutrino scattering function
 !
-!    Variables that must be passed through common:
-!      none
-!
-!    Modules:
-!  kind_module
-!  numerical_module
-!
-!  nes_module
-!
 !-----------------------------------------------------------------------
 
 USE kind_module
@@ -62,8 +49,8 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(in)    :: e_in          ! zone centered incoming neutrino energy [MeV]
-REAL(double), INTENT(in)    :: e_out         ! zone centered incoming neutrino energy [MeV]
+REAL(double), INTENT(in)    :: e_in          !(in beam neutrino energy)/kt
+REAL(double), INTENT(in)    :: e_out         !(out beam neutrino energy)/kt
 
 !-----------------------------------------------------------------------
 !        Output variables.
