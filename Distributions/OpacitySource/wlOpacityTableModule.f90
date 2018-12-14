@@ -72,27 +72,25 @@ MODULE wlOpacityTableModule
 !=======================================
 
   TYPE, PUBLIC :: OpacityTableType
-    INTEGER                        :: nOpacitiesA
-    INTEGER                        :: nOpacitiesB, nMomentsB
-    INTEGER                        :: nOpacitiesB_NES, nMomentsB_NES
-    INTEGER                        :: nOpacitiesB_TP, nMomentsB_TP
-    INTEGER                        :: nOpacitiesC, nMomentsC
-    INTEGER                        :: nPointsE, nPointsEta
-    INTEGER, DIMENSION(3)          :: nPointsTS
-    TYPE(GridType)                 :: EnergyGrid
-    TYPE(GridType)                 :: EtaGrid     ! -- eletron chemical potential / kT
+    INTEGER        :: nOpacities_EmAb
+    INTEGER        :: nOpacities_Iso,  nMoments_Iso
+    INTEGER        :: nOpacities_NES,  nMoments_NES
+    INTEGER        :: nOpacities_Pair, nMoments_Pair
+    INTEGER        :: nPointsE
+    INTEGER        :: nPointsEta
+    INTEGER        :: nPointsTS(3)
+    TYPE(GridType) :: EnergyGrid
+    TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
-    TYPE(OpacityTypeScat)             :: &
+    TYPE(OpacityTypeScat)          :: &
       Scat_Iso   ! -- Isoenergenic Scattering
-    TYPE(OpacityTypeScat)             :: &
+    TYPE(OpacityTypeScat)          :: &
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
-    TYPE(OpacityTypeScat)             :: &
+    TYPE(OpacityTypeScat)          :: &
       Scat_Pair  ! -- Pair Production
-    TYPE(OpacityTypeC)             :: &
-      Scat_nIso  ! -- Non-Isoenergenic Scattering
   END TYPE OpacityTableType
 
   PUBLIC :: AllocateOpacityTable
@@ -102,8 +100,8 @@ MODULE wlOpacityTableModule
 CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
-    ( OpTab, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
-      nOpacB_TP, nMomB_TP, nOpacC, nMomC, nPointsE, nPointsEta, &
+    ( OpTab, nOpacA, nOpacB, nMomB, nOpac_NES, nMom_NES, &
+      nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
       Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab

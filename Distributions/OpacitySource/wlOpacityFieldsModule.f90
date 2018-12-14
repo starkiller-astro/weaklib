@@ -11,6 +11,32 @@ MODULE wlOpacityFieldsModule
   INTEGER, PUBLIC, PARAMETER :: iNu_x_bar = 4
   INTEGER, PUBLIC, PARAMETER :: nSpecies  = 4
 
+  ! --- NES Scattering Kernels ---
+
+  INTEGER, PUBLIC, PARAMETER :: iHi0  = 1
+  INTEGER, PUBLIC, PARAMETER :: iHii0 = 2
+  INTEGER, PUBLIC, PARAMETER :: iHi1  = 3
+  INTEGER, PUBLIC, PARAMETER :: iHii1 = 4
+
+  ! --- Pair Kernels ---
+
+  INTEGER, PUBLIC, PARAMETER :: iJi0  = 1
+  INTEGER, PUBLIC, PARAMETER :: iJii0 = 2
+  INTEGER, PUBLIC, PARAMETER :: iJi1  = 3
+  INTEGER, PUBLIC, PARAMETER :: iJii1 = 4
+
+  TYPE :: ValueType_3D
+    REAL(dp), ALLOCATABLE :: Values(:,:,:)
+  END type ValueType_3D
+
+  TYPE :: ValueType_4D
+    REAL(dp), ALLOCATABLE :: Values(:,:,:,:)
+  END type ValueType_4D
+
+  TYPE :: ValueType_5D
+    REAL(dp), ALLOCATABLE :: Values(:,:,:,:,:)
+  END type ValueType_5D
+
 !---------------------------------------------
 !
 ! OpacityTypeEmAb (Emission / Absorption)
@@ -22,26 +48,18 @@ MODULE wlOpacityFieldsModule
 !
 !---------------------------------------------
 
-  TYPE :: ValueType_3D
-    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Values
-  END type ValueType_3D
-
-  TYPE :: ValueType_4D
-    REAL(dp), DIMENSION(:,:,:,:), ALLOCATABLE :: Values
-  END type ValueType_4D
-
   TYPE, PUBLIC :: OpacityTypeEmAb
     INTEGER                         :: nOpacities
     INTEGER                         :: nPoints(4)
     CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
     CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
     REAL(dp),           ALLOCATABLE :: Offsets(:)
-    TYPE(ValueType_4D), ALLOCATABLE :: Absorptivity(:)
+    TYPE(ValueType_4D), ALLOCATABLE :: Opacity(:)
   END TYPE OpacityTypeEmAb
 
 !---------------------------------------------
 !
-! OpacityType B (Elastic Scattering)
+! OpacityTypeScat (Elastic Scattering)
 !   Dependency ( E, rho, T, Ye, l )
 !     E:   Neutrino Energy
 !     rho: Mass Density
@@ -49,7 +67,7 @@ MODULE wlOpacityFieldsModule
 !     Ye:  Electron Fraction
 !     l:   Legendre Moment
 !
-! OpacityType B (Inelastic Neutrino-Electron Scattering)
+! OpacityTypeScat (Inelastic Neutrino-Electron Scattering)
 !   Dependency ( E', E, T, Eta, l )
 !     E':  Neutrino Energy
 !     E:   Neutrino Energy
@@ -57,11 +75,7 @@ MODULE wlOpacityFieldsModule
 !     Eta: Electron Chemical Pot. / Temperature
 !     l:   Legendre Moment
 !
-!---------------------------------------------  
-
-  TYPE :: ValueType_5D
-    REAL(dp), DIMENSION(:,:,:,:,:), ALLOCATABLE :: Values
-  END type ValueType_5D
+!---------------------------------------------
 
   TYPE, PUBLIC :: OpacityTypeScat
     INTEGER                         :: nOpacities
@@ -73,28 +87,6 @@ MODULE wlOpacityFieldsModule
     TYPE(ValueType_5D), ALLOCATABLE :: Kernel(:)
   END TYPE OpacityTypeScat
 
-!---------------------------------------------
-!
-! OpacityType C (Inelastic Scattering)
-!   Dependency ( E_out, E_in, rho, T, Ye, l )
-!
-!---------------------------------------------
-
-  TYPE :: ValueType_6D
-    REAL(dp), DIMENSION(:,:,:,:,:,:), ALLOCATABLE :: Values
-  END type ValueType_6D
-
-  TYPE, PUBLIC :: OpacityTypeC
-    INTEGER :: nOpacities
-    INTEGER :: nMoments
-    INTEGER, DIMENSION(4) :: nPoints
-    REAL(dp),          DIMENSION(:), ALLOCATABLE :: Offsets
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Species
-    CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
-    TYPE(ValueType_6D),  DIMENSION(:), ALLOCATABLE :: Kernel
-  END TYPE
-
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
   PUBLIC :: DescribeOpacity
@@ -102,22 +94,20 @@ MODULE wlOpacityFieldsModule
   INTERFACE AllocateOpacity
     MODULE PROCEDURE AllocateOpacityTypeEmAb
     MODULE PROCEDURE AllocateOpacityTypeScat
-    MODULE PROCEDURE AllocateOpacityTypeC
   END INTERFACE AllocateOpacity
 
   INTERFACE DeallocateOpacity
     MODULE PROCEDURE DeallocateOpacityTypeEmAb
     MODULE PROCEDURE DeallocateOpacityTypeScat
-    MODULE PROCEDURE DeallocateOpacityTypeC
   END INTERFACE DeallocateOpacity
 
   INTERFACE DescribeOpacity
     MODULE PROCEDURE DescribeOpacityTypeEmAb
     MODULE PROCEDURE DescribeOpacityTypeScat
-    MODULE PROCEDURE DescribeOpacityTypeC
   END INTERFACE DescribeOpacity
 
 CONTAINS
+
 
   SUBROUTINE AllocateOpacityTypeEmAb( Opacity, nPoints, nOpacities )
 
@@ -288,90 +278,5 @@ CONTAINS
 
   END SUBROUTINE DescribeOpacityTypeScat
 
-
-  SUBROUTINE AllocateOpacityTypeC( Opacity, nPoints, nMoments, nOpacities )
-
-    TYPE(OpacityTypeC), INTENT(inout) :: &
-      Opacity
-    INTEGER, DIMENSION(4), INTENT(in) :: &
-      nPoints
-    INTEGER, INTENT(in) :: &
-      nMoments, &
-      nOpacities
-
-    INTEGER :: i
-
-    Opacity % nOpacities = nOpacities
-    Opacity % nMoments   = nMoments
-    Opacity % nPoints    = nPoints
-
-    ALLOCATE( Opacity % Names(nOpacities) )
-    ALLOCATE( Opacity % Species(nOpacities) )
-    ALLOCATE( Opacity % Units(nOpacities) )
-    ALLOCATE( Opacity % Kernel(nOpacities) )
-
-    DO i = 1, nOpacities
-      ALLOCATE( Opacity % Kernel(i) % Values &
-                  (nPoints(1), nPoints(1), nPoints(2), nPoints(3), &
-                   nPoints(4), nMoments) )
-    END DO
-
-  END SUBROUTINE AllocateOpacityTypeC
-
-
-  SUBROUTINE DeallocateOpacityTypeC( Opacity )
-
-    TYPE(OpacityTypeC), INTENT(inout) :: Opacity
-
-    INTEGER :: i
-
-    DO i = 1, Opacity % nOpacities
-      DEALLOCATE( Opacity % Kernel(i) % Values )
-    END DO
-
-    DEALLOCATE( Opacity % Kernel )
-    DEALLOCATE( Opacity % Units )
-    DEALLOCATE( Opacity % Species )
-    DEALLOCATE( Opacity % Names )
-
-  END SUBROUTINE DeallocateOpacityTypeC
-
-
-  SUBROUTINE DescribeOpacityTypeC( Opacity )
-
-    TYPE(OpacityTypeC), INTENT(in) :: Opacity
-
-    INTEGER :: i
-
-    WRITE(*,*)
-    WRITE(*,'(A4,A)') ' ', 'Opacity Type C'
-    WRITE(*,'(A4,A)') ' ', '--------------'
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nOpacities = ', Opacity % nOpacities
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nMoments   = ', Opacity % nMoments
-    WRITE(*,'(A6,A13,4I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints
-    WRITE(*,'(A6,A13,I10.10)') &
-      ' ', 'DOFs       = ', &
-      Opacity % nOpacities * Opacity % nMoments &
-        * Opacity % nPoints(1) * PRODUCT( Opacity % nPoints )
-
-    DO i = 1, Opacity % nOpacities
-      WRITE(*,*)
-      WRITE(*,'(A6,A8,I3.3,A3,A)') &
-        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Species   = ', TRIM( Opacity % Species(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values )
-    END DO
-    WRITE(*,*)
-
-  END SUBROUTINE DescribeOpacityTypeC
 
 END MODULE wlOpacityFieldsModule
