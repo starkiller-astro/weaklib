@@ -14,25 +14,19 @@ MODULE wlOpacityTableModule
 !      Allocate/DeAllocate table for opacity considered EoS table.
 !
 !-----------------------------------------------------------------------
-!  NOTE: Only Type A interaction applied. Type B and Type C interaction 
-!        needs to be added for future use.
-!-----------------------------------------------------------------------
 !                         Three Opacity Type
 !
-! OpacityType EmAb for  ABEM( rho, T, Ye, E)
+! OpacityType EmAb for  ABEM( rho, T, Ye, E )
 !
 !                e- + p/A <--> v_e + n/A*
 !
-! OpacityType Scat for  ISO( e, rho, T, Ye, l)
+! OpacityType Scat for  ISO( e, l, rho, T, Ye )
 !                        
 !                v_i/anti(v_i) + A --> v_i/anti(v_i) + A 
 !                v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
 !
-! OpacityType C for  NISO( e_in, e_out, rho, T, Ye, l)
-!
-!                e+ + e-  <--> v_i + anti(v_i);   i=e, muon, tau
-!                N + N   <--> N + N + v_i + anti(v_i)
-!                 
+!                  and  NES ( ep, e, l, T, eta )
+!                       Pair( ep, e, l, T, eta )  
 !-----------------------------------------------------------------------
  
   USE wlKindModule, ONLY: &
@@ -45,7 +39,6 @@ MODULE wlOpacityTableModule
   USE wlOpacityFieldsModule, ONLY: &
     OpacityTypeEmAb, &
     OpacityTypeScat, &
-    OpacityTypeC, &
     AllocateOpacity, &
     DeallocateOpacity, &
     DescribeOpacity
@@ -62,7 +55,7 @@ MODULE wlOpacityTableModule
     ThermoStateType, &
     AllocateThermoState, &
     DeAllocateThermoState, &
-    CopyThermoState  
+    CopyThermoState 
 
   IMPLICIT NONE
   PRIVATE
@@ -100,22 +93,21 @@ MODULE wlOpacityTableModule
 CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
-    ( OpTab, nOpacA, nOpacB, nMomB, nOpac_NES, nMom_NES, &
+    ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
       nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
       Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
-    INTEGER,                INTENT(in)           :: nOpacA
-    INTEGER,                INTENT(in)           :: nOpacB, nMomB
-    INTEGER,                INTENT(in)           :: nOpacB_NES, nMomB_NES
-    INTEGER,                INTENT(in)           :: nOpacB_TP, nMomB_TP
-    INTEGER,                INTENT(in)           :: nOpacC, nMomC
+    INTEGER,                INTENT(in)           :: nOpac_EmAb
+    INTEGER,                INTENT(in)           :: nOpac_Iso, nMom_Iso
+    INTEGER,                INTENT(in)           :: nOpac_NES, nMom_NES
+    INTEGER,                INTENT(in)           :: nOpac_Pair, nMom_Pair
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
     LOGICAL :: Verbose
-    INTEGER :: nPointsTemp(4)
+    INTEGER :: nPointsTemp(5)
 
     IF( PRESENT( Verbose_Option ) )THEN
       Verbose = Verbose_Option
@@ -131,15 +123,13 @@ CONTAINS
     CALL ReadEquationOfStateTableHDF &
            ( OpTab % EOSTable, "EquationOfStateTable.h5" )
 
-    OpTab % nOpacitiesA     = nOpacA
-    OpTab % nOpacitiesB     = nOpacB
-    OpTab % nMomentsB       = nMomB
-    OpTab % nOpacitiesB_NES = nOpacB_NES
-    OpTab % nMomentsB_NES   = nMomB_NES
-    OpTab % nOpacitiesB_TP  = nOpacB_TP
-    OpTab % nMomentsB_TP    = nMomB_TP
-    OpTab % nOpacitiesC     = nOpacC
-    OpTab % nMomentsC       = nMomC
+    OpTab % nOpacities_EmAb     = nOpac_EmAb
+    OpTab % nOpacities_Iso     = nOpac_Iso
+    OpTab % nMoments_Iso       = nMom_Iso
+    OpTab % nOpacities_NES = nOpac_NES
+    OpTab % nMoments_NES   = nMom_NES
+    OpTab % nOpacities_Pair  = nOpac_Pair
+    OpTab % nMoments_Pair    = nMom_Pair
     OpTab % nPointsE        = nPointsE
     OpTab % nPointsEta      = nPointsEta
     OpTab % nPointsTS       = OpTab % EOSTable % TS % nPoints
@@ -150,30 +140,32 @@ CONTAINS
 
     CALL CopyThermoState( OpTab % TS, OpTab % EOSTable % TS )
 
-    ASSOCIATE( nPoints => OpTab % EOSTable % nPoints )
+    ASSOCIATE( nPoints => OpTab % EOSTable % nPoints, &
+               iT      => OpTab % EOSTable % TS % Indices % iT )
 
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
 
     CALL AllocateOpacity &
-           ( OpTab % EmAb, nPointsTemp, nOpacities = nOpacA )
+           ( OpTab % EmAb, nPointsTemp(1:4), nOpacities = nOpac_EmAb )
 
+    nPointsTemp(1:5) = [ nPointsE, nMom_Iso, nPoints ]
     CALL AllocateOpacity &
-           ( OpTab % Scat_Iso, nPointsTemp, &
-             nMoments = nMomB, nOpacities = nOpacB )
-
-    CALL AllocateOpacity &
-           ( OpTab % Scat_nIso, nPointsTemp, &
-             nMoments = nMomC, nOpacities = nOpacC )
+           ( OpTab % Scat_Iso, nPointsTemp(1:5), &
+             nMoments = nMom_Iso, nOpacities = nOpac_Iso )
   
-    nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(2), nPointsEta]
+    nPointsTemp(1:5) = &
+           [ nPointsE, nPointsE, nMom_NES, nPoints(iT), nPointsEta]
 
     CALL AllocateOpacity &
-           ( OpTab % Scat_NES, nPointsTemp, &
-             nMoments = nMomB_NES, nOpacities = nOpacB_NES )
+           ( OpTab % Scat_NES, nPointsTemp(1:5), &
+             nMoments = nMom_NES, nOpacities = nOpac_NES )
+
+    nPointsTemp(1:5) = &
+           [ nPointsE, nPointsE, nMom_Pair, nPoints(iT), nPointsEta]
 
     CALL AllocateOpacity &
-           ( OpTab % Scat_Pair, nPointsTemp, &
-             nMoments = nMomB_TP, nOpacities = nOpacB_TP )
+           ( OpTab % Scat_Pair, nPointsTemp(1:5), &
+             nMoments = nMom_Pair, nOpacities = nOpac_Pair )
 
     END ASSOCIATE ! nPoints
 
@@ -205,7 +197,6 @@ CONTAINS
     CALL DeAllocateOpacity( OpTab % Scat_Iso )
     CALL DeAllocateOpacity( OpTab % Scat_NES )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
-    CALL DeAllocateOpacity( OpTab % Scat_nIso )
 
     CALL DeAllocateThermoState( OpTab % TS )
 
@@ -262,7 +253,6 @@ CONTAINS
     CALL DescribeOpacity( OpTab % Scat_Iso )
     CALL DescribeOpacity( OpTab % Scat_NES )
     CALL DescribeOpacity( OpTab % Scat_Pair )
-    CALL DescribeOpacity( OpTab % Scat_nIso )
 
   END SUBROUTINE DescribeOpacityTable
 

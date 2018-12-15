@@ -2,7 +2,6 @@ include ../../../../External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
-     wlInterpolation \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
@@ -30,12 +29,6 @@ wlGreyTableTest: \
 	$(weaklib) wlGreyTableTest.o
 	$(FLINKER) $(FLAGS) -o wlGreyTableTest_$(MACHINE) \
 	$(weaklib) wlGreyTableTest.o \
-	$(LIBRARIES)
-
-wlInterpolation: \
-	$(Weaklib_External) wlInterpolation.o
-	$(FLINKER) $(FLAGS) -o wlInterpolation_$(MACHINE) \
-	$(Weaklib_External) wlInterpolation.o \
 	$(LIBRARIES)
 
 wlInterpolateAb: \

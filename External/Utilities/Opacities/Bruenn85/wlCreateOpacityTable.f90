@@ -50,7 +50,7 @@ PROGRAM wlCreateOpacityTable
       AllocateOpacityTable, &
       DescribeOpacityTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
-      WriteOpacityTableHDF_New
+      WriteOpacityTableHDF
   USE wlExtPhysicalConstantsModule, ONLY: kMeV
   USE wlExtNumericalModule, ONLY: epsilon
   USE B85_scattIso
@@ -64,15 +64,13 @@ IMPLICIT NONE
 
    INTEGER*4 today(3), now(3)    
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpacA = 0
-   INTEGER                 :: nOpacB = 0
-   INTEGER                 :: nMomB  = 0
-   INTEGER                 :: nOpacB_NES = 2 !2
-   INTEGER                 :: nMomB_NES  = 2 !2
-   INTEGER                 :: nOpacB_TP  = 0 !2
-   INTEGER                 :: nMomB_TP   = 0 !2
-   INTEGER                 :: nOpacC = 0
-   INTEGER                 :: nMomC  = 0
+   INTEGER                 :: nOpac_EmAb = 0
+   INTEGER                 :: nOpac_Iso= 0
+   INTEGER                 :: nMom_Iso  = 0
+   INTEGER                 :: nOpac_NES = 0 !1
+   INTEGER                 :: nMom_NES  = 0 !4
+   INTEGER                 :: nOpac_Pair  = 1 !1
+   INTEGER                 :: nMom_Pair   = 4 !4
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
@@ -108,16 +106,16 @@ IMPLICIT NONE
 
    CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
-            ( OpacityTable, nOpacA, nOpacB, nMomB, &
-              nOpacB_NES, nMomB_NES, nOpacB_TP, nMomB_TP, &
-              nOpacC, nMomC, nPointsE, nPointsEta ) 
+            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
+              nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
+              nPointsE, nPointsEta ) 
    CALL FinalizeHDF( )
 
-! -- Set OpacityTableTypeA EmAb  
+! -- Set OpacityTableTypeEmAb  
 
-   IF( nOpacA .gt. 0 ) THEN
+   IF( nOpac_EmAb .gt. 0 ) THEN
 
-   OpacityTable % EmAb % nOpacities = nOpacA
+   OpacityTable % EmAb % nOpacities = nOpac_EmAb
 
    OpacityTable % EmAb % nPoints(1) = nPointsE
 
@@ -132,65 +130,61 @@ IMPLICIT NONE
                                   'Per Centimeter              '/) 
 
    END IF
-! -- Set OpacityTableTypeB Scat_Iso
-   IF( nOpacB .gt. 0 ) THEN
+! -- Set OpacityTableTypeScat Iso
+   IF( nOpac_Iso.gt. 0 ) THEN
 
-   OpacityTable % Scat_Iso % nOpacities = nOpacB
+   OpacityTable % Scat_Iso % nOpacities = nOpac_Iso
    
-   OpacityTable % Scat_Iso % nMoments = nMomB
+   OpacityTable % Scat_Iso % nMoments = nMom_Iso
    
    OpacityTable % Scat_Iso % nPoints(1) = nPointsE
-
-   OpacityTable % Scat_Iso % nPoints(2:4) = OpacityTable % nPointsTS
+   OpacityTable % Scat_Iso % nPoints(2) = nMom_Iso
+   OpacityTable % Scat_Iso % nPoints(3:5) = OpacityTable % nPointsTS
 
    OpacityTable % Scat_Iso % Names = &
                                 (/'Electron Neutrino           ',  &
-                                  'Electron AntiNeutrino       '/)
+                                  'Electron Antineutrino       '/)
 
    OpacityTable % Scat_Iso % Units = &
                                 (/'Per Centimeter              ',  &
                                   'Per Centimeter              '/)
    END IF
 
-! -- Set OpacityTableTypeB Scat_NES
-   IF( nOpacB_NES .gt. 0 ) THEN
+! -- Set OpacityTableTypeScat NES
+   IF( nOpac_NES .gt. 0 ) THEN
 
-   OpacityTable % Scat_NES % nOpacities = nOpacB_NES
+   OpacityTable % Scat_NES % nOpacities = nOpac_NES
 
-   OpacityTable % Scat_NES % nMoments   = nMomB_NES
+   OpacityTable % Scat_NES % nMoments   = nMom_NES
 
    OpacityTable % Scat_NES % nPoints(1) = nPointsE
    OpacityTable % Scat_NES % nPoints(2) = nPointsE
-   OpacityTable % Scat_NES % nPoints(3) = OpacityTable % nPointsTS(2)
-   OpacityTable % Scat_NES % nPoints(4) = nPointsEta
+   OpacityTable % Scat_NES % nPoints(3) = nMom_NES
+   OpacityTable % Scat_NES % nPoints(4) = OpacityTable % nPointsTS(2)
+   OpacityTable % Scat_NES % nPoints(5) = nPointsEta
 
    OpacityTable % Scat_NES % Names = &
-                                (/'NES Kernel Moment H0i H0ii   ', &
-                                  'NES Kernel Moment H1i H1ii   '/)
+                                (/'Kernels'/)
 
    OpacityTable % Scat_NES % Units = &
-                                (/'Per Centimeter Per MeV^3    ',  &
-                                  'Per Centimeter Per MeV^3    '/)
+                                (/'Per Centimeter Per MeV^3'/)
    END IF
-! -- Set OpacityTableTypeB Scat_Pair
+! -- Set OpacityTableTypeScat Pair
 
-   IF( nOpacB_TP .gt. 0 ) THEN
-   OpacityTable % Scat_Pair % nOpacities = nOpacB_TP
+   IF( nOpac_Pair .gt. 0 ) THEN
+   OpacityTable % Scat_Pair % nOpacities = nOpac_Pair
 
-   OpacityTable % Scat_Pair % nMoments   = nMomB_TP
+   OpacityTable % Scat_Pair % nMoments   = nMom_Pair
 
    OpacityTable % Scat_Pair % nPoints(1) = nPointsE
    OpacityTable % Scat_Pair % nPoints(2) = nPointsE
-   OpacityTable % Scat_Pair % nPoints(3) = OpacityTable % nPointsTS(2)
-   OpacityTable % Scat_Pair % nPoints(4) = nPointsEta
+   OpacityTable % Scat_Pair % nPoints(3) = nMom_Pair
+   OpacityTable % Scat_Pair % nPoints(4) = OpacityTable % nPointsTS(2)
+   OpacityTable % Scat_Pair % nPoints(5) = nPointsEta
 
-   OpacityTable % Scat_Pair % Names = &
-                                (/'Pair A. Kernel Mome J0i J0ii',&
-                                  'Pair A. Kernel Mome J1i J1ii'/)
+   OpacityTable % Scat_Pair % Names = (/'Kernels'/)
 
-   OpacityTable % Scat_Pair % Units = &
-                                (/'Per Centimeter Per MeV^3    ',&
-                                  'Per Centimeter Per MeV^3    '/)
+   OpacityTable % Scat_Pair % Units = (/'Per Centimeter Per MeV^3'/)
    END IF
 !-----------------------------   
 ! Generate E grid from limits
@@ -252,7 +246,7 @@ PRINT*, 'Filling OpacityTable ...'
        DVar    => OpacityTable % EOSTable % DV % Variables  )
 
 !-----------------  ECAPEM -------------------- 
-  IF( nOpacA .gt. 0 ) THEN
+  IF( ( nOpac_EmAb + nOpac_Iso ) .gt. 0 ) THEN
   PRINT*, 'Calculating EmAb and Elastic Scattering Kernel ...'
 
    DO l_ye = 1, OpacityTable % nPointsTS(iYe)
@@ -315,7 +309,7 @@ PRINT*, 'Filling OpacityTable ...'
   
             bb  = (chem_e + chem_p - chem_n)/(T*kMev)
        
-         DO i_r = 1, nOpacA
+         DO i_r = 1, nOpac_EmAb
           
              iaefnp = 1
              i_aeps = 0
@@ -334,7 +328,7 @@ PRINT*, 'Filling OpacityTable ...'
                     absor, emit, ye, nPointsE )
 
              DO i_e = 1, OpacityTable % nPointsE
-                OpacityTable % EmAb % Absorptivity(i_r) % &
+                OpacityTable % EmAb % Opacity(i_r) % &
                         Values (i_e, j_rho, k_t, l_ye) &
                 = absor(i_e) + emit(i_e)
              END DO  !i_e
@@ -342,16 +336,16 @@ PRINT*, 'Filling OpacityTable ...'
          END DO !i_r
 
 !----------------  Scat_Iso -----------------------
-         DO i_rb = 1, nOpacB
+         DO i_rb = 1, nOpac_Iso
 
            CALL scatical_weaklib &
            ( i_rb, OpacityTable % EnergyGrid % Values, &
              nPointsE, rho, T, xn, xp, xhe, xheavy, A, Z, cok )
 
-           DO t_m = 1, nMomB
+           DO t_m = 1, nMom_Iso
 
              OpacityTable % Scat_Iso % Kernel(i_rb) % Values &
-             ( :, j_rho, k_t, l_ye, t_m )  = cok(:,t_m) 
+             ( :, t_m, j_rho, k_t, l_ye )  = cok(:,t_m) 
 
            END DO !t_m         
 
@@ -362,23 +356,24 @@ PRINT*, 'Filling OpacityTable ...'
    END DO  !l_ye
 
 !------- EmAb % Offsets
-   DO i_r = 1, nOpacA  
-     minvar = MINVAL( OpacityTable % EmAb % Absorptivity(i_r) % Values )
+   DO i_r = 1, nOpac_EmAb  
+     minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
      OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
    END DO
 
 !------- Scat_Iso % Offsets
-   DO i_r = 1, nOpacB
-     DO t_m = 1, nMomB
+   DO i_r = 1, nOpac_Iso
+     DO t_m = 1, nMom_Iso
        minvar = MINVAL( OpacityTable % Scat_Iso % Kernel(i_r) &
-                       % Values(:,:,:,:,t_m ) )
+                       % Values(:,t_m,:,:,:) )
        OpacityTable % Scat_Iso % Offsets(i_r, t_m) =           &
                       -2.d0 * MIN( 0.d0, minvar )
      END DO
-   END DO 
+   END DO
+
    END IF
 !----------------  Scat_NES -----------------------
-  IF( nOpacB_NES .gt. 0 ) THEN
+  IF( nOpac_NES .gt. 0 ) THEN
   PRINT*, 'Calculating Scat_NES Kernel ... '
 
       DO i_eta = 1, nPointsEta
@@ -395,18 +390,18 @@ PRINT*, 'Filling OpacityTable ...'
                  TMeV, eta, H0i, H0ii, H1i, H1ii )
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
-               ( :, :, k_t, i_eta, 1)       &
+               ( :, :, 1, k_t, i_eta )       &
           = TRANSPOSE(H0i(:,:)) ! H0i was saved as H0i(e,ep)
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
-               ( :, :, k_t, i_eta, 2)       &
+               ( :, :, 2, k_t, i_eta)       &
           = TRANSPOSE(H0ii(:,:)) ! H0ii was saved as H0ii(e,ep)
 
-          OpacityTable % Scat_NES % Kernel(2) % Values &
-               ( :, :, k_t, i_eta, 1)       &
+          OpacityTable % Scat_NES % Kernel(1) % Values &
+               ( :, :, 3, k_t, i_eta )       &
           = TRANSPOSE(H1i(:,:)) ! H1i was saved as H1i(e,ep)
-          OpacityTable % Scat_NES % Kernel(2) % Values &
-               ( :, :, k_t, i_eta, 2)       &
+          OpacityTable % Scat_NES % Kernel(1) % Values &
+               ( :, :, 4, k_t, i_eta )       &
           = TRANSPOSE(H1ii(:,:)) ! H1ii was saved as H1ii(e,ep)
 
         END DO  !k_t
@@ -414,11 +409,11 @@ PRINT*, 'Filling OpacityTable ...'
       END DO !i_eta
 
 !------- Scat_NES % Offsets
-    DO i_rb = 1, nOpacB_NES
-      DO t_m = 1, nMomB_NES
+    DO i_rb = 1, nOpac_NES
+      DO t_m = 1, nMom_NES
 
        minvar = MINVAL( OpacityTable % Scat_NES % Kernel(i_rb) &
-                       % Values(:,:,:,:,t_m ) )
+                       % Values(:,:,t_m,:,: ) )
        OpacityTable % Scat_NES % Offsets(i_rb, t_m) =          &
                       -2.d0 * MIN( 0.d0, minvar ) 
 
@@ -428,7 +423,7 @@ PRINT*, 'Filling OpacityTable ...'
     
 !----------------  Scat_Pair -----------------------
 
-  IF( nOpacB_TP .gt. 0 ) THEN
+  IF( nOpac_Pair .gt. 0 ) THEN
   PRINT*, 'Calculating Scat_Pair Kernel ... '
 
       DO i_eta = 1, nPointsEta
@@ -451,19 +446,19 @@ PRINT*, 'Filling OpacityTable ...'
                     chem_e, T, j0i, j0ii, j1i, j1ii )
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
-                          ( i_ep, i_e, k_t, i_eta, 1 )       &
+                          ( i_ep, i_e, 1, k_t, i_eta )       &
               = j0i
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
-                          ( i_ep, i_e, k_t, i_eta, 2 )       &
+                          ( i_ep, i_e, 2, k_t, i_eta )       &
               = j0ii
 
-             OpacityTable % Scat_Pair % Kernel(2) % Values  &
-                          ( i_ep, i_e, k_t, i_eta, 1 )       &
+             OpacityTable % Scat_Pair % Kernel(1) % Values  &
+                          ( i_ep, i_e, 3, k_t, i_eta )       &
               = j1i
 
-             OpacityTable % Scat_Pair % Kernel(2) % Values  &
-                          ( i_ep, i_e, k_t, i_eta, 2 )       &
+             OpacityTable % Scat_Pair % Kernel(1) % Values  &
+                          ( i_ep, i_e, 4, k_t, i_eta )       &
               = j1ii
 
             END DO ! i_ep
@@ -472,11 +467,11 @@ PRINT*, 'Filling OpacityTable ...'
       END DO !i_eta
 
 !------- Scat_Pair % Offsets
-  DO i_rb = 1, nOpacB_TP
-    DO t_m = 1, nMomB_TP
+  DO i_rb = 1, nOpac_Pair
+    DO t_m = 1, nMom_Pair
 
        minvar = MINVAL( OpacityTable % Scat_Pair % Kernel(i_rb) &
-                       % Values(:,:,:,:,t_m ) )
+                       % Values(:,:,t_m,:,:) )
        OpacityTable % Scat_Pair % Offsets(i_rb, t_m) =          &
                       -2.d0 * MIN( 0.d0, minvar ) 
     END DO ! t_m
@@ -496,66 +491,66 @@ PRINT*, 'Filling OpacityTable ...'
 
   WRITE(*,*) 'LOG the whole table with relevant offset for storage'
 
-  DO i_r = 1, nOpacA
-     OpacityTable % EmAb % Absorptivity(i_r) % Values&
-     = LOG10( OpacityTable % EmAb % Absorptivity(i_r) % &
+  DO i_r = 1, nOpac_EmAb
+     OpacityTable % EmAb % Opacity(i_r) % Values&
+     = LOG10( OpacityTable % EmAb % Opacity(i_r) % &
               Values + OpacityTable % EmAb % Offsets(i_r) + epsilon )
   END DO  !i_r
 
-  DO i_rb = 1, nOpacB
-    DO t_m = 1, nMomB
-      OpacityTable % Scat_Iso % Kernel(i_rb) % Values(:,:,:,:,t_m) &
-      = LOG10 ( OpacityTable % Scat_Iso % Kernel(i_rb) % Values(:,:,:,:,t_m) &
+  DO i_rb = 1, nOpac_Iso
+    DO t_m = 1, nMom_Iso
+      OpacityTable % Scat_Iso % Kernel(i_rb) % Values(:,t_m,:,:,:) &
+      = LOG10 ( OpacityTable % Scat_Iso % Kernel(i_rb) % Values(:,t_m,:,:,:) &
                 + OpacityTable % Scat_Iso % Offsets(i_rb,t_m) + epsilon )
     END DO ! t_m
   END DO ! i_rb
 
-  DO i_rb = 1, nOpacB_NES
-    DO t_m = 1, nMomB_NES
-      OpacityTable % Scat_NES % Kernel(i_rb) % Values(:,:,:,:,t_m) &
-      = LOG10 ( OpacityTable % Scat_NES % Kernel(i_rb) % Values(:,:,:,:,t_m) &
+  DO i_rb = 1, nOpac_NES
+    DO t_m = 1, nMom_NES
+      OpacityTable % Scat_NES % Kernel(i_rb) % Values(:,:,t_m,:,:) &
+      = LOG10 ( OpacityTable % Scat_NES % Kernel(i_rb) % Values(:,:,t_m,:,:) &
                 + OpacityTable % Scat_NES % Offsets(i_rb, t_m) + epsilon )
     END DO
   END DO !i_rb
 
-  DO i_rb = 1, nOpacB_TP
-    DO t_m = 1, nMomB_TP
-      OpacityTable % Scat_Pair % Kernel(i_rb) % Values(:,:,:,:,t_m) &
-      = LOG10 ( OpacityTable % Scat_Pair % Kernel(i_rb) % Values(:,:,:,:,t_m) &
+  DO i_rb = 1, nOpac_Pair
+    DO t_m = 1, nMom_Pair
+      OpacityTable % Scat_Pair % Kernel(i_rb) % Values(:,:,t_m,:,:) &
+      = LOG10 ( OpacityTable % Scat_Pair % Kernel(i_rb) % Values(:,:,t_m,:,:) &
                 + OpacityTable % Scat_Pair % Offsets(i_rb, t_m) + epsilon )
     END DO
   END DO !i_rb
 
 ! -- write into hdf5 file
 
-  IF( nOpacA > 0 ) THEN
+  IF( nOpac_EmAb > 0 ) THEN
     CALL InitializeHDF( )
     WRITE(*,*) 'Write EmAb data into file temp_EmAb.h5 '
-    CALL WriteOpacityTableHDF_New &
+    CALL WriteOpacityTableHDF &
          ( OpacityTable, "temp_EmAb.h5", WriteOpacity_EmAb_Option = .true. )
     CALL FinalizeHDF( )
   END IF
 
-  IF( nOpacB > 0 ) THEN
+  IF( nOpac_Iso> 0 ) THEN
     CALL InitializeHDF( )
     WRITE(*,*) 'Write Iso data into file temp_Iso.h5 '
-    CALL WriteOpacityTableHDF_New &
+    CALL WriteOpacityTableHDF &
          ( OpacityTable, "temp_Iso.h5", WriteOpacity_Iso_Option = .true. )
     CALL FinalizeHDF( )
   END IF
  
-  IF( nOpacB_NES > 0 ) THEN
+  IF( nOpac_NES > 0 ) THEN
     CALL InitializeHDF( )
     WRITE(*,*) 'Write Iso data into file temp_NES.h5 '
-    CALL WriteOpacityTableHDF_New &
+    CALL WriteOpacityTableHDF &
          ( OpacityTable, "temp_NES.h5", WriteOpacity_NES_Option = .true. )
     CALL FinalizeHDF( )
   END IF
 
-  IF( nOpacB_TP > 0 ) THEN
+  IF( nOpac_Pair > 0 ) THEN
     CALL InitializeHDF( )
     WRITE(*,*) 'Write Iso data into file temp_Pair.h5 '
-    CALL WriteOpacityTableHDF_New &
+    CALL WriteOpacityTableHDF &
          ( OpacityTable, "temp_Pair.h5", WriteOpacity_Pair_Option = .true. )
     CALL FinalizeHDF( )
   END IF

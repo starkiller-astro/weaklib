@@ -39,22 +39,24 @@ PROGRAM wlInterpolateIso
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_r, Inte_rho, Inte_T, &
                                          Inte_Ye, database
   REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
-  REAL(dp), DIMENSION(Inte_nPointE)   :: bufferES0, bufferES1
+  REAL(dp), DIMENSION(Inte_nPointE)   :: bufferIso10, bufferIso11, &
+                                         bufferIso20, bufferIso21
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: a
   INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
-  REAL(dp), DIMENSION(1,2)            :: Offset_ES
+  REAL(dp), DIMENSION(2,2)            :: Offset_Iso
 
 !-------- variables for output ------------------------
   INTEGER(HID_T)                          :: file_id, group_id
   INTEGER(HSIZE_T)                        :: datasize1d(1)
   INTEGER(HSIZE_T), DIMENSION(2)          :: datasize2d
 
-  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: InterpolantES1
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: InterpolantIso1
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: InterpolantIso2
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                           'InterpolatedIsoOutput.h5'
+                                           'InterpolatedIsoOutputC.h5'
 
 !----------------------------------------
 !   interpolated energy 
@@ -91,7 +93,8 @@ PROGRAM wlInterpolateIso
   ALLOCATE( Inte_rho( datasize ) )
   ALLOCATE( Inte_T  ( datasize ) )
   ALLOCATE( Inte_Ye ( datasize ) )
-  ALLOCATE( InterpolantES1( Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantIso1( Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantIso2( Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
   WRITE(*, Format3 ) database
@@ -112,19 +115,22 @@ PROGRAM wlInterpolateIso
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF &
           ( OpacityTable, &
-           "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5" )
+           "temp_Iso.h5", ReadOpacity_Iso_Option = .true. )
   CALL FinalizeHDF( )
 
-  Offset_ES(1,:) = OpacityTable % Scat_Iso % Offsets(1,1:2)
+  Offset_Iso(1:2,1:2) = OpacityTable % Scat_Iso % Offsets(1:2,1:2)
 
 !--------------------------------------
 !   do interpolation
 !--------------------------------------
 
-  ASSOCIATE( TableES10  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,:,:,:,1), &
-             TableES11  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,:,:,:,2), &
-              Energy   => Inte_E % Values )
-
+  ASSOCIATE&
+  ( TableES10  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,1,:,:,:), &
+    TableES11  => OpacityTable % Scat_Iso % Kernel(1) % Values(:,2,:,:,:), &
+    TableES20  => OpacityTable % Scat_Iso % Kernel(2) % Values(:,1,:,:,:), &
+    TableES21  => OpacityTable % Scat_Iso % Kernel(2) % Values(:,2,:,:,:), &
+       Energy   => Inte_E % Values )
+  
   DO i = 1, datasize
 
     buffer1(:) = Inte_rho(i)
@@ -137,7 +143,25 @@ PROGRAM wlInterpolateIso
              OpacityTable % EOSTable % TS % States(1) % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_ES(1,1), TableES10, bufferES0 )
+             LogInterp, Offset_Iso(1,1), TableES10, bufferIso10 )
+
+     CALL LogInterpolateSingleVariable &
+           ( Energy, buffer1, buffer2, buffer3, &
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset_Iso(1,2), TableES11, bufferIso11 )
+
+     InterpolantIso1(:,i) = bufferIso10 + bufferIso11
+
+     CALL LogInterpolateSingleVariable &
+           ( Energy, buffer1, buffer2, buffer3, &
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EOSTable % TS % States(1) % Values, &
+             OpacityTable % EOSTable % TS % States(2) % Values, &
+             OpacityTable % EOSTable % TS % States(3) % Values, &
+             LogInterp, Offset_Iso(2,1), TableES20, bufferIso20 )
 
     CALL LogInterpolateSingleVariable &
            ( Energy, buffer1, buffer2, buffer3, &
@@ -145,9 +169,9 @@ PROGRAM wlInterpolateIso
              OpacityTable % EOSTable % TS % States(1) % Values, &
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_ES(1,2), TableES11, bufferES1)
+             LogInterp, Offset_Iso(2,2), TableES21, bufferIso21 )
 
-     InterpolantES1(:,i) = bufferES0 + bufferES1
+     InterpolantIso2(:,i) = bufferIso20 + bufferIso21
 
    END DO ! i
 
@@ -174,7 +198,8 @@ PROGRAM wlInterpolateIso
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
   datasize2d(2) = datasize 
   datasize2d(1) = Inte_E % nPoints
-  CALL WriteHDF( "ES_Electron", InterpolantES1, group_id, datasize2d )
+  CALL WriteHDF( "Iso Neutrino", InterpolantIso1, group_id, datasize2d )
+  CALL WriteHDF( "Iso Antineutrino", InterpolantIso2, group_id, datasize2d )
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
@@ -183,6 +208,6 @@ PROGRAM wlInterpolateIso
   PRINT*, 'Result was written into ', outfilename
 
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, database )
-  DEALLOCATE( InterpolantES1 )
+  DEALLOCATE( InterpolantIso1 )
  
 END PROGRAM wlInterpolateIso

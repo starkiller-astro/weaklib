@@ -60,27 +60,27 @@ MODULE wlOpacityFieldsModule
 !---------------------------------------------
 !
 ! OpacityTypeScat (Elastic Scattering)
-!   Dependency ( E, rho, T, Ye, l )
+!   Dependency ( E, l, rho, T, Ye )
 !     E:   Neutrino Energy
+!     l:   Legendre Moment
 !     rho: Mass Density
 !     T:   Temperature
 !     Ye:  Electron Fraction
-!     l:   Legendre Moment
 !
 ! OpacityTypeScat (Inelastic Neutrino-Electron Scattering)
-!   Dependency ( E', E, T, Eta, l )
+!   Dependency ( E', E, l, T, Eta )
 !     E':  Neutrino Energy
 !     E:   Neutrino Energy
+!     l:   Legendre Moment
 !     T:   Temperature
 !     Eta: Electron Chemical Pot. / Temperature
-!     l:   Legendre Moment
 !
 !---------------------------------------------
 
   TYPE, PUBLIC :: OpacityTypeScat
     INTEGER                         :: nOpacities
     INTEGER                         :: nMoments
-    INTEGER                         :: nPoints(4)
+    INTEGER                         :: nPoints(5)
     CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
     CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
     REAL(dp),           ALLOCATABLE :: Offsets(:,:)
@@ -123,11 +123,11 @@ CONTAINS
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
     ALLOCATE( Opacity % Offsets(nOpacities) )
-    ALLOCATE( Opacity % Absorptivity(nOpacities) )
+    ALLOCATE( Opacity % Opacity(nOpacities) )
 
     DO i = 1, nOpacities
 
-      ALLOCATE( Opacity % Absorptivity(i) % Values &
+      ALLOCATE( Opacity % Opacity(i) % Values &
                   (nPoints(1), nPoints(2), nPoints(3), nPoints(4)) )
     END DO
 
@@ -141,10 +141,10 @@ CONTAINS
     INTEGER :: i
 
     DO i = 1, Opacity % nOpacities
-      DEALLOCATE( Opacity % Absorptivity(i) % Values )
+      DEALLOCATE( Opacity % Opacity(i) % Values )
     END DO
 
-    DEALLOCATE( Opacity % Absorptivity )
+    DEALLOCATE( Opacity % Opacity )
     DEALLOCATE( Opacity % Offsets )
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Names )
@@ -176,9 +176,9 @@ CONTAINS
       WRITE(*,'(A8,A12,A)') &
         ' ', 'Units     = ', TRIM( Opacity % Units(i) )
       WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % Absorptivity(i) % Values )
+        ' ', 'Min Value = ', MINVAL( Opacity % Opacity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % Absorptivity(i) % Values )
+        ' ', 'Max Value = ', MAXVAL( Opacity % Opacity(i) % Values )
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Offset    = ', Opacity % Offsets(i)
     END DO
@@ -191,7 +191,7 @@ CONTAINS
 
     INTEGER,               INTENT(in)    :: nMoments
     INTEGER,               INTENT(in)    :: nOpacities
-    INTEGER,               INTENT(in)    :: nPoints(4)
+    INTEGER,               INTENT(in)    :: nPoints(5)
     TYPE(OpacityTypeScat), INTENT(inout) :: Opacity
 
     INTEGER :: i
@@ -209,7 +209,7 @@ CONTAINS
 
       ALLOCATE( Opacity % Kernel(i) % Values &
                   ( nPoints(1), nPoints(2), nPoints(3), nPoints(4), &
-                    nMoments) )
+                    nPoints(5)) )
 
     END DO
 
@@ -241,18 +241,17 @@ CONTAINS
     INTEGER :: i, l
 
     WRITE(*,*)
-    WRITE(*,'(A4,A)') ' ', 'Opacity Type B'
+    WRITE(*,'(A4,A)') ' ', 'Opacity Type Scat'
     WRITE(*,'(A4,A)') ' ', '--------------'
     WRITE(*,'(A6,A13,I3.3)') &
       ' ', 'nOpacities = ', Opacity % nOpacities
     WRITE(*,'(A6,A13,I3.3)') &
       ' ', 'nMoments   = ', Opacity % nMoments
     WRITE(*,'(A6,A13,5I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints, Opacity % nMoments
+      ' ', 'nPoints    = ', Opacity % nPoints
     WRITE(*,'(A6,A13,I10.10)') &
       ' ', 'DOFs       = ', &
-      Opacity % nOpacities * Opacity % nMoments &
-        * PRODUCT( Opacity % nPoints )
+      Opacity % nOpacities * PRODUCT( Opacity % nPoints )
 
     DO i = 1, Opacity % nOpacities
       WRITE(*,*)
@@ -263,12 +262,12 @@ CONTAINS
 
       DO l = 1, Opacity % nMoments
       WRITE(*,*)
-         WRITE(*,'(A8,A16,I3.3)') &
-           ' ', 'For Moments l = ', l
-         WRITE(*,'(A8,A12,ES12.4E3)') &
-           ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
-         WRITE(*,'(A8,A12,ES12.4E3)') &
-           ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
+!         WRITE(*,'(A8,A16,I3.3)') &
+!           ' ', 'For Moments l = ', l
+!         WRITE(*,'(A8,A12,ES12.4E3)') &
+!           ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
+!         WRITE(*,'(A8,A12,ES12.4E3)') &
+!           ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
          WRITE(*,'(A8,A12,ES12.4E3)') &
            ' ', 'Offset    = ', Opacity % Offsets(i,l)
       END DO ! l = nMoment

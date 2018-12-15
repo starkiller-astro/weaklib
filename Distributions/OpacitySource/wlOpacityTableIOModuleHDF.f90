@@ -27,8 +27,7 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:&
     OpacityTypeEmAb,              &
-    OpacityTypeScat,                 &
-    OpacityTypeC
+    OpacityTypeScat
   USE wlIOModuleHDF, ONLY:        &
     ReadHDF,                      &
     WriteHDF,                     &
@@ -46,12 +45,12 @@ MODULE wlOpacityTableIOModuleHDF
 
   INTEGER :: hdferr
 
-  PUBLIC WriteOpacityTableHDF_New
-  PUBLIC ReadOpacityTableHDF_New
+  PUBLIC WriteOpacityTableHDF
+  PUBLIC ReadOpacityTableHDF
 
 CONTAINS
 
-  SUBROUTINE WriteOpacityTableHDF_New &
+  SUBROUTINE WriteOpacityTableHDF &
     ( OpacityTable, FileName, WriteOpacity_EmAb_Option, &
       WriteOpacity_Iso_Option, WriteOpacity_NES_Option, &
       WriteOpacity_Pair_Option )
@@ -100,7 +99,6 @@ CONTAINS
     CALL OpenFileHDF( FileName, .true., file_id )
 
     datasize1d(1) = 1
-
     CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
     CALL WriteGridHDF( OpacityTable % EnergyGrid, group_id )
     CALL CloseGroupHDF( group_id )
@@ -111,6 +109,7 @@ CONTAINS
 
     IF( WriteOpacity_EmAb )THEN
 
+    WRITE(*,*) "Writting out EmAb"
       IF( .NOT. ALLOCATED( OpacityTable % EmAb % Names ) )THEN
 
         ! --- Insert Appropriate Reaction ---
@@ -130,6 +129,7 @@ CONTAINS
 
     IF( WriteOpacity_Iso ) THEN
 
+    WRITE(*,*) "Writting out Iso"
        IF( .NOT. ALLOCATED( OpacityTable % Scat_Iso % Names ) )THEN
 
         ! --- Insert Appropriate Reaction ---
@@ -139,7 +139,7 @@ CONTAINS
       ELSE
 
         CALL OpenGroupHDF &
-               ( "Scat_Iso_Kernel", .true., file_id, group_id )
+               ( "Scat_Iso_Kernels", .true., file_id, group_id )
         CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Iso, group_id )
         CALL CloseGroupHDF( group_id )
 
@@ -154,6 +154,7 @@ CONTAINS
       CALL CloseGroupHDF( group_id )
 
       IF( WriteOpacity_NES ) THEN
+      WRITE(*,*) "Writting out NES"
 
         IF( .NOT. ALLOCATED( OpacityTable % Scat_NES % Names ) )THEN
   
@@ -164,7 +165,7 @@ CONTAINS
         ELSE
   
           CALL OpenGroupHDF &
-                 ( "NES_MomentsComponents", .true., file_id, group_id )
+                 ( "Scat_NES_Kernels", .true., file_id, group_id )
           CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_NES, group_id )
           CALL CloseGroupHDF( group_id )
   
@@ -183,7 +184,7 @@ CONTAINS
         ELSE
 
           CALL OpenGroupHDF &
-                 ( "Pair_MomentsComponents", .true., file_id, group_id )
+                 ( "Scat_Pair_Kernels", .true., file_id, group_id )
           CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Pair, group_id )
           CALL CloseGroupHDF( group_id )
 
@@ -195,7 +196,7 @@ CONTAINS
 
     CALL CloseFileHDF( file_id )
 
-  END SUBROUTINE WriteOpacityTableHDF_New
+  END SUBROUTINE WriteOpacityTableHDF
 
 
   SUBROUTINE WriteGridHDF( Grid, group_id )
@@ -246,11 +247,11 @@ CONTAINS
 
     CALL WriteHDF &
            ( TRIM( EmAb % Names(1) ), &
-             EmAb % Absorptivity(1) % Values(:,:,:,:), group_id, datasize4d )
+             EmAb % Opacity(1) % Values(:,:,:,:), group_id, datasize4d )
 
     CALL WriteHDF &
            ( TRIM( EmAb % Names(2) ), &
-             EmAb % Absorptivity(2) % Values(:,:,:,:), group_id, datasize4d )
+             EmAb % Opacity(2) % Values(:,:,:,:), group_id, datasize4d )
   
   END SUBROUTINE WriteOpacityTableHDF_EmAb
 
@@ -280,8 +281,7 @@ CONTAINS
     CALL WriteHDF&
          ( "Offsets", Scat % Offsets, group_id, datasize2d )
 
-    datasize5d(1:4) = Scat % nPoints
-    datasize5d(5) = Scat % nMoments
+    datasize5d(1:5) = Scat % nPoints
 
     DO i = 1, Scat % nOpacities
      CALL WriteHDF&
@@ -292,15 +292,7 @@ CONTAINS
   END SUBROUTINE WriteOpacityTableHDF_Scat
 
 
-  SUBROUTINE WriteOpacityTableTypeCHDF( scattn, group_id )
-
-    TYPE(OpacityTypeC), INTENT(in)              :: scattn
-    INTEGER(HID_T), INTENT(in)                  :: group_id
-
-  END SUBROUTINE WriteOpacityTableTypeCHDF
-
-
-  SUBROUTINE ReadOpacityTableHDF_New &
+  SUBROUTINE ReadOpacityTableHDF &
     ( OpacityTable, FileName, ReadOpacity_EmAb_Option, &
       ReadOpacity_Iso_Option, ReadOpacity_NES_Option,  &
       ReadOpacity_Pair_Option )
@@ -318,10 +310,10 @@ CONTAINS
     LOGICAL            :: ReadOpacity_Pair
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
-    INTEGER            :: nOpacA
-    INTEGER            :: nOpacB, nMomB
-    INTEGER            :: nOpacB_NES, nMomB_NES
-    INTEGER            :: nOpacB_TP, nMomB_TP
+    INTEGER            :: nOpac_EmAb
+    INTEGER            :: nOpac_Iso, nMom_Iso
+    INTEGER            :: nOpac_NES, nMom_NES
+    INTEGER            :: nOpac_Pair, nMom_Pair
     INTEGER            :: hdfreadErr
     INTEGER            :: buffer(1)
     INTEGER(HID_T)     :: file_id
@@ -337,40 +329,40 @@ CONTAINS
 
     IF( PRESENT( ReadOpacity_EmAb_Option ) )THEN
       ReadOpacity_EmAb = ReadOpacity_EmAb_Option
-      nOpacA = 2
+      nOpac_EmAb = 2
     ELSE
       ReadOpacity_EmAb = .FALSE.
-      nOpacA = 0
+      nOpac_EmAb = 0
     END IF
 
     IF( PRESENT( ReadOpacity_Iso_Option ) )THEN
       ReadOpacity_Iso = ReadOpacity_Iso_Option
-      nOpacB = 2
-      nMomB  = 2
+      nOpac_Iso = 2
+      nMom_Iso  = 2
     ELSE
       ReadOpacity_Iso = .FALSE.
-      nOpacB = 0
-      nMomB  = 0
+      nOpac_Iso = 0
+      nMom_Iso  = 0
     END IF
 
     IF( PRESENT( ReadOpacity_NES_Option ) )THEN
       ReadOpacity_NES = ReadOpacity_NES_Option
-      nOpacB_NES = 2
-      nMomB_NES  = 2
+      nOpac_NES = 1
+      nMom_NES  = 4
     ELSE
       ReadOpacity_NES = .FALSE.
-      nOpacB_NES = 0
-      nMomB_NES  = 0
+      nOpac_NES = 0
+      nMom_NES  = 0
     END IF
 
        IF( PRESENT( ReadOpacity_Pair_Option ) )THEN
       ReadOpacity_Pair = ReadOpacity_Pair_Option
-      nOpacB_TP = 2
-      nMomB_TP  = 2
+      nOpac_Pair = 1
+      nMom_Pair  = 4
     ELSE
       ReadOpacity_Pair = .FALSE.
-      nOpacB_TP = 0
-      nMomB_TP  = 0
+      nOpac_Pair = 0
+      nMom_Pair  = 0
     END IF
 
     WRITE(*,*) "           File in"
@@ -401,8 +393,8 @@ CONTAINS
     END IF
 
     CALL AllocateOpacityTable &
-           ( OpacityTable, nOpacA, nOpacB, nMomB, nOpacB_NES, nMomB_NES, &
-             nOpacB_TP, nMomB_TP, 0, 0, nPointsE, nPointsEta )
+           ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
+             nOpac_Pair, nMom_Pair, nPointsE, nPointsEta )
    
     CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
     CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
@@ -414,7 +406,7 @@ CONTAINS
       CALL OpenGroupHDF &
              ( "EmAb_CorrectedAbsorption", .false., file_id, group_id )
 
-      datasize1d(1) = 2
+      datasize1d(1) = nOpac_EmAb
       CALL ReadHDF &
              ( "Offsets", OpacityTable % EmAb % Offsets, group_id, datasize1d )
 
@@ -427,29 +419,68 @@ CONTAINS
       OpacityTable % EmAb % Names(1) = "Electron Neutrino";
       CALL ReadHDF &
              ( TRIM( OpacityTable % EmAb % Names(1) ), &
-               OpacityTable % EmAb % Absorptivity(1) % Values, &
+               OpacityTable % EmAb % Opacity(1) % Values, &
                group_id, datasize4d )
 
       OpacityTable % EmAb % Names(2) = "Electron Antineutrino";
       CALL ReadHDF &
          ( TRIM( OpacityTable % EmAb % Names(2) ), &
-            OpacityTable % EmAb % Absorptivity(2) % Values, &
+            OpacityTable % EmAb % Opacity(2) % Values, &
             group_id, datasize4d )
       CALL CloseGroupHDF( group_id )
 
     END IF ! ReadOpacity_EmAb
 
-    IF( ReadOpacity_NES ) THEN
-      WRITE(*,*) "Now read-in NES table"
+    IF( ReadOpacity_Iso ) THEN
+      WRITE(*,*) "Now read-in Iso table"
+
+      CALL OpenGroupHDF &
+             ( "Scat_Iso_Kernels", .false., file_id, group_id )
+
+      datasize2d(1) = nOpac_Iso
+      datasize2d(2) = nMom_Iso
+
+      CALL ReadHDF &
+             ( "Offsets", OpacityTable % Scat_Iso % Offsets, group_id, datasize2d )
+
+      datasize1d = 2
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_Iso % Units,   group_id, datasize1d )
+
+      datasize5d(1) = nPointsE
+      datasize5d(2)   = nMom_Iso
+      datasize5d(3:5)   = OpacityTable % TS % nPoints
+
+      OpacityTable % Scat_Iso % Names(1) = "Electron Neutrino";
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_Iso % Names(1) ), &
+               OpacityTable % Scat_Iso % Kernel(1) % Values, &
+               group_id, datasize5d )
+
+       OpacityTable % Scat_Iso % Names(2) = "Electron Antineutrino";
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_Iso % Names(2) ), &
+               OpacityTable % Scat_Iso % Kernel(2) % Values, &
+               group_id, datasize5d )
+      CALL CloseGroupHDF( group_id )
+
+    END IF
+
+    IF( ReadOpacity_NES .OR. ReadOpacity_Pair ) THEN
+      WRITE(*,*) "Now read-in eta"
 
       CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
       CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
-      CALL CloseGroupHDF( group_id )    
+      CALL CloseGroupHDF( group_id )   
+    END IF 
 
+    IF( ReadOpacity_NES ) THEN
+      WRITE(*,*) "Now read-in NES table"
       CALL OpenGroupHDF &
-             ( "NES_MomentsComponents", .false., file_id, group_id )
+             ( "Scat_NES_Kernels", .false., file_id, group_id )
 
-      datasize2d(1:2) = 2
+      datasize2d(1) = nOpac_NES
+      datasize2d(2) = nMom_NES
       CALL ReadHDF &
              ( "Offsets", OpacityTable % Scat_NES % Offsets, group_id, datasize2d )
 
@@ -457,28 +488,50 @@ CONTAINS
              ( "Units",   OpacityTable % Scat_NES % Units,   group_id, datasize2d )
 
       datasize5d(1:2) = nPointsE
-      datasize4d(3)   = OpacityTable % TS % nPoints(2) !! fix me
-      datasize5d(4)   = OpacityTable % EtaGrid % nPoints
-      datasize5d(5)   = nMomB_NES
+      datasize5d(3)   = nMom_NES
+      datasize5d(4)   = OpacityTable % TS % nPoints(2) !! fix me
+      datasize5d(5)   = OpacityTable % EtaGrid % nPoints
 
-      OpacityTable % Scat_NES % Names(1) = "NES Kernel Moment H0i H0ii";
+      OpacityTable % Scat_NES % Names(1) = "Kernels";
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_NES % Names(1) ), &
                OpacityTable % Scat_NES % Kernel(1) % Values, &
                group_id, datasize5d )
 
-      OpacityTable % Scat_NES % Names(2) = "NES Kernel Moment H1i H1ii";
-      CALL ReadHDF &
-         ( TRIM( OpacityTable % Scat_NES % Names(2) ), &
-            OpacityTable % Scat_NES % Kernel(2) % Values, &
-            group_id, datasize5d )
       CALL CloseGroupHDF( group_id )
 
     END IF ! ReadOpacity_NES
 
+    IF( ReadOpacity_Pair ) THEN
+      WRITE(*,*) "Now read-in Pair table"
+      CALL OpenGroupHDF &
+             ( "Scat_Pair_Kernels", .false., file_id, group_id )
+
+      datasize2d(1) = nOpac_Pair
+      datasize2d(2) = nMom_Pair
+      CALL ReadHDF &
+             ( "Offsets", OpacityTable % Scat_Pair % Offsets, group_id, datasize2d )
+
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_Pair % Units,   group_id, datasize2d )
+
+      datasize5d(1:2) = nPointsE
+      datasize5d(3)   = nMom_Pair
+      datasize5d(4)   = OpacityTable % TS % nPoints(2) !! fix me
+      datasize5d(5)   = OpacityTable % EtaGrid % nPoints
+
+      OpacityTable % Scat_Pair % Names(1) = "Kernels";
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_Pair % Names(1) ), &
+               OpacityTable % Scat_Pair % Kernel(1) % Values, &
+               group_id, datasize5d )
+
+      CALL CloseGroupHDF( group_id )
+    END IF
+
     CALL CloseFileHDF( file_id )
 
-  END SUBROUTINE ReadOpacityTableHDF_New
+  END SUBROUTINE ReadOpacityTableHDF
 
 
   SUBROUTINE ReadOpacityTypeEmAbHDF( EmAb, group_id )
@@ -509,13 +562,13 @@ CONTAINS
 
     datasize4d = EmAb % nPoints
 
-    CALL OpenGroupHDF( "Absorptivity", .false., group_id, subgroup_id )
+    CALL OpenGroupHDF( "Opacity", .false., group_id, subgroup_id )
 
     DO i = 1, EmAb % nOpacities
 
       CALL ReadHDF &
              ( EmAb % Names(i), &
-               EmAb % Absorptivity(i) % Values, &
+               EmAb % Opacity(i) % Values, &
                subgroup_id, datasize4d )
 
     END DO ! nOpacities
@@ -525,9 +578,9 @@ CONTAINS
   END SUBROUTINE ReadOpacityTypeEmAbHDF
 
 
-  SUBROUTINE ReadOpacityTypeScatHDF( Scat_Iso, group_id )
+  SUBROUTINE ReadOpacityTypeScatHDF( Scat, group_id )
 
-    TYPE(OpacityTypeScat),INTENT(inout)                 :: Scat_Iso
+    TYPE(OpacityTypeScat),INTENT(inout)                 :: Scat
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
@@ -541,32 +594,31 @@ CONTAINS
 
     datasize1d(1) = 1
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
-    Scat_Iso % nOpacities = buffer(1)
+    Scat % nOpacities = buffer(1)
 
     CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
-    Scat_Iso % nMoments   = buffer(1)
+    Scat % nMoments   = buffer(1)
 
     datasize1d = buffer(1)
-    Call ReadHDF( "Names", Scat_Iso % Names, group_id, datasize1d )
+    Call ReadHDF( "Names", Scat % Names, group_id, datasize1d )
 
-    Call ReadHDF( "Units", Scat_Iso % Units, group_id, datasize1d )
+    Call ReadHDF( "Units", Scat % Units, group_id, datasize1d )
 
     datasize1d(1) = 4
-    CALL ReadHDF( "nPoints", Scat_Iso % nPoints, group_id, datasize1d )
+    CALL ReadHDF( "nPoints", Scat % nPoints, group_id, datasize1d )
 
-    datasize2d = (/Scat_Iso % nOpacities, Scat_Iso % nMoments/)
-    CALL ReadHDF( "Offsets", Scat_Iso % Offsets, group_id, datasize2d )
+    datasize2d = (/Scat % nOpacities, Scat % nMoments/)
+    CALL ReadHDF( "Offsets", Scat % Offsets, group_id, datasize2d )
 
-    datasize5d(1:4) = Scat_Iso % nPoints
-    datasize5d(5) = Scat_Iso % nMoments
+    datasize5d(1:5) = Scat % nPoints
 
     CALL OpenGroupHDF( "Kernel", .false., group_id, subgroup_id )
 
-    DO i = 1, Scat_Iso % nOpacities
+    DO i = 1, Scat % nOpacities
 
       CALL ReadHDF &
-             ( Scat_Iso % Names(i), &
-               Scat_Iso % Kernel(i) % Values, &
+             ( Scat % Names(i), &
+               Scat % Kernel(i) % Values, &
                subgroup_id, datasize5d )
 
     END DO ! nOpacities
@@ -574,14 +626,6 @@ CONTAINS
     CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeScatHDF
-
-
-  SUBROUTINE ReadOpacityTypeCHDF( EmAb, group_id )
-
-    TYPE(OpacityTypeC),INTENT(inout)                 :: EmAb
-    INTEGER(HID_T), INTENT(in)                       :: group_id
-
-  END SUBROUTINE ReadOpacityTypeCHDF
 
 
   SUBROUTINE ReadGridHDF( Grid, group_id )

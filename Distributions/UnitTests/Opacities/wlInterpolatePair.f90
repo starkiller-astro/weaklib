@@ -59,7 +59,7 @@ PROGRAM wlInterpolatePair
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP_nue, SumTP_nuebar
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'InterpolatedPaOutput.h5'
+                                             'InterpolatedPaOutputC.h5'
 
 !-------- local variables -------------------------
   REAL(dp)                            :: root2p, root2n
@@ -140,9 +140,9 @@ PROGRAM wlInterpolatePair
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       "wl-Op-SFHo-15-25-50-E40-B85-Pa.h5" )
+       "temp_Pair.h5", ReadOpacity_Pair_Option = .TRUE. )
   CALL FinalizeHDF( )
-
+  
   Offset_TP   = OpacityTable % Scat_Pair  % Offsets(1,1:2)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
 
@@ -150,10 +150,11 @@ PROGRAM wlInterpolatePair
 !   do interpolation
 !--------------------------------------
   
-  ASSOCIATE( TableTPJ0i  => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,:,:,1), &
-             TableTPJ0ii => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,:,:,2), &
-             Tablecmpe   => OpacityTable % EOSTable % DV % Variables(4) % Values, &
-             Energy      => Inte_E  % Values )
+  ASSOCIATE &
+ ( TableTPJ0i  => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,1,:,:), &
+   TableTPJ0ii => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,2,:,:), &
+   Tablecmpe   => OpacityTable % EOSTable % DV % Variables(4) % Values, &
+   Energy      => Inte_E  % Values )
 
   CALL LogInterpolateSingleVariable &
            ( Inte_rho, Inte_T, Inte_Ye, &

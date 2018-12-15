@@ -15,7 +15,7 @@ PROGRAM wlInterpolateAb
     OpenGroupHDF, &
     CloseGroupHDF
   USE wlOpacityTableIOModuleHDF, ONLY: &
-    ReadOpacityTableHDF_New
+    ReadOpacityTableHDF
   USE wlGridModule, ONLY: &
     GridType, &
     AllocateGrid, &
@@ -110,8 +110,8 @@ PROGRAM wlInterpolateAb
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF_New( OpacityTable, &
-          "temp_EmAb.h5" )
+  CALL ReadOpacityTableHDF( OpacityTable, &
+          "temp_EmAb.h5", ReadOpacity_EmAb_Option = .true. )
 !          "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
   CALL FinalizeHDF( )
 
@@ -121,8 +121,8 @@ PROGRAM wlInterpolateAb
 !   do interpolation
 !--------------------------------------
 
-  ASSOCIATE( TableEm1  => OpacityTable % EmAb % Absorptivity(1) % Values, &
-             TableEm2  => OpacityTable % EmAb % Absorptivity(2) % Values, &
+  ASSOCIATE( TableEm1  => OpacityTable % EmAb % Opacity(1) % Values, &
+             TableEm2  => OpacityTable % EmAb % Opacity(2) % Values, &
               Energy   => Inte_E % Values )
 
   DO i = 1, datasize

@@ -18,9 +18,8 @@ PROGRAM wlOpacityFieldsTest
   TYPE(OpacityTableType) :: OpacityTable
 
   CALL AllocateOpacityTable &
-         ( OpacityTable, nOpacA = 4, nOpacB = 1, nMomB = 1, &
-           nOpacB_NES = 0, nMomB_NES = 0, nOpacB_TP = 0, nMomB_TP = 0, &
-           nOpacC = 1, nMomC = 1, &
+         ( OpacityTable, nOpac_EmAb = 4, nOpac_Iso = 1, nMom_Iso = 1, &
+           nOpac_NES = 0, nMom_NES = 0, nOpac_Pair = 0, nMom_Pair = 0, &
            nPointsE = 10, nPointsEta = 0 )
 
   ! -- Energy Grid -- 
@@ -44,7 +43,7 @@ PROGRAM wlOpacityFieldsTest
 
   END ASSOCIATE ! EnergyGrid
 
-  ! -- Absorptivity -- 
+  ! -- Opacity -- 
 
   ASSOCIATE( EmAb => OpacityTable % EmAb )
 
@@ -60,7 +59,7 @@ PROGRAM wlOpacityFieldsTest
         'Per Centimeter                  ', &
         'Per Centimeter                  ' ]
 
-  ASSOCIATE( Chi_Nu_e => EmAb % Absorptivity(iNu_e) % Values )
+  ASSOCIATE( Chi_Nu_e => EmAb % Opacity(iNu_e) % Values )
 
   DO iY = 1, EmAb % nPoints(4)
     DO iT = 1, EmAb % nPoints(3)
@@ -112,40 +111,6 @@ PROGRAM wlOpacityFieldsTest
 
   END ASSOCIATE ! Scat_Iso
 
-  ! -- Elastic Scattering --
-
-  ASSOCIATE( Scat_nIso => OpacityTable % Scat_nIso )
-
-  Scat_nIso % Names &
-    = [ 'Inelastic Scattering on Elect.' ]
-
-  Scat_nIso % Species &
-    = [ 'Electron Neutrino             ' ]
-
-  Scat_nIso % Units &
-    = [ 'Per Centimeter Per MeV**3     ' ]
-
-  ASSOCIATE( Sig_Nu_e => Scat_nIso % Kernel(iNu_e) % Values )
-
-  DO il = 1, Scat_nIso % nMoments
-    DO iY = 1, Scat_nIso % nPoints(4)
-      DO iT = 1, Scat_nIso % nPoints(3)
-        DO iD = 1, Scat_nIso % nPoints(2)
-          DO iEp = 1, Scat_nIso % nPoints(1)
-            DO iE = 1, Scat_nIso % nPoints(1)
-
-              Sig_Nu_e(iE,iEp,iD,iT,iY,il) = 3.0_dp
-
-            END DO
-          END DO
-        END DO
-      END DO
-    END DO
-  END DO
-
-  END ASSOCIATE ! Sig_Nu_e
-
-  END ASSOCIATE ! Scat_nIso
 
   CALL DescribeOpacityTable( OpacityTable )
 
