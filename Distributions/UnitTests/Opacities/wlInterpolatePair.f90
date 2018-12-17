@@ -59,7 +59,7 @@ PROGRAM wlInterpolatePair
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP_nue, SumTP_nuebar
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'InterpolatedPaOutputC.h5'
+                                             'InterpolatedPaOutput.h5'
 
 !-------- local variables -------------------------
   REAL(dp)                            :: root2p, root2n
@@ -140,7 +140,8 @@ PROGRAM wlInterpolatePair
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       "temp_Pair.h5", ReadOpacity_Pair_Option = .TRUE. )
+       "wl-Op-SFHo-15-25-50-E40-B85-Pair.h5", &
+       ReadOpacity_Pair_Option = .TRUE. )
   CALL FinalizeHDF( )
   
   Offset_TP   = OpacityTable % Scat_Pair  % Offsets(1,1:2)

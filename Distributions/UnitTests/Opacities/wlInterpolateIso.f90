@@ -56,7 +56,7 @@ PROGRAM wlInterpolateIso
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: InterpolantIso2
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                           'InterpolatedIsoOutputC.h5'
+                                           'InterpolatedIsoOutput.h5'
 
 !----------------------------------------
 !   interpolated energy 
@@ -115,7 +115,8 @@ PROGRAM wlInterpolateIso
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF &
           ( OpacityTable, &
-           "temp_Iso.h5", ReadOpacity_Iso_Option = .true. )
+           "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5", &
+            ReadOpacity_Iso_Option = .true. )
   CALL FinalizeHDF( )
 
   Offset_Iso(1:2,1:2) = OpacityTable % Scat_Iso % Offsets(1:2,1:2)
