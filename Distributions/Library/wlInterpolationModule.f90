@@ -599,13 +599,13 @@ CONTAINS
 
         END DO ! i
 
-        DO ip = j, SizeX1
-
-          Interpolant(ip,j,k) &
-            = Interpolant(j,ip,k) * &
-              EXP( ( x1(j) - x2(ip) )/( kmev * x3(k) ) )
-
-        END DO ! ip
+!        DO ip = j, SizeX1
+!
+!          Interpolant(ip,j,k) &
+!            = Interpolant(j,ip,k) * &
+!              EXP( ( x1(j) - x2(ip) )/( kmev * x3(k) ) )
+!
+!        END DO ! ip
 
       END DO ! j
     END DO ! k

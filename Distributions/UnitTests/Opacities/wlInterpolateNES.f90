@@ -2,7 +2,8 @@ PROGRAM wlInterpolateNES
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable
+    LogInterpolateSingleVariable, &
+    LogInterpolateSingleVariable_2D2D
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -30,7 +31,7 @@ PROGRAM wlInterpolateNES
 !--------- parameters for creating energy grid 
   INTEGER, PARAMETER     :: Inte_nPointE = 40
   REAL(dp)               :: Inte_Emin = 1.0d-1
-  REAL(dp)               :: Inte_Emax = 3.0d02
+  REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(GridType)         :: Inte_E
 
 !-------- variables for reading opacity table
@@ -56,9 +57,10 @@ PROGRAM wlInterpolateNES
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE   :: InterpolantNES_nue, &
                                                InterpolantNES_nuebar
 
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE   :: InterH0i, InterH0ii 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumNES_nue, SumNES_nuebar
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'InterpolatedNESOutputC.h5'
+                                             'InterpolatedNESOutput.h5'
 
 !-------- local variables -------------------------
   REAL(dp)                            :: sum_NES_nue, sum_NES_nuebar, &
@@ -121,6 +123,8 @@ PROGRAM wlInterpolateNES
   ALLOCATE( SumNES_nuebar( Inte_nPointE, datasize ) )
   ALLOCATE( InterpolantNES_nue( Inte_nPointE, Inte_nPointE, datasize ) )
   ALLOCATE( InterpolantNES_nuebar( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( InterH0i ( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( InterH0ii( Inte_nPointE, Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
   WRITE(*, Format3 ) database
@@ -139,7 +143,6 @@ PROGRAM wlInterpolateNES
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
          "temp_NES.h5", ReadOpacity_NES_Option = .TRUE. )
-!         "wl-Op-SFHo-15-25-50-E40-B85-NES-E5.h5" )
   CALL FinalizeHDF( )
 
   Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:2)
@@ -164,34 +167,30 @@ PROGRAM wlInterpolateNES
              Tablecmpe, &
              Inte_cmpe )
 
-  DO i = 1, datasize  
-
-    Inte_TMeV(i) = Inte_T(i)* kMeV
-    buffer1(:)   = Inte_T(i)
-    buffer2(:)   = Inte_cmpe(i) / Inte_TMeV(i)
-
-    DO ii = 1, Inte_nPointE ! e(ii)
-
-    buffer3(:) = Energy(ii) ! e
-
-      CALL LogInterpolateSingleVariable &
-           ( Energy, buffer3, buffer1, buffer2, &  ! interpolate ep
-             OpacityTable % EnergyGrid % Values, & ! ep
+  CALL LogInterpolateSingleVariable_2D2D&
+          ( Energy, Energy, Inte_T, Inte_cmpe / (Inte_T * kMev), &
+            OpacityTable % EnergyGrid % Values, & ! ep
              OpacityTable % EnergyGrid % Values, & ! e
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_NES(1), TableNES_H0i, H0i )
+             (/1,1,1,1/), Offset_NES(1), TableNES_H0i, InterH0i )
 
-      CALL LogInterpolateSingleVariable &
-           ( Energy, buffer3, buffer1, buffer2, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EnergyGrid % Values, &
+  CALL LogInterpolateSingleVariable_2D2D&
+          ( Energy, Energy, Inte_T, Inte_cmpe / (Inte_T * kMev), &
+            OpacityTable % EnergyGrid % Values, & ! ep
+             OpacityTable % EnergyGrid % Values, & ! e
              OpacityTable % EOSTable % TS % States(2) % Values, &
              OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_NES(2), TableNES_H0ii, H0ii )
+             (/1,1,1,1/), Offset_NES(2), TableNES_H0ii, InterH0ii )
 
-      NES0_nue = cparp * H0i + cparn * H0ii
-      NES0_nuebar = cparn * H0i + cparp * H0ii
+  InterpolantNES_nue    = cparp * InterH0i + cparn * InterH0ii
+  InterpolantNES_nuebar = cparn * InterH0i + cparp * InterH0ii
+
+  DO i = 1, datasize  
+    DO ii = 1, Inte_nPointE ! e(ii)
+
+      NES0_nue = InterpolantNES_nue(:,ii,i)
+      NES0_nuebar = InterpolantNES_nuebar(:,ii,i)
 
       sum_NES_nue = zero
       sum_NES_nuebar = zero
@@ -209,9 +208,6 @@ PROGRAM wlInterpolateNES
 
       SumNES_nue(ii,i) = sum_NES_nue
       SumNES_nuebar(ii,i) = sum_NES_nuebar
-
-      InterpolantNES_nue(:,ii,i) = NES0_nue
-      InterpolantNES_nuebar(:,ii,i) = NES0_nuebar
 
     END DO ! ii
     
@@ -259,5 +255,6 @@ PROGRAM wlInterpolateNES
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, Inte_TMeV)
   DEALLOCATE( Inte_cmpe, database )
   DEALLOCATE( InterpolantNES_nue, InterpolantNES_nuebar )
+  DEALLOCATE( InterH0i, InterH0ii )
 
 END PROGRAM wlInterpolateNES
