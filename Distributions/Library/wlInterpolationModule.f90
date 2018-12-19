@@ -26,6 +26,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
+  PUBLIC :: LogInterpolateOpacity_2D1D2D
 
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -709,6 +710,107 @@ CONTAINS
     END DO ! k
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
+
+
+  SUBROUTINE LogInterpolateOpacity_2D1D2D &
+    ( E, X1, X2, TabE, TabX1, TabX2, LogInterpE, LogInterpX, OS, &
+      TabOpacity, Opacity )
+
+    REAL(dp), INTENT(in)  :: E(:), X1(:), X2(:)
+    REAL(dp), INTENT(in)  :: TabE(:), TabX1(:), TabX2(:)
+    INTEGER,  INTENT(in)  :: LogInterpE
+    INTEGER,  INTENT(in)  :: LogInterpX(2)
+    REAL(dp), INTENT(in)  :: OS(:)
+    REAL(dp), INTENT(in)  :: TabOpacity(:,:,:,:,:)
+    REAL(dp), INTENT(out) :: Opacity(:,:,:,:)
+
+    INTEGER  :: iX, iX1, iX2, il1, il2, l, k, kp
+    REAL(dp) :: dX1, dX2
+    REAL(dp) :: &
+      p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+    INTEGER,  ALLOCATABLE :: iE(:)
+    REAL(dp), ALLOCATABLE :: dE(:)
+
+    ALLOCATE( iE(SIZE(E)), dE(SIZE(E)) )
+
+    DO k = 1, SIZE( E )
+
+      IF( LogInterpE == 1 )THEN
+        iE(k) = Index1D_Log( E(k), TabE, SIZE( TabE ) )
+        dE(k) = LOG10( E(k) / TabE(iE(k)) ) &
+                  / LOG10( TabE(iE(k)+1) / TabE(iE(k)) )
+      ELSE
+        iE(k) = Index1D_Lin( E(k), TabE, SIZE( TabE ) )
+        dE(k) = ( E(k) - TabE(iE(k)) ) &
+                  / ( TabE(iE(k)+1) - TabE(iE(k)) )
+      END IF
+
+    END DO
+
+    DO iX = 1, SIZE( X1 )
+
+      IF( LogInterpX(1) == 1 )THEN
+        iX1 = Index1D_Log( X1(iX), TabX1, SIZE( TabX1 ) )
+        dX1 = LOG10( X1(iX) / TabX1(iX1) ) &
+                / LOG10( TabX1(iX1+1) / TabX1(iX1) )
+      ELSE
+        iX1 = Index1D_Lin( X1(iX), TabX1, SIZE( TabX1 ) )
+        dX1 = ( X1(iX) - TabX1(iX1) ) &
+                / ( TabX1(iX1+1) - TabX1(iX1) )
+      END IF
+
+      IF( LogInterpX(2) == 1 )THEN
+        iX2 = Index1D_Log( X2(iX), TabX2, SIZE( TabX2 ) )
+        dX2 = LOG10( X2(iX) / TabX2(iX2) ) &
+                / LOG10( TabX2(iX2+1) / TabX2(iX2) )
+      ELSE
+        iX2 = Index1D_Lin( X2(iX), TabX2, SIZE( TabX2 ) )
+        dX2 = ( X2(iX) - TabX2(iX2) ) &
+                / ( TabX2(iX2+1) - TabX2(iX2) )
+      END IF
+
+      DO l  = 1, SIZE( TabOpacity, DIM = 3 )
+      DO k  = 1, SIZE( E )
+      DO kp = 1, k
+
+        il1 = iE(kp)
+        il2 = iE(k)
+
+        p0000 = TabOpacity( il1  , il2  , l, iX1  , iX2   )
+        p0001 = TabOpacity( il1  , il2  , l, iX1  , iX2+1 )
+        p0010 = TabOpacity( il1  , il2  , l, iX1+1, iX2   )
+        p0011 = TabOpacity( il1  , il2  , l, iX1+1, iX2+1 )
+        p0100 = TabOpacity( il1  , il2+1, l, iX1  , iX2   )
+        p0101 = TabOpacity( il1  , il2+1, l, iX1  , iX2+1 )
+        p0110 = TabOpacity( il1  , il2+1, l, iX1+1, iX2   )
+        p0111 = TabOpacity( il1  , il2+1, l, iX1+1, iX2+1 )
+        p1000 = TabOpacity( il1+1, il2  , l, iX1  , iX2   )
+        p1001 = TabOpacity( il1+1, il2  , l, iX1  , iX2+1 )
+        p1010 = TabOpacity( il1+1, il2  , l, iX1+1, iX2   )
+        p1011 = TabOpacity( il1+1, il2  , l, iX1+1, iX2+1 )
+        p1100 = TabOpacity( il1+1, il2+1, l, iX1  , iX2   )
+        p1101 = TabOpacity( il1+1, il2+1, l, iX1  , iX2+1 )
+        p1110 = TabOpacity( il1+1, il2+1, l, iX1+1, iX2   )
+        p1111 = TabOpacity( il1+1, il2+1, l, iX1+1, iX2+1 )
+
+        Opacity(kp,k,l,iX) &
+          = TetraLinear &
+              ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                dE(iE(kp)), dE(iE(k)), dX1, dX2 )
+
+        Opacity(kp,k,l,iX) = 10.0d0**( Opacity(kp,k,l,iX) ) - OS(l)
+
+      END DO
+      END DO
+      END DO
+
+    END DO
+
+    DEALLOCATE( iE, dE )
+
+  END SUBROUTINE LogInterpolateOpacity_2D1D2D
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
