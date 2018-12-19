@@ -207,9 +207,9 @@ CONTAINS
 
     DO i = 1, nOpacities
 
-      ALLOCATE( Opacity % Kernel(i) % Values &
-                  ( nPoints(1), nPoints(2), nPoints(3), nPoints(4), &
-                    nPoints(5)) )
+      ALLOCATE &
+        ( Opacity % Kernel(i) % Values &
+            ( nPoints(1), nPoints(2), nPoints(3), nPoints(4), nPoints(5) ) )
 
     END DO
 
