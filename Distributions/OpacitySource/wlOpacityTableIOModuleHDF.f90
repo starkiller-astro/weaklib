@@ -293,118 +293,218 @@ CONTAINS
 
 
   SUBROUTINE ReadOpacityTableHDF &
-    ( OpacityTable, FileName, ReadOpacity_EmAb_Option, &
-      ReadOpacity_Iso_Option, ReadOpacity_NES_Option,  &
-      ReadOpacity_Pair_Option )
+    ( OpacityTable, FileName_EmAb_Option, FileName_Iso_Option, &
+      FileName_NES_Option, FileName_Pair_Option, Verbose_Option )
  
-    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_EmAb_Option
-    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_Iso_Option
-    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_NES_Option
-    LOGICAL,                INTENT(in),   OPTIONAL :: ReadOpacity_Pair_Option
-    CHARACTER(len=*),       INTENT(in)             :: FileName
     TYPE(OpacityTableType), INTENT(inout)          :: OpacityTable
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_EmAb_Option
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Iso_Option
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NES_Option
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Pair_Option
+    LOGICAL,                INTENT(in),   OPTIONAL :: Verbose_Option
 
-    LOGICAL            :: ReadOpacity_EmAb
-    LOGICAL            :: ReadOpacity_Iso
-    LOGICAL            :: ReadOpacity_NES
-    LOGICAL            :: ReadOpacity_Pair
+    INTEGER, PARAMETER :: iEmAb = 1
+    INTEGER, PARAMETER :: iIso  = 2
+    INTEGER, PARAMETER :: iNES  = 3
+    INTEGER, PARAMETER :: iPair = 4
+
+    LOGICAL            :: ReadOpacity(4)
+    LOGICAL            :: Verbose
+    CHARACTER(128)     :: FileName(4)
+    INTEGER            :: iOp
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
     INTEGER            :: nOpac_EmAb
-    INTEGER            :: nOpac_Iso, nMom_Iso
-    INTEGER            :: nOpac_NES, nMom_NES
-    INTEGER            :: nOpac_Pair, nMom_Pair
-    INTEGER            :: hdfreadErr
+    INTEGER            :: nOpac_Iso
+    INTEGER            :: nMom_Iso
+    INTEGER            :: nOpac_NES
+    INTEGER            :: nMom_NES
+    INTEGER            :: nOpac_Pair
+    INTEGER            :: nMom_Pair
     INTEGER            :: buffer(1)
     INTEGER(HID_T)     :: file_id
     INTEGER(HID_T)     :: group_id
-    INTEGER(HID_T)     :: subgroup_id
     INTEGER(HSIZE_T)   :: datasize1d(1)
     INTEGER(HSIZE_T)   :: datasize2d(2)
     INTEGER(HSIZE_T)   :: datasize4d(4)
     INTEGER(HSIZE_T)   :: datasize5d(5)
-    CHARACTER(LEN=32)  :: buffer_string(1)
 
-    hdfreadErr = 0
-
-    IF( PRESENT( ReadOpacity_EmAb_Option ) )THEN
-      ReadOpacity_EmAb = ReadOpacity_EmAb_Option
+    IF( PRESENT( FileName_EmAb_Option ) )THEN
+      ReadOpacity(iEmAb) = .TRUE.
+      FileName   (iEmAb) = TRIM( FileName_EmAb_Option )
       nOpac_EmAb = 2
     ELSE
-      ReadOpacity_EmAb = .FALSE.
+      ReadOpacity(iEmAb) = .FALSE.
       nOpac_EmAb = 0
     END IF
 
-    IF( PRESENT( ReadOpacity_Iso_Option ) )THEN
-      ReadOpacity_Iso = ReadOpacity_Iso_Option
+    IF( PRESENT( FileName_Iso_Option ) )THEN
+      ReadOpacity(iIso) = .TRUE.
+      FileName   (iIso) = TRIM( FileName_Iso_Option )
       nOpac_Iso = 2
       nMom_Iso  = 2
     ELSE
-      ReadOpacity_Iso = .FALSE.
+      ReadOpacity(iIso) = .FALSE.
       nOpac_Iso = 0
       nMom_Iso  = 0
     END IF
 
-    IF( PRESENT( ReadOpacity_NES_Option ) )THEN
-      ReadOpacity_NES = ReadOpacity_NES_Option
+    IF( PRESENT( FileName_NES_Option ) )THEN
+      ReadOpacity(iNES) = .TRUE.
+      FileName   (iNES) = TRIM( FileName_NES_Option )
       nOpac_NES = 1
       nMom_NES  = 4
     ELSE
-      ReadOpacity_NES = .FALSE.
+      ReadOpacity(iNES) = .FALSE.
       nOpac_NES = 0
       nMom_NES  = 0
     END IF
 
-       IF( PRESENT( ReadOpacity_Pair_Option ) )THEN
-      ReadOpacity_Pair = ReadOpacity_Pair_Option
+    IF( PRESENT( FileName_Pair_Option ) )THEN
+      ReadOpacity(iPair) = .TRUE.
+      FileName   (iPair) = TRIM( FileName_Pair_Option )
       nOpac_Pair = 1
       nMom_Pair  = 4
     ELSE
-      ReadOpacity_Pair = .FALSE.
+      ReadOpacity(iPair) = .FALSE.
       nOpac_Pair = 0
       nMom_Pair  = 0
     END IF
 
-    WRITE(*,*) "           File in"
-    WRITE(*,*) " Reading ", FileName, " hdf5 file ... "
-
-    CALL OpenFileHDF( FileName, .false., file_id )
-
-    IF( hdfreadErr .NE. 0 ) THEN
-      WRITE(*,*) "ERROR!"
-      WRITE(*,*) "EquationOfStateTable is not consistent with OpacityTable!"
-      CALL CloseFileHDF( file_id )
-      STOP
-    END IF
-
-    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
-!   CALL h5dsget_num_scales
-    CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
-    nPointsE = buffer(1)
-    CALL CloseGroupHDF( group_id )
-
-    IF( ReadOpacity_NES .OR. ReadOpacity_Pair ) THEN
-      CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
-      CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
-      nPointsEta = buffer(1)
-      CALL CloseGroupHDF( group_id )
+    IF( PRESENT( Verbose_Option ) )THEN
+      Verbose = Verbose_Option
     ELSE
-      nPointsEta = 0
+      Verbose = .FALSE.
     END IF
+
+    IF( Verbose )THEN
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') '', 'ReadOpacityTableHDF'
+      WRITE(*,*)
+      DO iOp = 1, 4
+        IF( ReadOpacity(iOp) ) WRITE(*,'(A6,A)') '', TRIM( FileName(iOp) )
+      END DO
+      WRITE(*,*)
+    END IF
+
+    IF( .NOT. ANY( ReadOpacity ) )THEN
+      WRITE(*,'(A4,A)') '', 'ERROR: No Opacity Table Provided. Returning'
+      RETURN
+    END IF
+
+    ! --- Get Number of Energy Points ---
+
+    nPointsE = 0
+    DO iOp = iEmAb, iPair
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "EnergyGrid", .FALSE., file_id, group_id )
+
+        CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
+
+        CALL CloseGroupHDF( group_id )
+
+        CALL CloseFileHDF( file_id )
+
+        nPointsE = buffer(1)
+
+        EXIT
+
+      END IF
+
+    END DO
+
+    ! --- Get Number of Eta (Chem_e/kT) Points ---
+
+    nPointsEta = 0
+    DO iOp = iNES, iPair
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "EtaGrid",    .FALSE., file_id, group_id )
+
+        CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
+
+        CALL CloseGroupHDF( group_id )
+
+        CALL CloseFileHDF( file_id )
+
+        nPointsEta = buffer(1)
+
+        EXIT
+
+      END IF
+
+    END DO
 
     CALL AllocateOpacityTable &
-           ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
-             nOpac_Pair, nMom_Pair, nPointsE, nPointsEta )
-   
-    CALL OpenGroupHDF( "EnergyGrid", .false., file_id, group_id )
-    CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
-    CALL CloseGroupHDF( group_id )
+           ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
+             nMom_NES, nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
+             Verbose_Option = Verbose )
 
-    IF( ReadOpacity_EmAb )THEN
-      WRITE(*,*) "Now read-in EmAb table"
+    ! --- Read Energy Grid ---
+
+    DO iOp = iEmAb, iPair
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "EnergyGrid", .FALSE., file_id, group_id )
+
+        CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
+
+        CALL CloseGroupHDF( group_id )
+
+        CALL CloseFileHDF( file_id )
+
+        EXIT
+
+      END IF
+
+    END DO
+
+    ! --- Read Eta (Chem_e/kT) Grid ---
+
+    DO iOp = iNES, iPair
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "EtaGrid",    .FALSE., file_id, group_id )
+
+        CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
+
+        CALL CloseGroupHDF( group_id )
+
+        CALL CloseFileHDF( file_id )
+
+        EXIT
+
+      END IF
+
+    END DO
+
+    ! --- Read Opacities ---
+
+    IF( ReadOpacity(iEmAb) )THEN
+
+      IF( Verbose )THEN
+
+        WRITE(*,'(A6,A9,A)') '', 'Reading: ', TRIM( FileName(iEmAb) )
+
+      END IF
+
+      CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
 
       CALL OpenGroupHDF &
-             ( "EmAb_CorrectedAbsorption", .false., file_id, group_id )
+             ( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
 
       datasize1d(1) = nOpac_EmAb
       CALL ReadHDF &
@@ -413,86 +513,111 @@ CONTAINS
       CALL ReadHDF &
              ( "Units",   OpacityTable % EmAb % Units,   group_id, datasize1d )
 
-      datasize4d(1) = nPointsE
+      datasize4d(1)   = OpacityTable % EnergyGrid % nPoints
       datasize4d(2:4) = OpacityTable % TS % nPoints
 
-      OpacityTable % EmAb % Names(1) = "Electron Neutrino";
+      OpacityTable % EmAb % Names(1) = "Electron Neutrino"
+
       CALL ReadHDF &
              ( TRIM( OpacityTable % EmAb % Names(1) ), &
                OpacityTable % EmAb % Opacity(1) % Values, &
                group_id, datasize4d )
 
-      OpacityTable % EmAb % Names(2) = "Electron Antineutrino";
+      OpacityTable % EmAb % Names(2) = "Electron Antineutrino"
+
       CALL ReadHDF &
          ( TRIM( OpacityTable % EmAb % Names(2) ), &
             OpacityTable % EmAb % Opacity(2) % Values, &
             group_id, datasize4d )
+
       CALL CloseGroupHDF( group_id )
 
-    END IF ! ReadOpacity_EmAb
+      CALL CloseFileHDF( file_id )
 
-    IF( ReadOpacity_Iso ) THEN
-      WRITE(*,*) "Now read-in Iso table"
+    END IF
+
+
+    IF( ReadOpacity(iIso) ) THEN
+
+      IF( Verbose )THEN
+
+        WRITE(*,'(A6,A9,A)') '', 'Reading: ', TRIM( FileName(iIso) )
+
+      END IF
+
+      CALL OpenFileHDF( FileName(iIso), .FALSE., file_id )
 
       CALL OpenGroupHDF &
-             ( "Scat_Iso_Kernels", .false., file_id, group_id )
+             ( "Scat_Iso_Kernels", .FALSE., file_id, group_id )
 
-      datasize2d(1) = nOpac_Iso
-      datasize2d(2) = nMom_Iso
+      datasize2d(1) = OpacityTable % Scat_Iso % nOpacities
+      datasize2d(2) = OpacityTable % Scat_Iso % nMoments
 
       CALL ReadHDF &
-             ( "Offsets", OpacityTable % Scat_Iso % Offsets, group_id, datasize2d )
+             ( "Offsets", OpacityTable % Scat_Iso % Offsets, &
+               group_id, datasize2d )
 
-      datasize1d = 2
+      datasize1d = OpacityTable % Scat_Iso % nOpacities
       CALL ReadHDF &
-             ( "Units",   OpacityTable % Scat_Iso % Units,   group_id, datasize1d )
+             ( "Units",   OpacityTable % Scat_Iso % Units,   &
+               group_id, datasize1d )
 
-      datasize5d(1) = nPointsE
-      datasize5d(2)   = nMom_Iso
-      datasize5d(3:5)   = OpacityTable % TS % nPoints
+      datasize5d(1)   = OpacityTable % EnergyGrid % nPoints
+      datasize5d(2)   = OpacityTable % Scat_Iso % nMoments
+      datasize5d(3:5) = OpacityTable % TS % nPoints
 
-      OpacityTable % Scat_Iso % Names(1) = "Electron Neutrino";
+      OpacityTable % Scat_Iso % Names(1) = "Electron Neutrino"
+
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_Iso % Names(1) ), &
                OpacityTable % Scat_Iso % Kernel(1) % Values, &
                group_id, datasize5d )
 
-       OpacityTable % Scat_Iso % Names(2) = "Electron Antineutrino";
+      OpacityTable % Scat_Iso % Names(2) = "Electron Antineutrino"
+
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_Iso % Names(2) ), &
                OpacityTable % Scat_Iso % Kernel(2) % Values, &
                group_id, datasize5d )
+
       CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
 
     END IF
 
-    IF( ReadOpacity_NES .OR. ReadOpacity_Pair ) THEN
-      WRITE(*,*) "Now read-in eta"
 
-      CALL OpenGroupHDF( "EtaGrid", .false., file_id, group_id )
-      CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
-      CALL CloseGroupHDF( group_id )   
-    END IF 
+    IF( ReadOpacity(iNES) ) THEN
 
-    IF( ReadOpacity_NES ) THEN
-      WRITE(*,*) "Now read-in NES table"
+      IF( Verbose )THEN
+
+        WRITE(*,'(A6,A9,A)') '', 'Reading: ', TRIM( FileName(iNES) )
+
+      END IF
+
+      CALL OpenFileHDF( FileName(iNES), .FALSE., file_id )
+
       CALL OpenGroupHDF &
-             ( "Scat_NES_Kernels", .false., file_id, group_id )
+             ( "Scat_NES_Kernels", .FALSE., file_id, group_id )
 
-      datasize2d(1) = nOpac_NES
-      datasize2d(2) = nMom_NES
-      CALL ReadHDF &
-             ( "Offsets", OpacityTable % Scat_NES % Offsets, group_id, datasize2d )
+      datasize2d(1) = OpacityTable % Scat_NES % nOpacities
+      datasize2d(2) = OpacityTable % Scat_NES % nMoments
 
       CALL ReadHDF &
-             ( "Units",   OpacityTable % Scat_NES % Units,   group_id, datasize2d )
+             ( "Offsets", OpacityTable % Scat_NES % Offsets, &
+               group_id, datasize2d )
 
-      datasize5d(1:2) = nPointsE
-      datasize5d(3)   = nMom_NES
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_NES % Units,   &
+               group_id, datasize2d )
+
+      datasize5d(1:2) = OpacityTable % EnergyGrid % nPoints
+      datasize5d(3)   = OpacityTable % Scat_NES % nMoments
       datasize5d(4)   = OpacityTable % TS % nPoints(2) !! fix me
       datasize5d(5)   = OpacityTable % EtaGrid % nPoints
 
       OpacityTable % Scat_NES % Names(1) = "Kernels";
+
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_NES % Names(1) ), &
                OpacityTable % Scat_NES % Kernel(1) % Values, &
@@ -500,36 +625,53 @@ CONTAINS
 
       CALL CloseGroupHDF( group_id )
 
-    END IF ! ReadOpacity_NES
+      CALL CloseFileHDF( file_id )
 
-    IF( ReadOpacity_Pair ) THEN
-      WRITE(*,*) "Now read-in Pair table"
+    END IF
+
+
+    IF( ReadOpacity(iPair) ) THEN
+
+      IF( Verbose )THEN
+
+        WRITE(*,'(A6,A9,A)') '', 'Reading: ', TRIM( FileName(iPair) )
+
+      END IF
+
+      CALL OpenFileHDF( FileName(iPair), .FALSE., file_id )
+
       CALL OpenGroupHDF &
-             ( "Scat_Pair_Kernels", .false., file_id, group_id )
+             ( "Scat_Pair_Kernels", .FALSE., file_id, group_id )
 
-      datasize2d(1) = nOpac_Pair
-      datasize2d(2) = nMom_Pair
-      CALL ReadHDF &
-             ( "Offsets", OpacityTable % Scat_Pair % Offsets, group_id, datasize2d )
+      datasize2d(1) = OpacityTable % Scat_Pair % nOpacities
+      datasize2d(2) = OpacityTable % Scat_Pair % nMoments
 
       CALL ReadHDF &
-             ( "Units",   OpacityTable % Scat_Pair % Units,   group_id, datasize2d )
+             ( "Offsets", OpacityTable % Scat_Pair % Offsets, &
+               group_id, datasize2d )
 
-      datasize5d(1:2) = nPointsE
-      datasize5d(3)   = nMom_Pair
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_Pair % Units,   &
+               group_id, datasize2d )
+
+      datasize5d(1:2) = OpacityTable % EnergyGrid % nPoints
+      datasize5d(3)   = OpacityTable % Scat_Pair % nMoments
       datasize5d(4)   = OpacityTable % TS % nPoints(2) !! fix me
       datasize5d(5)   = OpacityTable % EtaGrid % nPoints
 
       OpacityTable % Scat_Pair % Names(1) = "Kernels";
+
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_Pair % Names(1) ), &
                OpacityTable % Scat_Pair % Kernel(1) % Values, &
                group_id, datasize5d )
 
       CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
     END IF
 
-    CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadOpacityTableHDF
 
