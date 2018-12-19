@@ -94,8 +94,7 @@ CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
     ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
-      nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
-      Verbose_Option )
+      nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
     INTEGER,                INTENT(in)           :: nOpac_EmAb
@@ -116,20 +115,23 @@ CONTAINS
     END IF
 
     IF( Verbose )THEN
-      WRITE(*,'(A4,A9,A)') &
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') '', 'AllocateOpacityTable'
+      WRITE(*,*)
+      WRITE(*,'(A6,A9,A)') &
         '', 'Reading: ', TRIM( 'EquationOfStateTable.h5' )
     END IF
 
     CALL ReadEquationOfStateTableHDF &
            ( OpTab % EOSTable, "EquationOfStateTable.h5" )
 
-    OpTab % nOpacities_EmAb     = nOpac_EmAb
-    OpTab % nOpacities_Iso     = nOpac_Iso
-    OpTab % nMoments_Iso       = nMom_Iso
-    OpTab % nOpacities_NES = nOpac_NES
-    OpTab % nMoments_NES   = nMom_NES
-    OpTab % nOpacities_Pair  = nOpac_Pair
-    OpTab % nMoments_Pair    = nMom_Pair
+    OpTab % nOpacities_EmAb = nOpac_EmAb
+    OpTab % nOpacities_Iso  = nOpac_Iso
+    OpTab % nMoments_Iso    = nMom_Iso
+    OpTab % nOpacities_NES  = nOpac_NES
+    OpTab % nMoments_NES    = nMom_NES
+    OpTab % nOpacities_Pair = nOpac_Pair
+    OpTab % nMoments_Pair   = nMom_Pair
     OpTab % nPointsE        = nPointsE
     OpTab % nPointsEta      = nPointsEta
     OpTab % nPointsTS       = OpTab % EOSTable % TS % nPoints
@@ -168,9 +170,6 @@ CONTAINS
              nMoments = nMom_Pair, nOpacities = nOpac_Pair )
 
     END ASSOCIATE ! nPoints
-
-    PRINT*, 'End allocate opacity table.'
-    PRINT*
 
   END SUBROUTINE AllocateOpacityTable
 
