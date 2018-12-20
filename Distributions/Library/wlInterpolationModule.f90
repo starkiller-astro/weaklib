@@ -724,7 +724,7 @@ CONTAINS
     REAL(dp), INTENT(in)  :: TabOpacity(:,:,:,:,:)
     REAL(dp), INTENT(out) :: Opacity(:,:,:,:)
 
-    INTEGER  :: iX, iX1, iX2, il1, il2, l, k, kp
+    INTEGER  :: iX, iX1, iX2, l, k, kp
     REAL(dp) :: dX1, dX2
     REAL(dp) :: &
       p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
@@ -774,31 +774,28 @@ CONTAINS
       DO k  = 1, SIZE( E )
       DO kp = 1, k
 
-        il1 = iE(kp)
-        il2 = iE(k)
-
-        p0000 = TabOpacity( il1  , il2  , l, iX1  , iX2   )
-        p0001 = TabOpacity( il1  , il2  , l, iX1  , iX2+1 )
-        p0010 = TabOpacity( il1  , il2  , l, iX1+1, iX2   )
-        p0011 = TabOpacity( il1  , il2  , l, iX1+1, iX2+1 )
-        p0100 = TabOpacity( il1  , il2+1, l, iX1  , iX2   )
-        p0101 = TabOpacity( il1  , il2+1, l, iX1  , iX2+1 )
-        p0110 = TabOpacity( il1  , il2+1, l, iX1+1, iX2   )
-        p0111 = TabOpacity( il1  , il2+1, l, iX1+1, iX2+1 )
-        p1000 = TabOpacity( il1+1, il2  , l, iX1  , iX2   )
-        p1001 = TabOpacity( il1+1, il2  , l, iX1  , iX2+1 )
-        p1010 = TabOpacity( il1+1, il2  , l, iX1+1, iX2   )
-        p1011 = TabOpacity( il1+1, il2  , l, iX1+1, iX2+1 )
-        p1100 = TabOpacity( il1+1, il2+1, l, iX1  , iX2   )
-        p1101 = TabOpacity( il1+1, il2+1, l, iX1  , iX2+1 )
-        p1110 = TabOpacity( il1+1, il2+1, l, iX1+1, iX2   )
-        p1111 = TabOpacity( il1+1, il2+1, l, iX1+1, iX2+1 )
+        p0000 = TabOpacity( iE(kp)  , iE(k)  , l, iX1  , iX2   )
+        p0001 = TabOpacity( iE(kp)  , iE(k)  , l, iX1  , iX2+1 )
+        p0010 = TabOpacity( iE(kp)  , iE(k)  , l, iX1+1, iX2   )
+        p0011 = TabOpacity( iE(kp)  , iE(k)  , l, iX1+1, iX2+1 )
+        p0100 = TabOpacity( iE(kp)  , iE(k)+1, l, iX1  , iX2   )
+        p0101 = TabOpacity( iE(kp)  , iE(k)+1, l, iX1  , iX2+1 )
+        p0110 = TabOpacity( iE(kp)  , iE(k)+1, l, iX1+1, iX2   )
+        p0111 = TabOpacity( iE(kp)  , iE(k)+1, l, iX1+1, iX2+1 )
+        p1000 = TabOpacity( iE(kp)+1, iE(k)  , l, iX1  , iX2   )
+        p1001 = TabOpacity( iE(kp)+1, iE(k)  , l, iX1  , iX2+1 )
+        p1010 = TabOpacity( iE(kp)+1, iE(k)  , l, iX1+1, iX2   )
+        p1011 = TabOpacity( iE(kp)+1, iE(k)  , l, iX1+1, iX2+1 )
+        p1100 = TabOpacity( iE(kp)+1, iE(k)+1, l, iX1  , iX2   )
+        p1101 = TabOpacity( iE(kp)+1, iE(k)+1, l, iX1  , iX2+1 )
+        p1110 = TabOpacity( iE(kp)+1, iE(k)+1, l, iX1+1, iX2   )
+        p1111 = TabOpacity( iE(kp)+1, iE(k)+1, l, iX1+1, iX2+1 )
 
         Opacity(kp,k,l,iX) &
           = TetraLinear &
               ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
                 p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
-                dE(iE(kp)), dE(iE(k)), dX1, dX2 )
+                dE(kp), dE(k), dX1, dX2 )
 
         Opacity(kp,k,l,iX) = 10.0d0**( Opacity(kp,k,l,iX) ) - OS(l)
 
