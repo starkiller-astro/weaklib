@@ -1,4 +1,4 @@
-LIBRARY = \
+WL_LIBRARY = \
   wlKindModule.o \
   wlGridModule.o \
   wlThermoStateModule.o \

@@ -6,4 +6,4 @@ include $(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85/Makefile_OpacityBru
 include $(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85/Chimera/Makefile_ObjectFiles
 
 Weaklib_External = \
-  $(LIBRARY) $(EOSSOURCE) $(OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYBRUENN85) $(CHIMERABRUENN85)
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYBRUENN85) $(CHIMERABRUENN85)
