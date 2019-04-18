@@ -4,6 +4,14 @@ wlEquationOfStateTableModule.o: \
   wlDependentVariablesModule.o \
   wlEquationOfStateTableModule.f90
 
+wlEOSInterpolationModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlThermoStateModule.o \
+  wlDependentVariablesModule.o \
+  wlEquationOfStateTableModule.o \
+  wlEOSInterpolationModule.f90 \
+
 wlEOSIOModuleHDF.o: \
   wlKindModule.o \
   wlThermoStateModule.o \

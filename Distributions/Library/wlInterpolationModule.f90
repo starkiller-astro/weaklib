@@ -1,18 +1,15 @@
 MODULE wlInterpolationModule
 
   USE wlKindModule, ONLY: dp
-  USE wlThermoStateModule
-  USE wlDependentVariablesModule
- 
-  implicit none
-  private
 
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: locate
+  PUBLIC :: Index1D
+  PUBLIC :: TriLinear
   PUBLIC :: LogInterpolateSingleVariable
-  PUBLIC :: LogInterpolateAllVariables
   PUBLIC :: LogInterpolateDifferentiateSingleVariable
-  PUBLIC :: LogInterpolateDifferentiateAllVariables
-  PUBLIC :: MonotonicityCheck
-  PUBLIC :: GetGamma1
   PUBLIC :: ComputeTempFromIntEnergy
   PUBLIC :: ComputeTempFromIntEnergy_Lookup
   PUBLIC :: ComputeTempFromIntEnergy_Bisection
@@ -20,30 +17,27 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromEntropy
   PUBLIC :: ComputeTempFromPressure
   PUBLIC :: ComputeTempFromPressure_Bisection
-!  PUBLIC :: ComputeTempForVector
-  PUBLIC :: EOSTableQuery
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateOpacity_2D1D2D
 
+  REAL(dp), PARAMETER :: One = 1.0_dp
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
   INTERFACE LogInterpolateSingleVariable
     MODULE PROCEDURE LogInterpolateSingleVariable_3D
     MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom
+    MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom_Point
     MODULE PROCEDURE LogInterpolateSingleVariable_4D
     MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom
   END INTERFACE LogInterpolateSingleVariable
 
-  INTERFACE LogInterpolateAllVariables
-    MODULE PROCEDURE LogInterpolateAllVariables_3D
-    MODULE PROCEDURE LogInterpolateAllVariables_3D_Custom
-  END INTERFACE LogInterpolateAllVariables
-
   INTERFACE LogInterpolateDifferentiateSingleVariable
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_3D
+    MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_3D_Custom
+    MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_4D
   END INTERFACE LogInterpolateDifferentiateSingleVariable
 
@@ -52,10 +46,11 @@ CONTAINS
 
   SUBROUTINE locate( xx, n, x, j )
 
-    INTEGER, INTENT(in)      :: n
-    INTEGER, INTENT(out)     :: j
-    REAL(dp), INTENT(in)     :: x,xx(n)
-    INTEGER                  :: jl,jm,ju
+    INTEGER,  INTENT(in)  :: n
+    INTEGER,  INTENT(out) :: j
+    REAL(dp), INTENT(in)  :: x,xx(n)
+
+    INTEGER :: jl,jm,ju
 
     jl = 0
     ju = n+1
@@ -143,9 +138,9 @@ CONTAINS
 
     REAL(dp) :: ddX1, ddX2, ddX3
 
-    ddX1 = 1.0_dp - dX1
-    ddX2 = 1.0_dp - dX2
-    ddX3 = 1.0_dp - dX3
+    ddX1 = One - dX1
+    ddX2 = One - dX2
+    ddX3 = One - dX3
 
     TriLinear                                        &
       = ddX3                                         &
@@ -157,6 +152,79 @@ CONTAINS
 
     RETURN
   END FUNCTION TriLinear
+
+
+  PURE REAL(dp) FUNCTION dTriLineardX1 &
+    ( p000, p100, p010, p110, p001, p101, p011, p111, dX2, dX3 )
+
+    REAL(dp), INTENT(in) :: &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111, &
+      dX2, dX3
+
+    REAL(dp) :: ddX2, ddX3
+
+    ddX2 = One - dX2
+    ddX3 = One - dX3
+
+    dTriLineardX1 &
+      = ddX3 &
+          * ( - ddX2 * p000 + ddX2 * p100   &
+              -  dX2 * p010 +  dX2 * p110 ) &
+       + dX3 &
+          * ( - ddX2 * p001 + ddX2 * p101   &
+              -  dX2 * p011 +  dX2 * p111 )
+
+    RETURN
+  END FUNCTION dTriLineardX1
+
+
+  PURE REAL(dp) FUNCTION dTriLineardX2 &
+    ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX3 )
+
+    REAL(dp), INTENT(in) :: &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111, &
+      dX1, dX3
+
+    REAL(dp) :: ddX1, ddX3
+
+    ddX1 = One - dX1
+    ddX3 = One - dX3
+
+    dTriLineardX2 &
+      =  ddX3 &
+           * ( - ddX1 * p000 - dX1 * p100   &
+               + ddX1 * p010 + dX1 * p110 ) &
+        + dX3 &
+           * ( - ddX1 * p001 - dX1 * p101   &
+               + ddX1 * p011 + dX1 * p111 )
+
+    RETURN
+  END FUNCTION dTriLineardX2
+
+
+  PURE REAL(dp) FUNCTION dTriLineardX3 &
+    ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX2 )
+
+    REAL(dp), INTENT(in) :: &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111, &
+      dX1, dX2
+
+    REAL(dp) :: ddX1, ddX2
+
+    ddX1 = One - dX1
+    ddX2 = One - dX2
+
+    dTriLineardX3 &
+      = - ddX1 * ddX2 * p000 - dX1 * ddX2 * p100 &
+        - ddX1 *  dX2 * p010 - dX1 *  dX2 * p110 &
+        + ddX1 * ddX2 * p001 + dX1 * ddX2 * p101 &
+        + ddX1 *  dX2 * p011 + dX1 *  dX2 * p111
+
+    RETURN
+  END FUNCTION dTriLineardX3
 
 
   PURE REAL(dp) FUNCTION TetraLinear &
@@ -811,13 +879,14 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
-               ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant )
+    ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Error_Option )
 
-    REAL(dp), DIMENSION(:),     INTENT(in)  :: D,  T,  Y
-    REAL(dp), DIMENSION(:),     INTENT(in)  :: Ds, Ts, Ys
-    REAL(dp),                   INTENT(in)  :: OS
-    REAL(dp), DIMENSION(:,:,:), INTENT(in)  :: Table
-    REAL(dp), DIMENSION(:),     INTENT(out) :: Interpolant
+    REAL(dp), INTENT(in)  :: D (:), T (:), Y (:)
+    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:)
+    REAL(dp), INTENT(out), OPTIONAL :: Error_Option
 
     INTEGER  :: &
       iP, iD, iT, iY
@@ -826,14 +895,19 @@ CONTAINS
       p000, p100, p010, p110, &
       p001, p101, p011, p111
 
-    IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
-      WRITE(*,*)
-      WRITE(*,'(A4,A)') &
-        '', 'LogInterpolateSingleVariable_3D_Custom'
-      WRITE(*,'(A4,A)') &
-        '', 'ERROR: arrays of interpolation points have different sizes'
-      WRITE(*,*)
-      RETURN
+    IF( PRESENT( Error_Option ) )THEN
+
+      IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
+
+        Error_Option = 1
+        RETURN
+
+      ELSE
+
+        Error_Option = 0
+
+      END IF
+
     END IF
 
     DO iP = 1, SIZE( D )
@@ -864,6 +938,49 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_3D_Custom
+
+
+  SUBROUTINE LogInterpolateSingleVariable_3D_Custom_Point &
+    ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: D,  T,  Y
+    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant
+
+    INTEGER  :: &
+      iD, iT, iY
+    REAL(dp) :: &
+      dD, dT, dY, &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111
+
+    iD = Index1D( D, Ds, SIZE( Ds ) )
+    iT = Index1D( T, Ts, SIZE( Ts ) )
+    iY = Index1D( Y, Ys, SIZE( Ys ) )
+
+    dD = LOG10( D / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+    dT = LOG10( T / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+    dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+    p000 = Table( iD  , iT  , iY   )
+    p100 = Table( iD+1, iT  , iY   )
+    p010 = Table( iD  , iT+1, iY   )
+    p110 = Table( iD+1, iT+1, iY   )
+    p001 = Table( iD  , iT  , iY+1 )
+    p101 = Table( iD+1, iT  , iY+1 )
+    p011 = Table( iD  , iT+1, iY+1 )
+    p111 = Table( iD+1, iT+1, iY+1 )
+
+    Interpolant &
+      = 10.0d0**( &
+          TriLinear &
+            ( p000, p100, p010, p110, &
+              p001, p101, p011, p111, &
+              dD, dT, dY ) ) - OS
+
+  END SUBROUTINE LogInterpolateSingleVariable_3D_Custom_Point
 
 
   SUBROUTINE LogInterpolateSingleVariable_4D &
@@ -1028,188 +1145,12 @@ CONTAINS
 
     END DO
 
-    WRITE(*,*) 'TetraLinear   '
   END SUBROUTINE LogInterpolateSingleVariable_4D_Custom
 
 
-  SUBROUTINE LogInterpolateAllVariables_3D &
-               ( x1, x2, x3, LogInterp, TS, DV, Interpolants, MaskVar )
-
-    REAL(dp), DIMENSION(:), INTENT(in) :: x1
-    REAL(dp), DIMENSION(:), INTENT(in) :: x2
-    REAL(dp), DIMENSION(:), INTENT(in) :: x3
-    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
-    TYPE(ThermoStateType), INTENT(in) :: TS
-    TYPE(DependentVariablesType), INTENT(in) :: DV
-    LOGICAL, DIMENSION(:), OPTIONAL, INTENT(in) :: MaskVar
-
-    REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
-
-    REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
-    REAL(dp), DIMENSION(:,:), ALLOCATABLE :: delta
-    INTEGER :: i, j, dim1, dim2, dim3
-    INTEGER, DIMENSION(:), ALLOCATABLE :: il1, il2, il3
-    LOGICAL, DIMENSION(:), ALLOCATABLE  :: work_mask
-    INTEGER                             :: Masksize
-
-    epsilon = 1.d-200
-
-    Masksize = SIZE( x2 )
-    dim1     = SIZE( TS % States(1) % Values )
-    dim2     = SIZE( TS % States(2) % Values )
-    dim3     = SIZE( TS % States(3) % Values )
-
-    ALLOCATE( work_mask( Masksize ), delta( 3, Masksize ), &
-              il1( Masksize), il2( Masksize ), il3( Masksize ) )
-
-    IF ( PRESENT(MaskVar) ) THEN
-      work_mask = MaskVar
-    ELSE
-      work_mask = .true.
-    END IF
-
-    DO i = 1, Masksize
-
-      IF ( .not.work_mask(i) ) CYCLE
-
-      ASSOCIATE( Coordinate1 => TS % States(1) % Values, &    
-                 Coordinate2 => TS % States(2) % Values, &    
-                 Coordinate3 => TS % States(3) % Values )   
-
-      CALL locate( Coordinate1, dim1, x1(i), il1(i) )
-      CALL locate( Coordinate2, dim2, x2(i), il2(i) )
-      CALL locate( Coordinate3, dim3, x3(i), il3(i) )
-
-      IF ( LogInterp(1) == 1 ) THEN
-        delta(1,i) = LOG10( x1(i) / Coordinate1(il1(i)) ) / LOG10( Coordinate1(il1(i)+1) / Coordinate1(il1(i)) )
-      ELSE
-        delta(1,i) = ( x1(i) - Coordinate1(il1(i)) ) / ( Coordinate1(il1(i)+1) - Coordinate1(il1(i)) )
-      END IF
-
-      IF ( LogInterp(2) == 1 ) THEN
-        delta(2,i) = LOG10( x2(i) / Coordinate2(il2(i)) ) / LOG10( Coordinate2(il2(i)+1) / Coordinate2(il2(i)) )
-      ELSE
-        delta(2,i) = ( x2(i) - Coordinate2(il2(i)) ) / ( Coordinate2(il2(i)+1) - Coordinate2(il2(i)) )
-      END IF
-
-      IF ( LogInterp(3) == 1 ) THEN
-        delta(3,i) = LOG10( x3(i) / Coordinate3(il3(i)) ) / LOG10( Coordinate3(il3(i)+1) / Coordinate3(il3(i)) )
-      ELSE
-        delta(3,i) = ( x3(i) - Coordinate3(il3(i)) ) / ( Coordinate3(il3(i)+1) - Coordinate3(il3(i)) )
-      END IF
-
-      END ASSOCIATE
-
-    END DO ! i = 1, Masksize
-
-    DO j = 1, DV % nVariables
-
-      ASSOCIATE( Table => DV % Variables(j) % Values(:,:,:), &
-                 Offset => DV % Offsets(j) )
-      DO i = 1, Masksize
-
-        IF ( .not.work_mask(i) ) CYCLE
-
-        p000 = ( Table( il1(i)  , il2(i)  , il3(i)   ) )
-        p100 = ( Table( il1(i)+1, il2(i)  , il3(i)   ) )
-        p010 = ( Table( il1(i)  , il2(i)+1, il3(i)   ) )
-        p110 = ( Table( il1(i)+1, il2(i)+1, il3(i)   ) )
-        p001 = ( Table( il1(i)  , il2(i)  , il3(i)+1 ) )
-        p101 = ( Table( il1(i)+1, il2(i)  , il3(i)+1 ) )
-        p011 = ( Table( il1(i)  , il2(i)+1, il3(i)+1 ) )
-        p111 = ( Table( il1(i)+1, il2(i)+1, il3(i)+1 ) )
-
-        Interpolants(i,j) &
-          = 10.d0**( &
-                (1.0_dp - delta(3,i)) * ( (1.0_dp - delta(1,i)) * (1.0_dp - delta(2,i)) * p000   &
-                                       +            delta(1,i)  * (1.0_dp - delta(2,i)) * p100   &
-                                       + ( 1.0_dp - delta(1,i)) *           delta(2,i)  * p010   &
-                                       +            delta(1,i)  *           delta(2,i)  * p110 ) &
-                        + delta(3,i)  * ( (1.0_dp - delta(1,i)) * (1.0_dp - delta(2,i)) * p001   &
-                                       +            delta(1,i)  * (1.0_dp - delta(2,i)) * p101   &
-                                       +  (1.0_dp - delta(1,i)) *           delta(2,i)  * p011   &
-                                       +            delta(1,i)  *           delta(2,i)  * p111 ) &
-
-                   ) - Offset
-
-        END DO ! i = 1, Masksize
-
-      END ASSOCIATE
-
-    END DO ! j = 1, nVariables
-        
-
-  END SUBROUTINE LogInterpolateAllVariables_3D
-
-
-  SUBROUTINE LogInterpolateAllVariables_3D_Custom &
-               ( D, T, Y, Ds, Ts, Ys, DV, Interpolants )
-
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: D,  T,  Y
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Ds, Ts, Ys
-    TYPE(DependentVariablesType), INTENT(in)  :: DV
-    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolants
-
-    INTEGER :: &
-      iP, iV, iD, iT, iY
-    REAL(dp) :: &
-      dD, dT, dY, &
-      p000, p100, p010, p110, &
-      p001, p101, p011, p111
-
-    IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
-      WRITE(*,*)
-      WRITE(*,'(A4,A)') &
-        '', 'LogInterpolateAllVariables_3D_Custom'
-      WRITE(*,'(A4,A)') &
-        '', 'ERROR: arrays of interpolation points have different sizes'
-      WRITE(*,*)
-      RETURN
-    END IF
-
-    DO iP = 1, SIZE( D )
-
-      iD = Index1D( D(iP), Ds, SIZE( Ds ) )
-      iT = Index1D( T(iP), Ts, SIZE( Ts ) )
-      iY = Index1D( Y(iP), Ys, SIZE( Ys ) )
-
-      dD = LOG10( D(iP) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
-      dT = LOG10( T(iP) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
-      dY = ( Y(iP) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
-
-      DO iV = 1, DV % nVariables
-
-        ASSOCIATE &
-          ( Table => DV % Variables(iV) % Values(:,:,:), &
-            OS    => DV % Offsets  (iV) )
-
-        p000 = Table( iD  , iT  , iY   )
-        p100 = Table( iD+1, iT  , iY   )
-        p010 = Table( iD  , iT+1, iY   )
-        p110 = Table( iD+1, iT+1, iY   )
-        p001 = Table( iD  , iT  , iY+1 )
-        p101 = Table( iD+1, iT  , iY+1 )
-        p011 = Table( iD  , iT+1, iY+1 )
-        p111 = Table( iD+1, iT+1, iY+1 )
-
-        Interpolants(iV, iP) &
-          = 10.0d0**( &
-              TriLinear &
-                ( p000, p100, p010, p110, &
-                  p001, p101, p011, p111, dD, dT, dY ) ) - OS
-
-        END ASSOCIATE ! Table, etc.
-
-      END DO
-
-    END DO
-
-  END SUBROUTINE LogInterpolateAllVariables_3D_Custom
-
-
-  SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D                    &
-               ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3,          &
-                 LogInterp, Offset, Table, Interpolant, Derivative, MaskVar)     
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D &
+    ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, LogInterp, Offset, &
+      Table, Interpolant, Derivative, MaskVar)     
 
     REAL(dp), DIMENSION(:), INTENT(in)     :: x1
     REAL(dp), DIMENSION(:), INTENT(in)     :: x2
@@ -1351,10 +1292,140 @@ CONTAINS
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D
 
+
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom &
+    ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Derivative )
+
+    REAL(dp), INTENT(in)  :: D (:), T (:), Y (:)
+    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:)
+    REAL(dp), INTENT(out) :: Derivative(:,:)
+
+    INTEGER  :: &
+      iP, iD, iT, iY
+    REAL(dp) :: &
+      dD, dT, dY, &
+      aD, aT, aY, &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111
+
+    DO iP = 1, SIZE( D )
+
+      iD = Index1D( D(iP), Ds, SIZE( Ds ) )
+      iT = Index1D( T(iP), Ts, SIZE( Ts ) )
+      iY = Index1D( Y(iP), Ys, SIZE( Ys ) )
+
+      dD = LOG10( D(iP) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+      dT = LOG10( T(iP) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+      dY = ( Y(iP) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+      aD = One / ( D(iP) * LOG10( Ds(iD+1) / Ds(iD) ) )
+      aT = One / ( T(iP) * LOG10( Ts(iT+1) / Ts(iT) ) )
+      aY = ln10 / ( Ys(iY+1) - Ys(iY) )
+
+      p000 = Table( iD  , iT  , iY   )
+      p100 = Table( iD+1, iT  , iY   )
+      p010 = Table( iD  , iT+1, iY   )
+      p110 = Table( iD+1, iT+1, iY   )
+      p001 = Table( iD  , iT  , iY+1 )
+      p101 = Table( iD+1, iT  , iY+1 )
+      p011 = Table( iD  , iT+1, iY+1 )
+      p111 = Table( iD+1, iT+1, iY+1 )
+
+      Interpolant(iP) &
+        = 10.0d0**( &
+            TriLinear &
+              ( p000, p100, p010, p110, &
+                p001, p101, p011, p111, dD, dT, dY ) ) - OS
+
+      Derivative(iP,1) &
+        = Interpolant(iP) * aD &
+            * dTriLineardX1 &
+                ( p000, p100, p010, p110, p001, p101, p011, p111, dT, dY )
+
+      Derivative(iP,2) &
+        = Interpolant(iP) * aT &
+            * dTriLineardX2 &
+                ( p000, p100, p010, p110, p001, p101, p011, p111, dD, dY )
+
+      Derivative(iP,3) &
+        = Interpolant(iP) * aY &
+            * dTriLineardX3 &
+                ( p000, p100, p010, p110, p001, p101, p011, p111, dD, dT )
+
+    END DO
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom
+
+
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point &
+    ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Derivative )
+
+    REAL(dp), INTENT(in)  :: D, T, Y
+    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant
+    REAL(dp), INTENT(out) :: Derivative(:)
+
+    INTEGER  :: &
+      iD, iT, iY
+    REAL(dp) :: &
+      dD, dT, dY, &
+      aD, aT, aY, &
+      p000, p100, p010, p110, &
+      p001, p101, p011, p111
+
+    iD = Index1D( D, Ds, SIZE( Ds ) )
+    iT = Index1D( T, Ts, SIZE( Ts ) )
+    iY = Index1D( Y, Ys, SIZE( Ys ) )
+
+    dD = LOG10( D / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+    dT = LOG10( T / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+    dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+    aD = One / ( D * LOG10( Ds(iD+1) / Ds(iD) ) )
+    aT = One / ( T * LOG10( Ts(iT+1) / Ts(iT) ) )
+    aY = ln10 / ( Ys(iY+1) - Ys(iY) )
+
+    p000 = Table( iD  , iT  , iY   )
+    p100 = Table( iD+1, iT  , iY   )
+    p010 = Table( iD  , iT+1, iY   )
+    p110 = Table( iD+1, iT+1, iY   )
+    p001 = Table( iD  , iT  , iY+1 )
+    p101 = Table( iD+1, iT  , iY+1 )
+    p011 = Table( iD  , iT+1, iY+1 )
+    p111 = Table( iD+1, iT+1, iY+1 )
+
+    Interpolant &
+      = 10.0d0**( &
+          TriLinear &
+            ( p000, p100, p010, p110, &
+              p001, p101, p011, p111, dD, dT, dY ) ) - OS
+
+    Derivative(1) &
+      = Interpolant * aD &
+          * dTriLineardX1 &
+              ( p000, p100, p010, p110, p001, p101, p011, p111, dT, dY )
+
+    Derivative(2) &
+      = Interpolant * aT &
+          * dTriLineardX2 &
+              ( p000, p100, p010, p110, p001, p101, p011, p111, dD, dY )
+
+    Derivative(3) &
+      = Interpolant * aY &
+          * dTriLineardX3 &
+              ( p000, p100, p010, p110, p001, p101, p011, p111, dD, dT )
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point
+
+
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D &
-               ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
-                 Coordinate4, LogInterp, Offset, Table, Interpolant, &
-                 Derivative, debug )     
+   ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, Coordinate4, &
+     LogInterp, Offset, Table, Interpolant, Derivative, debug )     
 
     REAL(dp), DIMENSION(:), INTENT(in)     :: x1
     REAL(dp), DIMENSION(:), INTENT(in)     :: x2
@@ -1675,339 +1746,6 @@ CONTAINS
     REAL(dp), DIMENSION(:,:),     INTENT(out) :: Derivatives
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom
-
-
-  SUBROUTINE LogInterpolateDifferentiateAllVariables &
-               ( x1, x2, x3, LogInterp, TS, DV, Interpolants, Derivatives, MaskVar )
-
-    REAL(dp), DIMENSION(:), INTENT(in) :: x1
-    REAL(dp), DIMENSION(:), INTENT(in) :: x2
-    REAL(dp), DIMENSION(:), INTENT(in) :: x3
-    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp 
-    TYPE(ThermoStateType), INTENT(in) :: TS
-    TYPE(DependentVariablesType), INTENT(in) :: DV
-    LOGICAL, DIMENSION(:), OPTIONAL, INTENT(in) :: MaskVar
-
-    REAL(dp), DIMENSION(:,:), INTENT(out) :: Interpolants 
-
-    REAL(dp), DIMENSION(:,:,:), INTENT(out) :: Derivatives 
-    REAL(dp) :: p000, p100, p010, p001, p011, p101, p110, p111, epsilon
-    REAL(dp), DIMENSION(:,:), ALLOCATABLe :: alpha, delta
-    INTEGER :: i, j, dim1, dim2, dim3
-    INTEGER, DIMENSION(:), ALLOCATABLE :: il1, il2, il3
-    LOGICAL, DIMENSION(:), ALLOCATABLE  :: work_mask
-    INTEGER                             :: Masksize
-
-    epsilon = 1.d-200
-
-    Masksize = SIZE( x2 )
-    dim1     = SIZE( TS % States(1) % Values )
-    dim2     = SIZE( TS % States(2) % Values )
-    dim3     = SIZE( TS % States(3) % Values )
-
-    ALLOCATE( work_mask( Masksize ), alpha( 3, Masksize ), delta( 3, Masksize ), &
-              il1( Masksize), il2( Masksize ), il3( Masksize ) )
-
-    IF ( PRESENT(MaskVar) ) THEN
-      work_mask = MaskVar
-    ELSE
-      work_mask = .true.
-    END IF
-
-    DO i = 1, Masksize
-
-      IF ( .not.work_mask(i) ) CYCLE
-
-      ASSOCIATE( Coordinate1 => TS % States(1) % Values, &
-                 Coordinate2 => TS % States(2) % Values, &
-                 Coordinate3 => TS % States(3) % Values )
-
-      CALL locate( Coordinate1, dim1, x1(i), il1(i) )
-      CALL locate( Coordinate2, dim2, x2(i), il2(i) )
-      CALL locate( Coordinate3, dim3, x3(i), il3(i) )
-
-      IF ( LogInterp(1) == 1 ) THEN
-        alpha(1,i) = ( 1.0d0 ) / ( x1(i) * LOG10( Coordinate1(il1(i)+1) / Coordinate1(il1(i)) ) )
-        delta(1,i) = LOG10( x1(i) / Coordinate1(il1(i)) ) / LOG10( Coordinate1(il1(i)+1) / Coordinate1(il1(i)) )
-      ELSE
-        alpha(1,i) = ( ln10 ) / ( Coordinate1(il1(i)+1) - Coordinate1(il1(i)) )
-        delta(1,i) = ( x1(i) - Coordinate1(il1(i)) ) / ( Coordinate1(il1(i)+1) - Coordinate1(il1(i)) )
-      END IF
-
-      IF ( LogInterp(2) == 1 ) THEN
-        alpha(2,i) = ( 1.0d0 ) / ( x2(i) * LOG10( Coordinate2(il2(i)+1) / Coordinate2(il2(i)) ) )
-        delta(2,i) = LOG10( x2(i) / Coordinate2(il2(i)) ) / LOG10( Coordinate2(il2(i)+1) / Coordinate2(il2(i)) )
-      ELSE
-        alpha(2,i) = ( ln10 ) / ( Coordinate2(il2(i)+1) - Coordinate2(il2(i)) )
-        delta(2,i) = ( x2(i) - Coordinate2(il2(i)) ) / ( Coordinate2(il2(i)+1) - Coordinate2(il2(i)) )
-      END IF
-
-      IF ( LogInterp(3) == 1 ) THEN
-        alpha(3,i) = ( 1.0d0 ) / ( x3(i) * LOG10( Coordinate3(il3(i)+1) / Coordinate3(il3(i)) ) )
-        delta(3,i) = LOG10( x3(i) / Coordinate3(il3(i)) ) / LOG10( Coordinate3(il3(i)+1) / Coordinate3(il3(i)) )
-      ELSE
-        alpha(3,i) = ( ln10 ) / ( Coordinate3(il3(i)+1) - Coordinate3(il3(i)) )
-        delta(3,i) = ( x3(i) - Coordinate3(il3(i)) ) / ( Coordinate3(il3(i)+1) - Coordinate3(il3(i)) )
-      END IF
-
-      END ASSOCIATE
-
-    END DO ! i = 1, Masksize
-
-      DO j = 1, DV % nVariables
-
-        ASSOCIATE( Table => DV % Variables(j) % Values(:,:,:), &
-                   Offset => DV % Offsets(j) )
-        DO i = 1, Masksize
-
-          IF ( .not.work_mask(i) ) CYCLE
-
-          p000 = ( Table( il1(i)  , il2(i)  , il3(i)   ) )
-          p100 = ( Table( il1(i)+1, il2(i)  , il3(i)   ) )
-          p010 = ( Table( il1(i)  , il2(i)+1, il3(i)   ) )
-          p110 = ( Table( il1(i)+1, il2(i)+1, il3(i)   ) )
-          p001 = ( Table( il1(i)  , il2(i)  , il3(i)+1 ) )
-          p101 = ( Table( il1(i)+1, il2(i)  , il3(i)+1 ) )
-          p011 = ( Table( il1(i)  , il2(i)+1, il3(i)+1 ) )
-          p111 = ( Table( il1(i)+1, il2(i)+1, il3(i)+1 ) )
-
-          Interpolants(i,j) &
-            = 10.d0**( &
-                  (1.0_dp - delta(3,i)) * ( (1.0_dp - delta(1,i)) * (1.0_dp - delta(2,i)) * p000   &
-                                       +            delta(1,i)  * (1.0_dp - delta(2,i)) * p100   &
-                                       + ( 1.0_dp - delta(1,i)) *           delta(2,i)  * p010   &
-                                       +            delta(1,i)  *           delta(2,i)  * p110 ) &
-                          + delta(3,i)  * ( (1.0_dp - delta(1,i)) * (1.0_dp - delta(2,i)) * p001   &
-                                       +            delta(1,i)  * (1.0_dp - delta(2,i)) * p101   &
-                                       +  (1.0_dp - delta(1,i)) *           delta(2,i)  * p011   &
-                                       +            delta(1,i)  *           delta(2,i)  * p111 ) &
-  
-                     ) - Offset
-  
-          Derivatives(i,1,j) &
-            = ( (Interpolants(i,j) ) * alpha(1,i) &
-                * ( (1.0_dp - delta(3,i)) * ( (delta(2,i) - 1.0_dp) * p000   &
-                                        +  ( 1.0_dp - delta(2,i)) * p100   &
-                                        -             delta(2,i)  * p010   &
-                                        +             delta(2,i)  * p110 ) &
-                             + delta(3,i) * ( (delta(2,i) - 1.0_dp) * p001   &
-                                        +  ( 1.0_dp - delta(2,i)) * p101   &
-                                        -             delta(2,i)  * p011   &
-                                        +             delta(2,i)  * p111 ) ) )
-    
-          Derivatives(i,2,j) &
-            = ( ( Interpolants(i,j) ) * alpha(2,i) &
-                * ( (1.0_dp - delta(3,i) ) * ( (delta(1,i) - 1.0_dp) * p000   &
-                                         -             delta(1,i)  * p100   & 
-                                         +  ( 1.0_dp - delta(1,i)) * p010   & 
-                                         +             delta(1,i)  * p110 ) & 
-                              + delta(3,i) * ( (delta(1,i) - 1.0_dp) * p001   & 
-                                         -             delta(1,i)  * p101   & 
-                                         +   (1.0_dp - delta(1,i)) * p011   & 
-                                         +             delta(1,i)  * p111 ) ) )
-  
-          Derivatives(i,3,j) &
-            = ( ( Interpolants(i,j) ) * alpha(3,i) &
-                                       * ( ( (delta(1,i) - 1.0_dp)) * (1.0_dp - delta(2,i)) * p000   &
-                                           -            delta(1,i)  * (1.0_dp - delta(2,i)) * p100   &
-                                           - ( 1.0_dp - delta(1,i)) *           delta(2,i)  * p010   &
-                                           -            delta(1,i)  *           delta(2,i)  * p110   &
-                                           +  (1.0_dp - delta(1,i)) * (1.0_dp - delta(2,i)) * p001   &
-                                           +            delta(1,i)  * (1.0_dp - delta(2,i)) * p101   &
-                                           +  (1.0_dp - delta(1,i)) *           delta(2,i)  * p011   &
-                                           +            delta(1,i)  *           delta(2,i)  * p111 ) )
-          END DO ! i = 1, Masksize
-  
-        END ASSOCIATE
-
-      END DO ! j = 1, nVariables
-
-  END SUBROUTINE LogInterpolateDifferentiateAllVariables 
-
-  SUBROUTINE GetGamma1( x1, x2, x3, Coordinate1, Coordinate2, &
-                Coordinate3, LogInterp, TS, DV, Gamma1 ) 
-
-    REAL(dp), DIMENSION(:), INTENT(in) :: x1
-    REAL(dp), DIMENSION(:), INTENT(in) :: x2
-    REAL(dp), DIMENSION(:), INTENT(in) :: x3
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate1
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate2
-    REAL(dp), DIMENSION(:), INTENT(in) :: Coordinate3
-    INTEGER, DIMENSION(3), INTENT(in)  :: LogInterp
-    TYPE(ThermoStateType), INTENT(in) :: TS
-    TYPE(DependentVariablesType), INTENT(in) :: DV
-
-    REAL(dp), DIMENSION(:), ALLOCATABLE, INTENT(out) :: Gamma1
-
-    INTEGER :: i
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: Interpolant 
-    REAL(dp), DIMENSION(:,:), ALLOCATABLE :: Derivative 
-
-    ALLOCATE( Interpolant( SIZE(x1) ) )
-    ALLOCATE( Gamma1( SIZE(x1) ) )
-    ALLOCATE( Derivative( SIZE(x1), 3 ) )
-
-      CALL LogInterpolateDifferentiateSingleVariable( x1, x2, x3,                 &
-                                    TS % States(1) % Values(:),        &
-                                    TS % States(2) % Values(:),        &
-                                    TS % States(3) % Values(:),        &
-                                    LogInterp, DV % Offsets(1),        &
-                                    DV % Variables(1) % Values(:,:,:), &
-                                    Interpolant(:), Derivative(:,:) )
-       
-      DO i = 1, SIZE(x1) 
-        Gamma1(i) =  ( x1(i)/Interpolant(i) ) * Derivative(i, 1 ) 
-      END DO
-
-  END SUBROUTINE GetGamma1 
-  
-  SUBROUTINE MonotonicityCheck ( Table, Nrho, NT, NYe, Axis, Repaired )
-
-    REAL(dp), DIMENSION(:,:,:), INTENT(in) :: Table
-    INTEGER, DIMENSION(:,:,:), INTENT(in) :: Repaired
-    INTEGER, INTENT(in) :: Nrho 
-    INTEGER, INTENT(in) :: NT
-    INTEGER, INTENT(in) :: NYe
-    INTEGER, INTENT(in) :: Axis
-
-    INTEGER :: i, j, k, count
-
-    97 FORMAT ("Table not monotonic in rho at (Nrho, NT, NYe) = ", 3(1x,i4) )
-    98 FORMAT ("Table not monotonic in T at (Nrho, NT, NYe) = ", 3(1x,i4) )
-    99 FORMAT ("Table not monotonic in Ye at (Nrho, NT, NYe) = ", 3(1x,i4) )
- 
-    count = 0
-    
-    SELECT CASE ( Axis ) 
-     
-    CASE( 1 )
-      DO k = 1, NYe
-        DO j = 1, NT  
-          DO i = 2, Nrho - 1
-
-            IF ( ( ( Table(i+1, j, k) - Table(i, j, k) ) * &
-                 ( Table(i, j, k) - Table(i-1, j, k) ) ) < 0. ) THEN
-              WRITE (*,97) i, j, k
-              WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
-                Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
-              count = count + 1
-            END IF
-          END DO
-        END DO
-      END DO
-
-    CASE( 2 )
-      DO k = 1, NYe
-        DO j = 2, NT - 1 
-          DO i = 1, Nrho
-
-            IF ( ( ( Table(i, j+1, k) - Table(i, j, k) ) * &
-                 ( Table(i, j, k) - Table(i, j-1, k) ) ) < 0.) THEN 
-              WRITE (*,98) i, j, k
-              WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
-                Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
-              count = count + 1
-            END IF
-          END DO
-        END DO
-      END DO
-
-   CASE( 3 )
-      DO k = 2, NYe - 1
-        DO j = 1, NT
-          DO i = 1, Nrho
-
-            IF ( ( ( Table(i, j, k+1) - Table(i, j, k) ) * &
-                 ( Table(i, j, k) - Table(i, j, k-1) ) ) < 0. ) &
-              WRITE (*, 99) i, j, k
-              WRITE (*,*) "Repaired =", Repaired(i,j,k), Repaired(i+1,j,k), Repaired(i-1,j,k), &
-                Repaired(i,j+1,k), Repaired(i,j-1,k), Repaired(i,j,k+1), Repaired(i,j,k-1)
-              count = count + 1
-          END DO
-        END DO
-      END DO
-
-    CASE DEFAULT
-      WRITE (*,*) "Invalid Axis", Axis
-      STOP
-
-    END SELECT
-    WRITE (*,*) count, " Non-monotonic out of " , NYe*NT*Nrho
-
-  END SUBROUTINE MonotonicityCheck 
-
- 
-!  SUBROUTINE ComputeTempForVector &
-!               ( rho, alt, ye, EOSTable, InputFlag, InputMask, Temperature )
-!
-!    USE wlEquationOfStateTableModule
-!
-!    REAL(dp), DIMENSION(:), INTENT(in)         :: rho
-!    REAL(dp), DIMENSION(:), INTENT(in)         :: alt
-!    REAL(dp), DIMENSION(:), INTENT(in)         :: ye
-!    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
-!    INTEGER, DIMENSION(:), INTENT(in)          :: InputFlag
-!    LOGICAL, DIMENSION(:), INTENT(in)          :: InputMask
-!    REAL(dp), DIMENSION(:), INTENT(out)        :: Temperature
-!
-!    INTEGER                                    :: i, ni, nf
-!    REAL(dp), DIMENSION(1)                     :: tbuff
-!
-!    ni = LBOUND( rho, DIM = 1 )
-!    nf = UBOUND( rho, DIM = 1 )
-!
-!    ASSOCIATE( WL_EINT    => EOSTable % DV % Indices % iInternalEnergyDensity, &
-!               WL_ENTROPY => EOSTable % DV % Indices % iEntropyPerBaryon,      &
-!               WL_PRESS   => EOSTable % DV % Indices % iPressure )
-!
-!    DO i = ni, nf
-!
-!      IF ( .not. InputMask(i) ) CYCLE
-!
-!      IF ( InputFlag(i) == WL_EINT ) THEN
-!
-!        CALL ComputeTempFromIntEnergy( rho(i), alt(i), ye(i),      &
-!           EOSTable % TS % States(1) % Values,                     &
-!           EOSTable % TS % States(2) % Values,                     &
-!           EOSTable % TS % States(3) % Values,                     &
-!           EOSTable % TS % LogInterp,                              &
-!           EOSTable % DV % Variables(WL_EINT) % Values(:,:,:),     &
-!           EOSTable % DV % Offsets(WL_EINT), tbuff )
-!
-!      ELSEIF ( InputFlag(i) == WL_ENTROPY ) THEN
-!
-!        CALL ComputeTempFromEntropy( rho(i), alt(i), ye(i),        &
-!           EOSTable % TS % States(1) % Values,                     &
-!           EOSTable % TS % States(2) % Values,                     &
-!           EOSTable % TS % States(3) % Values,                     &
-!           EOSTable % TS % LogInterp,                              &
-!           EOSTable % DV % Variables(WL_ENTROPY) % Values(:,:,:),  &
-!           EOSTable % DV % Offsets(WL_ENTROPY), tbuff )
-!
-!      ELSEIF ( InputFlag(i) == WL_PRESS ) THEN
-!
-!        CALL ComputeTempFromIntEnergy( rho(i), alt(i), ye(i),      &
-!           EOSTable % TS % States(1) % Values,                     &
-!           EOSTable % TS % States(2) % Values,                     &
-!           EOSTable % TS % States(3) % Values,                     &
-!           EOSTable % TS % LogInterp,                              &
-!           EOSTable % DV % Variables(WL_PRESS) % Values(:,:,:),    &
-!           EOSTable % DV % Offsets(WL_PRESS), tbuff )
-!
-!      ELSE
-!
-!        WRITE(*,*) "Invalid thermodynamic variable flag in ComputeTempForVector: ", InputMask(i)
-!        STOP
-!
-!      END IF
-!      Temperature(i) = tbuff(1) 
-!
-!    END DO
-!
-!    END ASSOCIATE
-!
-!  END SUBROUTINE ComputeTempForVector
-
 
 
   SUBROUTINE ComputeTempFromIntEnergy &
@@ -2590,32 +2328,5 @@ CONTAINS
 
   END SUBROUTINE ComputeTempFromPressure_Bisection
 
-
-  SUBROUTINE EOSTableQuery &
-               ( rho, T, Ye, LogInterp, TS, DV, Interpolants )
-
-    INTEGER                                    :: i, j
-    REAL(dp), DIMENSION(:), INTENT(in)         :: rho
-    REAL(dp), DIMENSION(:), INTENT(in)         :: T
-    REAL(dp), DIMENSION(:), INTENT(in)         :: Ye
-    INTEGER, DIMENSION(3), INTENT(in)          :: LogInterp
-    TYPE(ThermoStateType), INTENT(in)          :: TS
-    TYPE(DependentVariablesType), INTENT(in)   :: DV
-    REAL(dp), DIMENSION(:,:), INTENT(out)      :: Interpolants
-
-!    CALL InitializeHDF( )
-
-!    CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
-
-    CALL LogInterpolateAllVariables( rho, T, Ye, LogInterp, &
-                                     TS, DV, Interpolants )
-    DO i = 1, SIZE(rho)
-      WRITE(*,*) 'Rho=', rho(i), 'T=', T(i), 'Ye=', Ye(i)
-      DO j = 1, DV % nVariables
-        WRITE(*,*) DV % Names(j), Interpolants(i,j)
-      END DO
-    END DO
-
-  END SUBROUTINE EOSTableQuery
 
 END MODULE wlInterpolationModule

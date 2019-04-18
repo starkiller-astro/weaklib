@@ -1,3 +1,4 @@
 WL_EOSSOURCE = \
   wlEquationOfStateTableModule.o \
+  wlEOSInterpolationModule.o \
   wlEOSIOModuleHDF.o
