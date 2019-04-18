@@ -886,7 +886,7 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(in)  :: Table(:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:)
-    REAL(dp), INTENT(out), OPTIONAL :: Error_Option
+    INTEGER,  INTENT(out), OPTIONAL :: Error_Option
 
     INTEGER  :: &
       iP, iD, iT, iY
