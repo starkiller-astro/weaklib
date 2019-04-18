@@ -20,4 +20,5 @@ wlEosPerformanceTest.o: \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlInterpolationModule.o \
+  wlEOSInterpolationModule.o \
   wlEosPerformanceTest.f90
