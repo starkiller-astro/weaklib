@@ -60,7 +60,7 @@ OPTIMIZE_beacon_intel = -fast
 OPTIMIZE_summit_xl    = -g -O3 -qarch=pwr9 -qtune=pwr9 -qsuppress=cmpmsg -w
 OPTIMIZE              = $(OPTIMIZE_$(MACHINE))
 
-INCLUDE_HDF5_sn1987b      = -I/usr/local/Cellar/hdf5/1.8.16_1/include
+INCLUDE_HDF5_sn1987b      = -I/usr/local/Cellar/hdf5/1.10.5/include
 INCLUDE_HDF5_ranchu       = -I/usr/local/hdf5/include
 INCLUDE_HDF5_sjdunham     = 
 INCLUDE_HDF5_titan_gnu    = # Use Module Load
@@ -73,7 +73,7 @@ INCLUDE_HDF5_summit_xl    = -I$(OLCF_HDF5_ROOT)/include
 INCLUDE_HDF5              = $(INCLUDE_HDF5_$(MACHINE))
 INCLUDE                   = $(INCLUDE_HDF5)
 
-LIBRARIES_HDF5_sn1987b      = -L/usr/local/Cellar/hdf5/1.8.16_1/lib -lhdf5_fortran -lhdf5
+LIBRARIES_HDF5_sn1987b      = -L/usr/local/Cellar/hdf5/1.10.5/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_ranchu       = -L/usr/local/hdf5/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_sjdunham     = 
 LIBRARIES_HDF5_titan_gnu    = # Use Module Load
