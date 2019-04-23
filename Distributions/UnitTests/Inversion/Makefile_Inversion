@@ -1,0 +1,24 @@
+include ../../../Build/Makefile_Build
+
+all: wlEosInversionTest
+
+wlEosInversionTest: \
+	$(weaklib) wlEosInversionTest.o
+	$(FLINKER) $(FLAGS) -o wlEosInversionTest_$(MACHINE) \
+	$(weaklib) wlEosInversionTest.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f wlEosInversionTest_$(MACHINE)
+
+wlEosInversionTest.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlEOSInversionModule.o \
+  wlEosInversionTest.f90
