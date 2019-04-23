@@ -4,6 +4,11 @@ wlEquationOfStateTableModule.o: \
   wlDependentVariablesModule.o \
   wlEquationOfStateTableModule.f90
 
+wlEOSInversionModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlEOSInversionModule.f90
+
 wlEOSInterpolationModule.o: \
   wlKindModule.o \
   wlInterpolationModule.o \
