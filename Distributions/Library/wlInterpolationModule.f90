@@ -889,53 +889,36 @@ CONTAINS
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option
 
     INTEGER  :: &
-      iP, iD, iT, iY
+      iP, iD, iT, iY, Error
     REAL(dp) :: &
       dD, dT, dY, &
       p000, p100, p010, p110, &
       p001, p101, p011, p111
 
-    IF( PRESENT( Error_Option ) )THEN
+    Error = 0
 
-      IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
+    IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
 
-        Error_Option = 1
-        RETURN
+      Error = 1
 
-      ELSE
-
-        Error_Option = 0
-
+      IF( PRESENT( Error_Option ) )THEN
+        Error_Option = Error
       END IF
+
+      RETURN
 
     END IF
 
     DO iP = 1, SIZE( D )
 
-      iD = Index1D( D(iP), Ds, SIZE( Ds ) )
-      iT = Index1D( T(iP), Ts, SIZE( Ts ) )
-      iY = Index1D( Y(iP), Ys, SIZE( Ys ) )
-
-      dD = LOG10( D(iP) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
-      dT = LOG10( T(iP) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
-      dY = ( Y(iP) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
-
-      p000 = ( Table( iD  , iT  , iY   ) )
-      p100 = ( Table( iD+1, iT  , iY   ) )
-      p010 = ( Table( iD  , iT+1, iY   ) )
-      p110 = ( Table( iD+1, iT+1, iY   ) )
-      p001 = ( Table( iD  , iT  , iY+1 ) )
-      p101 = ( Table( iD+1, iT  , iY+1 ) )
-      p011 = ( Table( iD  , iT+1, iY+1 ) )
-      p111 = ( Table( iD+1, iT+1, iY+1 ) )
-
-      Interpolant(iP) &
-        = 10.0d0**( &
-            TriLinear &
-              ( p000, p100, p010, p110, &
-                p001, p101, p011, p111, dD, dT, dY ) ) - OS
+      CALL LogInterpolateSingleVariable_3D_Custom_Point &
+             ( D(iP), T(iP), Y(iP), Ds, Ts, Ys, OS, Table, Interpolant(iP) )
 
     END DO
+
+    IF( PRESENT( Error_Option ) )THEN
+      Error_Option = Error
+    END IF
 
   END SUBROUTINE LogInterpolateSingleVariable_3D_Custom
 
