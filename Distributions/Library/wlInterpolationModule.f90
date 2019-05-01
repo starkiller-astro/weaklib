@@ -74,7 +74,12 @@ CONTAINS
   END SUBROUTINE locate
 
 
-  PURE INTEGER FUNCTION Index1D( x, xx, n )
+  INTEGER FUNCTION Index1D( x, xx, n )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
@@ -128,8 +133,13 @@ CONTAINS
   END FUNCTION Index1D_Log
 
 
-  PURE REAL(dp) FUNCTION TriLinear &
+  REAL(dp) FUNCTION TriLinear &
     ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX2, dX3 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: &
       p000, p100, p010, p110, &
@@ -154,8 +164,13 @@ CONTAINS
   END FUNCTION TriLinear
 
 
-  PURE REAL(dp) FUNCTION dTriLineardX1 &
+  REAL(dp) FUNCTION dTriLineardX1 &
     ( p000, p100, p010, p110, p001, p101, p011, p111, dX2, dX3 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: &
       p000, p100, p010, p110, &
@@ -179,8 +194,13 @@ CONTAINS
   END FUNCTION dTriLineardX1
 
 
-  PURE REAL(dp) FUNCTION dTriLineardX2 &
+  REAL(dp) FUNCTION dTriLineardX2 &
     ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX3 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: &
       p000, p100, p010, p110, &
@@ -204,8 +224,13 @@ CONTAINS
   END FUNCTION dTriLineardX2
 
 
-  PURE REAL(dp) FUNCTION dTriLineardX3 &
+  REAL(dp) FUNCTION dTriLineardX3 &
     ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX2 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: &
       p000, p100, p010, p110, &
@@ -344,17 +369,9 @@ CONTAINS
 
       Interpolant(i) &
         = 10.d0**( &
-            (1.0_dp - delta(3)) &
-              * (   (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p000   &
-                  +           delta(1)  * (1.0_dp - delta(2)) * p100   &
-                  + (1.0_dp - delta(1)) *           delta(2)  * p010   &
-                  +           delta(1)  *           delta(2)  * p110 ) &
-            +         delta(3) &
-              * (   (1.0_dp - delta(1)) * (1.0_dp - delta(2)) * p001   &
-                  +           delta(1)  * (1.0_dp - delta(2)) * p101   &
-                  + (1.0_dp - delta(1)) *           delta(2)  * p011   &
-                  +           delta(1)  *           delta(2)  * p111 ) ) &
-          - Offset
+            TriLinear &
+              ( p000, p100, p010, p110, &
+                p001, p101, p011, p111, delta(1), delta(2), delta(3) ) ) - Offset
    
     END DO
 
@@ -925,6 +942,11 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom_Point &
     ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: D,  T,  Y
     REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
@@ -1345,6 +1367,11 @@ CONTAINS
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point &
     ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Derivative )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: D, T, Y
     REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)

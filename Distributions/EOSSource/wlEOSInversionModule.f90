@@ -23,6 +23,16 @@ MODULE wlEOSInversionModule
   REAL(dp) :: MinP, MaxP
   REAL(dp) :: MinS, MaxS
 
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET( &
+    !$OMP   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$OMP   MinY, MaxY, MinE, MaxE, MinP, MaxP, MinS, MaxS )
+#elif defined(WEAKLIB_OACC)
+    !$ACC DECLARE CREATE( &
+    !$ACC   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$ACC   MinY, MaxY, MinE, MaxE, MinP, MaxP, MinS, MaxS )
+#endif
+
   INTERFACE ComputeTemperatureWith_DEY
     MODULE PROCEDURE ComputeTemperatureWith_DEY_Many
     MODULE PROCEDURE ComputeTemperatureWith_DEY_Single
@@ -81,6 +91,16 @@ CONTAINS
 
     InversionInitialized = .TRUE.
 
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET UPDATE TO( &
+    !$OMP   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$OMP   MinY, MaxY, MinE, MaxE, MinP, MaxP, MinS, MaxS )
+#elif defined(WEAKLIB_OACC)
+    !$ACC UPDATE DEVICE( &
+    !$ACC   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$ACC   MinY, MaxY, MinE, MaxE, MinP, MaxP, MinS, MaxS )
+#endif
+
   END SUBROUTINE InitializeEOSInversion
 
 
@@ -129,6 +149,11 @@ CONTAINS
 
   SUBROUTINE ComputeTemperatureWith_DEY_Single &
     ( D, E, Y, Ds, Ts, Ys, Es, OS, T, UseInitialGuess_Option, Error_Option )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)    :: D
     REAL(dp), INTENT(in)    :: E
@@ -378,6 +403,11 @@ CONTAINS
 
   SUBROUTINE ComputeTemperatureWith_DPY_Single &
     ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, UseInitialGuess_Option, Error_Option )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)    :: D
     REAL(dp), INTENT(in)    :: P
@@ -453,6 +483,11 @@ CONTAINS
 
   SUBROUTINE ComputeTemperatureWith_DSY_Single &
     ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, UseInitialGuess_Option, Error_Option )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)    :: D
     REAL(dp), INTENT(in)    :: S
@@ -484,7 +519,12 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DSY_Single
 
 
-  PURE REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, y, OS )
+  REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, y, OS )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: x_a, x_b, y_a, y_b, y, OS
 
