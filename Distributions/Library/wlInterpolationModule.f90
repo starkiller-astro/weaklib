@@ -30,8 +30,9 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateSingleVariable_3D
     MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom
     MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom_Point
-    MODULE PROCEDURE LogInterpolateSingleVariable_4D
-    MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom
+    MODULE PROCEDURE LogInterpolateSingleVariable_1D3D
+    MODULE PROCEDURE LogInterpolateSingleVariable_1D3D_Custom
+    MODULE PROCEDURE LogInterpolateSingleVariable_1D3D_Custom_Point
   END INTERFACE LogInterpolateSingleVariable
 
   INTERFACE LogInterpolateDifferentiateSingleVariable
@@ -379,26 +380,26 @@ CONTAINS
 
   
   SUBROUTINE LogInterpolateSingleVariable_1D3D &
-               ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, &
-                 Coordinate4, LogInterp, Offset, Table, Interpolant )
+    ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, Coordinate4, &
+      LogInterp, Offset, Table, Interpolant )
 
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: x4
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Coordinate4
-    INTEGER,  DIMENSION(4),       INTENT(in)  :: LogInterp
-    REAL(dp),                     INTENT(in)  :: Offset
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
-    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolant
+    REAL(dp), INTENT(in)  :: x1(:)
+    REAL(dp), INTENT(in)  :: x2(:)
+    REAL(dp), INTENT(in)  :: x3(:)
+    REAL(dp), INTENT(in)  :: x4(:)
+    REAL(dp), INTENT(in)  :: Coordinate1(:)
+    REAL(dp), INTENT(in)  :: Coordinate2(:)
+    REAL(dp), INTENT(in)  :: Coordinate3(:)
+    REAL(dp), INTENT(in)  :: Coordinate4(:)
+    INTEGER,  INTENT(in)  :: LogInterp(4)
+    REAL(dp), INTENT(in)  :: Offset
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:)
 
-    INTEGER :: &
+    INTEGER  :: &
       i, j, il1, il2, il3, il4
-    REAL(dp), DIMENSION(4) :: &
-      alpha, delta
+    REAL(dp) :: &
+      alpha(4), delta(4)
     REAL(dp) :: &
       p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111,&
       p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
@@ -485,58 +486,58 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom &
-               ( LogX1, LogX2, LogX3, LinX4, LogCoordsX1, LogCoordsX2, &
-                 LogCoordsX3, LinCoordsX4, Offset, Table, Interpolant )
+    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
 
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LinX4
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LinCoordsX4
-    REAL(dp),                     INTENT(in)  :: Offset
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
-    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolant
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogD(:)
+    REAL(dp), INTENT(in)  :: LogT(:)
+    REAL(dp), INTENT(in)  :: Y(:)
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogDs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:)
 
-    INTEGER :: i, j
-    INTEGER :: iX1, iX2, iX3, iX4
-    INTEGER :: p1, p2, p3, p4
-    REAL(dp), DIMENSION(4) :: dX
-    REAL(dp), DIMENSION(0:1,0:1,0:1,0:1) :: p
+    INTEGER  :: i, j
+    INTEGER  :: iD, iT, iY
+    INTEGER  :: p1, p2, p3, p4
+    INTEGER  :: iE(SIZE(LogE))
+    REAL(dp) :: dD, dT, dY
+    REAL(dp) :: dE(SIZE(LogE))
+    REAL(dp) :: p(0:1,0:1,0:1,0:1)
 
-    DO j = 1, SIZE( LogX2 )
+    ! --- Precompute Indices and Differences ---
 
-      iX4   = Index1D_Lin( LinX4(j), LinCoordsX4, SIZE( LinCoordsX4 ) )
-      dX(4) = ( LinX4(j) - LinCoordsX4(iX4) ) &
-              / ( LinCoordsX4(iX4+1) - LinCoordsX4(iX4) )
+    DO i = 1, SIZE( LogE )
+      iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
+    END DO
 
-      iX3   = Index1D_Lin( LogX3(j), LogCoordsX3, SIZE( LogCoordsX3 ) )
-      dX(3) = ( LogX3(j) - LogCoordsX3(iX3) ) &
-              / ( LogCoordsX3(iX3+1) - LogCoordsX3(iX3) )
+    DO j = 1, SIZE( LogD )
 
-      iX2   = Index1D_Lin( LogX2(j), LogCoordsX2, SIZE( LogCoordsX2 ) )
-      dX(2) = ( LogX2(j) - LogCoordsX2(iX2) ) &
-              / ( LogCoordsX2(iX2+1) - LogCoordsX2(iX2) )
+      iY = Index1D_Lin( Y(j), Ys, SIZE( Ys ) )
+      dY = ( Y(j) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
 
-      DO i = 1, SIZE( LogX1 )
+      iT = Index1D_Lin( LogT(j), LogTs, SIZE( LogTs ) )
+      dT = ( LogT(j) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
 
-        iX1   = Index1D_Lin( LogX1(i), LogCoordsX1, SIZE( LogCoordsX1 ) )
-        dX(1) = ( LogX1(i) - LogCoordsX1(iX1) ) &
-                / ( LogCoordsX1(iX1+1) - LogCoordsX1(iX1) )
+      iD = Index1D_Lin( LogD(j), LogDs, SIZE( LogDs ) )
+      dD = ( LogD(j) - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
+
+      DO i = 1, SIZE( LogE )
 
         DO p4 = 0, 1
-          DO p3 = 0, 1
-            DO p2 = 0, 1
-              DO p1 = 0, 1
+        DO p3 = 0, 1
+        DO p2 = 0, 1
+        DO p1 = 0, 1
 
-                p(p1,p2,p3,p4) &
-                  = TABLE(iX1+p1,iX2+p2,iX3+p3,iX4+p4)
+          p(p1,p2,p3,p4) = TABLE(iE(i)+p1,iD+p2,iT+p3,iY+p4)
 
-              END DO
-            END DO
-          END DO
+        END DO
+        END DO
+        END DO
         END DO
 
         Interpolant(i,j) &
@@ -545,15 +546,76 @@ CONTAINS
                 p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
                 p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
                 p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-                dX(1), dX(2), dX(3), dX(4) )
+                dE(i), dD, dT, dY )
+
+        Interpolant(i,j) = 10**( Interpolant(i,j) ) - OS
 
       END DO ! i
     END DO ! j
 
-    Interpolant(:,:) &
-      = 10**( Interpolant(:,:) ) - Offset
-
   END SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom
+
+
+  SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom_Point &
+    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogD
+    REAL(dp), INTENT(in)  :: LogT
+    REAL(dp), INTENT(in)  :: Y
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogDs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:)
+
+    INTEGER  :: i
+    INTEGER  :: iD, iT, iY, iE
+    INTEGER  :: p1, p2, p3, p4
+    REAL(dp) :: dD, dT, dY, dE
+    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+
+    iY = Index1D_Lin( Y, Ys, SIZE( Ys ) )
+    dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+    iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+
+    iD = Index1D_Lin( LogD, LogDs, SIZE( LogDs ) )
+    dD = ( LogD - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
+
+    DO i = 1, SIZE( LogE )
+
+      iE = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE = ( LogE(i) - LogEs(iE) ) / ( LogEs(iE+1) - LogEs(iE) )
+
+      DO p4 = 0, 1
+      DO p3 = 0, 1
+      DO p2 = 0, 1
+      DO p1 = 0, 1
+
+        p(p1,p2,p3,p4) = TABLE(iE+p1,iD+p2,iT+p3,iY+p4)
+
+      END DO
+      END DO
+      END DO
+      END DO
+
+      Interpolant(i) &
+        = TetraLinear &
+            ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
+              p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
+              p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
+              p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
+              dE, dD, dT, dY )
+
+      Interpolant(i) = 10**( Interpolant(i) ) - OS
+
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom_Point
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D &
