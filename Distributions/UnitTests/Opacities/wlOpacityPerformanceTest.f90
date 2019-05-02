@@ -16,28 +16,37 @@ PROGRAM wlOpacityPerformanceTest
 
   INTEGER :: &
     n_rndm, &
-    iPoint
+    iP
   INTEGER, DIMENSION(4) :: &
     LogInterp = [ 1, 1, 1, 0 ]
   INTEGER, PARAMETER :: &
     iD = 1, iT = 2, iY = 3, &
-    nPoints = 2**20
+    nPoints = 2**20, &
+    nPointsX = 2**16, &
+    nPointsE = 2**05
   REAL(dp) :: &
     tBegin, &
     tEND
-  REAL(dp), DIMENSION(nPoints) :: &
-    E, D, T, Y, &
-    rndm_E, &
+  REAL(dp), DIMENSION(nPointsX) :: &
+    D, T, Y, &
     rndm_D, &
     rndm_T, &
-    rndm_Y, &
+    rndm_Y
+  REAL(dp), DIMENSION(nPointsE) :: &
+    E, LogE, &
+    rndm_E
+  REAL(dp), DIMENSION(nPointsE,nPointsX) :: &
     Interpolant1, &
-    Interpolant2
+    Interpolant2, &
+    Interpolant3
   TYPE(OpacityTableType) :: &
     OpTab
 
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpTab, "OpacityTable.h5" )
+
+  CALL ReadOpacityTableHDF &
+         ( OpTab, "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
+
   CALL FinalizeHDF( )
 
   WRITE(*,*)
@@ -58,7 +67,7 @@ PROGRAM wlOpacityPerformanceTest
     '', 'Interpolating ', nPoints, ' points'
   WRITE(*,*)
 
-  n_rndm = nPoints
+  n_rndm = nPointsE
 
   ! --- Initialize Energy Points ---
 
@@ -72,6 +81,8 @@ PROGRAM wlOpacityPerformanceTest
   E(:) = 10**( LOG10(minE) + ( LOG10(maxE) - LOG10(minE) ) * rndm_E )
 
   END ASSOCIATE
+
+  n_rndm = nPointsX
 
   ! --- Initialize Density Points ---
 
@@ -117,35 +128,69 @@ PROGRAM wlOpacityPerformanceTest
       Dtab => OpTab % EOSTable % TS % States(iD)  % Values, &
       Ttab => OpTab % EOSTable % TS % States(iT)  % Values, &
       Ytab => OpTab % EOSTable % TS % States(iY)  % Values, &
-      Ctab => OpTab % EmAb % Absorptivity(1) % Values, &
+      Ctab => OpTab % EmAb % Opacity(1) % Values, &
       OS   => OpTab % EmAb % Offsets(1) )
 
   CALL CPU_TIME( tBegin )
 
   CALL LogInterpolateSingleVariable &
-         ( E, D, T, Y, Etab, Dtab, Ttab, Ytab, LogInterp, OS, Ctab, Interpolant1 )
+         ( E, D, T, Y, Etab, Dtab, Ttab, Ytab, LogInterp, OS, Ctab, &
+           Interpolant1 )
 
   CALL CPU_TIME( tEND )
 
   WRITE(*,*)
-  WRITE(*,'(A4,A40,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_4D: ', tEND - tBegin
+  WRITE(*,'(A4,A48,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D: ', tEND - tBegin
   WRITE(*,*)
 
   CALL CPU_TIME( tBegin )
 
   CALL LogInterpolateSingleVariable &
-         ( E, D, T, Y, Etab, Dtab, Ttab, Ytab, OS, Ctab, Interpolant2 )
+         ( LOG10( E    ), LOG10( D    ), LOG10( T    ), Y, &
+           LOG10( Etab ), LOG10( Dtab ), LOG10( Ttab ), Ytab, &
+           OS, Ctab, Interpolant2 )
 
   CALL CPU_TIME( tEND )
 
   WRITE(*,*)
-  WRITE(*,'(A4,A40,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_4D_Custom: ', tEND - tBegin
+  WRITE(*,'(A4,A48,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D_Custom: ', tEND - tBegin
+  WRITE(*,*)
+
+  CALL CPU_TIME( tBegin )
+
+  LogE = LOG10( E )
+
+  ASSOCIATE &
+    ( LogEtab => LOG10( OpTab % EnergyGrid % Values ), &
+      LogDtab => LOG10( OpTab % EOSTable % TS % States(iD)  % Values ), &
+      LogTtab => LOG10( OpTab % EOSTable % TS % States(iT)  % Values ) )
+
+  DO iP = 1, nPointsX
+
+    CALL LogInterpolateSingleVariable &
+           ( LogE,    LOG10( D(iP) ), LOG10( T(iP) ), Y(iP), &
+             LogEtab, LogDtab,        LogTtab,        Ytab,  &
+             OS, Ctab, Interpolant3(:,iP) )
+
+  END DO
+
+  END ASSOCIATE ! LogEtab, etc.
+
+  CALL CPU_TIME( tEND )
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A48,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D_Custom_Point: ', tEND - tBegin
   WRITE(*,*)
 
   END ASSOCIATE
 
+  WRITE(*,*) MINVAL( Interpolant1 ), MAXVAL( Interpolant1 )
+  WRITE(*,*) MINVAL( Interpolant2 ), MAXVAL( Interpolant2 )
+  WRITE(*,*) MINVAL( Interpolant3 ), MAXVAL( Interpolant3 )
   WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant2 ) )
+  WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant3 ) )
 
 END PROGRAM wlOpacityPerformanceTest

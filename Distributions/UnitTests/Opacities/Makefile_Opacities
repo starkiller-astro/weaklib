@@ -1,7 +1,8 @@
-include ../../../../External/Build/Makefile_Build
+include ../../../Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
+     wlOpacityPerformanceTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
