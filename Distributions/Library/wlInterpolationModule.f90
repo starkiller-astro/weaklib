@@ -33,6 +33,7 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateSingleVariable_1D3D
     MODULE PROCEDURE LogInterpolateSingleVariable_1D3D_Custom
     MODULE PROCEDURE LogInterpolateSingleVariable_1D3D_Custom_Point
+    MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom_Point
   END INTERFACE LogInterpolateSingleVariable
 
   INTERFACE LogInterpolateDifferentiateSingleVariable
@@ -1213,6 +1214,63 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_4D_Custom
+
+
+  SUBROUTINE LogInterpolateSingleVariable_4D_Custom_Point &
+    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: LogE
+    REAL(dp), INTENT(in)  :: LogD
+    REAL(dp), INTENT(in)  :: LogT
+    REAL(dp), INTENT(in)  :: Y
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogDs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant
+
+    INTEGER  :: iD, iT, iY, iE
+    INTEGER  :: p1, p2, p3, p4
+    REAL(dp) :: dD, dT, dY, dE
+    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+
+    iE = Index1D_Lin( LogE, LogEs, SIZE( LogEs ) )
+    dE = ( LogE - LogEs(iE) ) / ( LogEs(iE+1) - LogEs(iE) )
+
+    iD = Index1D_Lin( LogD, LogDs, SIZE( LogDs ) )
+    dD = ( LogD - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
+
+    iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+
+    iY = Index1D_Lin( Y, Ys, SIZE( Ys ) )
+    dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+    DO p4 = 0, 1
+    DO p3 = 0, 1
+    DO p2 = 0, 1
+    DO p1 = 0, 1
+
+      p(p1,p2,p3,p4) = TABLE(iE+p1,iD+p2,iT+p3,iY+p4)
+
+    END DO
+    END DO
+    END DO
+    END DO
+
+    Interpolant &
+      = TetraLinear &
+          ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
+            p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
+            p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
+            p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
+            dE, dD, dT, dY )
+
+    Interpolant = 10**( Interpolant ) - OS
+
+  END SUBROUTINE LogInterpolateSingleVariable_4D_Custom_Point
 
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D &
