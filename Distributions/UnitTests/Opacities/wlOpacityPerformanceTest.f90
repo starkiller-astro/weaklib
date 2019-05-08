@@ -16,19 +16,20 @@ PROGRAM wlOpacityPerformanceTest
 
   INTEGER :: &
     n_rndm, &
-    iP
+    iP, jP
   INTEGER, DIMENSION(4) :: &
     LogInterp = [ 1, 1, 1, 0 ]
   INTEGER, PARAMETER :: &
     iD = 1, iT = 2, iY = 3, &
-    nPoints = 2**20, &
-    nPointsX = 2**16, &
+    nPointsX = 2**18, &
     nPointsE = 2**05
   REAL(dp) :: &
     tBegin, &
     tEND
   REAL(dp), DIMENSION(nPointsX) :: &
     D, T, Y, &
+    LogD, &
+    LogT, &
     rndm_D, &
     rndm_T, &
     rndm_Y
@@ -38,7 +39,8 @@ PROGRAM wlOpacityPerformanceTest
   REAL(dp), DIMENSION(nPointsE,nPointsX) :: &
     Interpolant1, &
     Interpolant2, &
-    Interpolant3
+    Interpolant3, &
+    Interpolant4
   TYPE(OpacityTableType) :: &
     OpTab
 
@@ -64,7 +66,7 @@ PROGRAM wlOpacityPerformanceTest
     ' / ', OpTab % EOSTable % TS % MaxValues(iY)
   WRITE(*,*)
   WRITE(*,'(A4,A14,I10.10,A7)') &
-    '', 'Interpolating ', nPoints, ' points'
+    '', 'Interpolating ', nPointsE * nPointsX, ' points'
   WRITE(*,*)
 
   n_rndm = nPointsE
@@ -185,12 +187,47 @@ PROGRAM wlOpacityPerformanceTest
     '', 'LogInterpolateSingleVariable_1D3D_Custom_Point: ', tEND - tBegin
   WRITE(*,*)
 
+  CALL CPU_TIME( tBegin )
+
+  LogE = LOG10( E )
+  LogD = LOG10( D )
+  LogT = LOG10( T )
+
+  ASSOCIATE &
+    ( LogEtab => LOG10( OpTab % EnergyGrid % Values ), &
+      LogDtab => LOG10( OpTab % EOSTable % TS % States(iD)  % Values ), &
+      LogTtab => LOG10( OpTab % EOSTable % TS % States(iT)  % Values ) )
+
+  DO jP = 1, nPointsX
+
+    DO iP = 1, nPointsE
+
+      CALL LogInterpolateSingleVariable &
+             ( LogE(iP), LogD(jP), LogT(jP), Y(jP), &
+               LogEtab,  LogDtab,  LogTtab,  Ytab,  &
+               OS, Ctab, Interpolant4(iP,jP) )
+
+    END DO
+
+  END DO
+
+  END ASSOCIATE ! LogEtab, etc.
+
+  CALL CPU_TIME( tEND )
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A48,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_4D_Custom_Point: ', tEND - tBegin
+  WRITE(*,*)
+
   END ASSOCIATE
 
   WRITE(*,*) MINVAL( Interpolant1 ), MAXVAL( Interpolant1 )
   WRITE(*,*) MINVAL( Interpolant2 ), MAXVAL( Interpolant2 )
   WRITE(*,*) MINVAL( Interpolant3 ), MAXVAL( Interpolant3 )
+  WRITE(*,*) MINVAL( Interpolant4 ), MAXVAL( Interpolant4 )
   WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant2 ) )
   WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant3 ) )
+  WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant4 ) )
 
 END PROGRAM wlOpacityPerformanceTest

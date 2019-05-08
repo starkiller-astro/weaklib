@@ -1,6 +1,6 @@
 MACHINE = $(WEAKLIB_MACHINE)
 
-OPT_LEVEL = DEBUG
+OPT_LEVEL = OPTIMIZE
 FLAGS     = $(FLAGS_$(OPT_LEVEL))
 
 include ../Makefile_Opacities
