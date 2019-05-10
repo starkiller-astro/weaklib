@@ -111,7 +111,12 @@ CONTAINS
   END FUNCTION Index1D
 
 
-  PURE INTEGER FUNCTION Index1D_Lin( x, xx, n )
+  INTEGER FUNCTION Index1D_Lin( x, xx, n )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
@@ -123,7 +128,12 @@ CONTAINS
   END FUNCTION Index1D_Lin
 
 
-  PURE INTEGER FUNCTION Index1D_Log( x, xx, n )
+  INTEGER FUNCTION Index1D_Log( x, xx, n )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
@@ -1955,11 +1965,14 @@ CONTAINS
     REAL(dp), DIMENSION(:),     INTENT(out) :: T
 
     LOGICAL, PARAMETER :: Debug = .TRUE.
-    INTEGER  :: i, Error
+    INTEGER  :: i, j, Error
     INTEGER  :: ilD, ilY, ilE, ilE1, ilE2, ilE3, ilE4, ilEa, ilEb
     INTEGER  :: nPtsE
-    REAL(dp) :: logE, tmpE
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: ptsD, ptsT, ptsY, ptsE
+    LOGICAL :: LocalRoot
+    REAL(dp) :: logE, tmpE, f_a, f_b, T_a, T_b, E_a, E_b
+    REAL(dp) :: Ds(1:2), Ys(1:2)
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Ts, EvsT
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Es
 
     DO i = 1, SIZE( D )
 
@@ -1967,6 +1980,9 @@ CONTAINS
 
       ilD = Index1D( D(i), D_table, SIZE( D_table ) )
       ilY = Index1D( Y(i), Y_table, SIZE( Y_table ) )
+
+      Ds(1:2) = D_Table(ilD:ilD+1)
+      Ys(1:2) = Y_Table(ilY:ilY+1)
 
       logE = LOG10( E(i) + Offset )
       ilE1 = Index1D( logE, E_table(ilD,  :,ilY  ), SIZE( T_Table ) )
@@ -1977,36 +1993,59 @@ CONTAINS
       ilEa = MAX( MINVAL( [ilE1,ilE2,ilE3,ilE4] ) - 1, 1 )
       ilEb = MIN( MAXVAL( [ilE1,ilE2,ilE3,ilE4] ) + 2, SIZE( T_Table ) )
 
-      nPtsE = SIZE( T_Table(ilEa:ilEb) )
-      ALLOCATE( ptsD(nPtsE), ptsT(nPtsE), ptsY(nPtsE), ptsE(nPtsE) )
-      ptsD = D(i)
-      ptsT = T_Table(ilEa:ilEb)
-      ptsY = Y(i)
+      nPtsE = ilEb - ilEa + 1
+      ALLOCATE( Ts(1:nPtsE), Es(1:2,1:nPtsE,1:2), EvsT(1:nPtsE) )
+      Ts(1:nPtsE) = T_Table(ilEa:ilEb)
+      Es(1:2,1:nPtsE,1:2) = E_Table(ilD:ilD+1,ilEa:ilEb,ilY:ilY+1)
 
-      CALL LogInterpolateSingleVariable &
-             ( ptsD, ptsT, ptsY, D_Table(ilD:ilD+1), T_Table(ilEa:ilEb), &
-               Y_Table(ilY:ilY+1), LogInterp, Offset, &
-               E_Table(ilD:ilD+1,ilEa:ilEb,ilY:ilY+1), ptsE )
+      DO j = 1, nPtsE
+        CALL LogInterpolateSingleVariable &
+               ( D(i), Ts(j), Y(i), Ds, Ts, Ys, Offset, Es, EvsT(j) )
+      END DO
+
+      ! --- Pick Highest Temperature Root ---
+      DO j = nPtsE - 1, 1, -1
+
+        f_a = E(i) - EvsT(j)
+        f_b = E(i) - EvsT(j+1)
+
+        LocalRoot = ( f_a * f_b < 0.0_DP )
+
+        IF ( LocalRoot ) THEN
+          ilE = j
+          EXIT
+        END IF
+
+      END DO
 
       tmpE = E(i)
 
-      IF( (ptsE(1)-E(i))*(ptsE(nPtsE)-E(i)) > 0.0_DP )THEN
+      T_a = Ts(1)
+      T_b = Ts(nPtsE)
+
+      E_a = EvsT(1)
+      E_b = EvsT(nPtsE)
+
+      f_a = E(i) - E_a
+      f_b = E(i) - E_b
+
+      IF( .not. LocalRoot )THEN
 
         IF( Debug )THEN
           WRITE(*,*)
           WRITE(*,'(A4,A)') &
             '', 'Warning: ComputeTempFromIntEnergy_Lookup'
           WRITE(*,'(A6,A20,ES10.4E2,A9,ES10.4E2)') &
-            '', 'No Root Between T = ', ptsT(1), ' and T = ', ptsT(nPtsE)
+            '', 'No Root Between T = ', Ts(1), ' and T = ', Ts(nPtsE)
           WRITE(*,*)
           WRITE(*,*) '  nPtsE = ', nPtsE
-          WRITE(*,*) '  ptsE  = ', ptsE
+          WRITE(*,*) '  EvsT  = ', EvsT
           WRITE(*,*) '    ia  = ', ilEa
           WRITE(*,*) '    ib  = ', ilEb
-          WRITE(*,*) '    Ta  = ', T_Table(ilEa)
-          WRITE(*,*) '    Tb  = ', T_Table(ilEb)
-          WRITE(*,*) '    Ea  = ', ptsE(1)
-          WRITE(*,*) '    Eb  = ', ptsE(nPtsE)
+          WRITE(*,*) '    Ta  = ', T_a
+          WRITE(*,*) '    Tb  = ', T_b
+          WRITE(*,*) '    Ea  = ', E_a
+          WRITE(*,*) '    Eb  = ', E_b
           WRITE(*,*) '     i  = ', i
           WRITE(*,*) '     E  = ', E(i)
           WRITE(*,*) '     D  = ', D(i)
@@ -2017,13 +2056,15 @@ CONTAINS
 
         ! --- Reset Energy Density ---
 
-        IF( E(i) < ptsE(1) .AND. E(i) < ptsE(nPtsE) )THEN
+        IF( E(i) < EvsT(1) .AND. E(i) < EvsT(nPtsE) )THEN
 
-          tmpE = 0.5 * ( ptsE(1) + ptsE(2) )
+          ilE = 1
+          tmpE = 0.5 * ( EvsT(1) + EvsT(2) )
 
         ELSE
 
-          tmpE = 0.5 * ( ptsE(nPtsE-1) + ptsE(nPtsE) )
+          ilE = nPtsE - 1
+          tmpE = 0.5 * ( EvsT(nPtsE-1) + EvsT(nPtsE) )
 
         END IF
 
@@ -2031,13 +2072,13 @@ CONTAINS
 
       END IF
 
-      ilE = Index1D( tmpE, ptsE, nPtsE )
+      !ilE = Index1D( tmpE, EvsT, nPtsE )
 
       T(i) &
-        = 10.d0**( LOG10( ptsT(ilE) ) &
-                   + LOG10( ptsT(ilE+1)/ptsT(ilE) ) &
-                     * LOG10( (tmpE+Offset)/(ptsE(ilE)+Offset) ) &
-                       / LOG10( (ptsE(ilE+1)+Offset)/(ptsE(ilE)+Offset) ) )
+        = 10.d0**( LOG10( Ts(ilE) ) &
+                   + LOG10( Ts(ilE+1)/Ts(ilE) ) &
+                     * LOG10( (tmpE+Offset)/(EvsT(ilE)+Offset) ) &
+                       / LOG10( (EvsT(ilE+1)+Offset)/(EvsT(ilE)+Offset) ) )
 
       IF( Error == 1 .AND. Debug )THEN
         WRITE(*,*)
@@ -2045,7 +2086,7 @@ CONTAINS
         WRITE(*,*)
       END IF
 
-      DEALLOCATE( ptsD, ptsT, ptsY, ptsE )
+      DEALLOCATE( Ts, Es, EvsT )
 
     END DO
 
