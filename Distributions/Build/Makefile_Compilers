@@ -7,7 +7,9 @@ FORTRAN_titan_pgi    = ftn
 FORTRAN_darter_gnu   = ftn
 FORTRAN_darter_cray  = ftn
 FORTRAN_beacon_intel = mpiifort
-FORTRAN_summit_xl    = mpifort
+FORTRAN_summit_gcc   = mpifort -cpp
+FORTRAN_summit_pgi   = mpifort -Mpreprocess
+FORTRAN_summit_xl    = mpifort -qpreprocess
 FORTRAN              = $(FORTRAN_$(MACHINE))
 
 SUFFIX_f90_sn1987b      = 
@@ -19,6 +21,8 @@ SUFFIX_f90_titan_pgi    =
 SUFFIX_darter_gnu       = 
 SUFFIX_f90_darter_cray  = 
 SUFFIX_f90_beacon_intel = 
+SUFFIX_f90_summit_gcc   =
+SUFFIX_f90_summit_pgi   =
 SUFFIX_f90_summit_xl    = 
 SUFFIX_f90              = $(SUFFIX_f90_$(MACHINE))
 
@@ -31,7 +35,9 @@ FLINKER_titan_pgi    = ftn
 FLINKER_darter_gnu   = ftn
 FLINKER_darter_cray  = ftn
 FLINKER_beacon_intel = mpiifort
-FLINKER_summit_xl    = mpifort
+FLINKER_summit_gcc   = mpifort -cpp
+FLINKER_summit_pgi   = mpifort -Mpreprocess
+FLINKER_summit_xl    = mpifort -qpreprocess
 FLINKER              = $(FLINKER_$(MACHINE))
 
 FLAGS_DEBUG        = $(DEBUG)
@@ -44,6 +50,8 @@ DEBUG_titan_pgi    = -g -Ktrap=inv,divz,ovf -Minform=inform
 DEBUG_darter_gnu   = -g -ffpe-trap=invalid,zero -fcheck=bounds
 DEBUG_darter_cray  = -G0 -hfp0 -K trap=fp
 DEBUG_beacon_intel = -g -warn all -fpe0 -fpe-all=0 -ftrapuv -traceback -CB
+DEBUG_summit_gcc   = -g -Og -ggdb -ftrapv -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -fbacktrace
+DEBUG_summit_pgi   = -O0 -Mbounds -Mnoopenmp
 DEBUG_summit_xl    = -g -O0 -qstrict=all -qsuppress=cmpmsg -qflag=i:w -qfloat=rngchk -qcheck=all:nounset -qflttrap=enable:invalid:nanq:overflow:zerodivide -qsigtrap=xl__trcedump
 DEBUG              = $(DEBUG_$(MACHINE))
 
@@ -57,7 +65,9 @@ OPTIMIZE_titan_pgi    = -fastsse
 OPTIMIZE_darter_gnu   = -O2
 OPTIMIZE_darter_cray  = -O2
 OPTIMIZE_beacon_intel = -fast
-OPTIMIZE_summit_xl    = -g -O3 -qarch=pwr9 -qtune=pwr9 -qsuppress=cmpmsg -w
+OPTIMIZE_summit_gcc   = -g -O3 -mcpu=power9
+OPTIMIZE_summit_pgi   = -g -O3
+OPTIMIZE_summit_xl    = -g -O3 -qnohot -qarch=pwr9 -qtune=pwr9 -qsclk=micro -qsuppress=cmpmsg -w
 OPTIMIZE              = $(OPTIMIZE_$(MACHINE))
 
 INCLUDE_HDF5_sn1987b      = -I/usr/local/Cellar/hdf5/1.10.5/include
@@ -69,8 +79,16 @@ INCLUDE_HDF5_titan_gnu    = # Use Module Load
 INCLUDE_HDF5_darter_gnu   = # Use Module Load
 INCLUDE_HDF5_darter_cray  = # Use Module Load
 INCLUDE_HDF5_beacon_intel = ${HDF5_INC}
+INCLUDE_HDF5_summit_gcc   = -I$(OLCF_HDF5_ROOT)/include
+INCLUDE_HDF5_summit_pgi   = -I$(OLCF_HDF5_ROOT)/include
 INCLUDE_HDF5_summit_xl    = -I$(OLCF_HDF5_ROOT)/include
 INCLUDE_HDF5              = $(INCLUDE_HDF5_$(MACHINE))
+
+INCLUDE_CUDA_summit_gcc   = -I$(OLCF_CUDA_ROOT)/include
+INCLUDE_CUDA_summit_pgi   = -I$(OLCF_CUDA_ROOT)/include
+INCLUDE_CUDA_summit_xl    = -I$(OLCF_CUDA_ROOT)/include
+INCLUDE_CUDA              = $(INCLUDE_CUDA_$(MACHINE))
+
 INCLUDE                   = $(INCLUDE_HDF5)
 
 LIBRARIES_HDF5_sn1987b      = -L/usr/local/Cellar/hdf5/1.10.5/lib -lhdf5_fortran -lhdf5
@@ -82,6 +100,34 @@ LIBRARIES_HDF5_titan_gnu    = # Use Module Load
 LIBRARIES_HDF5_darter_gnu   = # Use Module Load
 LIBRARIES_HDF5_darter_cray  = # Use Module Load
 LIBRARIES_HDF5_beacon_intel = ${HDF5_LIB} -lhdf5_fortran -lhdf5
+LIBRARIES_HDF5_summit_gcc   = -L$(OLCF_HDF5_ROOT)/lib -lhdf5_fortran -lhdf5
+LIBRARIES_HDF5_summit_pgi   = -L$(OLCF_HDF5_ROOT)/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_summit_xl    = -L$(OLCF_HDF5_ROOT)/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5              = $(LIBRARIES_HDF5_$(MACHINE))
+
+LIBRARIES_CUDA_summit_gcc   = -L$(OLCF_CUDA_ROOT)/lib64 -lcublas -lcudart -lcuda
+LIBRARIES_CUDA_summit_pgi   = -L$(OLCF_CUDA_ROOT)/lib64 -lcublas -lcudart -lcuda
+LIBRARIES_CUDA_summit_xl    = -L$(OLCF_CUDA_ROOT)/lib64 -lcublas -lcudart -lcuda
+LIBRARIES_CUDA              = $(LIBRARIES_CUDA_$(MACHINE))
+
 LIBRARIES                   = $(LIBRARIES_HDF5)
+
+PP_summit_gcc                  =
+PP_summit_pgi                  =
+PP_summit_xl                   = -WF,
+PP                             = $(PP_$(MACHINE))
+
+ifeq ($(USE_GPU),TRUE)
+   INCLUDE      += $(INCLUDE_CUDA)
+   LIBRARIES    += $(LIBRARIES_CUDA)
+   DEFINES      += $(PP)-DWEAKLIB_GPU
+   ifeq ($(USE_OACC),TRUE)
+      DEFINES   += $(PP)-DWEAKLIB_OACC
+   else ifeq ($(USE_OMP_OL),TRUE)
+      DEFINES   += $(PP)-DWEAKLIB_OMP_OL
+   endif
+else
+   ifeq ($(USE_OMP),TRUE)
+      DEFINES   += $(PP)-DWEAKLIB_OMP
+   endif
+endif
