@@ -11,7 +11,7 @@ PROGRAM wlEosInversionTest
     ReadEquationOfStateTableHDF
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable, &
-    ComputeTempFromIntEnergy, &
+    ComputeTempFromIntEnergy_Lookup, &
     ComputeTempFromEntropy
   USE wlEOSInversionModule, ONLY: &
     InitializeEOSInversion, &
@@ -23,7 +23,8 @@ PROGRAM wlEosInversionTest
 
   INTEGER :: &
     n_rndm, &
-    iP
+    iP, &
+    iMaxError
   INTEGER, PARAMETER :: &
     nPoints = 2**16, &
     iD = 1, iT = 2, iY = 3
@@ -34,7 +35,8 @@ PROGRAM wlEosInversionTest
   REAL(dp) :: &
     tBegin, &
     tEnd, &
-    Amp
+    Amp, &
+    E_E
   REAL(dp), DIMENSION(nPoints) :: &
     D, T, Y, E, P, S, T_E, T_P, T_S, dT, &
     rndm_D, &
@@ -208,31 +210,112 @@ PROGRAM wlEosInversionTest
   END DO
 
   Error = ABS( T - T_E ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+
+  CALL LogInterpolateSingleVariable &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Dtab, Ttab, Ytab, OS_E, Etab, E_E )
 
   PRINT*
-  PRINT*, "ComputeTemperatureWith_DEY:"
+  PRINT*, "ComputeTemperatureWith_DEY (Good Guess):"
   PRINT*, "CPU_TIME = ", tEnd - tBegin
   PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   PRINT*, "MINVAL(T) = ", MINVAL( T_E )
 
   ! -------------------------------------------------------------------
 
+  associate &
+    ( minT => 1.0001 * EosTab % TS % MinValues(iT), &
+      maxT => 0.9999 * EosTab % TS % MaxValues(iT) )
+
+  Amp = 0.1_dp * ( maxT - minT ) ! --- Perturbation Amplitude
+
+  PRINT*
+  PRINT*, "Perturbation Amplitude: ", Amp
+
+  dT = Amp * 2.0_dp * ( rndm_T - 0.5_dp ) * T
+
+  T_E = MIN( MAX( T + dT, minT ), maxT )
+
+  end associate
+
   CALL CPU_TIME( tBegin )
 
+  CALL ComputeTemperatureWith_DEY &
+         ( D, E, Y, Dtab, Ttab, Ytab, Etab, OS_E, T_E, &
+           UseInitialGuess_Option = .TRUE., &
+           Error_Option = Error_E )
+
+  CALL CPU_TIME( tEnd )
+
   DO iP = 1, nPoints
-
-    CALL ComputeTempFromIntEnergy &
-           ( D(iP), E(iP), Y(iP), Dtab, Ttab, Ytab, [1,1,0], &
-             Etab, OS_E, T_E(iP:iP) )
-
+    IF( Error_E(iP) .NE. 0 )THEN
+      CALL DescribeEOSInversionError( Error_E(iP) )
+    END IF
   END DO
+
+  Error = ABS( T - T_E ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+
+  CALL LogInterpolateSingleVariable &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Dtab, Ttab, Ytab, OS_E, Etab, E_E )
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DEY (Bad Guess):"
+  PRINT*, "CPU_TIME = ", tEnd - tBegin
+  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "MINVAL(T) = ", MINVAL( T_E )
+
+  ! -------------------------------------------------------------------
+
+  T_E = 0.0_dp
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTemperatureWith_DEY &
+         ( D, E, Y, Dtab, Ttab, Ytab, Etab, OS_E, T_E, &
+           UseInitialGuess_Option = .FALSE., &
+           Error_Option = Error_E )
+
+  CALL CPU_TIME( tEnd )
+
+  DO iP = 1, nPoints
+    IF( Error_E(iP) .NE. 0 )THEN
+      CALL DescribeEOSInversionError( Error_E(iP) )
+    END IF
+  END DO
+
+  Error = ABS( T - T_E ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+
+  CALL LogInterpolateSingleVariable &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Dtab, Ttab, Ytab, OS_E, Etab, E_E )
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DEY (No Guess):"
+  PRINT*, "CPU_TIME = ", tEnd - tBegin
+  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "MINVAL(T) = ", MINVAL( T_E )
+
+  ! -------------------------------------------------------------------
+
+  T_E = 0.0_dp
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTempFromIntEnergy_Lookup &
+         ( D, E, Y, Dtab, Ttab, Ytab, [1,1,0], &
+           Etab, OS_E, T_E )
 
   CALL CPU_TIME( tEnd )
 
   Error = ABS( T - T_E ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+
+  CALL LogInterpolateSingleVariable &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Dtab, Ttab, Ytab, OS_E, Etab, E_E )
 
   PRINT*
-  PRINT*, "ComputeTempFromIntEnergy:"
+  PRINT*, "ComputeTempFromIntEnergy_Lookup:"
   PRINT*, "CPU_TIME = ", tEnd - tBegin
   PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   PRINT*, "MINVAL(T) = ", MINVAL( T_E )
