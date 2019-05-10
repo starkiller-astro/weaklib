@@ -264,10 +264,15 @@ CONTAINS
   END FUNCTION dTriLineardX3
 
 
-  PURE REAL(dp) FUNCTION TetraLinear &
+  REAL(dp) FUNCTION TetraLinear &
     ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
       p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
       dX1, dX2, dX3, dX4 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: &
       p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
@@ -569,6 +574,11 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom_Point &
     ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogD
@@ -1228,6 +1238,11 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_4D_Custom_Point &
     ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: LogE
     REAL(dp), INTENT(in)  :: LogD
