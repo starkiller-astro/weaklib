@@ -21,7 +21,9 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
+  PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Point
   PUBLIC :: LogInterpolateOpacity_2D1D2D
+  PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
 
   REAL(dp), PARAMETER :: One = 1.0_dp
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
@@ -784,100 +786,141 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom &
-               ( LogX1, LogX2, LogX3, LogX4, LogCoordsX1, LogCoordsX2, &
-                 LogCoordsX3, LogCoordsX4, Offset, Table, Interpolant )
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant )
 
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogX4
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX1
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX2
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX3
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: LogCoordsX4
-    REAL(dp),                     INTENT(in)  :: Offset
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
-    REAL(dp), DIMENSION(:,:,:),   INTENT(out) :: Interpolant
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogT(:)
+    REAL(dp), INTENT(in)  :: LogX(:)
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
 
-    INTEGER :: i, j, k
-    INTEGER :: iX1, iX2, iX3, iX4
-    INTEGER :: p1, p2, p3, p4
-    REAL(dp), DIMENSION(4) :: dX
-    REAL(dp), DIMENSION(0:1,0:1,0:1,0:1) :: p
+    INTEGER  :: i, j, k, kp, l, iT, iX
+    INTEGER  :: p1, p2, p3, p4
+    INTEGER  :: iE(SIZE(LogE))
+    REAL(dp) :: dT, dX
+    REAL(dp) :: dE(SIZE(LogE))
+    REAL(dp) :: p(0:1,0:1,0:1,0:1)
 
-    REAL(dp), PARAMETER :: kmev = 8.61733d-11
+    DO i = 1, SIZE( LogE )
+      iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
+    END DO
 
-    DO k = 1, SIZE( LogX3 )
+    DO l = 1, SIZE( LogT )
 
-      iX4 &
-        = Index1D_Lin( LogX4(k), LogCoordsX4, SIZE( LogCoordsX4 ) )
-      dX(4) &
-        = ( LogX4(k) - LogCoordsX4(iX4) ) &
-            / ( LogCoordsX4(iX4+1) - LogCoordsX4(iX4) )
+      iT = Index1D_Lin( LogT(l), LogTs, SIZE( LogTs ) )
+      dT = ( LogT(l) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
 
-      iX3 &
-        = Index1D_Lin( LogX3(k), LogCoordsX3, SIZE( LogCoordsX3 ) )
-      dX(3) &
-        = ( LogX3(k) - LogCoordsX3(iX3) ) &
-            / ( LogCoordsX3(iX3+1) - LogCoordsX3(iX3) )
+      iX = Index1D_Lin( LogX(l), LogXs, SIZE( LogXs ) )
+      dX = ( LogX(l) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
 
-      DO j = 1, SIZE( LogX2 )
-
-        iX2 &
-          = Index1D_Lin( LogX2(j), LogCoordsX2, SIZE( LogCoordsX2 ) )
-        dX(2) &
-          = ( LogX2(j) - LogCoordsX2(iX2) ) &
-              / ( LogCoordsX2(iX2+1) - LogCoordsX2(iX2) )
+      DO j = 1, SIZE( LogE )
 
         DO i = 1, j
 
-          iX1 &
-            = Index1D_Lin( LogX1(i), LogCoordsX1, SIZE( LogCoordsX1 ) )
-          dX(1) &
-            = ( LogX1(i) - LogCoordsX1(iX1) ) &
-                / ( LogCoordsX1(iX1+1) - LogCoordsX1(iX1) )
+          kp = iE(i)
+          k  = iE(j)
 
           DO p4 = 0, 1
-            DO p3 = 0, 1
-              DO p2 = 0, 1
-                DO p1 = 0, 1
+          DO p3 = 0, 1
+          DO p2 = 0, 1
+          DO p1 = 0, 1
 
-                  p(p1,p2,p3,p4) &
-                    = TABLE(iX1+p1,iX2+p2,iX3+p3,iX4+p4)
+            p(p1,p2,p3,p4) = TABLE(kp+p1,k+p2,iT+p3,iX+p4)
 
-                END DO
-              END DO
-            END DO
+          END DO
+          END DO
+          END DO
           END DO
 
-          Interpolant(i,j,k) &
+          Interpolant(i,j,l) &
             = TetraLinear &
                 ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
                   p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
                   p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
                   p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-                  dX(1), dX(2), dX(3), dX(4) )
+                  dE(i), dE(j), dT, dX )
 
-        END DO ! i
-      END DO ! j
-    END DO ! k
+          Interpolant(i,j,l) = 10.0d0**( Interpolant(i,j,l) ) - OS
 
-    Interpolant(:,:,:) &
-      = 10**( Interpolant(:,:,:) ) - Offset
+        END DO
 
-    DO k = 1,SIZE( LogX3 )
-      DO j = 1, SIZE( LogX2 )
-        DO i = j, SIZE( LogX1 )
+      END DO
 
-          Interpolant(i,j,k) &
-            = Interpolant(j,i,k) * &
-              EXP( ( 10**LogX1(j) - 10**LogX2(i) )/( kmev * 10**LogX3(k) ) )
-
-        END DO ! ip
-      END DO ! j
-    END DO ! k
+    END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
+
+
+  SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Point &
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogT
+    REAL(dp), INTENT(in)  :: LogX
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:)
+
+    INTEGER  :: i, j, k, kp, iT, iX
+    INTEGER  :: p1, p2, p3, p4
+    INTEGER  :: iE(SIZE(LogE))
+    REAL(dp) :: dT, dX
+    REAL(dp) :: dE(SIZE(LogE))
+    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+
+    iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+
+    iX = Index1D_Lin( LogX, LogXs, SIZE( LogXs ) )
+    dX = ( LogX - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+
+    DO i = 1, SIZE( LogE )
+      iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
+    END DO
+
+    DO j = 1, SIZE( LogE )
+
+      DO i = 1, j
+
+        kp = iE(i)
+        k  = iE(j)
+
+        DO p4 = 0, 1
+        DO p3 = 0, 1
+        DO p2 = 0, 1
+        DO p1 = 0, 1
+
+          p(p1,p2,p3,p4) = TABLE(kp+p1,k+p2,iT+p3,iX+p4)
+
+        END DO
+        END DO
+        END DO
+        END DO
+
+        Interpolant(i,j) &
+          = TetraLinear &
+              ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
+                p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
+                p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
+                p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
+                dE(i), dE(j), dT, dX )
+
+        Interpolant(i,j) = 10.0d0**( Interpolant(i,j) ) - OS
+
+      END DO
+
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Point
 
 
   SUBROUTINE LogInterpolateOpacity_2D1D2D &
@@ -976,6 +1019,77 @@ CONTAINS
     DEALLOCATE( iE, dE )
 
   END SUBROUTINE LogInterpolateOpacity_2D1D2D
+
+
+  SUBROUTINE LogInterpolateOpacity_2D1D2D_Custom &
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogT(:)
+    REAL(dp), INTENT(in)  :: LogX(:)
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS(:)
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:,:,:)
+
+    INTEGER  :: i, j, k, kp, l, m, iT, iX
+    INTEGER  :: p1, p2, p3, p4
+    INTEGER  :: iE(SIZE(LogE))
+    REAL(dp) :: dT, dX
+    REAL(dp) :: dE(SIZE(LogE))
+    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+
+    DO i = 1, SIZE( LogE )
+      iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
+    END DO
+
+    DO m = 1, SIZE( LogT )
+
+      iT = Index1D_Lin( LogT(m), LogTs, SIZE( LogTs ) )
+      dT = ( LogT(m) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+
+      iX = Index1D_Lin( LogX(m), LogXs, SIZE( LogXs ) )
+      dX = ( LogX(m) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+
+      DO l = 1, SIZE( TABLE, DIM = 3 )
+      DO j = 1, SIZE( LogE )
+      DO i = 1, j
+
+        kp = iE(i)
+        k  = iE(j)
+
+        DO p4 = 0, 1
+        DO p3 = 0, 1
+        DO p2 = 0, 1
+        DO p1 = 0, 1
+
+          p(p1,p2,p3,p4) = TABLE(kp+p1,k+p2,l,iT+p3,iX+p4)
+
+        END DO
+        END DO
+        END DO
+        END DO
+
+        Interpolant(i,j,l,m) &
+          = TetraLinear &
+              ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
+                p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
+                p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
+                p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
+                dE(i), dE(j), dT, dX )
+
+        Interpolant(i,j,l,m) = 10.0d0**( Interpolant(i,j,l,m) ) - OS(l)
+
+      END DO
+      END DO
+      END DO
+
+    END DO
+
+  END SUBROUTINE LogInterpolateOpacity_2D1D2D_Custom
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
