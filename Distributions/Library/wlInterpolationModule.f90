@@ -7,6 +7,7 @@ MODULE wlInterpolationModule
 
   PUBLIC :: locate
   PUBLIC :: Index1D
+  PUBLIC :: Index1D_Lin
   PUBLIC :: TriLinear
   PUBLIC :: LogInterpolateSingleVariable
   PUBLIC :: LogInterpolateDifferentiateSingleVariable
@@ -44,6 +45,11 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_4D
   END INTERFACE LogInterpolateDifferentiateSingleVariable
+
+  INTERFACE Index1D_Lin
+    MODULE PROCEDURE Index1D_Lin_1
+    MODULE PROCEDURE Index1D_Lin_2
+  END INTERFACE Index1D_Lin
 
 CONTAINS
 
@@ -113,7 +119,8 @@ CONTAINS
   END FUNCTION Index1D
 
 
-  INTEGER FUNCTION Index1D_Lin( x, xx, n )
+  INTEGER FUNCTION Index1D_Lin_1( x, xx, n ) &
+      RESULT( Index1D_Lin )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -122,12 +129,31 @@ CONTAINS
 
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
+    INTEGER :: Index1D_Lin
 
     Index1D_Lin &
       = FLOOR( 1 + (n-1)*(x-xx(1))/(xx(n)-xx(1)) + 1.d-12 )
 
     RETURN
-  END FUNCTION Index1D_Lin
+  END FUNCTION Index1D_Lin_1
+
+
+  INTEGER FUNCTION Index1D_Lin_2( x, offset, dx ) &
+      RESULT( Index1D_Lin )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in) :: x, offset, dx
+    INTEGER :: Index1D_Lin
+
+    Index1D_Lin &
+      = 1 + FLOOR( ( x - offset ) / dx )
+
+    RETURN
+  END FUNCTION Index1D_Lin_2
 
 
   INTEGER FUNCTION Index1D_Log( x, xx, n )
@@ -1371,43 +1397,43 @@ CONTAINS
     REAL(dp), INTENT(out) :: Interpolant
 
     INTEGER  :: iD, iT, iY, iE
-    INTEGER  :: p1, p2, p3, p4
     REAL(dp) :: dD, dT, dY, dE
-    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
     iE = Index1D_Lin( LogE, LogEs, SIZE( LogEs ) )
-    dE = ( LogE - LogEs(iE) ) / ( LogEs(iE+1) - LogEs(iE) )
-
     iD = Index1D_Lin( LogD, LogDs, SIZE( LogDs ) )
-    dD = ( LogD - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
-
     iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
-    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
-
     iY = Index1D_Lin( Y, Ys, SIZE( Ys ) )
+
+    p0000 = TABLE( iE  , iD  , iT  , iY   )
+    p1000 = TABLE( iE+1, iD  , iT  , iY   )
+    p0100 = TABLE( iE  , iD+1, iT  , iY   )
+    p1100 = TABLE( iE+1, iD+1, iT  , iY   )
+    p0010 = TABLE( iE  , iD  , iT+1, iY   )
+    p1010 = TABLE( iE+1, iD  , iT+1, iY   )
+    p0110 = TABLE( iE  , iD+1, iT+1, iY   )
+    p1110 = TABLE( iE+1, iD+1, iT+1, iY   )
+    p0001 = TABLE( iE  , iD  , iT  , iY+1 )
+    p1001 = TABLE( iE+1, iD  , iT  , iY+1 )
+    p0101 = TABLE( iE  , iD+1, iT  , iY+1 )
+    p1101 = TABLE( iE+1, iD+1, iT  , iY+1 )
+    p0011 = TABLE( iE  , iD  , iT+1, iY+1 )
+    p1011 = TABLE( iE+1, iD  , iT+1, iY+1 )
+    p0111 = TABLE( iE  , iD+1, iT+1, iY+1 )
+    p1111 = TABLE( iE+1, iD+1, iT+1, iY+1 )
+
+    dE = ( LogE - LogEs(iE) ) / ( LogEs(iE+1) - LogEs(iE) )
+    dD = ( LogD - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
     dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
 
-    DO p4 = 0, 1
-    DO p3 = 0, 1
-    DO p2 = 0, 1
-    DO p1 = 0, 1
-
-      p(p1,p2,p3,p4) = TABLE(iE+p1,iD+p2,iT+p3,iY+p4)
-
-    END DO
-    END DO
-    END DO
-    END DO
-
     Interpolant &
-      = TetraLinear &
-          ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
-            p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
-            p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
-            p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-            dE, dD, dT, dY )
-
-    Interpolant = 10**( Interpolant ) - OS
+      = 10.0d0**( &
+          TetraLinear &
+            ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+              p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+              dE, dD, dT, dY ) ) - OS
 
   END SUBROUTINE LogInterpolateSingleVariable_4D_Custom_Point
 
