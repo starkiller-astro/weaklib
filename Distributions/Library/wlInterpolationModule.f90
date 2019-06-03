@@ -20,6 +20,7 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromPressure_Bisection
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
+  PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Point
@@ -530,7 +531,7 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom &
-    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
+    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant, GPU_Option )
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogD(:)
@@ -543,22 +544,58 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(in)  :: Table(:,:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:,:)
+    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
 
     INTEGER  :: i, j
     INTEGER  :: iD, iT, iY
-    INTEGER  :: p1, p2, p3, p4
     INTEGER  :: iE(SIZE(LogE))
     REAL(dp) :: dD, dT, dY
     REAL(dp) :: dE(SIZE(LogE))
-    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+    LOGICAL  :: do_gpu
+
+    IF( PRESENT( GPU_Option ) )THEN
+      do_gpu = GPU_Option
+    ELSE
+      do_gpu = .FALSE.
+    END IF
+
+#if defined(THORNADO_OMP_OL)
+    !$OMP TARGET ENTER DATA &
+    !$OMP IF( do_gpu ) &
+    !$OMP MAP( alloc: iE, dE )
+#elif defined(THORNADO_OACC)
+    !$ACC ENTER DATA &
+    !$ACC IF( do_gpu ) &
+    !$ACC CREATE( iE, dE )
+#endif
 
     ! --- Precompute Indices and Differences ---
 
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO &
+    !$OMP IF( do_gpu )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG VECTOR &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRESENT( iE, dE, LogE, LogEs )
+#endif
     DO i = 1, SIZE( LogE )
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
       dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
     END DO
 
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE &
+    !$OMP IF( do_gpu ) &
+    !$OMP PRIVATE( iD, dD, iT, dT, iY, dY ) &
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRIVATE( iD, dD, iT, dT, iY, dY ) &
+    !$ACC PRESENT( iE, dE, LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
+#endif
     DO j = 1, SIZE( LogD )
 
       iY = Index1D_Lin( Y(j), Ys, SIZE( Ys ) )
@@ -570,32 +607,54 @@ CONTAINS
       iD = Index1D_Lin( LogD(j), LogDs, SIZE( LogDs ) )
       dD = ( LogD(j) - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
 
+#if defined(WEAKLIB_OMP_OL)
+      !$OMP PARALLEL DO &
+      !$OMP PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#elif defined(WEAKLIB_OACC)
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#endif
       DO i = 1, SIZE( LogE )
 
-        DO p4 = 0, 1
-        DO p3 = 0, 1
-        DO p2 = 0, 1
-        DO p1 = 0, 1
-
-          p(p1,p2,p3,p4) = TABLE(iE(i)+p1,iD+p2,iT+p3,iY+p4)
-
-        END DO
-        END DO
-        END DO
-        END DO
+        p0000 = TABLE( iE(i)  , iD  , iT  , iY   )
+        p1000 = TABLE( iE(i)+1, iD  , iT  , iY   )
+        p0100 = TABLE( iE(i)  , iD+1, iT  , iY   )
+        p1100 = TABLE( iE(i)+1, iD+1, iT  , iY   )
+        p0010 = TABLE( iE(i)  , iD  , iT+1, iY   )
+        p1010 = TABLE( iE(i)+1, iD  , iT+1, iY   )
+        p0110 = TABLE( iE(i)  , iD+1, iT+1, iY   )
+        p1110 = TABLE( iE(i)+1, iD+1, iT+1, iY   )
+        p0001 = TABLE( iE(i)  , iD  , iT  , iY+1 )
+        p1001 = TABLE( iE(i)+1, iD  , iT  , iY+1 )
+        p0101 = TABLE( iE(i)  , iD+1, iT  , iY+1 )
+        p1101 = TABLE( iE(i)+1, iD+1, iT  , iY+1 )
+        p0011 = TABLE( iE(i)  , iD  , iT+1, iY+1 )
+        p1011 = TABLE( iE(i)+1, iD  , iT+1, iY+1 )
+        p0111 = TABLE( iE(i)  , iD+1, iT+1, iY+1 )
+        p1111 = TABLE( iE(i)+1, iD+1, iT+1, iY+1 )
 
         Interpolant(i,j) &
-          = TetraLinear &
-              ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
-                p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
-                p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
-                p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-                dE(i), dD, dT, dY )
-
-        Interpolant(i,j) = 10**( Interpolant(i,j) ) - OS
+          = 10.0d0**( &
+              TetraLinear &
+                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                  dE(i), dD, dT, dY ) ) - OS
 
       END DO ! i
+
     END DO ! j
+
+#if defined(THORNADO_OMP_OL)
+    !$OMP TARGET EXIT DATA &
+    !$OMP IF( do_gpu ) &
+    !$OMP MAP( release: iE, dE )
+#elif defined(THORNADO_OACC)
+    !$ACC EXIT DATA &
+    !$ACC IF( do_gpu ) &
+    !$ACC DELETE( iE, dE )
+#endif
 
   END SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom
 
@@ -622,9 +681,9 @@ CONTAINS
 
     INTEGER  :: i
     INTEGER  :: iD, iT, iY, iE
-    INTEGER  :: p1, p2, p3, p4
     REAL(dp) :: dD, dT, dY, dE
-    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
     iY = Index1D_Lin( Y, Ys, SIZE( Ys ) )
     dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
@@ -640,27 +699,29 @@ CONTAINS
       iE = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
       dE = ( LogE(i) - LogEs(iE) ) / ( LogEs(iE+1) - LogEs(iE) )
 
-      DO p4 = 0, 1
-      DO p3 = 0, 1
-      DO p2 = 0, 1
-      DO p1 = 0, 1
-
-        p(p1,p2,p3,p4) = TABLE(iE+p1,iD+p2,iT+p3,iY+p4)
-
-      END DO
-      END DO
-      END DO
-      END DO
+      p0000 = TABLE( iE  , iD  , iT  , iY   )
+      p1000 = TABLE( iE+1, iD  , iT  , iY   )
+      p0100 = TABLE( iE  , iD+1, iT  , iY   )
+      p1100 = TABLE( iE+1, iD+1, iT  , iY   )
+      p0010 = TABLE( iE  , iD  , iT+1, iY   )
+      p1010 = TABLE( iE+1, iD  , iT+1, iY   )
+      p0110 = TABLE( iE  , iD+1, iT+1, iY   )
+      p1110 = TABLE( iE+1, iD+1, iT+1, iY   )
+      p0001 = TABLE( iE  , iD  , iT  , iY+1 )
+      p1001 = TABLE( iE+1, iD  , iT  , iY+1 )
+      p0101 = TABLE( iE  , iD+1, iT  , iY+1 )
+      p1101 = TABLE( iE+1, iD+1, iT  , iY+1 )
+      p0011 = TABLE( iE  , iD  , iT+1, iY+1 )
+      p1011 = TABLE( iE+1, iD  , iT+1, iY+1 )
+      p0111 = TABLE( iE  , iD+1, iT+1, iY+1 )
+      p1111 = TABLE( iE+1, iD+1, iT+1, iY+1 )
 
       Interpolant(i) &
-        = TetraLinear &
-            ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
-              p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
-              p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
-              p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-              dE, dD, dT, dY )
-
-      Interpolant(i) = 10**( Interpolant(i) ) - OS
+        = 10.0d0**( &
+            TetraLinear &
+              ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                dE, dD, dT, dY ) ) - OS
 
     END DO
 
@@ -812,7 +873,7 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom &
-    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant )
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, GPU_Option )
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogT(:)
@@ -823,19 +884,55 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(in)  :: Table(:,:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:,:,:)
+    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
 
-    INTEGER  :: i, j, k, kp, l, iT, iX
-    INTEGER  :: p1, p2, p3, p4
+    INTEGER  :: i, j, l, iT, iX
     INTEGER  :: iE(SIZE(LogE))
     REAL(dp) :: dT, dX
     REAL(dp) :: dE(SIZE(LogE))
-    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+    LOGICAL  :: do_gpu
 
+    IF( PRESENT( GPU_Option ) )THEN
+      do_gpu = GPU_Option
+    ELSE
+      do_gpu = .FALSE.
+    END IF
+
+#if defined(THORNADO_OMP_OL)
+    !$OMP TARGET ENTER DATA &
+    !$OMP IF( do_gpu ) &
+    !$OMP MAP( alloc: iE, dE )
+#elif defined(THORNADO_OACC)
+    !$ACC ENTER DATA &
+    !$ACC IF( do_gpu ) &
+    !$ACC CREATE( iE, dE )
+#endif
+
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO &
+    !$OMP IF( do_gpu )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG VECTOR &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRESENT( iE, dE, LogE, LogEs )
+#endif
     DO i = 1, SIZE( LogE )
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
       dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
     END DO
 
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE &
+    !$OMP IF( do_gpu ) &
+    !$OMP PRIVATE( iT, dT, iX, dX ) &
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRIVATE( iT, dT, iX, dX ) &
+    !$ACC PRESENT( iE, dE, LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+#endif
     DO l = 1, SIZE( LogT )
 
       iT = Index1D_Lin( LogT(l), LogTs, SIZE( LogTs ) )
@@ -844,46 +941,67 @@ CONTAINS
       iX = Index1D_Lin( LogX(l), LogXs, SIZE( LogXs ) )
       dX = ( LogX(l) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
 
+#if defined(WEAKLIB_OMP_OL)
+      !$OMP PARALLEL DO &
+      !$OMP PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#elif defined(WEAKLIB_OACC)
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#endif
       DO j = 1, SIZE( LogE )
-
         DO i = 1, j
 
-          kp = iE(i)
-          k  = iE(j)
-
-          DO p4 = 0, 1
-          DO p3 = 0, 1
-          DO p2 = 0, 1
-          DO p1 = 0, 1
-
-            p(p1,p2,p3,p4) = TABLE(kp+p1,k+p2,iT+p3,iX+p4)
-
-          END DO
-          END DO
-          END DO
-          END DO
+          p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
+          p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
+          p0100 = TABLE( iE(i)  , iE(j)+1, iT  , iX   )
+          p1100 = TABLE( iE(i)+1, iE(j)+1, iT  , iX   )
+          p0010 = TABLE( iE(i)  , iE(j)  , iT+1, iX   )
+          p1010 = TABLE( iE(i)+1, iE(j)  , iT+1, iX   )
+          p0110 = TABLE( iE(i)  , iE(j)+1, iT+1, iX   )
+          p1110 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX   )
+          p0001 = TABLE( iE(i)  , iE(j)  , iT  , iX+1 )
+          p1001 = TABLE( iE(i)+1, iE(j)  , iT  , iX+1 )
+          p0101 = TABLE( iE(i)  , iE(j)+1, iT  , iX+1 )
+          p1101 = TABLE( iE(i)+1, iE(j)+1, iT  , iX+1 )
+          p0011 = TABLE( iE(i)  , iE(j)  , iT+1, iX+1 )
+          p1011 = TABLE( iE(i)+1, iE(j)  , iT+1, iX+1 )
+          p0111 = TABLE( iE(i)  , iE(j)+1, iT+1, iX+1 )
+          p1111 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX+1 )
 
           Interpolant(i,j,l) &
-            = TetraLinear &
-                ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
-                  p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
-                  p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
-                  p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-                  dE(i), dE(j), dT, dX )
-
-          Interpolant(i,j,l) = 10.0d0**( Interpolant(i,j,l) ) - OS
+            = 10.0d0**( &
+                TetraLinear &
+                  ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                    p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                    dE(i), dE(j), dT, dX ) ) - OS
 
         END DO
-
       END DO
 
     END DO
+
+#if defined(THORNADO_OMP_OL)
+    !$OMP TARGET EXIT DATA &
+    !$OMP IF( do_gpu ) &
+    !$OMP MAP( release: iE, dE )
+#elif defined(THORNADO_OACC)
+    !$ACC EXIT DATA &
+    !$ACC IF( do_gpu ) &
+    !$ACC DELETE( iE, dE )
+#endif
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Point &
     ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogT
@@ -895,12 +1013,12 @@ CONTAINS
     REAL(dp), INTENT(in)  :: Table(:,:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:,:)
 
-    INTEGER  :: i, j, k, kp, iT, iX
-    INTEGER  :: p1, p2, p3, p4
+    INTEGER  :: i, j, iT, iX
     INTEGER  :: iE(SIZE(LogE))
     REAL(dp) :: dT, dX
     REAL(dp) :: dE(SIZE(LogE))
-    REAL(dp) :: p(0:1,0:1,0:1,0:1)
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
     iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
     dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
@@ -914,36 +1032,33 @@ CONTAINS
     END DO
 
     DO j = 1, SIZE( LogE )
-
       DO i = 1, j
 
-        kp = iE(i)
-        k  = iE(j)
-
-        DO p4 = 0, 1
-        DO p3 = 0, 1
-        DO p2 = 0, 1
-        DO p1 = 0, 1
-
-          p(p1,p2,p3,p4) = TABLE(kp+p1,k+p2,iT+p3,iX+p4)
-
-        END DO
-        END DO
-        END DO
-        END DO
+        p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
+        p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
+        p0100 = TABLE( iE(i)  , iE(j)+1, iT  , iX   )
+        p1100 = TABLE( iE(i)+1, iE(j)+1, iT  , iX   )
+        p0010 = TABLE( iE(i)  , iE(j)  , iT+1, iX   )
+        p1010 = TABLE( iE(i)+1, iE(j)  , iT+1, iX   )
+        p0110 = TABLE( iE(i)  , iE(j)+1, iT+1, iX   )
+        p1110 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX   )
+        p0001 = TABLE( iE(i)  , iE(j)  , iT  , iX+1 )
+        p1001 = TABLE( iE(i)+1, iE(j)  , iT  , iX+1 )
+        p0101 = TABLE( iE(i)  , iE(j)+1, iT  , iX+1 )
+        p1101 = TABLE( iE(i)+1, iE(j)+1, iT  , iX+1 )
+        p0011 = TABLE( iE(i)  , iE(j)  , iT+1, iX+1 )
+        p1011 = TABLE( iE(i)+1, iE(j)  , iT+1, iX+1 )
+        p0111 = TABLE( iE(i)  , iE(j)+1, iT+1, iX+1 )
+        p1111 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX+1 )
 
         Interpolant(i,j) &
-          = TetraLinear &
-              ( p(0,0,0,0), p(1,0,0,0), p(0,1,0,0), p(1,1,0,0), &
-                p(0,0,1,0), p(1,0,1,0), p(0,1,1,0), p(1,1,1,0), &
-                p(0,0,0,1), p(1,0,0,1), p(0,1,0,1), p(1,1,0,1), &
-                p(0,0,1,1), p(1,0,1,1), p(0,1,1,1), p(1,1,1,1), &
-                dE(i), dE(j), dT, dX )
-
-        Interpolant(i,j) = 10.0d0**( Interpolant(i,j) ) - OS
+          = 10.0d0**( &
+              TetraLinear &
+                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                  dE(i), dE(j), dT, dX ) ) - OS
 
       END DO
-
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Point
