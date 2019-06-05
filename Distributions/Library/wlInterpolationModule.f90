@@ -120,7 +120,7 @@ CONTAINS
   END FUNCTION Index1D
 
 
-  INTEGER FUNCTION Index1D_Lin_1( x, xx, n ) &
+  FUNCTION Index1D_Lin_1( x, xx, n ) &
       RESULT( Index1D_Lin )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -139,7 +139,7 @@ CONTAINS
   END FUNCTION Index1D_Lin_1
 
 
-  INTEGER FUNCTION Index1D_Lin_2( x, offset, dx ) &
+  FUNCTION Index1D_Lin_2( x, offset, dx ) &
       RESULT( Index1D_Lin )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -926,7 +926,7 @@ CONTAINS
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE &
     !$OMP IF( do_gpu ) &
-    !$OMP PRIVATE( iT, dT, iX, dX ) &
+    !$OMP PRIVATE( iT, dT, iX, dX )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG &
     !$ACC IF( do_gpu ) &
