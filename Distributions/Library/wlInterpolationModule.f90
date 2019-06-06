@@ -1833,6 +1833,176 @@ CONTAINS
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point
 
 
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom &
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, &
+      DerivativeT, DerivativeX )
+
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogT(:)
+    REAL(dp), INTENT(in)  :: LogX(:)
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
+    REAL(dp), INTENT(out) :: DerivativeT(:,:,:)
+    REAL(dp), INTENT(out) :: DerivativeX(:,:,:)
+
+    INTEGER  :: i, j, l, iT, iX
+    INTEGER  :: iE(SIZE(LogE))
+    REAL(dp) :: dT, aT, dX, aX
+    REAL(dp) :: dE(SIZE(LogE))
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+
+    DO i = 1, SIZE( LogE )
+      iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
+    END DO
+
+    DO l = 1, SIZE( LogT )
+
+      iT = Index1D_Lin( LogT(l), LogTs, SIZE( LogTs ) )
+      dT = ( LogT(l) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+      aT = One / ( LogTs(iT+1) - LogTs(iT) ) / 10.0d0**LogT(l)
+
+      iX = Index1D_Lin( LogX(l), LogXs, SIZE( LogXs ) )
+      dX = ( LogX(l) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+      aX = One / ( LogXs(iX+1) - LogXs(iX) ) / 10.0d0**LogX(l)
+
+      DO j = 1, SIZE( LogE )
+      DO i = 1, j
+
+        p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
+        p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
+        p0100 = TABLE( iE(i)  , iE(j)+1, iT  , iX   )
+        p1100 = TABLE( iE(i)+1, iE(j)+1, iT  , iX   )
+        p0010 = TABLE( iE(i)  , iE(j)  , iT+1, iX   )
+        p1010 = TABLE( iE(i)+1, iE(j)  , iT+1, iX   )
+        p0110 = TABLE( iE(i)  , iE(j)+1, iT+1, iX   )
+        p1110 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX   )
+        p0001 = TABLE( iE(i)  , iE(j)  , iT  , iX+1 )
+        p1001 = TABLE( iE(i)+1, iE(j)  , iT  , iX+1 )
+        p0101 = TABLE( iE(i)  , iE(j)+1, iT  , iX+1 )
+        p1101 = TABLE( iE(i)+1, iE(j)+1, iT  , iX+1 )
+        p0011 = TABLE( iE(i)  , iE(j)  , iT+1, iX+1 )
+        p1011 = TABLE( iE(i)+1, iE(j)  , iT+1, iX+1 )
+        p0111 = TABLE( iE(i)  , iE(j)+1, iT+1, iX+1 )
+        p1111 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX+1 )
+
+        Interpolant(i,j,l) &
+          = 10.0d0**( &
+              TetraLinear &
+                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                  dE(i), dE(j), dT, dX ) ) - OS
+
+        DerivativeT(i,j,l) &
+          = Interpolant(i,j,l) * aT &
+              * ( Trilinear( p0000, p1000, p0100, p1100, p0001, p1001, p0101, p1101, &
+                             dE(i), dE(j), dX ) &
+                  - Trilinear( p0010, p1010, p0110, p1110, p0011, p1011, p0111, p1111, &
+                               dE(i), dE(j), dX ) )
+
+        DerivativeX(i,j,l) &
+          = Interpolant(i,j,l) * aX &
+              * ( Trilinear( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                             dE(i), dE(j), dT ) &
+                  - Trilinear( p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                               dE(i), dE(j), dT ) )
+
+      END DO
+      END DO
+
+    END DO
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom
+
+
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point &
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, &
+      DerivativeT, DerivativeX )
+
+    REAL(dp), INTENT(in)  :: LogE(:)
+    REAL(dp), INTENT(in)  :: LogT
+    REAL(dp), INTENT(in)  :: LogX
+    REAL(dp), INTENT(in)  :: LogEs(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:)
+    REAL(dp), INTENT(out) :: DerivativeT(:,:)
+    REAL(dp), INTENT(out) :: DerivativeX(:,:)
+
+    INTEGER  :: i, j, iT, iX
+    INTEGER  :: iE(SIZE(LogE))
+    REAL(dp) :: dT, aT, dX, aX
+    REAL(dp) :: dE(SIZE(LogE))
+    REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+                p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+
+    iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+    aT = One / ( LogTs(iT+1) - LogTs(iT) ) / 10.0d0**LogT
+
+    iX = Index1D_Lin( LogX, LogXs, SIZE( LogXs ) )
+    dX = ( LogX - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+    aX = One / ( LogXs(iX+1) - LogXs(iX) ) / 10.0d0**LogX
+
+    DO i = 1, SIZE( LogE )
+      iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
+      dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
+    END DO
+
+    DO j = 1, SIZE( LogE )
+    DO i = 1, j
+
+      p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
+      p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
+      p0100 = TABLE( iE(i)  , iE(j)+1, iT  , iX   )
+      p1100 = TABLE( iE(i)+1, iE(j)+1, iT  , iX   )
+      p0010 = TABLE( iE(i)  , iE(j)  , iT+1, iX   )
+      p1010 = TABLE( iE(i)+1, iE(j)  , iT+1, iX   )
+      p0110 = TABLE( iE(i)  , iE(j)+1, iT+1, iX   )
+      p1110 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX   )
+      p0001 = TABLE( iE(i)  , iE(j)  , iT  , iX+1 )
+      p1001 = TABLE( iE(i)+1, iE(j)  , iT  , iX+1 )
+      p0101 = TABLE( iE(i)  , iE(j)+1, iT  , iX+1 )
+      p1101 = TABLE( iE(i)+1, iE(j)+1, iT  , iX+1 )
+      p0011 = TABLE( iE(i)  , iE(j)  , iT+1, iX+1 )
+      p1011 = TABLE( iE(i)+1, iE(j)  , iT+1, iX+1 )
+      p0111 = TABLE( iE(i)  , iE(j)+1, iT+1, iX+1 )
+      p1111 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX+1 )
+
+      Interpolant(i,j) &
+        = 10.0d0**( &
+            TetraLinear &
+              ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                dE(i), dE(j), dT, dX ) ) - OS
+
+      DerivativeT(i,j) &
+        = Interpolant(i,j) * aT &
+            * ( Trilinear( p0000, p1000, p0100, p1100, p0001, p1001, p0101, p1101, &
+                           dE(i), dE(j), dX ) &
+                - Trilinear( p0010, p1010, p0110, p1110, p0011, p1011, p0111, p1111, &
+                             dE(i), dE(j), dX ) )
+
+      DerivativeX(i,j) &
+        = Interpolant(i,j) * aX &
+            * ( Trilinear( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                           dE(i), dE(j), dT ) &
+                - Trilinear( p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                             dE(i), dE(j), dT ) )
+
+    END DO
+    END DO
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point
+
+
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D &
    ( x1, x2, x3, x4, Coordinate1, Coordinate2, Coordinate3, Coordinate4, &
      LogInterp, Offset, Table, Interpolant, Derivative, debug )     
