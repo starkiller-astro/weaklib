@@ -24,6 +24,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Point
+  PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point
   PUBLIC :: LogInterpolateOpacity_2D1D2D
   PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
 
@@ -1985,17 +1986,17 @@ CONTAINS
 
       DerivativeT(i,j) &
         = Interpolant(i,j) * aT &
-            * ( Trilinear( p0000, p1000, p0100, p1100, p0001, p1001, p0101, p1101, &
-                           dE(i), dE(j), dX ) &
-                - Trilinear( p0010, p1010, p0110, p1110, p0011, p1011, p0111, p1111, &
-                             dE(i), dE(j), dX ) )
+            * ( Trilinear( p0010, p1010, p0110, p1110, &
+                           p0011, p1011, p0111, p1111, dE(i), dE(j), dX ) &
+              - Trilinear( p0000, p1000, p0100, p1100, &
+                           p0001, p1001, p0101, p1101, dE(i), dE(j), dX ) )
 
       DerivativeX(i,j) &
         = Interpolant(i,j) * aX &
-            * ( Trilinear( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
-                           dE(i), dE(j), dT ) &
-                - Trilinear( p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
-                             dE(i), dE(j), dT ) )
+            * ( Trilinear( p0001, p1001, p0101, p1101, &
+                           p0011, p1011, p0111, p1111, dE(i), dE(j), dT ) &
+              - Trilinear( p0000, p1000, p0100, p1100, &
+                           p0010, p1010, p0110, p1110, dE(i), dE(j), dT ) )
 
     END DO
     END DO
