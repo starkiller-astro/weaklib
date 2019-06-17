@@ -40,6 +40,11 @@ elif [[ $WEAKLIB_MACHINE == ranchu* ]]; then
   echo
   echo "INFO: Setting environment for" $WEAKLIB_MACHINE
 
+elif [[ $WEAKLIB_MACHINE == ranchuair* ]]; then
+
+  echo
+  echo "INFO: Setting environment for" $WEAKLIB_MACHINE
+
 elif [[ $WEAKLIB_MACHINE == sjdunham* ]]; then
 
 echo
@@ -98,6 +103,10 @@ elif [[ $WEAKLIB_MACHINE == sn1987b ]]; then
   echo
 
 elif [[ $WEAKLIB_MACHINE == ranchu ]]; then
+
+  echo
+
+elif [[ $WEAKLIB_MACHINE == ranchuair ]]; then
 
   echo
 
