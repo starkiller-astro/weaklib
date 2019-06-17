@@ -157,7 +157,7 @@ REAL(dp), PARAMETER  :: mbg         = mb*ergmev*cvel_inv*cvel_inv ! baryon mass 
 REAL(dp), PARAMETER  :: stherm  = 1.0d0/(pi*hbarc_MeV**4)
 REAL(dp), PARAMETER  :: therm1  = gf*gf*(gv*gv+3.d0*ga*ga)*stherm
 REAL(dp), PARAMETER  :: therm2  = 2.d0*gf*gf*ga*ga*stherm/7.0d0
-
+REAL(dp), PARAMETER  :: therm3  = gf*gf*stherm
 
 END MODULE wlExtPhysicalConstantsModule
 
