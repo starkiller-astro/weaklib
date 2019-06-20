@@ -2,7 +2,7 @@ PROGRAM wlInterpolateIso
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable
+    LogInterpolateSingleVariable_1D3D_Custom
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -38,12 +38,10 @@ PROGRAM wlInterpolateIso
 !-------- variables for reading parameters data
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_r, Inte_rho, Inte_T, &
                                          Inte_Ye, database
-  REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
-  REAL(dp), DIMENSION(Inte_nPointE)   :: bufferIso10, bufferIso11, &
-                                         bufferIso20, bufferIso21
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE :: bufferIso10, bufferIso11, &
+                                           bufferIso20, bufferIso21
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: a
-  INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
   REAL(dp), DIMENSION(2,2)            :: Offset_Iso
 
@@ -74,7 +72,6 @@ PROGRAM wlInterpolateIso
   Inte_E % MaxValue = Inte_Emax
   Inte_E % LogInterp = 1
   Inte_E % nPoints = Inte_nPointE
-  LogInterp(1) = 1              ! EnergyGrid is LogGrid
 
   CALL MakeLogGrid &
           ( Inte_E % MinValue, Inte_E % MaxValue, &
@@ -95,9 +92,12 @@ PROGRAM wlInterpolateIso
   ALLOCATE( Inte_Ye ( datasize ) )
   ALLOCATE( InterpolantIso1( Inte_nPointE, datasize ) )
   ALLOCATE( InterpolantIso2( Inte_nPointE, datasize ) )
+  ALLOCATE( bufferIso10    ( Inte_nPointE, datasize ) )
+  ALLOCATE( bufferIso11    ( Inte_nPointE, datasize ) )
+  ALLOCATE( bufferIso20    ( Inte_nPointE, datasize ) )
+  ALLOCATE( bufferIso21    ( Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
-  WRITE(*, Format3 ) database
   CLOSE( 1, STATUS = 'keep')  
 
   DO i = 1, datasize  
@@ -107,16 +107,14 @@ PROGRAM wlInterpolateIso
     Inte_Ye(i)  = database(i*4)
   END DO 
 
-  LogInterp(2:4) = (/1, 1, 0/)     ! rho and T is LogGrid, Ye is linear
- 
 !---------------------------------------
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF &
           ( OpacityTable, &
-           "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5", &
-            ReadOpacity_Iso_Option = .true. )
+            FileName_Iso_Option = "temp_Iso.h5", &
+            Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
   Offset_Iso(1:2,1:2) = OpacityTable % Scat_Iso % Offsets(1:2,1:2)
@@ -132,49 +130,45 @@ PROGRAM wlInterpolateIso
     TableES21  => OpacityTable % Scat_Iso % Kernel(2) % Values(:,2,:,:,:), &
        Energy   => Inte_E % Values )
   
-  DO i = 1, datasize
-
-    buffer1(:) = Inte_rho(i)
-    buffer2(:) = Inte_T(i)
-    buffer3(:) = Inte_Ye(i)
-
-    CALL LogInterpolateSingleVariable &
-           ( Energy, buffer1, buffer2, buffer3, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
+    CALL LogInterpolateSingleVariable_1D3D_Custom &
+           ( LOG10( Energy ), LOG10( Inte_rho ),  &
+             LOG10( Inte_T ), Inte_Ye, &
+             LOG10( OpacityTable % EnergyGrid % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_Iso(1,1), TableES10, bufferIso10 )
+             Offset_Iso(1,1), TableES10, bufferIso10 )
 
-     CALL LogInterpolateSingleVariable &
-           ( Energy, buffer1, buffer2, buffer3, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
+     CALL LogInterpolateSingleVariable_1D3D_Custom &
+           ( LOG10( Energy ), LOG10( Inte_rho ),  &
+             LOG10( Inte_T ), Inte_Ye, &
+             LOG10( OpacityTable % EnergyGrid % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_Iso(1,2), TableES11, bufferIso11 )
+             Offset_Iso(1,2), TableES11, bufferIso11 )
 
-     InterpolantIso1(:,i) = bufferIso10 + bufferIso11
+     InterpolantIso1 = bufferIso10 + bufferIso11
 
-     CALL LogInterpolateSingleVariable &
-           ( Energy, buffer1, buffer2, buffer3, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
+     CALL LogInterpolateSingleVariable_1D3D_Custom &
+           ( LOG10( Energy ), LOG10( Inte_rho ),  &
+             LOG10( Inte_T ), Inte_Ye, &
+             LOG10( OpacityTable % EnergyGrid % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_Iso(2,1), TableES20, bufferIso20 )
+             Offset_Iso(2,1), TableES20, bufferIso20 )
 
-    CALL LogInterpolateSingleVariable &
-           ( Energy, buffer1, buffer2, buffer3, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
+    CALL LogInterpolateSingleVariable_1D3D_Custom &
+           ( LOG10( Energy ), LOG10( Inte_rho ),  &
+             LOG10( Inte_T ), Inte_Ye, &
+             LOG10( OpacityTable % EnergyGrid % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
+             LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
              OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_Iso(2,2), TableES21, bufferIso21 )
+             Offset_Iso(2,2), TableES21, bufferIso21 )
 
-     InterpolantIso2(:,i) = bufferIso20 + bufferIso21
-
-   END DO ! i
+     InterpolantIso2 = bufferIso20 + bufferIso21
 
   END ASSOCIATE ! Table
 
@@ -209,6 +203,7 @@ PROGRAM wlInterpolateIso
   PRINT*, 'Result was written into ', outfilename
 
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, database )
+  DEALLOCATE( bufferIso10, bufferIso11, bufferIso20, bufferIso21 )
   DEALLOCATE( InterpolantIso1 )
  
 END PROGRAM wlInterpolateIso

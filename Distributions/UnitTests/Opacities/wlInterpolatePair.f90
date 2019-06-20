@@ -2,7 +2,8 @@ PROGRAM wlInterpolatePair
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable
+    LogInterpolateSingleVariable, &
+    LogInterpolateSingleVariable_2D2D_Custom
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -53,8 +54,8 @@ PROGRAM wlInterpolatePair
   INTEGER(HSIZE_T), DIMENSION(2)          :: datasize2d
   INTEGER(HSIZE_T), DIMENSION(3)          :: datasize3d
 
-  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantTP_nue
-  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantTP_nuebar
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantPair_nue
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantPair_nuebar
 
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP_nue, SumTP_nuebar
 
@@ -64,9 +65,7 @@ PROGRAM wlInterpolatePair
 !-------- local variables -------------------------
   REAL(dp)                            :: root2p, root2n
   REAL(dp)                            :: sum_TP0_nue, sum_TP0_nuebar
-  REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
-  REAL(dp), DIMENSION(Inte_nPointE)   :: J0i
-  REAL(dp), DIMENSION(Inte_nPointE)   :: J0ii
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE   :: J0i, J0ii
   REAL(dp), DIMENSION(Inte_nPointE)   :: TP0_nue
   REAL(dp), DIMENSION(Inte_nPointE)   :: TP0_nuebar
   REAL(dp), DIMENSION(Inte_nPointE)   :: roots, widths
@@ -121,11 +120,12 @@ PROGRAM wlInterpolatePair
   ALLOCATE( Inte_cmpe ( datasize ) )
   ALLOCATE( SumTP_nue  ( Inte_nPointE, datasize ) )
   ALLOCATE( SumTP_nuebar  ( Inte_nPointE, datasize ) )
-  ALLOCATE( InterpolantTP_nue  ( Inte_nPointE, Inte_nPointE, datasize ) )
-  ALLOCATE( InterpolantTP_nuebar( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( J0i  ( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( J0ii  ( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantPair_nue  ( Inte_nPointE, Inte_nPointE, datasize ) )
+  ALLOCATE( InterpolantPair_nuebar( Inte_nPointE, Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
-  WRITE(*, Format3 ) database
   CLOSE( 1, STATUS = 'keep')
 
   DO i = 1, datasize
@@ -133,6 +133,7 @@ PROGRAM wlInterpolatePair
     Inte_rho(i) = database(i*4-2)
     Inte_T(i)   = database(i*4-1)
     Inte_Ye(i)  = database(i*4)
+    Inte_TMeV(i) = Inte_T(i)* kMeV
   END DO
 
 !---------------------------------------
@@ -140,8 +141,8 @@ PROGRAM wlInterpolatePair
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       "wl-Op-SFHo-15-25-50-E40-B85-Pair.h5", &
-       ReadOpacity_Pair_Option = .TRUE. )
+       FileName_Pair_Option = "temp_Pair.h5", &
+       Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
   
   Offset_TP   = OpacityTable % Scat_Pair  % Offsets(1,1:2)
@@ -158,42 +159,39 @@ PROGRAM wlInterpolatePair
    Energy      => Inte_E  % Values )
 
   CALL LogInterpolateSingleVariable &
-           ( Inte_rho, Inte_T, Inte_Ye, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EOSTable % TS % States(3) % Values, &
-             (/1,1,0/), Offset_cmpe, &
-             Tablecmpe, &
-             Inte_cmpe )
+       ( Inte_rho, Inte_T, Inte_Ye, &
+         OpacityTable % EOSTable % TS % States(1) % Values, &
+         OpacityTable % EOSTable % TS % States(2) % Values, &
+         OpacityTable % EOSTable % TS % States(3) % Values, &
+         (/1,1,0/), Offset_cmpe, &
+         Tablecmpe, &
+         Inte_cmpe )
+
+  CALL LogInterpolateSingleVariable_2D2D_Custom &
+       ( LOG10(Energy), LOG10(Inte_T), &
+         LOG10(Inte_cmpe / Inte_TMeV), &
+         LOG10(OpacityTable % EnergyGrid % Values), &
+         LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
+         LOG10(OpacityTable % EtaGrid % Values), &
+         Offset_TP(1)  , TableTPJ0i  , J0i )
+
+  CALL LogInterpolateSingleVariable_2D2D_Custom &
+       ( LOG10(Energy), LOG10(Inte_T), &
+         LOG10(Inte_cmpe / Inte_TMeV), &
+         LOG10(OpacityTable % EnergyGrid % Values), &
+         LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
+         LOG10(OpacityTable % EtaGrid % Values), &
+         Offset_TP(2)  , TableTPJ0ii  , J0ii )
+
+  InterpolantPair_nue    = cparp * J0i + cparn * J0ii
+  InterpolantPair_nuebar = cparn * J0i + cparp * J0ii
 
   DO i = 1, datasize  
 
-    Inte_TMeV(i) = Inte_T(i)* kMeV
-    buffer1(:)   = Inte_T(i)
-    buffer2(:)   = Inte_cmpe(i) / Inte_TMeV(i)
-
     DO ii = 1, Inte_nPointE ! e(ii)
 
-    buffer3(:) = Energy(ii) ! e
-
-      CALL LogInterpolateSingleVariable &
-           ( Energy, buffer3, buffer1, buffer2, & ! interpolate ep
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_TP(1)  , TableTPJ0i  , J0i )
-
-      CALL LogInterpolateSingleVariable &
-           ( Energy, buffer3, buffer1, buffer2, & ! interpolate ep
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_TP(2)  , TableTPJ0ii  , J0ii )
-
-      TP0_nue    = cparp * J0i + cparn * J0ii
-      TP0_nuebar = cparn * J0i + cparp * J0ii
+      TP0_nue = InterpolantPair_nue(:,ii,i)
+      TP0_nuebar = InterpolantPair_nuebar(:,ii,i)
 
       sum_TP0_nue     = zero
       sum_TP0_nuebar  = zero
@@ -215,9 +213,6 @@ PROGRAM wlInterpolatePair
 
       SumTP_nue(ii,i) = sum_TP0_nue
       SumTP_nuebar(ii,i) = sum_TP0_nuebar
-
-      InterpolantTP_nue(:,ii,i) = TP0_nue 
-      InterpolantTP_nuebar(:,ii,i) = TP0_nuebar
 
     END DO ! ii
     
@@ -253,9 +248,9 @@ PROGRAM wlInterpolatePair
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
   datasize3d(3) = datasize
   datasize3d(1:2) = Inte_E % nPoints
-  CALL WriteHDF( "TP_Electron", InterpolantTP_nue, group_id, datasize3d )
+  CALL WriteHDF( "TP_Electron", InterpolantPair_nue, group_id, datasize3d )
   CALL WriteHDF( "TP_ElecAnti", &
-          InterpolantTP_nuebar, group_id, datasize3d )
+          InterpolantPair_nuebar, group_id, datasize3d )
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
@@ -266,6 +261,6 @@ PROGRAM wlInterpolatePair
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, Inte_TMeV)
   DEALLOCATE( Inte_cmpe, database )
   DEALLOCATE( SumTP_nue, SumTP_nuebar )
-  DEALLOCATE( InterpolantTP_nue, InterpolantTP_nuebar )
+  DEALLOCATE( InterpolantPair_nue, InterpolantPair_nuebar )
 
 END PROGRAM wlInterpolatePair

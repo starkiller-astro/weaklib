@@ -2,9 +2,10 @@ PROGRAM wlInterpolateAb
 
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable
+    LogInterpolateSingleVariable_1D3D_Custom
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
+    DescribeOpacityTable, &
     DeAllocateOpacityTable
   USE wlIOModuleHDF, ONLY: &
     InitializeHDF, &
@@ -38,10 +39,8 @@ PROGRAM wlInterpolateAb
 !-------- variables for reading parameters data
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_r, Inte_rho, Inte_T, &
                                          Inte_Ye, database
-  REAL(dp), DIMENSION(Inte_nPointE)   :: buffer1, buffer2, buffer3
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
   CHARACTER(LEN=30)                   :: a
-  INTEGER, DIMENSION(4)               :: LogInterp
   INTEGER                             :: i, ii, jj, datasize
   REAL(dp), DIMENSION(2)              :: Offset_Em
 
@@ -71,7 +70,6 @@ PROGRAM wlInterpolateAb
   Inte_E % MaxValue = Inte_Emax
   Inte_E % LogInterp = 1
   Inte_E % nPoints = Inte_nPointE
-  LogInterp(1) = 1              ! EnergyGrid is LogGrid
 
   CALL MakeLogGrid &
           ( Inte_E % MinValue, Inte_E % MaxValue, &
@@ -94,7 +92,6 @@ PROGRAM wlInterpolateAb
   ALLOCATE( InterpolantEm2( Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
-  WRITE(*, Format3 ) database
   CLOSE( 1, STATUS = 'keep')  
 
   DO i = 1, datasize  
@@ -104,15 +101,13 @@ PROGRAM wlInterpolateAb
     Inte_Ye(i)  = database(i*4)
   END DO 
 
-  LogInterp(2:4) = (/1, 1, 0/)     ! rho and T is LogGrid, Ye is linear
- 
 !---------------------------------------
 !    read in the reference table
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-          "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5", &
-           ReadOpacity_EmAb_Option = .true. )
+       FileName_EmAb_Option = "temp_EmAb.h5", &
+       Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
   Offset_Em = OpacityTable % EmAb % Offsets
@@ -123,31 +118,25 @@ PROGRAM wlInterpolateAb
 
   ASSOCIATE( TableEm1  => OpacityTable % EmAb % Opacity(1) % Values, &
              TableEm2  => OpacityTable % EmAb % Opacity(2) % Values, &
-              Energy   => Inte_E % Values )
+             Energy   => Inte_E % Values )
 
-  DO i = 1, datasize
+  CALL LogInterpolateSingleVariable_1D3D_Custom & 
+         ( LOG10( Energy ), LOG10( Inte_rho ), &
+           LOG10( Inte_T ), Inte_Ye, & 
+           LOG10( OpacityTable % EnergyGrid % Values ), &
+           LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
+           LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
+           OpacityTable % EOSTable % TS % States(3) % Values, &
+           Offset_Em(1), TableEm1, InterpolantEm1 )
 
-    buffer1(:) = Inte_rho(i)
-    buffer2(:) = Inte_T(i)
-    buffer3(:) = Inte_Ye(i)
-
-    CALL LogInterpolateSingleVariable & 
-           ( Energy, buffer1, buffer2, buffer3, & 
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_Em(1), TableEm1, InterpolantEm1(:,i) )
-
-    CALL LogInterpolateSingleVariable &
-           ( Energy, buffer1, buffer2, buffer3, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EOSTable % TS % States(1) % Values, &
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EOSTable % TS % States(3) % Values, &
-             LogInterp, Offset_Em(2), TableEm2, InterpolantEm2(:,i) )  
-
-  END DO ! i
+  CALL LogInterpolateSingleVariable_1D3D_Custom &
+         ( LOG10(Energy), LOG10(Inte_rho), &
+           LOG10(Inte_T), Inte_Ye, &
+           LOG10(OpacityTable % EnergyGrid % Values), &
+           LOG10(OpacityTable % EOSTable % TS % States(1) % Values), &
+           LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
+           OpacityTable % EOSTable % TS % States(3) % Values, &
+           Offset_Em(2), TableEm2, InterpolantEm2 )  
 
   END ASSOCIATE ! Table
 

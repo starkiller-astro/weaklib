@@ -3,7 +3,7 @@ PROGRAM wlInterpolateNES
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable, &
-    LogInterpolateSingleVariable_2D2D
+    LogInterpolateSingleVariable_2D2D_Custom
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -127,7 +127,6 @@ PROGRAM wlInterpolateNES
   ALLOCATE( InterH0ii( Inte_nPointE, Inte_nPointE, datasize ) )
 
   READ( 1, Format3 ) database
-  WRITE(*, Format3 ) database
   CLOSE( 1, STATUS = 'keep')
 
   DO i = 1, datasize
@@ -142,7 +141,8 @@ PROGRAM wlInterpolateNES
 !---------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-         "temp_NES.h5", ReadOpacity_NES_Option = .TRUE. )
+       FileName_NES_Option = "temp_NES.h5", &
+       Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
   Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:2)
@@ -167,21 +167,21 @@ PROGRAM wlInterpolateNES
              Tablecmpe, &
              Inte_cmpe )
 
-  CALL LogInterpolateSingleVariable_2D2D&
-          ( Energy, Energy, Inte_T, Inte_cmpe / (Inte_T * kMev), &
-            OpacityTable % EnergyGrid % Values, & ! ep
-             OpacityTable % EnergyGrid % Values, & ! e
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_NES(1), TableNES_H0i, InterH0i )
+  CALL LogInterpolateSingleVariable_2D2D_Custom &
+          ( LOG10(Energy), LOG10(Inte_T), &
+            LOG10(Inte_cmpe / (Inte_T * kMev)), &
+            LOG10(OpacityTable % EnergyGrid % Values), &
+            LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
+            LOG10(OpacityTable % EtaGrid % Values),    &
+            Offset_NES(1), TableNES_H0i, InterH0i )
 
-  CALL LogInterpolateSingleVariable_2D2D&
-          ( Energy, Energy, Inte_T, Inte_cmpe / (Inte_T * kMev), &
-            OpacityTable % EnergyGrid % Values, & ! ep
-             OpacityTable % EnergyGrid % Values, & ! e
-             OpacityTable % EOSTable % TS % States(2) % Values, &
-             OpacityTable % EtaGrid % Values,    &
-             (/1,1,1,1/), Offset_NES(2), TableNES_H0ii, InterH0ii )
+  CALL LogInterpolateSingleVariable_2D2D_Custom &
+          ( LOG10(Energy), LOG10(Inte_T), &
+            LOG10(Inte_cmpe / (Inte_T * kMev)), &
+            LOG10(OpacityTable % EnergyGrid % Values), &
+            LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
+            LOG10(OpacityTable % EtaGrid % Values), &
+            Offset_NES(2), TableNES_H0ii, InterH0ii )
 
   InterpolantNES_nue    = cparp * InterH0i + cparn * InterH0ii
   InterpolantNES_nuebar = cparn * InterH0i + cparp * InterH0ii

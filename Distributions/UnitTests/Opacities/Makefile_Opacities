@@ -1,4 +1,4 @@
-include ../../../Build/Makefile_Build
+include $(WEAKLIB_DIR)/External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
