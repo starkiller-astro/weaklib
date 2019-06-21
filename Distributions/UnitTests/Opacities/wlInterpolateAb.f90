@@ -5,7 +5,6 @@ PROGRAM wlInterpolateAb
     LogInterpolateSingleVariable_1D3D_Custom
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
-    DescribeOpacityTable, &
     DeAllocateOpacityTable
   USE wlIOModuleHDF, ONLY: &
     InitializeHDF, &
@@ -27,24 +26,24 @@ PROGRAM wlInterpolateAb
 
   IMPLICIT NONE
 
-!--------- parameters for creating energy grid 
+  !--------- parameters for creating energy grid --------------------------
   INTEGER, PARAMETER     :: Inte_nPointE = 40
   REAL(dp)               :: Inte_Emin = 2.0d00
   REAL(dp)               :: Inte_Emax = 2.0d02
   TYPE(GridType)         :: Inte_E
 
-!-------- variables for reading opacity table
+  !-------- variables for reading opacity table ---------------------------
   TYPE(OpacityTableType) :: OpacityTable
+  REAL(dp), DIMENSION(2) :: Offset_Em
 
-!-------- variables for reading parameters data
+  !-------- variables for reading parameters data -------------------------
   REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_r, Inte_rho, Inte_T, &
                                          Inte_Ye, database
-  CHARACTER(LEN=100)                  :: Format1, Format2, Format3, Format4
+  CHARACTER(LEN=100)                  :: Format1, Format2, Format3
   CHARACTER(LEN=30)                   :: a
-  INTEGER                             :: i, ii, jj, datasize
-  REAL(dp), DIMENSION(2)              :: Offset_Em
+  INTEGER                             :: i, datasize
 
-!-------- variables for output ------------------------
+  !-------- variables for output ------------------------------------------
   INTEGER(HID_T)                          :: file_id, group_id
   INTEGER(HSIZE_T)                        :: datasize1d(1)
   INTEGER(HSIZE_T), DIMENSION(2)          :: datasize2d
@@ -52,12 +51,12 @@ PROGRAM wlInterpolateAb
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: InterpolantEm1, &
                                              InterpolantEm2
 
-  CHARACTER(LEN=30)                       :: outfilename = &
+  CHARACTER(LEN=30)                       :: Outfilename = &
                                             'InterpolatedAbOutput.h5'
-!----------------------------------------
-!   interpolated energy 
-!----------------------------------------
-  
+
+  !--------------------------------------------------
+  !   interpolated energy 
+  !--------------------------------------------------
   Format1 = "(A2,I5)"
   Format2 = "(4A12)"
   Format3 = "(4ES12.3)"
@@ -75,9 +74,9 @@ PROGRAM wlInterpolateAb
           ( Inte_E % MinValue, Inte_E % MaxValue, &
             Inte_E % nPoints, Inte_E % Values )
 
-!---------------------------------------
-!    read in profile ( rho, T, Ye )
-!---------------------------------------
+  !-------------------------------------------------------
+  !    read in profile ( rho, T, Ye )
+  !-------------------------------------------------------
   OPEN(1, FILE = "ProfileBruenn.d", FORM = "formatted", &
           ACTION = 'read')
   READ( 1, Format1 ) a, datasize
@@ -101,9 +100,9 @@ PROGRAM wlInterpolateAb
     Inte_Ye(i)  = database(i*4)
   END DO 
 
-!---------------------------------------
-!    read in the reference table
-!---------------------------------------
+  !--------------------------------------------
+  !    read in the opacity table
+  !--------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
        FileName_EmAb_Option = "temp_EmAb.h5", &
@@ -112,44 +111,43 @@ PROGRAM wlInterpolateAb
 
   Offset_Em = OpacityTable % EmAb % Offsets
 
-!--------------------------------------
-!   do interpolation
-!--------------------------------------
-
+  !-----------------------------------------------------------------------
+  !   do interpolation
+  !-----------------------------------------------------------------------
   ASSOCIATE( TableEm1  => OpacityTable % EmAb % Opacity(1) % Values, &
              TableEm2  => OpacityTable % EmAb % Opacity(2) % Values, &
-             Energy   => Inte_E % Values )
+             Energy    => Inte_E % Values )
 
   CALL LogInterpolateSingleVariable_1D3D_Custom & 
-         ( LOG10( Energy ), LOG10( Inte_rho ), &
-           LOG10( Inte_T ), Inte_Ye, & 
-           LOG10( OpacityTable % EnergyGrid % Values ), &
+         ( LOG10( Energy ), LOG10( Inte_rho ),  &
+           LOG10( Inte_T ), Inte_Ye,            & 
+           LOG10( OpacityTable % EnergyGrid % Values ),                &
            LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
            LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
-           OpacityTable % EOSTable % TS % States(3) % Values, &
+           OpacityTable % EOSTable % TS % States(3) % Values,          &
            Offset_Em(1), TableEm1, InterpolantEm1 )
 
   CALL LogInterpolateSingleVariable_1D3D_Custom &
-         ( LOG10(Energy), LOG10(Inte_rho), &
-           LOG10(Inte_T), Inte_Ye, &
-           LOG10(OpacityTable % EnergyGrid % Values), &
+         ( LOG10(Energy), LOG10(Inte_rho),      &
+           LOG10(Inte_T), Inte_Ye,              &
+           LOG10(OpacityTable % EnergyGrid % Values),                &
            LOG10(OpacityTable % EOSTable % TS % States(1) % Values), &
            LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
-           OpacityTable % EOSTable % TS % States(3) % Values, &
+           OpacityTable % EOSTable % TS % States(3) % Values,        &
            Offset_Em(2), TableEm2, InterpolantEm2 )  
 
   END ASSOCIATE ! Table
 
   CALL DeAllocateOpacityTable( OpacityTable )
   
-!--------------------------------------
-!   write out
-!--------------------------------------
-
+  !----------------------------------------------------------------------
+  !   write out
+  !----------------------------------------------------------------------
   CALL InitializeHDF( )
-  CALL OpenFileHDF( outfilename, .true., file_id )
+  CALL OpenFileHDF( Outfilename, .true., file_id )
 
   CALL OpenGroupHDF( 'ProfileInfo', .true., file_id, group_id )
+
   datasize1d(1) = Inte_E % nPoints
   CALL WriteHDF( "Energy", Inte_E % Values(:), group_id, datasize1d ) 
   datasize1d(1) = datasize
@@ -157,19 +155,22 @@ PROGRAM wlInterpolateAb
   CALL WriteHDF( "Density", Inte_rho, group_id, datasize1d )
   CALL WriteHDF( "Temperature", Inte_T, group_id, datasize1d )
   CALL WriteHDF( "Electron Fraction", Inte_ye, group_id, datasize1d )
+
   CALL CloseGroupHDF( group_id )
 
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
+
   datasize2d(2) = datasize 
   datasize2d(1) = Inte_E % nPoints
   CALL WriteHDF( "EmAb_Electron", InterpolantEm1, group_id, datasize2d )
   CALL WriteHDF( "EmAb_ElecAnti", InterpolantEm2, group_id, datasize2d )
+
   CALL CloseGroupHDF( group_id )
 
   CALL CloseFileHDF( file_id )
   CALL FinalizeHDF( )
 
-  PRINT*, 'Result was written into ',outfilename
+  PRINT*, 'Result was written into ',Outfilename
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, database )
   DEALLOCATE( InterpolantEm1, InterpolantEm2 )
  
