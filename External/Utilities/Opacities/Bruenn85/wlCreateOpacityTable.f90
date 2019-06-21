@@ -64,13 +64,13 @@ IMPLICIT NONE
 
    INTEGER*4 today(3), now(3)    
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpac_EmAb = 0
-   INTEGER                 :: nOpac_Iso= 0
-   INTEGER                 :: nMom_Iso  = 0
-   INTEGER                 :: nOpac_NES = 0 !1
-   INTEGER                 :: nMom_NES  = 0 !4
-   INTEGER                 :: nOpac_Pair  = 1 !1
-   INTEGER                 :: nMom_Pair   = 4 !4
+   INTEGER                 :: nOpac_EmAb = 0  ! 2
+   INTEGER                 :: nOpac_Iso = 0   ! 2
+   INTEGER                 :: nMom_Iso  = 0   ! 2
+   INTEGER                 :: nOpac_NES = 1   ! 1
+   INTEGER                 :: nMom_NES  = 4   ! 4
+   INTEGER                 :: nOpac_Pair  = 0 ! 1
+   INTEGER                 :: nMom_Pair   = 0 ! 4
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
@@ -81,8 +81,8 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eta grid limits
 !---------------------------------------------------------------------
-   INTEGER                 :: nPointsEta = 100
-   REAL(dp), PARAMETER     :: Etamin = 1.0d-8
+   INTEGER                 :: nPointsEta = 60  ! NES: 60      Pair: 50
+   REAL(dp), PARAMETER     :: Etamin = 1.0d-3  ! NES: 1.0d-3  Pair: 1.0d-2
    REAL(dp), PARAMETER     :: Etamax = 2.5d03
 
    ! --- other inner variables
