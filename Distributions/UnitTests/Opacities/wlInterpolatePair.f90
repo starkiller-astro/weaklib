@@ -57,7 +57,7 @@ PROGRAM wlInterpolatePair
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantPair_nue
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: InterpolantPair_nuebar
 
-  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumTP_nue, SumTP_nuebar
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: SumPair_nue, SumPair_nuebar
 
   CHARACTER(LEN=30)                       :: outfilename = &
                                              'InterpolatedPaOutput.h5'
@@ -118,8 +118,8 @@ PROGRAM wlInterpolatePair
   ALLOCATE( Inte_Ye ( datasize ) )
   ALLOCATE( Inte_TMeV ( datasize ) )
   ALLOCATE( Inte_cmpe ( datasize ) )
-  ALLOCATE( SumTP_nue  ( Inte_nPointE, datasize ) )
-  ALLOCATE( SumTP_nuebar  ( Inte_nPointE, datasize ) )
+  ALLOCATE( SumPair_nue  ( Inte_nPointE, datasize ) )
+  ALLOCATE( SumPair_nuebar  ( Inte_nPointE, datasize ) )
   ALLOCATE( J0i  ( Inte_nPointE, Inte_nPointE, datasize ) )
   ALLOCATE( J0ii  ( Inte_nPointE, Inte_nPointE, datasize ) )
   ALLOCATE( InterpolantPair_nue  ( Inte_nPointE, Inte_nPointE, datasize ) )
@@ -183,8 +183,17 @@ PROGRAM wlInterpolatePair
          LOG10(OpacityTable % EtaGrid % Values), &
          Offset_TP(2)  , TableTPJ0ii  , J0ii )
 
-  InterpolantPair_nue    = cparp * J0i + cparn * J0ii
+  InterpolantPair_nue = cparp * J0i + cparn * J0ii
   InterpolantPair_nuebar = cparn * J0i + cparp * J0ii
+
+  DO i = 1,datasize
+    DO ii = 1, Inte_nPointE
+      DO jj = ii+1, Inte_nPointE
+        InterpolantPair_nue(jj,ii,i)    = InterpolantPair_nuebar(ii,jj,i)
+        InterpolantPair_nuebar(jj,ii,i) = InterpolantPair_nue(ii,jj,i)
+      END DO
+    END DO
+  END DO
 
   DO i = 1, datasize  
 
@@ -211,8 +220,8 @@ PROGRAM wlInterpolatePair
 
       END DO ! jj
 
-      SumTP_nue(ii,i) = sum_TP0_nue
-      SumTP_nuebar(ii,i) = sum_TP0_nuebar
+      SumPair_nue(ii,i) = sum_TP0_nue
+      SumPair_nuebar(ii,i) = sum_TP0_nuebar
 
     END DO ! ii
     
@@ -241,8 +250,8 @@ PROGRAM wlInterpolatePair
   CALL OpenGroupHDF( 'OpacitiesIMFP', .true., file_id, group_id )
   datasize2d(2) = datasize
   datasize2d(1) = Inte_E % nPoints
-  CALL WriteHDF( "TP_Electron", SumTP_nue, group_id, datasize2d )
-  CALL WriteHDF( "TP_ElecAnti", SumTP_nuebar, group_id, datasize2d )
+  CALL WriteHDF( "TP_Electron", SumPair_nue, group_id, datasize2d )
+  CALL WriteHDF( "TP_ElecAnti", SumPair_nuebar, group_id, datasize2d )
   CALL CloseGroupHDF( group_id )
 
   CALL OpenGroupHDF( 'Opacities', .true., file_id, group_id )
@@ -260,7 +269,7 @@ PROGRAM wlInterpolatePair
 
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, Inte_TMeV)
   DEALLOCATE( Inte_cmpe, database )
-  DEALLOCATE( SumTP_nue, SumTP_nuebar )
+  DEALLOCATE( SumPair_nue, SumPair_nuebar )
   DEALLOCATE( InterpolantPair_nue, InterpolantPair_nuebar )
 
 END PROGRAM wlInterpolatePair
