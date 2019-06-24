@@ -590,7 +590,7 @@ CONTAINS
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE &
     !$OMP IF( do_gpu ) &
-    !$OMP PRIVATE( iD, dD, iT, dT, iY, dY ) &
+    !$OMP PRIVATE( iD, dD, iT, dT, iY, dY )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG &
     !$ACC IF( do_gpu ) &
@@ -947,11 +947,14 @@ CONTAINS
       !$OMP PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #elif defined(WEAKLIB_OACC)
-      !$ACC LOOP VECTOR &
-      !$ACC PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
-      !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+      !$ACC LOOP WORKER
 #endif
       DO j = 1, SIZE( LogE )
+#if defined(WEAKLIB_OACC)
+        !$ACC LOOP VECTOR &
+        !$ACC PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+        !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#endif
         DO i = 1, j
 
           p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
