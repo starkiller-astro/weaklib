@@ -575,7 +575,7 @@ CONTAINS
     ! --- Precompute Indices and Differences ---
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO &
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
     !$OMP IF( do_gpu )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR &
@@ -609,7 +609,7 @@ CONTAINS
       dD = ( LogD(j) - LogDs(iD) ) / ( LogDs(iD+1) - LogDs(iD) )
 
 #if defined(WEAKLIB_OMP_OL)
-      !$OMP PARALLEL DO &
+      !$OMP PARALLEL DO SIMD &
       !$OMP PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #elif defined(WEAKLIB_OACC)
@@ -912,7 +912,7 @@ CONTAINS
 #endif
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO &
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
     !$OMP IF( do_gpu )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR &
@@ -943,7 +943,7 @@ CONTAINS
       dX = ( LogX(l) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
 
 #if defined(WEAKLIB_OMP_OL)
-      !$OMP PARALLEL DO &
+      !$OMP PARALLEL DO SIMD &
       !$OMP PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #elif defined(WEAKLIB_OACC)
