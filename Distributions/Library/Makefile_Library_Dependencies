@@ -15,7 +15,7 @@ wlDependentVariablesModule.o: \
 
 wlInterpolationModule.o: \
   wlKindModule.o \
-  wlInterpolationModule.f90
+  wlInterpolationModule.F90
 
 wlIOModuleHDF.o: \
   wlKindModule.o \

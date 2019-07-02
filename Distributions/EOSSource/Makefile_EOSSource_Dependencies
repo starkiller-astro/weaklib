@@ -7,7 +7,7 @@ wlEquationOfStateTableModule.o: \
 wlEOSInversionModule.o: \
   wlKindModule.o \
   wlInterpolationModule.o \
-  wlEOSInversionModule.f90
+  wlEOSInversionModule.F90
 
 wlEOSInterpolationModule.o: \
   wlKindModule.o \
