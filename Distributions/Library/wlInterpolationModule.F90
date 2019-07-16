@@ -129,8 +129,6 @@ CONTAINS
     INTEGER,  INTENT(in) :: n
     INTEGER :: Index1D
 
-    !$gpu
-
     Index1D &
       = FLOOR( 1 + (n-1)*(x-xx(1))/(xx(n)-xx(1)) + 1.d-12 )
 
@@ -169,8 +167,6 @@ CONTAINS
       dX1, dX2, dX3
 
     REAL(dp) :: ddX1, ddX2, ddX3
-
-    !$gpu
 
     ddX1 = One - dX1
     ddX2 = One - dX2
@@ -1287,15 +1283,13 @@ CONTAINS
     INTEGER :: &
       SizeDs, SizeTs, SizeYs
 
-    !$gpu
-
     SizeDs = SIZE( Ds )
     SizeTs = SIZE( Ts )
     SizeYs = SIZE( Ys )
 
-    iD = Index1D_Lin( D, Ds, SizeDs )
-    iT = Index1D_Lin( T, Ts, SizeTs )
-    iY = Index1D_Lin( Y, Ys, SizeYs )
+    iD = Index1D( D, Ds, SizeDs )
+    iT = Index1D( T, Ts, SizeTs )
+    iY = Index1D( Y, Ys, SizeYs )
 
     dD = LOG10( D / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
     dT = LOG10( T / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )

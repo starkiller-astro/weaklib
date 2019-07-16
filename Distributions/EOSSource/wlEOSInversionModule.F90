@@ -4,8 +4,7 @@ MODULE wlEOSInversionModule
     dp
   USE wlInterpolationModule, ONLY: &
     Index1D, &
-    LogInterpolateSingleVariable, &
-    LogInterpolateSingleVariable_3D_Custom_Point
+    LogInterpolateSingleVariable
 
   IMPLICIT NONE
   PRIVATE
@@ -172,8 +171,6 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    USE wlInterpolationModule, ONLY: Index1D_Lin ! function
-
     REAL(dp), INTENT(in)    :: D
     REAL(dp), INTENT(in)    :: E
     REAL(dp), INTENT(in)    :: Y
@@ -199,8 +196,6 @@ CONTAINS
     REAL(dp) :: Ts_a(1:2), Ts_b(1:2), Ts_c(1:2)
     REAL(dp), DIMENSION(1:2,1:2,1:2) :: Es_a, Es_b, Es_c
     REAL(dp), DIMENSION(1:2,1:3,1:2) :: Es_i
-
-    !$gpu
 
     ! --- Initial Error Check -------------------------------------------
 
@@ -234,9 +229,9 @@ CONTAINS
     SizeTs = SIZE( Ts )
     SizeYs = SIZE( Ys )
 
-    iD = Index1D_Lin( D, Ds, SizeDs )
-    iT = Index1D_Lin( T_Guess, Ts, SizeTs )
-    iY = Index1D_Lin( Y, Ys, SizeYs )
+    iD = Index1D( D, Ds, SizeDs )
+    iT = Index1D( T_Guess, Ts, SizeTs )
+    iY = Index1D( Y, Ys, SizeYs )
 
     iD = MIN( MAX( 1, iD ), SizeDs - 1 )
     iT = MIN( MAX( 1, iT ), SizeTs - 1 )
@@ -254,7 +249,7 @@ CONTAINS
     Ts_a(1:2) = Ts(i_a:i_a+1)
     Es_a(1:2,1:2,1:2) = Es(iD:iD+1,i_a:i_a+1,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_a, Y, Ds_i, Ts_a, Ys_i, OS, Es_a, E_a )
 
     f_a = E - E_a
@@ -264,7 +259,7 @@ CONTAINS
     Ts_b(1:2) = Ts(i_b-1:i_b)
     Es_b(1:2,1:2,1:2) = Es(iD:iD+1,i_b-1:i_b,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_b, Y, Ds_i, Ts_b, Ys_i, OS, Es_b, E_b )
 
     f_b = E - E_b
@@ -284,7 +279,7 @@ CONTAINS
     Ts_a(1:2) = Ts(i_a:i_a+1)
     Es_a(1:2,1:2,1:2) = Es(iD:iD+1,i_a:i_a+1,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_a, Y, Ds_i, Ts_a, Ys_i, OS, Es_a, E_a )
 
     f_a = E - E_a
@@ -294,7 +289,7 @@ CONTAINS
     Ts_b(1:2) = Ts(i_b-1:i_b)
     Es_b(1:2,1:2,1:2) = Es(iD:iD+1,i_b-1:i_b,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_b, Y, Ds_i, Ts_b, Ys_i, OS, Es_b, E_b )
 
     f_b = E - E_b
@@ -309,7 +304,7 @@ CONTAINS
         Ts_c(1:2) = Ts(i_c:i_c+1)
         Es_c(1:2,1:2,1:2) = Es(iD:iD+1,i_c:i_c+1,iY:iY+1)
 
-        CALL LogInterpolateSingleVariable_3D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( D, T_c, Y, Ds_i, Ts_c, Ys_i, OS, Es_c, E_c )
 
         f_c = E - E_c
@@ -349,7 +344,7 @@ CONTAINS
         Ts_i(1:3) = Ts(lo:hi)
         Es_i(1:2,1:3,1:2) = Es(iD:iD+1,lo:hi,iY:iY+1)
 
-        CALL LogInterpolateSingleVariable_3D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( D, T_i, Y, Ds_i, Ts_i, Ys_i, OS, Es_i, E_i )
 
         f_c = E - E_c
@@ -633,8 +628,6 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    USE wlInterpolationModule, ONLY: Index1D_Lin ! function
-
     REAL(dp), INTENT(in)    :: D
     REAL(dp), INTENT(in)    :: P
     REAL(dp), INTENT(in)    :: Y
@@ -660,8 +653,6 @@ CONTAINS
     REAL(dp) :: Ts_a(1:2), Ts_b(1:2), Ts_c(1:2)
     REAL(dp), DIMENSION(1:2,1:2,1:2) :: Ps_a, Ps_b, Ps_c
     REAL(dp), DIMENSION(1:2,1:3,1:2) :: Ps_i
-
-    !$gpu
 
     ! --- Initial Error Check -------------------------------------------
 
@@ -695,9 +686,9 @@ CONTAINS
     SizeTs = SIZE( Ts )
     SizeYs = SIZE( Ys )
 
-    iD = Index1D_Lin( D, Ds, SizeDs )
-    iT = Index1D_Lin( T_Guess, Ts, SizeTs )
-    iY = Index1D_Lin( Y, Ys, SizeYs )
+    iD = Index1D( D, Ds, SizeDs )
+    iT = Index1D( T_Guess, Ts, SizeTs )
+    iY = Index1D( Y, Ys, SizeYs )
 
     iD = MIN( MAX( 1, iD ), SizeDs - 1 )
     iT = MIN( MAX( 1, iT ), SizeTs - 1 )
@@ -715,7 +706,7 @@ CONTAINS
     Ts_a(1:2) = Ts(i_a:i_a+1)
     Ps_a(1:2,1:2,1:2) = Ps(iD:iD+1,i_a:i_a+1,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_a, Y, Ds_i, Ts_a, Ys_i, OS, Ps_a, P_a )
 
     f_a = P - P_a
@@ -725,7 +716,7 @@ CONTAINS
     Ts_b(1:2) = Ts(i_b-1:i_b)
     Ps_b(1:2,1:2,1:2) = Ps(iD:iD+1,i_b-1:i_b,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_b, Y, Ds_i, Ts_b, Ys_i, OS, Ps_b, P_b )
 
     f_b = P - P_b
@@ -745,7 +736,7 @@ CONTAINS
     Ts_a(1:2) = Ts(i_a:i_a+1)
     Ps_a(1:2,1:2,1:2) = Ps(iD:iD+1,i_a:i_a+1,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_a, Y, Ds_i, Ts_a, Ys_i, OS, Ps_a, P_a )
 
     f_a = P - P_a
@@ -755,7 +746,7 @@ CONTAINS
     Ts_b(1:2) = Ts(i_b-1:i_b)
     Ps_b(1:2,1:2,1:2) = Ps(iD:iD+1,i_b-1:i_b,iY:iY+1)
 
-    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( D, T_b, Y, Ds_i, Ts_b, Ys_i, OS, Ps_b, P_b )
 
     f_b = P - P_b
@@ -770,7 +761,7 @@ CONTAINS
         Ts_c(1:2) = Ts(i_c:i_c+1)
         Ps_c(1:2,1:2,1:2) = Ps(iD:iD+1,i_c:i_c+1,iY:iY+1)
 
-        CALL LogInterpolateSingleVariable_3D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( D, T_c, Y, Ds_i, Ts_c, Ys_i, OS, Ps_c, P_c )
 
         f_c = P - P_c
@@ -810,7 +801,7 @@ CONTAINS
         Ts_i(1:3) = Ts(lo:hi)
         Ps_i(1:2,1:3,1:2) = Ps(iD:iD+1,lo:hi,iY:iY+1)
 
-        CALL LogInterpolateSingleVariable_3D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( D, T_i, Y, Ds_i, Ts_i, Ys_i, OS, Ps_i, P_i )
 
         f_c = P - P_c
@@ -1497,8 +1488,6 @@ CONTAINS
 #endif
 
     REAL(dp), INTENT(in) :: x_a, x_b, y_a, y_b, y, OS
-
-    !$gpu
 
     InverseLogInterp &
       = 10.d0**( LOG10( x_a ) + LOG10( x_b/x_a ) &
