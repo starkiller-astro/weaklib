@@ -18,6 +18,7 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromEntropy
   PUBLIC :: ComputeTempFromPressure
   PUBLIC :: ComputeTempFromPressure_Bisection
+  PUBLIC :: LogInterpolateSingleVariable_3D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom_Point
@@ -47,11 +48,6 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_3D_Custom_Point
     MODULE PROCEDURE LogInterpolateDifferentiateSingleVariable_4D
   END INTERFACE LogInterpolateDifferentiateSingleVariable
-
-  INTERFACE Index1D_Lin
-    MODULE PROCEDURE Index1D_Lin_1
-    MODULE PROCEDURE Index1D_Lin_2
-  END INTERFACE Index1D_Lin
 
 CONTAINS
 
@@ -121,8 +117,8 @@ CONTAINS
   END FUNCTION Index1D
 
 
-  FUNCTION Index1D_Lin_1( x, xx, n ) &
-      RESULT( Index1D_Lin )
+  FUNCTION Index1D_Lin( x, xx, n ) &
+      RESULT( Index1D )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -131,31 +127,15 @@ CONTAINS
 
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
-    INTEGER :: Index1D_Lin
+    INTEGER :: Index1D
 
-    Index1D_Lin &
+    !$gpu
+
+    Index1D &
       = FLOOR( 1 + (n-1)*(x-xx(1))/(xx(n)-xx(1)) + 1.d-12 )
 
     RETURN
-  END FUNCTION Index1D_Lin_1
-
-
-  FUNCTION Index1D_Lin_2( x, offset, dx ) &
-      RESULT( Index1D_Lin )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    REAL(dp), INTENT(in) :: x, offset, dx
-    INTEGER :: Index1D_Lin
-
-    Index1D_Lin &
-      = 1 + FLOOR( ( x - offset ) / dx )
-
-    RETURN
-  END FUNCTION Index1D_Lin_2
+  END FUNCTION Index1D_Lin
 
 
   INTEGER FUNCTION Index1D_Log( x, xx, n )
@@ -189,6 +169,8 @@ CONTAINS
       dX1, dX2, dX3
 
     REAL(dp) :: ddX1, ddX2, ddX3
+
+    !$gpu
 
     ddX1 = One - dX1
     ddX2 = One - dX2
@@ -1302,10 +1284,18 @@ CONTAINS
       dD, dT, dY, &
       p000, p100, p010, p110, &
       p001, p101, p011, p111
+    INTEGER :: &
+      SizeDs, SizeTs, SizeYs
 
-    iD = Index1D( D, Ds, SIZE( Ds ) )
-    iT = Index1D( T, Ts, SIZE( Ts ) )
-    iY = Index1D( Y, Ys, SIZE( Ys ) )
+    !$gpu
+
+    SizeDs = SIZE( Ds )
+    SizeTs = SIZE( Ts )
+    SizeYs = SIZE( Ys )
+
+    iD = Index1D_Lin( D, Ds, SizeDs )
+    iT = Index1D_Lin( T, Ts, SizeTs )
+    iY = Index1D_Lin( Y, Ys, SizeYs )
 
     dD = LOG10( D / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
     dT = LOG10( T / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
