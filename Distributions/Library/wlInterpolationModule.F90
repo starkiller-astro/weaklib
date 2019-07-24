@@ -18,6 +18,7 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromEntropy
   PUBLIC :: ComputeTempFromPressure
   PUBLIC :: ComputeTempFromPressure_Bisection
+  PUBLIC :: LogInterpolateSingleVariable_2D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_3D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
@@ -25,6 +26,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_2D2D
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Point
+  PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Aligned
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point
   PUBLIC :: LogInterpolateOpacity_2D1D2D
   PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
@@ -151,6 +153,24 @@ CONTAINS
 
     RETURN
   END FUNCTION Index1D_Log
+
+
+  REAL(dp) FUNCTION BiLinear &
+    ( p00, p10, p01, p11, dX1, dX2 )
+
+    REAL(dp), INTENT(in) :: &
+      p00, p10, p01, p11, dX1, dX2
+
+    REAL(dp) :: ddX1, ddX2
+
+    ddX1 = One - dX1
+    ddX2 = One - dX2
+
+    BiLinear =  ddX1 * ( ddX2 * p00 + dX2 * p01 ) &
+               + dX1 * ( ddX2 * p10 + dX2 * p11 )
+
+    RETURN
+  END FUNCTION BiLinear
 
 
   REAL(dp) FUNCTION TriLinear &
@@ -308,6 +328,38 @@ CONTAINS
 
     RETURN
   END FUNCTION TetraLinear
+
+
+  SUBROUTINE LogInterpolateSingleVariable_2D_Custom_Point &
+    ( X, Y, Xs, Ys, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: X, Y
+    REAL(dp), INTENT(in)  :: Xs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:)
+    REAL(dp), INTENT(out) :: Interpolant
+
+    INTEGER  :: &
+      iX, iY
+    REAL(dp) :: &
+      dX, dY, &
+      p00, p10, p01, p11
+
+    iX = Index1D( X, Xs, SIZE( Xs ) )
+    iY = Index1D( Y, Ys, SIZE( Ys ) )
+
+    dX = LOG10( X / Xs(iX) ) / LOG10( Xs(iX+1) / Xs(iX) )
+    dY = LOG10( Y / Ys(iY) ) / LOG10( Ys(iY+1) / Ys(iY) )
+
+    p00 = Table( iX  , iY   )
+    P10 = Table( iX+1, iY   )
+    p01 = Table( iX  , iY+1 )
+    p11 = Table( iX+1, iY+1 )
+
+    Interpolant &
+      = 10.0d0**( BiLinear( p00, p10, p01, p11, dX, dY ) ) - OS
+
+  END SUBROUTINE LogInterpolateSingleVariable_2D_Custom_Point
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D &
@@ -1044,6 +1096,55 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Point
+
+
+  SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned &
+    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: LogT(:)
+    REAL(dp), INTENT(in)  :: LogX(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
+
+    INTEGER  :: i, j, k
+    INTEGER  :: iT(SIZE(LogT))
+    INTEGER  :: iX(SIZE(LogX))
+    REAL(dp) :: dT(SIZE(LogT))
+    REAL(dp) :: dX(SIZE(LogX))
+    REAL(dp) :: p00, p10, p01, p11
+
+    DO k = 1, SIZE( LogT )
+
+      iT(k) = Index1D_Lin( LogT(k), LogTs, SIZE( LogTs ) )
+      dT(k) = ( LogT(k) - LogTs(iT(k)) ) / ( LogTs(iT(k)+1) - LogTs(iT(k)) )
+
+      iX(k) = Index1D_Lin( LogX(k), LogXs, SIZE( LogXs ) )
+      dX(k) = ( LogX(k) - LogXs(iX(k)) ) / ( LogXs(iX(k)+1) - LogXs(iX(k)) )
+
+    END DO
+
+    DO j = 1, SIZE( Interpolant, DIM = 1 )
+    DO i = 1, j
+
+      DO k = 1, SIZE( LogT )
+
+        p00 = Table(iT(k)  ,iX(k)  ,i,j)
+        p10 = Table(iT(k)+1,iX(k)  ,i,j)
+        p01 = Table(iT(k)  ,iX(k)+1,i,j)
+        p11 = Table(iT(k)+1,iX(k)+1,i,j)
+
+        Interpolant(i,j,k) &
+          = 10.0d0**( BiLinear( p00, p10, p01, p11, dT(k), dX(k) ) ) - OS
+
+      END DO
+
+    END DO
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned
 
 
   SUBROUTINE LogInterpolateOpacity_2D1D2D &
