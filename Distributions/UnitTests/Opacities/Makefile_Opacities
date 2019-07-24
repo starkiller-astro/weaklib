@@ -1,8 +1,9 @@
-include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
      wlOpacityPerformanceTest \
+     wlOpacityAlignTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
@@ -24,6 +25,12 @@ wlOpacityPerformanceTest: \
 	$(weaklib) wlOpacityPerformanceTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityPerformanceTest_$(MACHINE) \
 	$(weaklib) wlOpacityPerformanceTest.o \
+	$(LIBRARIES)
+
+wlOpacityAlignTest: \
+	$(weaklib) wlOpacityAlignTest.o
+	$(FLINKER) $(FLAGS) -o wlOpacityAlignTest_$(MACHINE) \
+	$(weaklib) wlOpacityAlignTest.o \
 	$(LIBRARIES)
 
 wlGreyTableTest: \
