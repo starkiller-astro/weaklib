@@ -1,6 +1,9 @@
 MODULE wlInterpolationModule
 
   USE wlKindModule, ONLY: dp
+#if defined(WEAKLIB_OACC)
+  USE openacc, ONLY: acc_async_sync
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -18,7 +21,9 @@ MODULE wlInterpolationModule
   PUBLIC :: ComputeTempFromEntropy
   PUBLIC :: ComputeTempFromPressure
   PUBLIC :: ComputeTempFromPressure_Bisection
+  PUBLIC :: LogInterpolateSingleVariable_2D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D_Custom_Point
+  PUBLIC :: LogInterpolateSingleVariable_3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_3D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
@@ -27,7 +32,11 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Aligned
+  PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point
+  PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point
+  PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned
+  PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_Point
   PUBLIC :: LogInterpolateOpacity_2D1D2D
   PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
 
@@ -35,6 +44,8 @@ MODULE wlInterpolationModule
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
   INTERFACE LogInterpolateSingleVariable
+    MODULE PROCEDURE LogInterpolateSingleVariable_2D_Custom
+    MODULE PROCEDURE LogInterpolateSingleVariable_2D_Custom_Point
     MODULE PROCEDURE LogInterpolateSingleVariable_3D
     MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom
     MODULE PROCEDURE LogInterpolateSingleVariable_3D_Custom_Point
@@ -155,8 +166,35 @@ CONTAINS
   END FUNCTION Index1D_Log
 
 
+  REAL(dp) FUNCTION Linear &
+    ( p0, p1, dX1 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in) :: &
+      p0, p1, dX1
+
+    REAL(dp) :: ddX1
+
+    ddX1 = One - dX1
+
+    Linear =  ddX1 * p0 &
+             + dX1 * p1 
+
+    RETURN
+  END FUNCTION Linear
+
+
   REAL(dp) FUNCTION BiLinear &
     ( p00, p10, p01, p11, dX1, dX2 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in) :: &
       p00, p10, p01, p11, dX1, dX2
@@ -330,8 +368,34 @@ CONTAINS
   END FUNCTION TetraLinear
 
 
+  SUBROUTINE LogInterpolateSingleVariable_2D_Custom &
+    ( X, Y, Xs, Ys, OS, Table, Interpolant )
+
+    REAL(dp), INTENT(in)  :: X (:), Y (:)
+    REAL(dp), INTENT(in)  :: Xs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:)
+
+    INTEGER  :: iP
+
+    DO iP = 1, SIZE( X )
+
+      CALL LogInterpolateSingleVariable_2D_Custom_Point &
+             ( X(iP), Y(iP), Xs, Ys, OS, Table, Interpolant(iP) )
+
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_2D_Custom
+
+
   SUBROUTINE LogInterpolateSingleVariable_2D_Custom_Point &
     ( X, Y, Xs, Ys, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: X, Y
     REAL(dp), INTENT(in)  :: Xs(:), Ys(:)
@@ -578,10 +642,8 @@ CONTAINS
     LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
 
     INTEGER  :: i, j
-    INTEGER  :: iD, iT, iY
-    INTEGER  :: iE(SIZE(LogE))
-    REAL(dp) :: dD, dT, dY
-    REAL(dp) :: dE(SIZE(LogE))
+    INTEGER  :: iD, iT, iY, iE(SIZE(LogE))
+    REAL(dp) :: dD, dT, dY, dE(SIZE(LogE))
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
     LOGICAL  :: do_gpu
@@ -904,7 +966,7 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom &
-    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, GPU_Option )
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, GPU_Option, ASYNC_Option )
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogT(:)
@@ -916,11 +978,12 @@ CONTAINS
     REAL(dp), INTENT(in)  :: Table(:,:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:,:,:)
     LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
-    INTEGER  :: i, j, l, iT, iX
-    INTEGER  :: iE(SIZE(LogE))
-    REAL(dp) :: dT, dX
-    REAL(dp) :: dE(SIZE(LogE))
+    INTEGER  :: async_flag
+    INTEGER  :: i, j, l, ij, i0, j0, SizeE
+    INTEGER  :: iT, iX, iE(SIZE(LogE))
+    REAL(dp) :: dT, dX, dE(SIZE(LogE))
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
     LOGICAL  :: do_gpu
@@ -930,6 +993,18 @@ CONTAINS
     ELSE
       do_gpu = .FALSE.
     END IF
+
+    IF( PRESENT( ASYNC_Option ) )THEN
+      async_flag = ASYNC_Option
+    ELSE
+#if defined(WEAKLIB_OMP_OL)
+      async_flag = -1
+#elif defined(WEAKLIB_OACC)
+      async_flag = acc_async_sync
+#endif
+    END IF
+
+    SizeE = SIZE( LogE )
 
 #if defined(THORNADO_OMP_OL)
     !$OMP TARGET ENTER DATA &
@@ -945,11 +1020,11 @@ CONTAINS
     !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
     !$OMP IF( do_gpu )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR &
+    !$ACC PARALLEL LOOP GANG VECTOR ASYNC( async_flag ) &
     !$ACC IF( do_gpu ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs )
 #endif
-    DO i = 1, SIZE( LogE )
+    DO i = 1, SizeE
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
       dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
     END DO
@@ -959,7 +1034,7 @@ CONTAINS
     !$OMP IF( do_gpu ) &
     !$OMP PRIVATE( iT, dT, iX, dX )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG &
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC IF( do_gpu ) &
     !$ACC PRIVATE( iT, dT, iX, dX ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
@@ -974,44 +1049,50 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
       !$OMP PARALLEL DO SIMD &
-      !$OMP PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$OMP PRIVATE( i0, j0, i, j, &
+      !$OMP          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
       !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #elif defined(WEAKLIB_OACC)
-      !$ACC LOOP WORKER
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( i0, j0, i, j, &
+      !$ACC          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #endif
-      DO j = 1, SIZE( LogE )
-#if defined(WEAKLIB_OACC)
-        !$ACC LOOP VECTOR &
-        !$ACC PRIVATE( p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
-        !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
-#endif
-        DO i = 1, j
+      DO ij = 1, SizeE*(SizeE+1)/2 ! Fused triangular loop: DO j = 1, SizeE ; DO i = 1, j
+        j0 = MOD( (ij-1) / ( SizeE + 1 ), SizeE + 1 ) + 1
+        i0 = MOD( (ij-1)                , SizeE + 1 ) + 1
+        IF ( i0 > j0 ) THEN
+          j = SizeE - j0 + 1
+          i = SizeE - i0 + 2
+        ELSE
+          j = j0
+          i = i0
+        END IF
 
-          p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
-          p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
-          p0100 = TABLE( iE(i)  , iE(j)+1, iT  , iX   )
-          p1100 = TABLE( iE(i)+1, iE(j)+1, iT  , iX   )
-          p0010 = TABLE( iE(i)  , iE(j)  , iT+1, iX   )
-          p1010 = TABLE( iE(i)+1, iE(j)  , iT+1, iX   )
-          p0110 = TABLE( iE(i)  , iE(j)+1, iT+1, iX   )
-          p1110 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX   )
-          p0001 = TABLE( iE(i)  , iE(j)  , iT  , iX+1 )
-          p1001 = TABLE( iE(i)+1, iE(j)  , iT  , iX+1 )
-          p0101 = TABLE( iE(i)  , iE(j)+1, iT  , iX+1 )
-          p1101 = TABLE( iE(i)+1, iE(j)+1, iT  , iX+1 )
-          p0011 = TABLE( iE(i)  , iE(j)  , iT+1, iX+1 )
-          p1011 = TABLE( iE(i)+1, iE(j)  , iT+1, iX+1 )
-          p0111 = TABLE( iE(i)  , iE(j)+1, iT+1, iX+1 )
-          p1111 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX+1 )
+        p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
+        p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
+        p0100 = TABLE( iE(i)  , iE(j)+1, iT  , iX   )
+        p1100 = TABLE( iE(i)+1, iE(j)+1, iT  , iX   )
+        p0010 = TABLE( iE(i)  , iE(j)  , iT+1, iX   )
+        p1010 = TABLE( iE(i)+1, iE(j)  , iT+1, iX   )
+        p0110 = TABLE( iE(i)  , iE(j)+1, iT+1, iX   )
+        p1110 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX   )
+        p0001 = TABLE( iE(i)  , iE(j)  , iT  , iX+1 )
+        p1001 = TABLE( iE(i)+1, iE(j)  , iT  , iX+1 )
+        p0101 = TABLE( iE(i)  , iE(j)+1, iT  , iX+1 )
+        p1101 = TABLE( iE(i)+1, iE(j)+1, iT  , iX+1 )
+        p0011 = TABLE( iE(i)  , iE(j)  , iT+1, iX+1 )
+        p1011 = TABLE( iE(i)+1, iE(j)  , iT+1, iX+1 )
+        p0111 = TABLE( iE(i)  , iE(j)+1, iT+1, iX+1 )
+        p1111 = TABLE( iE(i)+1, iE(j)+1, iT+1, iX+1 )
 
-          Interpolant(i,j,l) &
-            = 10.0d0**( &
-                TetraLinear &
-                  ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
-                    p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
-                    dE(i), dE(j), dT, dX ) ) - OS
+        Interpolant(i,j,l) &
+          = 10.0d0**( &
+              TetraLinear &
+                ( p0000, p1000, p0100, p1100, p0010, p1010, p0110, p1110, &
+                  p0001, p1001, p0101, p1101, p0011, p1011, p0111, p1111, &
+                  dE(i), dE(j), dT, dX ) ) - OS
 
-        END DO
       END DO
 
     END DO
@@ -1047,10 +1128,9 @@ CONTAINS
     REAL(dp), INTENT(in)  :: Table(:,:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:,:)
 
-    INTEGER  :: i, j, iT, iX
-    INTEGER  :: iE(SIZE(LogE))
-    REAL(dp) :: dT, dX
-    REAL(dp) :: dE(SIZE(LogE))
+    INTEGER  :: i, j
+    INTEGER  :: iT, iX, iE(SIZE(LogE))
+    REAL(dp) :: dT, dX, dE(SIZE(LogE))
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
@@ -1099,7 +1179,7 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned &
-    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant )
+    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, GPU_Option, ASYNC_Option )
 
     REAL(dp), INTENT(in)  :: LogT(:)
     REAL(dp), INTENT(in)  :: LogX(:)
@@ -1108,43 +1188,126 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(in)  :: Table(:,:,:,:)
     REAL(dp), INTENT(out) :: Interpolant(:,:,:)
+    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
-    INTEGER  :: i, j, k
-    INTEGER  :: iT(SIZE(LogT))
-    INTEGER  :: iX(SIZE(LogX))
-    REAL(dp) :: dT(SIZE(LogT))
-    REAL(dp) :: dX(SIZE(LogX))
+    INTEGER  :: async_flag
+    INTEGER  :: i, j, k, ij, i0, j0, SizeE
+    INTEGER  :: iT, iX
+    REAL(dp) :: dT, dX
     REAL(dp) :: p00, p10, p01, p11
+    LOGICAL  :: do_gpu
 
+    IF( PRESENT( GPU_Option ) )THEN
+      do_gpu = GPU_Option
+    ELSE
+      do_gpu = .FALSE.
+    END IF
+
+    IF( PRESENT( ASYNC_Option ) )THEN
+      async_flag = ASYNC_Option
+    ELSE
+#if defined(WEAKLIB_OMP_OL)
+      async_flag = -1
+#elif defined(WEAKLIB_OACC)
+      async_flag = acc_async_sync
+#endif
+    END IF
+
+    SizeE = SIZE( Interpolant, DIM = 1 )
+
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE &
+    !$OMP IF( do_gpu ) &
+    !$OMP PRIVATE( iT, dT, iX, dX )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRIVATE( iT, dT, iX, dX ) &
+    !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+#endif
     DO k = 1, SIZE( LogT )
 
-      iT(k) = Index1D_Lin( LogT(k), LogTs, SIZE( LogTs ) )
-      dT(k) = ( LogT(k) - LogTs(iT(k)) ) / ( LogTs(iT(k)+1) - LogTs(iT(k)) )
+      iT = Index1D_Lin( LogT(k), LogTs, SIZE( LogTs ) )
+      dT = ( LogT(k) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
 
-      iX(k) = Index1D_Lin( LogX(k), LogXs, SIZE( LogXs ) )
-      dX(k) = ( LogX(k) - LogXs(iX(k)) ) / ( LogXs(iX(k)+1) - LogXs(iX(k)) )
+      iX = Index1D_Lin( LogX(k), LogXs, SIZE( LogXs ) )
+      dX = ( LogX(k) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
 
-    END DO
+#if defined(WEAKLIB_OMP_OL)
+      !$OMP PARALLEL DO SIMD &
+      !$OMP PRIVATE( i0, j0, i, j, p00, p10, p01, p11 )
+#elif defined(WEAKLIB_OACC)
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( i0, j0, i, j, p00, p10, p01, p11 )
+#endif
+      DO ij = 1, SizeE*(SizeE+1)/2 ! Fused triangular loop: DO j = 1, SizeE ; DO i = 1, j
+        j0 = MOD( (ij-1) / ( SizeE + 1 ), SizeE + 1 ) + 1
+        i0 = MOD( (ij-1)                , SizeE + 1 ) + 1
+        IF ( i0 > j0 ) THEN
+          j = SizeE - j0 + 1
+          i = SizeE - i0 + 2
+        ELSE
+          j = j0
+          i = i0
+        END IF
 
-    DO j = 1, SIZE( Interpolant, DIM = 1 )
-    DO i = 1, j
-
-      DO k = 1, SIZE( LogT )
-
-        p00 = Table(iT(k)  ,iX(k)  ,i,j)
-        p10 = Table(iT(k)+1,iX(k)  ,i,j)
-        p01 = Table(iT(k)  ,iX(k)+1,i,j)
-        p11 = Table(iT(k)+1,iX(k)+1,i,j)
+        p00 = Table(i,j,iT  ,iX  )
+        p10 = Table(i,j,iT+1,iX  )
+        p01 = Table(i,j,iT  ,iX+1)
+        p11 = Table(i,j,iT+1,iX+1)
 
         Interpolant(i,j,k) &
-          = 10.0d0**( BiLinear( p00, p10, p01, p11, dT(k), dX(k) ) ) - OS
+          = 10.0d0**( BiLinear( p00, p10, p01, p11, dT, dX ) ) - OS
 
       END DO
-
-    END DO
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned
+
+
+  SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point &
+    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in)  :: LogT
+    REAL(dp), INTENT(in)  :: LogX
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:)
+
+    INTEGER  :: i, j
+    INTEGER  :: iT, iX
+    REAL(dp) :: dT, dX
+    REAL(dp) :: p00, p10, p01, p11
+
+    iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+
+    iX = Index1D_Lin( LogX, LogXs, SIZE( LogXs ) )
+    dX = ( LogX - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+
+    DO j = 1, SIZE( Interpolant, DIM = 1 )
+      DO i = 1, j
+
+        p00 = Table(i,j,iT  ,iX  )
+        p10 = Table(i,j,iT+1,iX  )
+        p01 = Table(i,j,iT  ,iX+1)
+        p11 = Table(i,j,iT+1,iX+1)
+
+        Interpolant(i,j) &
+          = 10.0d0**( BiLinear( p00, p10, p01, p11, dT, dX ) ) - OS
+
+      END DO
+    END DO
+
+  END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point
 
 
   SUBROUTINE LogInterpolateOpacity_2D1D2D &
@@ -1924,7 +2087,7 @@ CONTAINS
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom &
     ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, &
-      DerivativeT, DerivativeX )
+      DerivativeT, DerivativeX, GPU_Option, ASYNC_Option )
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogT(:)
@@ -1937,19 +2100,70 @@ CONTAINS
     REAL(dp), INTENT(out) :: Interpolant(:,:,:)
     REAL(dp), INTENT(out) :: DerivativeT(:,:,:)
     REAL(dp), INTENT(out) :: DerivativeX(:,:,:)
+    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
-    INTEGER  :: i, j, l, iT, iX
-    INTEGER  :: iE(SIZE(LogE))
-    REAL(dp) :: dT, aT, dX, aX
-    REAL(dp) :: dE(SIZE(LogE))
+    INTEGER  :: async_flag
+    INTEGER  :: i, j, l, ij, i0, j0, SizeE
+    INTEGER  :: iT, iX, iE(SIZE(LogE))
+    REAL(dp) :: dT, dX, dE(SIZE(LogE))
+    REAL(dp) :: aT, aX
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
+    LOGICAL  :: do_gpu
 
-    DO i = 1, SIZE( LogE )
+    IF( PRESENT( GPU_Option ) )THEN
+      do_gpu = GPU_Option
+    ELSE
+      do_gpu = .FALSE.
+    END IF
+
+    IF( PRESENT( ASYNC_Option ) )THEN
+      async_flag = ASYNC_Option
+    ELSE
+#if defined(WEAKLIB_OMP_OL)
+      async_flag = -1
+#elif defined(WEAKLIB_OACC)
+      async_flag = acc_async_sync
+#endif
+    END IF
+
+    SizeE = SIZE( Interpolant, DIM = 1 )
+
+#if defined(THORNADO_OMP_OL)
+    !$OMP TARGET ENTER DATA &
+    !$OMP IF( do_gpu ) &
+    !$OMP MAP( alloc: iE, dE )
+#elif defined(THORNADO_OACC)
+    !$ACC ENTER DATA &
+    !$ACC IF( do_gpu ) &
+    !$ACC CREATE( iE, dE )
+#endif
+
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+    !$OMP IF( do_gpu )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG VECTOR ASYNC( async_flag ) &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRESENT( iE, dE, LogE, LogEs )
+#endif
+    DO i = 1, SizeE
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
       dE(i) = ( LogE(i) - LogEs(iE(i)) ) / ( LogEs(iE(i)+1) - LogEs(iE(i)) )
     END DO
 
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE &
+    !$OMP IF( do_gpu ) &
+    !$OMP PRIVATE( iT, dT, aT, iX, dX, aX )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRIVATE( iT, dT, aT, iX, dX, aX ) &
+    !$ACC PRESENT( iE, dE, LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, &
+    !$ACC          Table, Interpolant, DerivativeT, DerivativeX )
+#endif
     DO l = 1, SIZE( LogT )
 
       iT = Index1D_Lin( LogT(l), LogTs, SIZE( LogTs ) )
@@ -1960,8 +2174,27 @@ CONTAINS
       dX = ( LogX(l) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
       aX = One / ( LogXs(iX+1) - LogXs(iX) ) / 10.0d0**LogX(l)
 
-      DO j = 1, SIZE( LogE )
-      DO i = 1, j
+#if defined(WEAKLIB_OMP_OL)
+      !$OMP PARALLEL DO SIMD &
+      !$OMP PRIVATE( i0, j0, i, j, &
+      !$OMP          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#elif defined(WEAKLIB_OACC)
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( i0, j0, i, j, &
+      !$ACC          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+      !$ACC          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
+#endif
+      DO ij = 1, SizeE*(SizeE+1)/2 ! Fused triangular loop: DO j = 1, SizeE ; DO i = 1, j
+        j0 = MOD( (ij-1) / ( SizeE + 1 ), SizeE + 1 ) + 1
+        i0 = MOD( (ij-1)                , SizeE + 1 ) + 1
+        IF ( i0 > j0 ) THEN
+          j = SizeE - j0 + 1
+          i = SizeE - i0 + 2
+        ELSE
+          j = j0
+          i = i0
+        END IF
 
         p0000 = TABLE( iE(i)  , iE(j)  , iT  , iX   )
         p1000 = TABLE( iE(i)+1, iE(j)  , iT  , iX   )
@@ -2002,9 +2235,17 @@ CONTAINS
                                dE(i), dE(j), dT ) )
 
       END DO
-      END DO
-
     END DO
+
+#if defined(THORNADO_OMP_OL)
+    !$OMP TARGET EXIT DATA &
+    !$OMP IF( do_gpu ) &
+    !$OMP MAP( release: iE, dE )
+#elif defined(THORNADO_OACC)
+    !$ACC EXIT DATA &
+    !$ACC IF( do_gpu ) &
+    !$ACC DELETE( iE, dE )
+#endif
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom
 
@@ -2012,6 +2253,11 @@ CONTAINS
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point &
     ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, &
       DerivativeT, DerivativeX )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(dp), INTENT(in)  :: LogE(:)
     REAL(dp), INTENT(in)  :: LogT
@@ -2025,10 +2271,10 @@ CONTAINS
     REAL(dp), INTENT(out) :: DerivativeT(:,:)
     REAL(dp), INTENT(out) :: DerivativeX(:,:)
 
-    INTEGER  :: i, j, iT, iX
-    INTEGER  :: iE(SIZE(LogE))
-    REAL(dp) :: dT, aT, dX, aX
-    REAL(dp) :: dE(SIZE(LogE))
+    INTEGER  :: i, j
+    INTEGER  :: iT, iX, iE(SIZE(LogE))
+    REAL(dp) :: dT, dX, dE(SIZE(LogE))
+    REAL(dp) :: aT, aX
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
                 p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111
 
@@ -2090,6 +2336,164 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point
+
+
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned &
+    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, &
+      DerivativeT, DerivativeX, GPU_Option, ASYNC_Option )
+
+    REAL(dp), INTENT(in)  :: LogT(:)
+    REAL(dp), INTENT(in)  :: LogX(:)
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
+    REAL(dp), INTENT(out) :: DerivativeT(:,:,:)
+    REAL(dp), INTENT(out) :: DerivativeX(:,:,:)
+    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
+
+    INTEGER  :: async_flag
+    INTEGER  :: i, j, k, ij, i0, j0, SizeE
+    INTEGER  :: iT, iX
+    REAL(dp) :: dT, aT, dX, aX
+    REAL(dp) :: p00, p10, p01, p11
+    LOGICAL  :: do_gpu
+
+    IF( PRESENT( GPU_Option ) )THEN
+      do_gpu = GPU_Option
+    ELSE
+      do_gpu = .FALSE.
+    END IF
+
+    IF( PRESENT( ASYNC_Option ) )THEN
+      async_flag = ASYNC_Option
+    ELSE
+#if defined(WEAKLIB_OMP_OL)
+      async_flag = -1
+#elif defined(WEAKLIB_OACC)
+      async_flag = acc_async_sync
+#endif
+    END IF
+
+    SizeE = SIZE( Interpolant, DIM = 1 )
+
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE &
+    !$OMP IF( do_gpu ) &
+    !$OMP PRIVATE( iT, dT, aT, iX, dX, aX )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
+    !$ACC IF( do_gpu ) &
+    !$ACC PRIVATE( iT, dT, aT, iX, dX, aX ) &
+    !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+#endif
+    DO k = 1, SIZE( LogT )
+
+      iT = Index1D_Lin( LogT(k), LogTs, SIZE( LogTs ) )
+      dT = ( LogT(k) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+      aT = One / ( LogTs(iT+1) - LogTs(iT) ) / 10.0d0**LogT(k)
+
+      iX = Index1D_Lin( LogX(k), LogXs, SIZE( LogXs ) )
+      dX = ( LogX(k) - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+      aX = One / ( LogXs(iX+1) - LogXs(iX) ) / 10.0d0**LogX(k)
+
+#if defined(WEAKLIB_OMP_OL)
+      !$OMP PARALLEL DO SIMD &
+      !$OMP PRIVATE( i0, j0, i, j, p00, p10, p01, p11 )
+#elif defined(WEAKLIB_OACC)
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( i0, j0, i, j, p00, p10, p01, p11 )
+#endif
+      DO ij = 1, SizeE*(SizeE+1)/2 ! Fused triangular loop: DO j = 1, SizeE ; DO i = 1, j
+        j0 = MOD( (ij-1) / ( SizeE + 1 ), SizeE + 1 ) + 1
+        i0 = MOD( (ij-1)                , SizeE + 1 ) + 1
+        IF ( i0 > j0 ) THEN
+          j = SizeE - j0 + 1
+          i = SizeE - i0 + 2
+        ELSE
+          j = j0
+          i = i0
+        END IF
+
+        p00 = Table(i,j,iT  ,iX  )
+        p10 = Table(i,j,iT+1,iX  )
+        p01 = Table(i,j,iT  ,iX+1)
+        p11 = Table(i,j,iT+1,iX+1)
+
+        Interpolant(i,j,k) &
+          = 10.0d0**( BiLinear( p00, p10, p01, p11, dT, dX ) ) - OS
+
+        DerivativeT(i,j,k) &
+          = Interpolant(i,j,k) * aT &
+              * ( Linear( p00, p01, dX ) - Linear( p10, p11, dX ) )
+
+        DerivativeX(i,j,k) &
+          = Interpolant(i,j,k) * aX &
+              * ( Linear( p00, p10, dT ) - Linear( p01, p11, dX ) )
+
+      END DO
+    END DO
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned
+
+
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_Point &
+    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, &
+      DerivativeT, DerivativeX )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in)  :: LogT
+    REAL(dp), INTENT(in)  :: LogX
+    REAL(dp), INTENT(in)  :: LogTs(:)
+    REAL(dp), INTENT(in)  :: LogXs(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:)
+    REAL(dp), INTENT(out) :: DerivativeT(:,:)
+    REAL(dp), INTENT(out) :: DerivativeX(:,:)
+
+    INTEGER  :: i, j
+    INTEGER  :: iT, iX
+    REAL(dp) :: dT, aT, dX, aX
+    REAL(dp) :: p00, p10, p01, p11
+
+    iT = Index1D_Lin( LogT, LogTs, SIZE( LogTs ) )
+    dT = ( LogT - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+    aT = One / ( LogTs(iT+1) - LogTs(iT) ) / 10.0d0**LogT
+
+    iX = Index1D_Lin( LogX, LogXs, SIZE( LogXs ) )
+    dX = ( LogX - LogXs(iX) ) / ( LogXs(iX+1) - LogXs(iX) )
+    aX = One / ( LogXs(iX+1) - LogXs(iX) ) / 10.0d0**LogX
+
+    DO j = 1, SIZE( Interpolant, DIM = 1 )
+      DO i = 1, j
+
+        p00 = Table(i,j,iT  ,iX  )
+        p10 = Table(i,j,iT+1,iX  )
+        p01 = Table(i,j,iT  ,iX+1)
+        p11 = Table(i,j,iT+1,iX+1)
+
+        Interpolant(i,j) &
+          = 10.0d0**( BiLinear( p00, p10, p01, p11, dT, dX ) ) - OS
+
+        DerivativeT(i,j) &
+          = Interpolant(i,j) * aT &
+              * ( Linear( p00, p01, dX ) - Linear( p10, p11, dX ) )
+
+        DerivativeX(i,j) &
+          = Interpolant(i,j) * aX &
+              * ( Linear( p00, p10, dT ) - Linear( p01, p11, dX ) )
+
+      END DO
+    END DO
+
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_Point
 
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D &
