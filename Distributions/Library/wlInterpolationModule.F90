@@ -36,7 +36,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Point
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned
-  PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_Point
+  PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_P
   PUBLIC :: LogInterpolateOpacity_2D1D2D
   PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
 
@@ -2439,7 +2439,7 @@ CONTAINS
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned
 
 
-  SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_Point &
+  SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_P &
     ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, &
       DerivativeT, DerivativeX )
 #if defined(WEAKLIB_OMP_OL)
@@ -2493,7 +2493,7 @@ CONTAINS
       END DO
     END DO
 
-  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_Point
+  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_P
 
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D &
