@@ -1,4 +1,6 @@
 .SUFFIXES: .f95 .f90 .F90 .f
 
 .f90.o:
-	$(FORTRAN) -c $(FLAGS) $(INCLUDE) $(SUFFIX_f90) $<
+	$(FORTRAN) -c $(DEFINES) $(FLAGS) $(INCLUDE) $(SUFFIX_f90) $<
+.F90.o:
+	$(FORTRAN) -c $(DEFINES) $(FLAGS) $(INCLUDE) $(SUFFIX_f90) $<
