@@ -115,7 +115,7 @@ CONTAINS
 
     ISNucleiKernel_1 = nucleiTP * tempC1 * 3.0_dp / 2.0_dp
 
-    IF ( ISNAN(ISNucleiKernel_0) .or. ISNAN(ISNucleiKernel_1)  ) THEN
+    IF ( (ISNucleiKernel_0-1 == ISNucleiKernel_0) .or. (ISNucleiKernel_1-1 == ISNucleiKernel_1)  ) THEN
      WRITE(*,*) "ERROR AT B85.f90 MARK 1003 !"
      WRITE(*,*) "nucleiExp is ", nucleiExp
      WRITE(*,*) "ISNucleiKernel_0 ", ISNucleiKernel_0
@@ -137,7 +137,7 @@ CONTAINS
                         ( etann * ( cv_n**2 - ca_n**2) + &
                           etapp * ( cv_p**2 - ca_p**2) )
 
-    IF ( ISNAN(ISNucleonKernel_0) .or. ISNAN(ISNucleonKernel_1)  ) &
+    IF ( (ISNucleonKernel_0-1 == ISNucleonKernel_0) .or. (ISNucleonKernel_1-1 == ISNucleonKernel_1)  ) &
     THEN
       WRITE(*,*) "ERROR AT B85.f90 MARK 1004 !"
       WRITE(*,*) "etann is ", etann
@@ -163,7 +163,7 @@ CONTAINS
                          l other than 0 and 1 "
     END IF
     
-    IF ( ISNAN(TotalIsoScatteringKernel) ) THEN
+    IF ( TotalIsoScatteringKernel-1 ==TotalIsoScatteringKernel ) THEN
       WRITE(*,*) "TotalIsoScatteringKernel is NAN! "
       WRITE(*,*) "l is", l
       WRITE(*,*) "ISNucleiKernel_0 + ISNucleonKernel_0 ", &

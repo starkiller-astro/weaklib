@@ -154,7 +154,7 @@ CONTAINS
 
     TotalNuEAbsorption = ( emitni + absorni ) + ( emitnp + absornp )
 
-    IF ( ISNAN(TotalNuEAbsorption) ) THEN
+    IF ( TotalNuEAbsorption-1 == TotalNuEAbsorption ) THEN
       WRITE(*,*) "TotalNuEAbsorption is NAN! "
       STOP
     END IF
@@ -205,7 +205,7 @@ CONTAINS
 
       TotalNuEbarAbsorption =  emitnp + absornp 
 
-      IF ( ISNAN(TotalNuEbarAbsorption) ) THEN
+      IF ( TotalNuEbarAbsorption-1 == TotalNuEbarAbsorption ) THEN
         WRITE(*,*) "TotalNuepAbsorption is NAN! "
         STOP
       END IF

@@ -271,7 +271,7 @@ CONTAINS
    PRINT*, "and the outcome is", outcome
   END IF
 
-  IF ( ISNAN(outcome) )THEN
+  IF ( outcome-1 == outcome )THEN
    WRITE(*,*)"STOP for data error"
    STOP
   END IF
