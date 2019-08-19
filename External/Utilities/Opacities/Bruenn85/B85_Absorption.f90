@@ -72,6 +72,8 @@ CONTAINS
 !   Mezzacappa & Bruenn(1993) AJ 405
 !   Bruenn(1985) AJSS 58
 !---------------------------------------------------------------------
+  USE, INTRINSIC :: ieee_arithmetic, ONLY: IEEE_IS_NAN
+
   IMPLICIT NONE
 
     REAL(dp), INTENT(in) :: energy, rho, T, Z, A, chem_e, chem_n, chem_p, &
@@ -154,7 +156,7 @@ CONTAINS
 
     TotalNuEAbsorption = ( emitni + absorni ) + ( emitnp + absornp )
 
-    IF ( TotalNuEAbsorption-1 == TotalNuEAbsorption ) THEN
+    IF ( IEEE_IS_NAN(TotalNuEAbsorption) ) THEN
       WRITE(*,*) "TotalNuEAbsorption is NAN! "
       STOP
     END IF
@@ -173,6 +175,8 @@ CONTAINS
 ! Ref: 
 !   Bruenn(1985) AJSS 58
 !---------------------------------------------------------------------
+  USE, INTRINSIC :: ieee_arithmetic, ONLY: IEEE_IS_NAN
+
   IMPLICIT NONE
 
     REAL(dp), INTENT(in) :: energy, rho, T, chem_e, xn, xp
@@ -205,7 +209,7 @@ CONTAINS
 
       TotalNuEbarAbsorption =  emitnp + absornp 
 
-      IF ( TotalNuEbarAbsorption-1 == TotalNuEbarAbsorption ) THEN
+      IF ( IEEE_IS_NAN(TotalNuEbarAbsorption) ) THEN
         WRITE(*,*) "TotalNuepAbsorption is NAN! "
         STOP
       END IF

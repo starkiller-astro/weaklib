@@ -66,6 +66,8 @@ CONTAINS
 !--------------------------------------------------------------
 !   Input Variables
 !--------------------------------------------------------------
+  USE, INTRINSIC :: ieee_arithmetic, ONLY: IEEE_IS_NAN
+
   IMPLICIT NONE
     REAL(dp), INTENT(in) :: energy, rho, T, xh, A, Z, xn, xp
     INTEGER, INTENT(in)  :: l
@@ -115,7 +117,7 @@ CONTAINS
 
     ISNucleiKernel_1 = nucleiTP * tempC1 * 3.0_dp / 2.0_dp
 
-    IF ( (ISNucleiKernel_0-1 == ISNucleiKernel_0) .or. (ISNucleiKernel_1-1 == ISNucleiKernel_1)  ) THEN
+    IF ( IEEE_IS_NAN(ISNucleiKernel_0) .or. IEEE_IS_NAN(ISNucleiKernel_1)  ) THEN
      WRITE(*,*) "ERROR AT B85.f90 MARK 1003 !"
      WRITE(*,*) "nucleiExp is ", nucleiExp
      WRITE(*,*) "ISNucleiKernel_0 ", ISNucleiKernel_0
@@ -137,7 +139,7 @@ CONTAINS
                         ( etann * ( cv_n**2 - ca_n**2) + &
                           etapp * ( cv_p**2 - ca_p**2) )
 
-    IF ( (ISNucleonKernel_0-1 == ISNucleonKernel_0) .or. (ISNucleonKernel_1-1 == ISNucleonKernel_1)  ) &
+    IF ( IEEE_IS_NAN(ISNucleonKernel_0) .or. IEEE_IS_NAN(ISNucleonKernel_1)  ) &
     THEN
       WRITE(*,*) "ERROR AT B85.f90 MARK 1004 !"
       WRITE(*,*) "etann is ", etann
@@ -163,7 +165,7 @@ CONTAINS
                          l other than 0 and 1 "
     END IF
     
-    IF ( TotalIsoScatteringKernel-1 ==TotalIsoScatteringKernel ) THEN
+    IF ( IEEE_IS_NAN(TotalIsoScatteringKernel) ) THEN
       WRITE(*,*) "TotalIsoScatteringKernel is NAN! "
       WRITE(*,*) "l is", l
       WRITE(*,*) "ISNucleiKernel_0 + ISNucleonKernel_0 ", &

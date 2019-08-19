@@ -193,6 +193,9 @@ CONTAINS
                   ( nquad, bb, &
                     rho, T, xh, A, Z, xn, xp, l,&
                     outcome, func, debug )
+ 
+  USE, INTRINSIC :: ieee_arithmetic, ONLY: IEEE_IS_NAN
+
   INTEGER, INTENT(in)        :: nquad, l
   REAL(dp), INTENT(in)       :: bb, rho, T, xh, A, Z, xn, xp
   CHARACTER(18), INTENT(in)  :: func
@@ -271,7 +274,7 @@ CONTAINS
    PRINT*, "and the outcome is", outcome
   END IF
 
-  IF ( outcome-1 == outcome )THEN
+  IF ( IEEE_IS_NAN(outcome) )THEN
    WRITE(*,*)"STOP for data error"
    STOP
   END IF
