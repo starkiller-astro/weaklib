@@ -10,3 +10,6 @@ wlCreateOpacityTable: \
 
 clean:
 	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateOpacityTable_$(MACHINE)
