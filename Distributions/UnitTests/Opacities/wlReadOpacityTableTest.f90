@@ -15,7 +15,7 @@ PROGRAM wlReadOpacityTableTest
 
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF &
-          ( OpacityTable, FileName_Pair_Option = "temp_Pair.h5" )
+          ( OpacityTable, FileName_EmAb_Option = "temp_EmAb.h5" )
   CALL FinalizeHDF( ) 
 
   PRINT*
