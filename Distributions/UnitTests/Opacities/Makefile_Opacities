@@ -1,4 +1,5 @@
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/External/Build/Makefile_Build
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
@@ -40,15 +41,15 @@ wlGreyTableTest: \
 	$(LIBRARIES)
 
 wlInterpolateAb: \
-        $(Weaklib_External) wlInterpolateAb.o
+        $(weaklib) wlInterpolateAb.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateAb_$(MACHINE) \
-        $(Weaklib_External) wlInterpolateAb.o \
+        $(weaklib) wlInterpolateAb.o \
         $(LIBRARIES)
 
 wlInterpolateIso: \
-        $(Weaklib_External) wlInterpolateIso.o
+        $(weaklib) wlInterpolateIso.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateIso_$(MACHINE) \
-        $(Weaklib_External) wlInterpolateIso.o \
+        $(weaklib) wlInterpolateIso.o \
         $(LIBRARIES)
 
 wlInterpolateNES: \
