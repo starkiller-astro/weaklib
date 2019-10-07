@@ -31,7 +31,7 @@ PROGRAM wlInterpolateNES
   !--------- parameters for creating energy grid ----------------------------
   INTEGER, PARAMETER :: Inte_nPointE = 40
   REAL(dp)           :: Inte_Emin = 1.0d-1
-  REAL(dp)           :: Inte_Emax = 3.0d02
+  REAL(dp)           :: Inte_Emax = 2.9d02
   TYPE(GridType)     :: Inte_E
 
   !-------- variables for reading opacity table -----------------------------
@@ -145,7 +145,7 @@ PROGRAM wlInterpolateNES
   !------------------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_NES_Option = "temp_NES.h5", &
+       FileName_NES_Option = "wl-Op-LS220-20-40-100-Lower-T-E40-B85-NES.h5", &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 

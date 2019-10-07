@@ -31,7 +31,7 @@ PROGRAM wlInterpolatePair
   !--------- parameters for creating energy grid ----------------------------
   INTEGER, PARAMETER :: Inte_nPointE = 40
   REAL(dp)           :: Inte_Emin = 1.0d-1
-  REAL(dp)           :: Inte_Emax = 3.0d02
+  REAL(dp)           :: Inte_Emax = 2.9d02
   TYPE(GridType)     :: Inte_E
 
   !-------- variables for reading opacity table
@@ -148,7 +148,7 @@ PROGRAM wlInterpolatePair
   !--------------------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_Pair_Option = "temp_Pair.h5", &
+       FileName_Pair_Option = "wl-Op-LS220-20-40-100-Lower-T-E40-B85-Pair.h5", &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
   
