@@ -21,7 +21,6 @@ PROGRAM wlInterpolateIso
     AllocateGrid, &
     DescribeGrid, &
     MakeLogGrid
-  USE wlExtPhysicalConstantsModule, ONLY: kMeV
   USE HDF5
 
   IMPLICIT NONE
@@ -113,7 +112,7 @@ PROGRAM wlInterpolateIso
   !---------------------------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_Iso_Option = "temp_Iso.h5", &
+       FileName_Iso_Option = "wl-Op-LS220-20-40-100-Lower-T-E40-B85-Iso.h5", &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 

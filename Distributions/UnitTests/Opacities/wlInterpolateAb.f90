@@ -21,7 +21,6 @@ PROGRAM wlInterpolateAb
     AllocateGrid, &
     DescribeGrid, &
     MakeLogGrid
-  USE wlExtPhysicalConstantsModule, ONLY: kMeV
   USE HDF5
 
   IMPLICIT NONE
@@ -105,7 +104,7 @@ PROGRAM wlInterpolateAb
   !--------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_EmAb_Option = "temp_EmAb.h5", &
+       FileName_EmAb_Option = "wl-Op-LS220-20-40-100-Lower-T-E40-B85-AbEm.h5", &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
