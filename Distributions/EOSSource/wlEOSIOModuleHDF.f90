@@ -217,7 +217,7 @@ CONTAINS
     INTEGER, INTENT(in)                           :: myid ! rank of each processor (MPI)   
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(3)                         :: nPoints
-    INTEGER, DIMENSION(19)                        :: buffer
+    INTEGER, DIMENSION(22)                        :: buffer
     INTEGER                                       :: nStates, nVariables, i
     INTEGER                                       :: i_count
     INTEGER                                       :: charlen
@@ -244,6 +244,9 @@ CONTAINS
       buffer(17) = EOSTable % DV % Indices % iHeavyBindingEnergy
       buffer(18) = EOSTable % DV % Indices % iThermalEnergy
       buffer(19) = EOSTable % DV % Indices % iGamma1
+      buffer(20) = EOSTable % TS % Indices % iRho
+      buffer(21) = EOSTable % TS % Indices % iT
+      buffer(22) = EOSTable % TS % Indices % iYe
 
     END IF
 
@@ -275,6 +278,9 @@ CONTAINS
       EOSTable % DV % Indices % iHeavyBindingEnergy        = buffer(17)
       EOSTable % DV % Indices % iThermalEnergy             = buffer(18)
       EOSTable % DV % Indices % iGamma1                    = buffer(19)
+      EOSTable % TS % Indices % iRho                       = buffer(20)
+      EOSTable % TS % Indices % iT                         = buffer(21)
+      EOSTable % TS % Indices % iYe                        = buffer(22)
 
     END IF
 
