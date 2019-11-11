@@ -145,7 +145,9 @@ PROGRAM wlInterpolateNES
   !------------------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_NES_Option = "wl-Op-LS220-20-40-100-Lower-T-E40-B85-NES.h5", &
+       FileName_NES_Option = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-NES.h5", &
+       EquationOfStateTableName_Option &
+       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5", &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
