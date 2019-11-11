@@ -294,13 +294,15 @@ CONTAINS
 
   SUBROUTINE ReadOpacityTableHDF &
     ( OpacityTable, FileName_EmAb_Option, FileName_Iso_Option, &
-      FileName_NES_Option, FileName_Pair_Option, Verbose_Option )
+      FileName_NES_Option, FileName_Pair_Option, &
+      EquationOfStateTableName_Option, Verbose_Option )
  
     TYPE(OpacityTableType), INTENT(inout)          :: OpacityTable
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_EmAb_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Iso_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NES_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Pair_Option
+    CHARACTER(LEN=*),       INTENT(in),   OPTIONAL :: EquationOfStateTableName_Option
     LOGICAL,                INTENT(in),   OPTIONAL :: Verbose_Option
 
     INTEGER, PARAMETER :: iEmAb = 1
@@ -311,6 +313,7 @@ CONTAINS
     LOGICAL            :: ReadOpacity(4)
     LOGICAL            :: Verbose
     CHARACTER(128)     :: FileName(4)
+    CHARACTER(128)     :: EquationOfStateTableName
     INTEGER            :: iOp
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
@@ -328,6 +331,12 @@ CONTAINS
     INTEGER(HSIZE_T)   :: datasize2d(2)
     INTEGER(HSIZE_T)   :: datasize4d(4)
     INTEGER(HSIZE_T)   :: datasize5d(5)
+
+    IF( PRESENT( EquationOfStateTableName_Option ) )THEN
+       EquationOfStateTableName = TRIM( EquationOfStateTableName_Option )
+    ELSE
+       EquationOfStateTableName = 'EquationOfStateTable.h5'
+    END IF
 
     IF( PRESENT( FileName_EmAb_Option ) )THEN
       ReadOpacity(iEmAb) = .TRUE.
@@ -445,6 +454,7 @@ CONTAINS
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
              nMom_NES, nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
+             EquationOfStateTableName_Option = EquationOfStateTableName, &
              Verbose_Option = Verbose )
 
     ! --- Read Energy Grid ---
