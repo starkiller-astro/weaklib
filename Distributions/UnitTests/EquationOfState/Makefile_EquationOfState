@@ -1,6 +1,6 @@
-include ../../../Build/Makefile_Build
+include $(WEAKLIB_DIR)/External/Build/Makefile_Build
 
-all: wlEosPerformanceTest wlReadEquationOfStateTest
+all: wlEosPerformanceTest wlReadEquationOfStateTest wlRewriteEquationOfStateTest
 
 wlEosPerformanceTest: \
 	$(weaklib) wlEosPerformanceTest.o
@@ -12,6 +12,12 @@ wlReadEquationOfStateTest: \
 	$(weaklib) wlReadEquationOfStateTest.o
 	$(FLINKER) $(FLAGS) -o wlReadEquationOfStateTest_$(MACHINE) \
 	$(weaklib) wlReadEquationOfStateTest.o \
+	$(LIBRARIES)
+
+wlRewriteEquationOfStateTest: \
+	$(Weaklib_External) wlRewriteEquationOfStateTest.o
+	$(FLINKER) $(FLAGS) -o wlRewriteEquationOfStateTest_$(MACHINE) \
+	$(Weaklib_External) wlRewriteEquationOfStateTest.o \
 	$(LIBRARIES)
 
 clean:
