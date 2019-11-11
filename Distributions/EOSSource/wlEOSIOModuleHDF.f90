@@ -26,14 +26,22 @@ MODULE wlEOSIOModuleHDF
 CONTAINS
 
 
-  SUBROUTINE WriteEquationOfStateTableHDF( EOSTable )
+  SUBROUTINE WriteEquationOfStateTableHDF( EOSTable, EOSTableName_Option )
 
-    TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
+    TYPE(EquationOfStateTableType), INTENT(inout)        :: EOSTable
+    CHARACTER(len=*),               INTENT(in), OPTIONAL :: EOSTableName_Option
     
-    INTEGER(HID_T)                                :: file_id
-    INTEGER(HID_T)                                :: group_id
-    
-    CALL OpenFileHDF( "EquationOfStateTable.h5", .true., file_id )
+    INTEGER(HID_T) :: file_id
+    INTEGER(HID_T) :: group_id
+    CHARACTER(256) :: EOSTableName
+ 
+    IF( PRESENT( EOSTableName_Option ) )THEN
+       EOSTableName = TRIM( EOSTableName_Option )
+    ELSE
+       EOSTableName = 'EquationOfStateTable.h5'
+    END IF
+ 
+    CALL OpenFileHDF( EOSTableName, .true., file_id )
 
     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
     CALL WriteThermoStateHDF( EOSTable % TS, group_id )
