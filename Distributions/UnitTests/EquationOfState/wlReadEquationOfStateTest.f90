@@ -12,7 +12,7 @@ PROGRAM wlReadEquationOfStateTest
 
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "EquationOfStateTable.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "wl-EOS-SFHo-15-25-50.h5" )
 
   WRITE (*,*) 'EOSTable % nPoints:', EOSTable % nPoints
   WRITE (*,*) 'EOSTable % nVariables:', EOSTable % nVariables
@@ -36,13 +36,13 @@ PROGRAM wlReadEquationOfStateTest
   END DO
 
   WRITE(*,*) "Metadata!" 
-  WRITE(*,*) "Table IDTag", EOSTable % MD % IDTag
-  WRITE(*,*) "Table Rez", EOSTable % MD % TableResolution
-  WRITE(*,*) "Table Nuc EOS Paper", EOSTable % MD % NucEOSLink
-  WRITE(*,*) "Table Lepton EOS Paper", EOSTable % MD % LeptonEOSLink
-  WRITE(*,*) "Table Source Link", EOSTable % MD % SourceLink
-  WRITE(*,*) "WeakLib Revision", EOSTable % MD % WLRevision
-  WRITE(*,*) "WeakLib Table Link", EOSTable % MD % TableLink
+  WRITE(*,*) "Table IDTag: ", EOSTable % MD % IDTag
+  WRITE(*,*) "Table Rez: ", EOSTable % MD % TableResolution
+  WRITE(*,*) "Table Nuc EOS Paper: ", EOSTable % MD % NucEOSLink
+  WRITE(*,*) "Table Lepton EOS Paper: ", EOSTable % MD % LeptonEOSLink
+  WRITE(*,*) "Table Source Link: ", EOSTable % MD % SourceLink
+  WRITE(*,*) "WeakLib Revision: ", EOSTable % MD % WLRevision
+  WRITE(*,*) "WeakLib Table Link: ", EOSTable % MD % TableLink
 
   CALL DeAllocateEquationOfStateTable( EOSTable )
 
