@@ -477,7 +477,7 @@ CONTAINS
 
 
   SUBROUTINE EOSTableQuery &
-    ( rho, T, Ye, LogInterp, TS, DV, Interpolants )
+    ( rho, T, Ye, LogInterp, TS, DV, Interpolants, Verbose_Option )
 
     INTEGER                                   :: i, j
     REAL(dp), DIMENSION(:),       INTENT(in)  :: rho
@@ -487,16 +487,27 @@ CONTAINS
     TYPE(ThermoStateType),        INTENT(in)  :: TS
     TYPE(DependentVariablesType), INTENT(in)  :: DV
     REAL(dp), DIMENSION(:,:),     INTENT(out) :: Interpolants
+    LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
+
+    LOGICAL        :: Verbose
+
+    IF( PRESENT( Verbose_Option ) )THEN
+      Verbose = Verbose_Option
+    ELSE
+      Verbose = .FALSE.
+    END IF
 
     CALL LogInterpolateAllVariables &
            ( rho, T, Ye, LogInterp, TS, DV, Interpolants )
 
-    DO i = 1, SIZE(rho)
-      WRITE(*,*) 'Rho=', rho(i), 'T=', T(i), 'Ye=', Ye(i)
-      DO j = 1, DV % nVariables
-        WRITE(*,*) DV % Names(j), Interpolants(i,j)
+    IF( Verbose )THEN
+      DO i = 1, SIZE(rho)
+        WRITE(*,*) 'Rho=', rho(i), 'T=', T(i), 'Ye=', Ye(i)
+        DO j = 1, DV % nVariables
+          WRITE(*,*) DV % Names(j), Interpolants(i,j)
+        END DO
       END DO
-    END DO
+    END IF
 
   END SUBROUTINE EOSTableQuery
 
