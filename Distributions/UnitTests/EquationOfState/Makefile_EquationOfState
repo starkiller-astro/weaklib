@@ -1,11 +1,17 @@
 include ../../../Build/Makefile_Build
 
-all: wlEosPerformanceTest
+all: wlEosPerformanceTest wlReadEquationOfStateTest
 
 wlEosPerformanceTest: \
 	$(weaklib) wlEosPerformanceTest.o
 	$(FLINKER) $(FLAGS) -o wlEosPerformanceTest_$(MACHINE) \
 	$(weaklib) wlEosPerformanceTest.o \
+	$(LIBRARIES)
+
+wlReadEquationOfStateTest: \
+	$(weaklib) wlReadEquationOfStateTest.o
+	$(FLINKER) $(FLAGS) -o wlReadEquationOfStateTest_$(MACHINE) \
+	$(weaklib) wlReadEquationOfStateTest.o \
 	$(LIBRARIES)
 
 clean:
