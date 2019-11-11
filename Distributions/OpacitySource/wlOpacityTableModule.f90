@@ -94,7 +94,8 @@ CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
     ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
-      nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, Verbose_Option )
+      nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
+      EquationOfStateTableName_Option, Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
     INTEGER,                INTENT(in)           :: nOpac_EmAb
@@ -103,10 +104,18 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nOpac_Pair, nMom_Pair
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
+    CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
-    LOGICAL :: Verbose
-    INTEGER :: nPointsTemp(5)
+    LOGICAL        :: Verbose
+    CHARACTER(256) :: EquationOfStateTableName
+    INTEGER        :: nPointsTemp(5)
+
+    IF( PRESENT( EquationOfStateTableName_Option ) )THEN
+       EquationOfStateTableName = TRIM( EquationOfStateTableName_Option )
+    ELSE
+       EquationOfStateTableName = 'EquationOfStateTable.h5'
+    END IF
 
     IF( PRESENT( Verbose_Option ) )THEN
       Verbose = Verbose_Option
@@ -114,16 +123,16 @@ CONTAINS
       Verbose = .FALSE.
     END IF
 
-    IF( Verbose )THEN
+!    IF( Verbose )THEN
       WRITE(*,*)
       WRITE(*,'(A4,A)') '', 'AllocateOpacityTable'
       WRITE(*,*)
       WRITE(*,'(A6,A9,A)') &
-        '', 'Reading: ', TRIM( 'EquationOfStateTable.h5' )
-    END IF
+        '', 'Reading: ', TRIM( EquationOfStateTableName )
+!    END IF
 
     CALL ReadEquationOfStateTableHDF &
-           ( OpTab % EOSTable, "EquationOfStateTable.h5" )
+           ( OpTab % EOSTable, TRIM( EquationOfStateTableName ) )
 
     OpTab % nOpacities_EmAb = nOpac_EmAb
     OpTab % nOpacities_Iso  = nOpac_Iso
