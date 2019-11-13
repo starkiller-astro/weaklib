@@ -16,6 +16,7 @@
 *.h5
 
 # compiled code
+*.a
 *.o
 *.mod
 
