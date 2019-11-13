@@ -1,0 +1,59 @@
+# name of the library -- make sure it is in the object directory
+LIBNAME = libweaklib.a
+LIBDIR = ../../../object
+INCDIR = ../../../include
+
+# what the makefile should do -- this is the default thing to do
+.PHONY: default
+default: $(LIBNAME)
+
+# Import site specific information.
+# At setup time, this file will exist in the local library directory.
+include ../../../Makefile.h
+
+# Import thornado Makefiles
+WEAKLIB_DIR = ../../
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_GPU
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Defines
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+
+# BUILDFLAG can be passed to the Makefile to choose specific
+# compilation flags (one of OPT,TEST,DEBUG).
+ifdef BUILDFLAG
+  FFLAGS = $(FFLAGS_$(BUILDFLAG))
+else
+  FFLAGS = $(FFLAGS_OPT)
+endif
+FFLAGS += $(FFLAGS_HDF5)
+ifeq ($(USE_GPU),TRUE)
+  FFLAGS += $(FFLAGS_CUDA)
+endif
+ifeq ($(USE_OACC),TRUE)
+  FFLAGS += $(FFLAGS_OACC)
+endif
+ifeq ($(USE_OMP_OL),TRUE)
+  FFLAGS += $(FFLAGS_OMP_OL)
+endif
+
+# command for generating a library
+MKLIB = ar -r
+
+OBJS = \
+       $(weaklib)
+
+$(LIBNAME): $(OBJS)
+	$(MKLIB) $(LIBNAME) $(OBJS)
+	cp $(LIBNAME) $(LIBDIR)
+	cp *.mod $(INCDIR)
+
+.SUFFIXES: .f90 .F90
+%.o %.mod : %.f90
+	$(FCOMP) $(FFLAGS) $(f90FLAGS) $(DEFINES) $< -o $@
+%.o %.mod : %.F90
+	$(FCOMP) $(FFLAGS) $(F90FLAGS) $(DEFINES) $< -o $@
+
+.PHONY: clean
+clean:
+	rm -f $(LIBNAME) $(LIBDIR)/$(LIBNAME) *.mod $(INCDIR)/*.mod *.o

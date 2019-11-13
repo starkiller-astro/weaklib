@@ -1,0 +1,25 @@
+ifeq ($(USE_OACC),TRUE)
+   USE_GPU = TRUE
+else ifeq ($(USE_OMP_OL),TRUE)
+   USE_GPU = TRUE
+endif
+
+USE_GPU ?= FALSE
+ifeq ($(USE_GPU),TRUE)
+
+   USE_OMP   ?= FALSE
+
+   USE_OACC  ?= FALSE
+   ifeq ($(USE_OACC),TRUE)
+      USE_OMP_OL ?= FALSE
+   else
+      USE_OMP_OL ?= TRUE
+   endif
+
+else
+
+   USE_OMP    ?= FALSE
+   USE_OACC   ?= FALSE
+   USE_OMP_OL ?= FALSE
+
+endif

@@ -1,30 +1,6 @@
-ifeq ($(USE_OACC),TRUE)
-   USE_GPU = TRUE
-else ifeq ($(USE_OMP_OL),TRUE)
-   USE_GPU = TRUE
-endif
-
-USE_GPU ?= FALSE
-ifeq ($(USE_GPU),TRUE)
-
-   USE_OMP   ?= FALSE
-
-   USE_OACC  ?= FALSE
-   ifeq ($(USE_OACC),TRUE)
-      USE_OMP_OL ?= FALSE
-   else
-      USE_OMP_OL ?= TRUE
-   endif
-
-else
-
-   USE_OMP    ?= FALSE
-   USE_OACC   ?= FALSE
-   USE_OMP_OL ?= FALSE
-
-endif
-
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_GPU
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Compilers
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Defines
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Suffixes

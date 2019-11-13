@@ -1,0 +1,15 @@
+MDEFS ?=
+PP ?= -D
+
+ifeq ($(USE_GPU),TRUE)
+   DEFINES      += $(MDEFS)$(PP)WEAKLIB_GPU
+   ifeq ($(USE_OACC),TRUE)
+      DEFINES   += $(MDEFS)$(PP)WEAKLIB_OACC
+   else ifeq ($(USE_OMP_OL),TRUE)
+      DEFINES   += $(MDEFS)$(PP)WEAKLIB_OMP_OL
+   endif
+else
+   ifeq ($(USE_OMP),TRUE)
+      DEFINES   += $(MDEFS)$(PP)WEAKLIB_OMP
+   endif
+endif
