@@ -14,11 +14,20 @@ PROGRAM wlReadOpacityTableTest
   TYPE(OpacityTableType) :: OpacityTable
 
   CALL InitializeHDF( )
+
   CALL ReadOpacityTableHDF &
           ( OpacityTable, &
            FileName_EmAb_Option &
-           = "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5", &
-           EquationOfStateTableName_Option = "wl-EOS-SFHo-15-25-50.h5" )
+           = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-AbEm.h5", &
+           FileName_Iso_Option &
+           = "", &
+           FileName_NES_Option &
+           = "", &
+           FileName_Pair_Option &
+           = "", &
+           EquationOfStateTableName_Option &
+           = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5" )
+
   CALL FinalizeHDF( ) 
 
   PRINT*
