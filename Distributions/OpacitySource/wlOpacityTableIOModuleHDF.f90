@@ -332,13 +332,15 @@ CONTAINS
     INTEGER(HSIZE_T)   :: datasize4d(4)
     INTEGER(HSIZE_T)   :: datasize5d(5)
 
-    IF( PRESENT( EquationOfStateTableName_Option ) )THEN
+    IF( PRESENT( EquationOfStateTableName_Option ) &
+        .AND. ( LEN( EquationOfStateTableName_Option ) > 1 ) )THEN
        EquationOfStateTableName = TRIM( EquationOfStateTableName_Option )
     ELSE
        EquationOfStateTableName = 'EquationOfStateTable.h5'
     END IF
 
-    IF( PRESENT( FileName_EmAb_Option ) )THEN
+    IF( PRESENT( FileName_EmAb_Option ) &
+        .AND. ( LEN( FileName_EmAb_Option ) > 1 ) )THEN
       ReadOpacity(iEmAb) = .TRUE.
       FileName   (iEmAb) = TRIM( FileName_EmAb_Option )
       nOpac_EmAb = 2
@@ -347,7 +349,8 @@ CONTAINS
       nOpac_EmAb = 0
     END IF
 
-    IF( PRESENT( FileName_Iso_Option ) )THEN
+    IF( PRESENT( FileName_Iso_Option ) &
+        .AND. ( LEN( FileName_Iso_Option ) > 1 ) )THEN
       ReadOpacity(iIso) = .TRUE.
       FileName   (iIso) = TRIM( FileName_Iso_Option )
       nOpac_Iso = 2
@@ -358,7 +361,8 @@ CONTAINS
       nMom_Iso  = 0
     END IF
 
-    IF( PRESENT( FileName_NES_Option ) )THEN
+    IF( PRESENT( FileName_NES_Option ) &
+        .AND. ( LEN( FileName_NES_Option ) > 1 ) )THEN
       ReadOpacity(iNES) = .TRUE.
       FileName   (iNES) = TRIM( FileName_NES_Option )
       nOpac_NES = 1
@@ -369,7 +373,8 @@ CONTAINS
       nMom_NES  = 0
     END IF
 
-    IF( PRESENT( FileName_Pair_Option ) )THEN
+    IF( PRESENT( FileName_Pair_Option ) &
+        .AND. ( LEN( FileName_Pair_Option ) > 1 ) )THEN
       ReadOpacity(iPair) = .TRUE.
       FileName   (iPair) = TRIM( FileName_Pair_Option )
       nOpac_Pair = 1
