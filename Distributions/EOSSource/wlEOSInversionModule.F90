@@ -207,14 +207,32 @@ CONTAINS
 
     IF( D < MinD .OR. D > MaxD )THEN
       Error = 01
+#if EOS_DEBUG
+      WRITE(*,*) 'ComputeTemperatureWith_DEY_Single_Guess ERROR 01'
+      WRITE(*,*) 'input D, E, Y :', D, E, Y
+      WRITE(*,*) 'Table MinD:', MinD
+      WRITE(*,*) 'Table MaxD:', MaxD
+#endif
     END IF
 
     IF( E < MinE .OR. E > MaxE )THEN
       Error = 02
+#if EOS_DEBUG
+      WRITE(*,*) 'ComputeTemperatureWith_DEY_Single_Guess ERROR 02'
+      WRITE(*,*) 'input D, E, Y :', D, E, Y
+      WRITE(*,*) 'Table MinE:', MinD
+      WRITE(*,*) 'Table MaxE:', MaxD
+#endif
     END IF
 
     IF( Y < MinY .OR. Y > MaxY )THEN
       Error = 03
+#if EOS_DEBUG
+      WRITE(*,*) 'ComputeTemperatureWith_DEY_Single_Guess ERROR 03'
+      WRITE(*,*) 'input D, E, Y :', D, E, Y
+      WRITE(*,*) 'Table MinY:', MinY
+      WRITE(*,*) 'Table MaxY:', MaxY
+#endif
     END IF
 
     IF( Error .NE. 0 )THEN
@@ -429,14 +447,32 @@ CONTAINS
 
     IF( D < MinD .OR. D > MaxD )THEN
       Error = 01
+#if EOS_DEBUG
+      WRITE(*,*) 'ComputeTemperatureWith_DEY_Single_NoGuess ERROR 01'
+      WRITE(*,*) 'input D, E, Y :', D, E, Y
+      WRITE(*,*) 'Table MinD:', MinD
+      WRITE(*,*) 'Table MaxD:', MaxD
+#endif
     END IF
 
     IF( E < MinE .OR. E > MaxE )THEN
       Error = 02
+#if EOS_DEBUG
+      WRITE(*,*) 'ComputeTemperatureWith_DEY_Single_NoGuess ERROR 02'
+      WRITE(*,*) 'input D, E, Y :', D, E, Y
+      WRITE(*,*) 'Table MinE:', MinD
+      WRITE(*,*) 'Table MaxE:', MaxD
+#endif
     END IF
 
     IF( Y < MinY .OR. Y > MaxY )THEN
       Error = 03
+#if EOS_DEBUG
+      WRITE(*,*) 'ComputeTemperatureWith_DEY_Single_NoGuess ERROR 03'
+      WRITE(*,*) 'input D, E, Y :', D, E, Y
+      WRITE(*,*) 'Table MinY:', MinY
+      WRITE(*,*) 'Table MaxY:', MaxY
+#endif
     END IF
 
     IF( Error .NE. 0 )THEN
