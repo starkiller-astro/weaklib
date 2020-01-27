@@ -123,13 +123,13 @@ CONTAINS
       Verbose = .FALSE.
     END IF
 
-!    IF( Verbose )THEN
+    IF( Verbose )THEN
       WRITE(*,*)
       WRITE(*,'(A4,A)') '', 'AllocateOpacityTable'
       WRITE(*,*)
       WRITE(*,'(A6,A9,A)') &
         '', 'Reading: ', TRIM( EquationOfStateTableName )
-!    END IF
+    END IF
 
     CALL ReadEquationOfStateTableHDF &
            ( OpTab % EOSTable, TRIM( EquationOfStateTableName ) )
