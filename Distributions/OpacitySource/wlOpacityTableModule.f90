@@ -95,7 +95,7 @@ CONTAINS
   SUBROUTINE AllocateOpacityTable &
     ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
       nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
-      EquationOfStateTableName_Option, Verbose_Option )
+      EquationOfStateTableName_Option, OpacityThermoState_Option, Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
     INTEGER,                INTENT(in)           :: nOpac_EmAb
@@ -105,11 +105,12 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
+    TYPE(ThermoStateType),  INTENT(in), OPTIONAL :: OpacityThermoState_Option
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
-    LOGICAL        :: Verbose
-    CHARACTER(256) :: EquationOfStateTableName
-    INTEGER        :: nPointsTemp(5)
+    LOGICAL               :: Verbose
+    CHARACTER(256)        :: EquationOfStateTableName
+    INTEGER               :: nPointsTemp(5)
 
     IF( PRESENT( EquationOfStateTableName_Option ) )THEN
        EquationOfStateTableName = TRIM( EquationOfStateTableName_Option )
@@ -147,12 +148,17 @@ CONTAINS
 
     CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
     CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
-    CALL AllocateThermoState( OpTab % TS, OpTab % EOSTable % TS % nPoints )
 
-    CALL CopyThermoState( OpTab % TS, OpTab % EOSTable % TS )
+    IF( PRESENT( OpacityThermoState_Option ) )THEN
+      CALL AllocateThermoState( OpTab % TS, OpacityThermoState_Option % nPoints )
+      CALL CopyThermoState( OpTab % TS, OpacityThermoState_Option )
+    ELSE
+      CALL AllocateThermoState( OpTab % TS, OpTab % EOSTable % TS % nPoints )
+      CALL CopyThermoState( OpTab % TS, OpTab % EOSTable % TS )
+    END IF
 
-    ASSOCIATE( nPoints => OpTab % EOSTable % nPoints, &
-               iT      => OpTab % EOSTable % TS % Indices % iT )
+    ASSOCIATE( nPoints => OpTab % TS % nPoints, &
+               iT      => OpTab % TS % Indices % iT )
 
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
 
