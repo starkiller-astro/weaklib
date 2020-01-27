@@ -48,7 +48,8 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityTableModule, ONLY: &
       OpacityTableType,     &
       AllocateOpacityTable, &
-      DescribeOpacityTable
+      DescribeOpacityTable, &
+      DeAllocateOpacityTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
       WriteOpacityTableHDF
   USE wlExtPhysicalConstantsModule, ONLY: kMeV
@@ -62,15 +63,18 @@ PROGRAM wlCreateOpacityTable
 
 IMPLICIT NONE
 
-   INTEGER*4 today(3), now(3)    
+   INTEGER*4 today(3), now(3)
+
+   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
+ 
    TYPE(OpacityTableType)  :: OpacityTable
    INTEGER                 :: nOpac_EmAb = 0  ! 2
    INTEGER                 :: nOpac_Iso = 0   ! 2
    INTEGER                 :: nMom_Iso  = 0   ! 2
-   INTEGER                 :: nOpac_NES = 1   ! 1
-   INTEGER                 :: nMom_NES  = 4   ! 4
-   INTEGER                 :: nOpac_Pair  = 0 ! 1
-   INTEGER                 :: nMom_Pair   = 0 ! 4
+   INTEGER                 :: nOpac_NES = 0   ! 1
+   INTEGER                 :: nMom_NES  = 0   ! 4
+   INTEGER                 :: nOpac_Pair  = 1 ! 1
+   INTEGER                 :: nMom_Pair   = 4 ! 4
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
@@ -108,7 +112,8 @@ IMPLICIT NONE
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
               nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
-              nPointsE, nPointsEta ) 
+              nPointsE, nPointsEta, &
+              EquationOfStateTableName_Option = EOSTableName ) 
    CALL FinalizeHDF( )
 
 ! -- Set OpacityTableTypeEmAb  
@@ -554,10 +559,10 @@ PRINT*, 'Filling OpacityTable ...'
          ( OpacityTable, "temp_Pair.h5", WriteOpacity_Pair_Option = .true. )
     CALL FinalizeHDF( )
   END IF
-
  
   WRITE (*,*) "HDF write successful"
 
+  CALL DeAllocateOpacityTable( OpacityTable )
   !=============================================================
 
   CALL itime(now)
