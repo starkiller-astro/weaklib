@@ -68,13 +68,13 @@ IMPLICIT NONE
    CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
  
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpac_EmAb = 0  ! 2
+   INTEGER                 :: nOpac_EmAb = 2  ! 2
    INTEGER                 :: nOpac_Iso = 0   ! 2
    INTEGER                 :: nMom_Iso  = 0   ! 2
    INTEGER                 :: nOpac_NES = 0   ! 1
    INTEGER                 :: nMom_NES  = 0   ! 4
-   INTEGER                 :: nOpac_Pair  = 1 ! 1
-   INTEGER                 :: nMom_Pair   = 4 ! 4
+   INTEGER                 :: nOpac_Pair  = 0 ! 1
+   INTEGER                 :: nMom_Pair   = 0 ! 4
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
@@ -243,9 +243,9 @@ PRINT*, "Making Eta Grid ... "
 
 PRINT*, 'Filling OpacityTable ...'
    ASSOCIATE(  & 
-       iRho    => OpacityTable % EOSTable % TS % Indices % iRho , &
-       iT      => OpacityTable % EOSTable % TS % Indices % iT   , &
-       iYe     => OpacityTable % EOSTable % TS % Indices % iYe  , &
+       iRho    => OpacityTable % TS % Indices % iRho , &
+       iT      => OpacityTable % TS % Indices % iT   , &
+       iYe     => OpacityTable % TS % Indices % iYe  , &
        Indices => OpacityTable % EOSTable % DV % Indices        , &
        DVOffs  => OpacityTable % EOSTable % DV % Offsets        , &
        DVar    => OpacityTable % EOSTable % DV % Variables  )
@@ -256,15 +256,15 @@ PRINT*, 'Filling OpacityTable ...'
 
    DO l_ye = 1, OpacityTable % nPointsTS(iYe)
    
-     ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
+     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
 
      DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-       T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+       T = OpacityTable % TS % States (iT) % Values (k_t)
 
        DO j_rho = 1, OpacityTable % nPointsTS(iRho)
 
-         rho = OpacityTable % EOSTable % TS % States (iRho) % &
+         rho = OpacityTable % TS % States (iRho) % &
                Values (j_rho)
 
          chem_e = 10**DVar(Indices % iElectronChemicalPotential) % &
@@ -387,7 +387,7 @@ PRINT*, 'Filling OpacityTable ...'
       
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-          T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+          T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
 
           CALL scatergn_weaklib &
@@ -437,7 +437,7 @@ PRINT*, 'Filling OpacityTable ...'
       
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-          T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+          T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
           chem_e = TMeV * eta
 
