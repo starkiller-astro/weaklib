@@ -3,36 +3,30 @@ PROGRAM wlCreateOpacityTable
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
 !                  U. Tennesee, Knoxville
+!                  rchu@vols.utk.edu
 !
 !    Created:      10/23/18
 !    WeakLib ver:  
 !
 !    Purpose:
-!      Create table for opacity containing EoS table with BoltzTran.
+!      Create table for neutrino opacities in Bruenn85.
 !      Existing EoS table is readin. 
 !      Function were created to fill OpacityTable and Chimera
 !      routines were called.
 ! 
-!    CONTAINS:
-!    
-!    Modules used:
-!
-!---------------------------------------------------------------------
-!  NOTE: Only Type A interaction applied. Type B and Type C 
-!        interaction needs to be added for future use.
 !---------------------------------------------------------------------
 !                         Three Opacity Type
 !
-! OpacityType A for  ABEM( rho, T, Ye, E)
+! OpacityType A for emission and absorption EmAb( rho, T, Ye, E)
 !
 !       e- + p/A <--> v_e + n/A*
 !
-! OpacityType B for  ISO( e, rho, T, Ye, l)
+! OpacityType B for isoenergetic scattering Iso( e, rho, T, Ye, l)
 !                        
 !       v_i/anti(v_i) + A --> v_i/anti(v_i) + A 
 !       v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
 !
-! OpacityType C for  NISO( e_in, e_out, rho, T, Ye, l)
+! OpacityType C for non-iso scattering NES/Pair( e_in, e_out, rho, T, Ye, l)
 !
 !       e+ + e-  <--> v_i + anti(v_i);   i=e, muon, tau
 !       N + N   <--> N + N + v_i + anti(v_i)
