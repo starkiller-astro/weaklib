@@ -59,16 +59,30 @@ IMPLICIT NONE
 
    INTEGER*4 today(3), now(3)
 
+!---------------------------------------------------------------------
+! Set Eos table
+!---------------------------------------------------------------------
    CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
  
+!---------------------------------------------------------------------
+! Set neutrino interaction type
+!---------------------------------------------------------------------
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpac_EmAb = 2  ! 2
-   INTEGER                 :: nOpac_Iso = 0   ! 2
-   INTEGER                 :: nMom_Iso  = 0   ! 2
-   INTEGER                 :: nOpac_NES = 0   ! 1
-   INTEGER                 :: nMom_NES  = 0   ! 4
-   INTEGER                 :: nOpac_Pair  = 0 ! 1
-   INTEGER                 :: nMom_Pair   = 0 ! 4
+   INTEGER                 :: nOpac_EmAb = 2  ! 2 for electron type
+
+   INTEGER                 :: nOpac_Iso = 0   ! 2 for electron type
+                                              !   ( flavor identical )
+   INTEGER                 :: nMom_Iso  = 0   ! 2 for 0th & 1st order 
+                                              !   legendre coff.
+
+   INTEGER                 :: nOpac_NES = 0   ! 1 ( either 0 or 1 )
+   INTEGER                 :: nMom_NES  = 0   ! 4 for H1l, H2l
+                                              !   ( either 0 or 4 )
+
+   INTEGER                 :: nOpac_Pair  = 0 ! 1 ( either 0 or 1 )
+   INTEGER                 :: nMom_Pair   = 0 ! 4 for J1l, J2l
+                                              !   ( either 0 or 4 )
+
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
@@ -93,7 +107,6 @@ IMPLICIT NONE
    REAL(dp), DIMENSION(nPointsE,2) :: cok 
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
    REAL(dp)                :: j0i, j0ii, j1i, j1ii
-   REAL(dp)                :: buffer1, buffer2
 
    CALL idate(today)
    CALL itime(now)
