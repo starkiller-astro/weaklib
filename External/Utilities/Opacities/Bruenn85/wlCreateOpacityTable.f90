@@ -26,7 +26,7 @@ PROGRAM wlCreateOpacityTable
 !       v_i/anti(v_i) + A --> v_i/anti(v_i) + A 
 !       v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
 !
-! OpacityType C for non-iso scattering NES/Pair( e_in, e_out, rho, T, Ye, l)
+! OpacityType C for non-iso scattering NES/Pair( e_in, e_out, l, T, eta)
 !
 !       e+ + e-  <--> v_i + anti(v_i);   i=e, muon, tau
 !       N + N   <--> N + N + v_i + anti(v_i)
