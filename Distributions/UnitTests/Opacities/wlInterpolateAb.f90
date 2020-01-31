@@ -138,10 +138,10 @@ PROGRAM wlInterpolateAb
   CALL LogInterpolateSingleVariable_1D3D_Custom &
          ( LOG10(Energy), LOG10(Inte_rho),      &
            LOG10(Inte_T), Inte_Ye,              &
-           LOG10(OpacityTable % EnergyGrid % Values),                &
-           LOG10(OpacityTable % TS % States(iRho) % Values), &
-           LOG10(OpacityTable % TS % States(iT) % Values), &
-           OpacityTable % TS % States(iYe) % Values,        &
+           LOG10(OpacityTable % EnergyGrid % Values),         &
+           LOG10(OpacityTable % TS % States(iRho) % Values),  &
+           LOG10(OpacityTable % TS % States(iT) % Values),    &
+           OpacityTable % TS % States(iYe) % Values,          &
            Offset_Em(iNu_e_bar), TableEm2, InterpolantEm2 )  
 
   END ASSOCIATE ! Table
