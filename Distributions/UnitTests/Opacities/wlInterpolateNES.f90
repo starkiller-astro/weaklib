@@ -4,6 +4,8 @@ PROGRAM wlInterpolateNES
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable, &
     LogInterpolateSingleVariable_2D2D_Custom
+  USE wlOpacityFieldsModule, ONLY: &
+    iHi0, iHii0, iHi1, iHii1
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -29,10 +31,10 @@ PROGRAM wlInterpolateNES
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER :: Inte_nPointE = 40
-  REAL(dp)           :: Inte_Emin = 1.0d-1
-  REAL(dp)           :: Inte_Emax = 2.9d02
-  TYPE(GridType)     :: Inte_E
+  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  REAL(dp)               :: Inte_Emin = 1.0d-1
+  REAL(dp)               :: Inte_Emax = 2.9d02
+  TYPE(GridType)         :: Inte_E
 
   !-------- variables for reading opacity table -----------------------------
   TYPE(OpacityTableType) :: OpacityTable
@@ -40,11 +42,11 @@ PROGRAM wlInterpolateNES
   REAL(dp), DIMENSION(2) :: Offset_NES
 
   !-------- variables for reading parameters data ---------------------------
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_r, Inte_rho, Inte_T, &
-                                         Inte_Ye, Inte_cmpe, database
-  CHARACTER(LEN=100)                  :: Format1, Format2, Format3
-  CHARACTER(LEN=30)                   :: a
-  INTEGER                             :: i, datasize
+  REAL(dp), DIMENSION(:), ALLOCATABLE     :: Inte_r, Inte_rho, Inte_T, &
+                                             Inte_Ye, Inte_cmpe, database
+  CHARACTER(LEN=100)                      :: Format1, Format2, Format3
+  CHARACTER(LEN=30)                       :: a
+  INTEGER                                 :: i, datasize, icmpe
 
   !-------- variables for output -------------------------------------------
   INTEGER(HID_T)                          :: file_id, group_id
@@ -144,49 +146,58 @@ PROGRAM wlInterpolateNES
   !    read in the opacity table
   !------------------------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_NES_Option = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-NES.h5", &
-       EquationOfStateTableName_Option &
-       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5", &
+  CALL ReadOpacityTableHDF( OpacityTable,               &
+       FileName_NES_Option                              &
+       = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-NES.h5", &
+       EquationOfStateTableName_Option                  &
+       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5",    &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
+  icmpe = OpacityTable % EOSTable % DV % Indices % iElectronChemicalPotential
   Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:2)
-  Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
+  Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(icmpe)
 
   !----------------------------------------------------------------------------
   !   do interpolation
   !----------------------------------------------------------------------------
   ASSOCIATE &
-  ( TableNES_H0i  => OpacityTable % Scat_NES % Kernel(1) % Values(:,:,1,:,:), &
-    TableNES_H0ii => OpacityTable % Scat_NES % Kernel(1) % Values(:,:,2,:,:), &
-        Tablecmpe => OpacityTable % EOSTable % DV % Variables(4) % Values, &
-        Energy    => Inte_E  % Values )
+  ( TableNES_H0i  => OpacityTable % Scat_NES % Kernel(1) % Values(:,:,iHi0,:,:),  &
+    TableNES_H0ii => OpacityTable % Scat_NES % Kernel(1) % Values(:,:,iHii0,:,:), &
+    Tablecmpe     => OpacityTable % EOSTable % DV % Variables(icmpe) % Values,    &
+    Energy        => Inte_E  % Values,                              &
+    iEOS_Rho      => OpacityTable % EOSTable % TS % Indices % iRho, &
+    iEOS_T        => OpacityTable % EOSTable % TS % Indices % iT,   &
+    iEOS_Ye       => OpacityTable % EOSTable % TS % Indices % iYe,  &
+    iRho          => OpacityTable % TS % Indices % iRho, &
+    iT            => OpacityTable % TS % Indices % iT,   &
+    iYe           => OpacityTable % TS % Indices % iYe,  &
+    LogInterp     => OpacityTable % EOSTable % TS % LogInterp )
 
-  CALL LogInterpolateSingleVariable &
+  CALL LogInterpolateSingleVariable   &
          ( Inte_rho, Inte_T, Inte_Ye, &
-           OpacityTable % EOSTable % TS % States(1) % Values, &
-           OpacityTable % EOSTable % TS % States(2) % Values, &
-           OpacityTable % EOSTable % TS % States(3) % Values, &
-           (/1,1,0/), Offset_cmpe, &
-           Tablecmpe, &
+           OpacityTable % EOSTable % TS % States(iEOS_Rho) % Values, &
+           OpacityTable % EOSTable % TS % States(iEOS_T) % Values,   &
+           OpacityTable % EOSTable % TS % States(iEOS_Ye) % Values,  &
+           LogInterp, Offset_cmpe,    &
+           Tablecmpe,                 &
            Inte_cmpe )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
          ( LOG10(Energy), LOG10(Inte_T),        &
            LOG10(Inte_cmpe / (Inte_T * kMev)),  &
-           LOG10(OpacityTable % EnergyGrid % Values),                &
-           LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
-           LOG10(OpacityTable % EtaGrid % Values),                   &
-           Offset_NES(1), TableNES_H0i, InterH0i )
+           LOG10(OpacityTable % EnergyGrid % Values),      &
+           LOG10(OpacityTable % TS % States(iT) % Values), &
+           LOG10(OpacityTable % EtaGrid % Values),         &
+           Offset_NES(iHi0), TableNES_H0i, InterH0i )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
          ( LOG10(Energy), LOG10(Inte_T),        &
            LOG10(Inte_cmpe / (Inte_T * kMev)),  &
-           LOG10(OpacityTable % EnergyGrid % Values),                &
-           LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
-           LOG10(OpacityTable % EtaGrid % Values),                   &
-           Offset_NES(2), TableNES_H0ii, InterH0ii )
+           LOG10(OpacityTable % EnergyGrid % Values),      &
+           LOG10(OpacityTable % TS % States(iT) % Values), &
+           LOG10(OpacityTable % EtaGrid % Values),         &
+           Offset_NES(iHii0), TableNES_H0ii, InterH0ii )
 
   InterpolantNES_nue      = cparpe  * InterH0i + cparne  * InterH0ii
   InterpolantNES_nuebar   = cparne  * InterH0i + cparpe  * InterH0ii
@@ -198,16 +209,16 @@ PROGRAM wlInterpolateNES
     DO ii = 1, Inte_nPointE
       DO jj = ii+1, Inte_nPointE
 
-        InterpolantNES_nue(jj,ii,i)     &
-          = InterpolantNES_nue(ii,jj,i) &
+        InterpolantNES_nue(jj,ii,i)          &
+          = InterpolantNES_nue(ii,jj,i)      &
             * EXP( ( Energy(ii) - Energy(jj) ) / ( Inte_T(i) * kMeV) )
 
-        InterpolantNES_nuebar(jj,ii,i)     &
-          = InterpolantNES_nuebar(ii,jj,i) &
+        InterpolantNES_nuebar(jj,ii,i)       &
+          = InterpolantNES_nuebar(ii,jj,i)   &
             * EXP( ( Energy(ii) - Energy(jj) ) / ( Inte_T(i) * kMeV) ) 
 
-        InterpolantNES_mutau(jj,ii,i)     &
-          = InterpolantNES_mutau(ii,jj,i) &
+        InterpolantNES_mutau(jj,ii,i)        &
+          = InterpolantNES_mutau(ii,jj,i)    &
             * EXP( ( Energy(ii) - Energy(jj) ) / ( Inte_T(i) * kMeV) )
 
         InterpolantNES_mutaubar(jj,ii,i)     &
