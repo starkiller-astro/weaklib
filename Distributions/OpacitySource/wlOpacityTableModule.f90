@@ -144,15 +144,16 @@ CONTAINS
     OpTab % nMoments_Pair   = nMom_Pair
     OpTab % nPointsE        = nPointsE
     OpTab % nPointsEta      = nPointsEta
-    OpTab % nPointsTS       = OpTab % EOSTable % TS % nPoints
 
     CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
     CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
 
     IF( PRESENT( OpacityThermoState_Option ) )THEN
+      OpTab % nPointsTS       = OpacityThermoState_Option % nPoints
       CALL AllocateThermoState( OpTab % TS, OpacityThermoState_Option % nPoints )
       CALL CopyThermoState( OpTab % TS, OpacityThermoState_Option )
     ELSE
+      OpTab % nPointsTS       = OpTab % EOSTable % TS % nPoints
       CALL AllocateThermoState( OpTab % TS, OpTab % EOSTable % TS % nPoints )
       CALL CopyThermoState( OpTab % TS, OpTab % EOSTable % TS )
     END IF
