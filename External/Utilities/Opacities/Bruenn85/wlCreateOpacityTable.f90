@@ -21,7 +21,7 @@ PROGRAM wlCreateOpacityTable
 !
 !       e- + p/A <--> v_e + n/A*
 !
-! OpacityType B for isoenergetic scattering Iso( e, rho, T, Ye, l)
+! OpacityType B for isoenergetic scattering Iso( e, l, rho, T, Ye )
 !                        
 !       v_i/anti(v_i) + A --> v_i/anti(v_i) + A 
 !       v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
