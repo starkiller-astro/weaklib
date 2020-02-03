@@ -235,6 +235,7 @@ CONTAINS
 
     INTEGER(HSIZE_T) :: datasize1d(1)
     INTEGER(HSIZE_T) :: datasize4d(4)
+    INTEGER :: ii
 
     datasize1d = EmAb % nOpacities
     CALL WriteHDF &
@@ -245,13 +246,13 @@ CONTAINS
 
     datasize4d = EmAb % nPoints
 
-    CALL WriteHDF &
-           ( TRIM( EmAb % Names(1) ), &
-             EmAb % Opacity(1) % Values(:,:,:,:), group_id, datasize4d )
+    DO ii = 1, EmAb % nOpacities
 
-    CALL WriteHDF &
-           ( TRIM( EmAb % Names(2) ), &
-             EmAb % Opacity(2) % Values(:,:,:,:), group_id, datasize4d )
+      CALL WriteHDF &
+             ( TRIM( EmAb % Names(ii) ), &
+               EmAb % Opacity(ii) % Values(:,:,:,:), group_id, datasize4d )
+
+    END DO
   
   END SUBROUTINE WriteOpacityTableHDF_EmAb
 
