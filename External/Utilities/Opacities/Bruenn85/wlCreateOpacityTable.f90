@@ -63,24 +63,26 @@ IMPLICIT NONE
 ! Set Eos table
 !---------------------------------------------------------------------
    CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
- 
+
 !---------------------------------------------------------------------
 ! Set neutrino interaction type
 !---------------------------------------------------------------------
+   CHARACTER(256)          :: WriteTableName
+
    TYPE(OpacityTableType)  :: OpacityTable
    INTEGER                 :: nOpac_EmAb = 2  ! 2 for electron type
 
-   INTEGER                 :: nOpac_Iso = 0   ! 2 for electron type
+   INTEGER                 :: nOpac_Iso  = 2  ! 2 for electron type
                                               !   ( flavor identical )
-   INTEGER                 :: nMom_Iso  = 0   ! 2 for 0th & 1st order 
+   INTEGER                 :: nMom_Iso   = 2  ! 2 for 0th & 1st order 
                                               !   legendre coff.
 
-   INTEGER                 :: nOpac_NES = 0   ! 1 ( either 0 or 1 )
-   INTEGER                 :: nMom_NES  = 0   ! 4 for H1l, H2l
+   INTEGER                 :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
+   INTEGER                 :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER                 :: nOpac_Pair  = 0 ! 1 ( either 0 or 1 )
-   INTEGER                 :: nMom_Pair   = 0 ! 4 for J1l, J2l
+   INTEGER                 :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
+   INTEGER                 :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
 !---------------------------------------------------------------------
@@ -93,13 +95,13 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eta grid limits
 !---------------------------------------------------------------------
-   INTEGER                 :: nPointsEta = 60  ! NES: 60      Pair: 50
-   REAL(dp), PARAMETER     :: Etamin = 1.0d-3  ! NES: 1.0d-3  Pair: 1.0d-2
+   INTEGER                 :: nPointsEta = 60
+   REAL(dp), PARAMETER     :: Etamin = 1.0d-3
    REAL(dp), PARAMETER     :: Etamax = 2.5d03
 
    ! --- other inner variables
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, &
-                              t_m, i_quad, i_eta, i_ep
+                              t_m, i_eta, i_ep, stringlength
    REAL(dp)                :: energy, rho, T, TMeV, ye, Z, A, &
                               chem_e, chem_n, chem_p, xheavy, xn, &
                               xp, xhe, bb, eta, minvar 
@@ -114,6 +116,14 @@ IMPLICIT NONE
 
    10000 format ( ' Date ', i2.2, '/', i2.2, '/', i4.4, '; Time ',&
      &         i2.2, ':', i2.2, ':', i2.2 )
+
+! -- Set Write-Out FileName
+   stringlength = LEN(TRIM(EOSTableName))
+   WRITE(WriteTableName,'(A,A,A,A,I2,A)') &
+     EOSTableName(1:3),'Op-',EOSTableName(8:stringlength-3),'-E',nPointsE,&
+     '-B85'
+   stringlength = len(TRIM(WriteTableName))
+
 
    CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
@@ -536,34 +546,38 @@ PRINT*, 'Filling OpacityTable ...'
 ! -- write into hdf5 file
 
   IF( nOpac_EmAb > 0 ) THEN
+    WriteTableName(stringlength+1:stringlength+8) = '-EmAb.h5'
     CALL InitializeHDF( )
-    WRITE(*,*) 'Write EmAb data into file temp_EmAb.h5 '
+    WRITE(*,*) 'Write EmAb data into file ', TRIM(WriteTableName)
     CALL WriteOpacityTableHDF &
-         ( OpacityTable, "temp_EmAb.h5", WriteOpacity_EmAb_Option = .true. )
+         ( OpacityTable, TRIM(WriteTableName), WriteOpacity_EmAb_Option = .true. )
     CALL FinalizeHDF( )
   END IF
 
-  IF( nOpac_Iso> 0 ) THEN
+  IF( nOpac_Iso > 0 ) THEN
+    WriteTableName(stringlength+1:stringlength+8) = '-Iso.h5 '
     CALL InitializeHDF( )
-    WRITE(*,*) 'Write Iso data into file temp_Iso.h5 '
+    WRITE(*,*) 'Write Iso data into file ', TRIM(WriteTableName)
     CALL WriteOpacityTableHDF &
-         ( OpacityTable, "temp_Iso.h5", WriteOpacity_Iso_Option = .true. )
+         ( OpacityTable, TRIM(WriteTableName), WriteOpacity_Iso_Option = .true. )
     CALL FinalizeHDF( )
   END IF
  
   IF( nOpac_NES > 0 ) THEN
+    WriteTableName(stringlength+1:stringlength+8) = '-NES.h5 '
     CALL InitializeHDF( )
-    WRITE(*,*) 'Write Iso data into file temp_NES.h5 '
+    WRITE(*,*) 'Write NES data into file ', TRIM(WriteTableName)
     CALL WriteOpacityTableHDF &
-         ( OpacityTable, "temp_NES.h5", WriteOpacity_NES_Option = .true. )
+         ( OpacityTable, TRIM(WriteTableName), WriteOpacity_NES_Option = .true. )
     CALL FinalizeHDF( )
   END IF
 
   IF( nOpac_Pair > 0 ) THEN
+    WriteTableName(stringlength+1:stringlength+8) = '-Pair.h5'
     CALL InitializeHDF( )
-    WRITE(*,*) 'Write Iso data into file temp_Pair.h5 '
+    WRITE(*,*) 'Write Pair data into file ', TRIM(WriteTableName)
     CALL WriteOpacityTableHDF &
-         ( OpacityTable, "temp_Pair.h5", WriteOpacity_Pair_Option = .true. )
+         ( OpacityTable, TRIM(WriteTableName), WriteOpacity_Pair_Option = .true. )
     CALL FinalizeHDF( )
   END IF
  
