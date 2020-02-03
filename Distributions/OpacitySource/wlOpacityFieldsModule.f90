@@ -262,12 +262,23 @@ CONTAINS
 
       DO l = 1, Opacity % nMoments
       WRITE(*,*)
-!         WRITE(*,'(A8,A16,I3.3)') &
-!           ' ', 'For Moments l = ', l
-!         WRITE(*,'(A8,A12,ES12.4E3)') &
-!           ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
-!         WRITE(*,'(A8,A12,ES12.4E3)') &
-!           ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
+         IF( Opacity % nMoments .eq. 4 )THEN
+           WRITE(*,'(A8,A16,I3.3)') &
+             ' ', 'For Moments l = ', l
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+           WRITE(*,'(A8,A12,5I4)') &
+             ' ', 'Max Value at = ', MAXLOC( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+         ELSE
+           WRITE(*,'(A8,A16,I3.3)') &
+             ' ', 'For Moments l = ', l
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
+         END IF
          WRITE(*,'(A8,A12,ES12.4E3)') &
            ' ', 'Offset    = ', Opacity % Offsets(i,l)
       END DO ! l = nMoment
