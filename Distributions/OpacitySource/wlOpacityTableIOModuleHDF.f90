@@ -38,6 +38,10 @@ MODULE wlOpacityTableIOModuleHDF
     WriteThermoStateHDF,          &
     ReadThermoStateHDF
   USE wlEquationOfStateTableModule
+  USE wlThermoStateModule, ONLY:  &
+    ThermoStateType, &
+    AllocateThermoState, &
+    DeAllocateThermoState
   USE HDF5
 
   IMPLICIT NONE
@@ -318,6 +322,7 @@ CONTAINS
     INTEGER            :: iOp
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
+    INTEGER            :: nPointsTS(3)
     INTEGER            :: nOpac_EmAb
     INTEGER            :: nOpac_Iso
     INTEGER            :: nMom_Iso
@@ -330,8 +335,11 @@ CONTAINS
     INTEGER(HID_T)     :: group_id
     INTEGER(HSIZE_T)   :: datasize1d(1)
     INTEGER(HSIZE_T)   :: datasize2d(2)
+    INTEGER(HSIZE_T)   :: datasize3d(3)
     INTEGER(HSIZE_T)   :: datasize4d(4)
     INTEGER(HSIZE_T)   :: datasize5d(5)
+
+    TYPE(ThermoStateType) :: TS
 
     IF( PRESENT( EquationOfStateTableName_Option ) &
         .AND. ( LEN( EquationOfStateTableName_Option ) > 1 ) )THEN
@@ -457,11 +465,36 @@ CONTAINS
 
     END DO
 
+    ! --- Get Number of ThermoState Points ---
+
+    DO iOp = iNES, iPair
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "ThermoState",.FALSE., file_id, group_id )
+
+        CALL ReadHDF( "Dimensions", nPointsTS, group_id, datasize3d )
+
+        CALL AllocateThermoState( TS, nPointsTS )
+
+        CALL ReadThermoStateHDF( TS, file_id )
+
+        CALL CloseFileHDF( file_id )
+
+      END IF
+
+    END DO
+
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
              nMom_NES, nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
              EquationOfStateTableName_Option = EquationOfStateTableName, &
+             OpacityThermoState_Option = TS, &
              Verbose_Option = Verbose )
+
+    CALL DeAllocateThermoState( TS )
 
     ! --- Read Energy Grid ---
 
