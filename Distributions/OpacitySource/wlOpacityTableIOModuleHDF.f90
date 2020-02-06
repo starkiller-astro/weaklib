@@ -482,6 +482,8 @@ CONTAINS
         CALL ReadThermoStateHDF( TS, file_id )
 
         CALL CloseFileHDF( file_id )
+ 
+        EXIT
 
       END IF
 
