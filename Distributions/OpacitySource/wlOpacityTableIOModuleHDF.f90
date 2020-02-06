@@ -467,7 +467,7 @@ CONTAINS
 
     ! --- Get Number of ThermoState Points ---
 
-    DO iOp = iNES, iPair
+    DO iOp = iEmAb, iPair
 
       IF( ReadOpacity(iOp) )THEN
 
