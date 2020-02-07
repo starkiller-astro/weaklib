@@ -416,6 +416,8 @@ PROGRAM wlOpacityTableResolutionTest
 
   END IF
 
+  END ASSOCIATE
+
   CALL DescribeOpacityTable( ErrorTable )
 
   IF( nOpac_EmAb > 0 ) THEN
