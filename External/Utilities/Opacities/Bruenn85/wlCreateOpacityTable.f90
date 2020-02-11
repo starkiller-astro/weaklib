@@ -153,7 +153,7 @@ IMPLICIT NONE
 
    END IF
 ! -- Set OpacityTableTypeScat Iso
-   IF( nOpac_Iso.gt. 0 ) THEN
+   IF( nOpac_Iso .gt. 0 ) THEN
 
    OpacityTable % Scat_Iso % nOpacities = nOpac_Iso
    
