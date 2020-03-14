@@ -4,6 +4,8 @@ PROGRAM wlInterpolatePair
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable, &
     LogInterpolateSingleVariable_2D2D_Custom
+  USE wlOpacityFieldsModule, ONLY: &
+    iJi0, iJii0, iJi1, iJii1
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -29,10 +31,10 @@ PROGRAM wlInterpolatePair
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER :: Inte_nPointE = 40
-  REAL(dp)           :: Inte_Emin = 1.0d-1
-  REAL(dp)           :: Inte_Emax = 2.9d02
-  TYPE(GridType)     :: Inte_E
+  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  REAL(dp)               :: Inte_Emin = 1.0d-1
+  REAL(dp)               :: Inte_Emax = 2.9d02
+  TYPE(GridType)         :: Inte_E
 
   !-------- variables for reading opacity table
   TYPE(OpacityTableType) :: OpacityTable
@@ -40,12 +42,12 @@ PROGRAM wlInterpolatePair
   REAL(dp), DIMENSION(2) :: Offset_TP
 
   !-------- variables for reading parameters data ---------------------------
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: Inte_r, Inte_rho, Inte_T, &
-                                         Inte_Ye, Inte_TMeV, Inte_cmpe, &
-                                         database
-  CHARACTER(LEN=100)                  :: Format1, Format2, Format3
-  CHARACTER(LEN=30)                   :: a
-  INTEGER                             :: i, datasize
+  REAL(dp), DIMENSION(:), ALLOCATABLE     :: Inte_r, Inte_rho, Inte_T, &
+                                             Inte_Ye, Inte_TMeV, Inte_cmpe, &
+                                             database
+  CHARACTER(LEN=100)                      :: Format1, Format2, Format3
+  CHARACTER(LEN=30)                       :: a
+  INTEGER                                 :: i, datasize, icmpe
 
   !-------- variables for output -------------------------------------------
   INTEGER(HID_T)                          :: file_id, group_id
@@ -147,49 +149,58 @@ PROGRAM wlInterpolatePair
   !    read in the reference table
   !--------------------------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_Pair_Option = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-Pair.h5", &
-       EquationOfStateTableName_Option &
-       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5", &
+  CALL ReadOpacityTableHDF( OpacityTable,                &
+       FileName_Pair_Option                              &
+       = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-Pair.h5", &
+       EquationOfStateTableName_Option                   &
+       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5",     &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
-  
+ 
+  icmpe = OpacityTable % EOSTable % DV % Indices % iElectronChemicalPotential 
   Offset_TP   = OpacityTable % Scat_Pair  % Offsets(1,1:2)
-  Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(4)
+  Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(icmpe)
 
   !---------------------------------------------------------------------------
   !   do interpolation
   !---------------------------------------------------------------------------
   ASSOCIATE &
- ( TableTPJ0i  => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,1,:,:), &
-   TableTPJ0ii => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,2,:,:), &
-   Tablecmpe   => OpacityTable % EOSTable % DV % Variables(4) % Values, &
-   Energy      => Inte_E  % Values )
+ ( TableTPJ0i  => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,iJi0,:,:),  &
+   TableTPJ0ii => OpacityTable % Scat_Pair  % Kernel(1) % Values(:,:,iJii0,:,:), &
+   Tablecmpe   => OpacityTable % EOSTable % DV % Variables(icmpe) % Values,      &
+   Energy      => Inte_E  % Values,                              &
+   iEOS_Rho    => OpacityTable % EOSTable % TS % Indices % iRho, &
+   iEOS_T      => OpacityTable % EOSTable % TS % Indices % iT,   &
+   iEOS_Ye     => OpacityTable % EOSTable % TS % Indices % iYe,  &
+   iRho        => OpacityTable % TS % Indices % iRho, &
+   iT          => OpacityTable % TS % Indices % iT,   &
+   iYe         => OpacityTable % TS % Indices % iYe,  &
+   LogInterp   => OpacityTable % EOSTable % TS % LogInterp )
 
   CALL LogInterpolateSingleVariable &
        ( Inte_rho, Inte_T, Inte_Ye, &
-         OpacityTable % EOSTable % TS % States(1) % Values, &
-         OpacityTable % EOSTable % TS % States(2) % Values, &
-         OpacityTable % EOSTable % TS % States(3) % Values, &
-         (/1,1,0/), Offset_cmpe, &
-         Tablecmpe, &
+         OpacityTable % EOSTable % TS % States(iEOS_Rho) % Values, &
+         OpacityTable % EOSTable % TS % States(iEOS_T) % Values,   &
+         OpacityTable % EOSTable % TS % States(iEOS_Ye) % Values,  &
+         LogInterp, Offset_cmpe,    &
+         Tablecmpe,                 &
          Inte_cmpe )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
        ( LOG10(Energy), LOG10(Inte_T), &
          LOG10(Inte_cmpe / Inte_TMeV), &
-         LOG10(OpacityTable % EnergyGrid % Values), &
-         LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
-         LOG10(OpacityTable % EtaGrid % Values), &
-         Offset_TP(1)  , TableTPJ0i  , J0i )
+         LOG10(OpacityTable % EnergyGrid % Values),      &
+         LOG10(OpacityTable % TS % States(iT) % Values), &
+         LOG10(OpacityTable % EtaGrid % Values),         &
+         Offset_TP(iJi0)  , TableTPJ0i  , J0i )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
        ( LOG10(Energy), LOG10(Inte_T), &
          LOG10(Inte_cmpe / Inte_TMeV), &
-         LOG10(OpacityTable % EnergyGrid % Values), &
-         LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
-         LOG10(OpacityTable % EtaGrid % Values), &
-         Offset_TP(2)  , TableTPJ0ii  , J0ii )
+         LOG10(OpacityTable % EnergyGrid % Values),      &
+         LOG10(OpacityTable % TS % States(iT) % Values), &
+         LOG10(OpacityTable % EtaGrid % Values),         &
+         Offset_TP(iJii0)  , TableTPJ0ii  , J0ii )
 
   InterpolantPair_nue      = cparpe  * J0i + cparne  * J0ii
   InterpolantPair_nuebar   = cparne  * J0i + cparpe  * J0ii

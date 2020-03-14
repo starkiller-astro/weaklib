@@ -38,6 +38,10 @@ MODULE wlOpacityTableIOModuleHDF
     WriteThermoStateHDF,          &
     ReadThermoStateHDF
   USE wlEquationOfStateTableModule
+  USE wlThermoStateModule, ONLY:  &
+    ThermoStateType, &
+    AllocateThermoState, &
+    DeAllocateThermoState
   USE HDF5
 
   IMPLICIT NONE
@@ -235,6 +239,7 @@ CONTAINS
 
     INTEGER(HSIZE_T) :: datasize1d(1)
     INTEGER(HSIZE_T) :: datasize4d(4)
+    INTEGER :: ii
 
     datasize1d = EmAb % nOpacities
     CALL WriteHDF &
@@ -245,13 +250,13 @@ CONTAINS
 
     datasize4d = EmAb % nPoints
 
-    CALL WriteHDF &
-           ( TRIM( EmAb % Names(1) ), &
-             EmAb % Opacity(1) % Values(:,:,:,:), group_id, datasize4d )
+    DO ii = 1, EmAb % nOpacities
 
-    CALL WriteHDF &
-           ( TRIM( EmAb % Names(2) ), &
-             EmAb % Opacity(2) % Values(:,:,:,:), group_id, datasize4d )
+      CALL WriteHDF &
+             ( TRIM( EmAb % Names(ii) ), &
+               EmAb % Opacity(ii) % Values(:,:,:,:), group_id, datasize4d )
+
+    END DO
   
   END SUBROUTINE WriteOpacityTableHDF_EmAb
 
@@ -317,6 +322,7 @@ CONTAINS
     INTEGER            :: iOp
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
+    INTEGER            :: nPointsTS(3)
     INTEGER            :: nOpac_EmAb
     INTEGER            :: nOpac_Iso
     INTEGER            :: nMom_Iso
@@ -329,16 +335,21 @@ CONTAINS
     INTEGER(HID_T)     :: group_id
     INTEGER(HSIZE_T)   :: datasize1d(1)
     INTEGER(HSIZE_T)   :: datasize2d(2)
+    INTEGER(HSIZE_T)   :: datasize3d(3)
     INTEGER(HSIZE_T)   :: datasize4d(4)
     INTEGER(HSIZE_T)   :: datasize5d(5)
 
-    IF( PRESENT( EquationOfStateTableName_Option ) )THEN
+    TYPE(ThermoStateType) :: TS
+
+    IF( PRESENT( EquationOfStateTableName_Option ) &
+        .AND. ( LEN( EquationOfStateTableName_Option ) > 1 ) )THEN
        EquationOfStateTableName = TRIM( EquationOfStateTableName_Option )
     ELSE
        EquationOfStateTableName = 'EquationOfStateTable.h5'
     END IF
 
-    IF( PRESENT( FileName_EmAb_Option ) )THEN
+    IF( PRESENT( FileName_EmAb_Option ) &
+        .AND. ( LEN( FileName_EmAb_Option ) > 1 ) )THEN
       ReadOpacity(iEmAb) = .TRUE.
       FileName   (iEmAb) = TRIM( FileName_EmAb_Option )
       nOpac_EmAb = 2
@@ -347,7 +358,8 @@ CONTAINS
       nOpac_EmAb = 0
     END IF
 
-    IF( PRESENT( FileName_Iso_Option ) )THEN
+    IF( PRESENT( FileName_Iso_Option ) &
+        .AND. ( LEN( FileName_Iso_Option ) > 1 ) )THEN
       ReadOpacity(iIso) = .TRUE.
       FileName   (iIso) = TRIM( FileName_Iso_Option )
       nOpac_Iso = 2
@@ -358,7 +370,8 @@ CONTAINS
       nMom_Iso  = 0
     END IF
 
-    IF( PRESENT( FileName_NES_Option ) )THEN
+    IF( PRESENT( FileName_NES_Option ) &
+        .AND. ( LEN( FileName_NES_Option ) > 1 ) )THEN
       ReadOpacity(iNES) = .TRUE.
       FileName   (iNES) = TRIM( FileName_NES_Option )
       nOpac_NES = 1
@@ -369,7 +382,8 @@ CONTAINS
       nMom_NES  = 0
     END IF
 
-    IF( PRESENT( FileName_Pair_Option ) )THEN
+    IF( PRESENT( FileName_Pair_Option ) &
+        .AND. ( LEN( FileName_Pair_Option ) > 1 ) )THEN
       ReadOpacity(iPair) = .TRUE.
       FileName   (iPair) = TRIM( FileName_Pair_Option )
       nOpac_Pair = 1
@@ -451,11 +465,38 @@ CONTAINS
 
     END DO
 
+    ! --- Get Number of ThermoState Points ---
+
+    DO iOp = iEmAb, iPair
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "ThermoState",.FALSE., file_id, group_id )
+
+        CALL ReadHDF( "Dimensions", nPointsTS, group_id, datasize3d )
+
+        CALL AllocateThermoState( TS, nPointsTS )
+
+        CALL ReadThermoStateHDF( TS, file_id )
+
+        CALL CloseFileHDF( file_id )
+ 
+        EXIT
+
+      END IF
+
+    END DO
+
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
              nMom_NES, nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
              EquationOfStateTableName_Option = EquationOfStateTableName, &
+             OpacityThermoState_Option = TS, &
              Verbose_Option = Verbose )
+
+    CALL DeAllocateThermoState( TS )
 
     ! --- Read Energy Grid ---
 

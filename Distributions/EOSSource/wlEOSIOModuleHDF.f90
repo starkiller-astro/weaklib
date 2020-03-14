@@ -362,7 +362,8 @@ CONTAINS
     INTEGER, INTENT(in)                          :: NewLocation
 
      IF ( NewLocation == 0 ) THEN
-       WRITE (*,*) "Dependent Variable", OldDV % Names( OldLocation ), "omitted"
+       WRITE (*,*) "Dependent Variable  ", OldDV % Names( OldLocation ), &
+                   "omitted"
        RETURN
      END IF
 

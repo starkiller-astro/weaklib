@@ -3,6 +3,8 @@ PROGRAM wlInterpolateAb
   USE wlKindModule, ONLY: dp
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable_1D3D_Custom
+  USE wlOpacityFieldsModule, ONLY: &
+    iNu_e, iNu_e_bar
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -117,25 +119,30 @@ PROGRAM wlInterpolateAb
   !-----------------------------------------------------------------------
   ASSOCIATE( TableEm1  => OpacityTable % EmAb % Opacity(1) % Values, &
              TableEm2  => OpacityTable % EmAb % Opacity(2) % Values, &
-             Energy    => Inte_E % Values )
+             Energy    => Inte_E % Values, &
+             iRho      => OpacityTable % TS % Indices % iRho, &
+             iT        => OpacityTable % TS % Indices % iT,   &
+             iYe       => OpacityTable % TS % Indices % iYe   )
 
+  ! interpolate electron neutrino EmAb opacity
   CALL LogInterpolateSingleVariable_1D3D_Custom & 
          ( LOG10( Energy ), LOG10( Inte_rho ),  &
            LOG10( Inte_T ), Inte_Ye,            & 
-           LOG10( OpacityTable % EnergyGrid % Values ),                &
-           LOG10( OpacityTable % EOSTable % TS % States(1) % Values ), &
-           LOG10( OpacityTable % EOSTable % TS % States(2) % Values ), &
-           OpacityTable % EOSTable % TS % States(3) % Values,          &
-           Offset_Em(1), TableEm1, InterpolantEm1 )
+           LOG10( OpacityTable % EnergyGrid % Values ),        &
+           LOG10( OpacityTable % TS % States(iRho) % Values ), &
+           LOG10( OpacityTable % TS % States(iT) % Values ),   &
+           OpacityTable % TS % States(iYe) % Values,           &
+           Offset_Em(iNu_e), TableEm1, InterpolantEm1 )
 
+  ! interpolate electron anti-neutrino EmAb opacity
   CALL LogInterpolateSingleVariable_1D3D_Custom &
          ( LOG10(Energy), LOG10(Inte_rho),      &
            LOG10(Inte_T), Inte_Ye,              &
-           LOG10(OpacityTable % EnergyGrid % Values),                &
-           LOG10(OpacityTable % EOSTable % TS % States(1) % Values), &
-           LOG10(OpacityTable % EOSTable % TS % States(2) % Values), &
-           OpacityTable % EOSTable % TS % States(3) % Values,        &
-           Offset_Em(2), TableEm2, InterpolantEm2 )  
+           LOG10(OpacityTable % EnergyGrid % Values),         &
+           LOG10(OpacityTable % TS % States(iRho) % Values),  &
+           LOG10(OpacityTable % TS % States(iT) % Values),    &
+           OpacityTable % TS % States(iYe) % Values,          &
+           Offset_Em(iNu_e_bar), TableEm2, InterpolantEm2 )  
 
   END ASSOCIATE ! Table
 
@@ -170,7 +177,8 @@ PROGRAM wlInterpolateAb
 
   CALL CloseFileHDF( file_id )
   CALL FinalizeHDF( )
-
+ 
+  PRINT*, ''
   PRINT*, 'Result was written into ',Outfilename
   DEALLOCATE( Inte_r, Inte_rho, Inte_T, Inte_Ye, database )
   DEALLOCATE( InterpolantEm1, InterpolantEm2 )

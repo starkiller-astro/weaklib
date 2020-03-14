@@ -7,7 +7,8 @@ all: wlOpacityFieldsTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
-     wlInterpolatePair
+     wlInterpolatePair \
+     wlOpacityTableResolutionTest
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -62,6 +63,12 @@ wlInterpolatePair: \
 	$(FLINKER) $(FLAGS) -o wlInterpolatePair_$(MACHINE) \
         $(Weaklib_External) wlInterpolatePair.o \
         $(LIBRARIES)
+
+wlOpacityTableResolutionTest: \
+	$(Weaklib_External) wlOpacityTableResolutionTest.o
+	$(FLINKER) $(FLAGS) -o wlOpacityTableResolutionTest_$(MACHINE) \
+	$(Weaklib_External) wlOpacityTableResolutionTest.o \
+	$(LIBRARIES)
 
 clean:
 	rm -f *.o *.mod *.ld

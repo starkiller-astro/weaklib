@@ -654,11 +654,11 @@ CONTAINS
       do_gpu = .FALSE.
     END IF
 
-#if defined(THORNADO_OMP_OL)
+#if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET ENTER DATA &
     !$OMP IF( do_gpu ) &
     !$OMP MAP( alloc: iE, dE )
-#elif defined(THORNADO_OACC)
+#elif defined(WEAKLIB_OACC)
     !$ACC ENTER DATA &
     !$ACC IF( do_gpu ) &
     !$ACC CREATE( iE, dE )
@@ -739,11 +739,11 @@ CONTAINS
 
     END DO ! j
 
-#if defined(THORNADO_OMP_OL)
+#if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET EXIT DATA &
     !$OMP IF( do_gpu ) &
     !$OMP MAP( release: iE, dE )
-#elif defined(THORNADO_OACC)
+#elif defined(WEAKLIB_OACC)
     !$ACC EXIT DATA &
     !$ACC IF( do_gpu ) &
     !$ACC DELETE( iE, dE )
@@ -1006,11 +1006,11 @@ CONTAINS
 
     SizeE = SIZE( LogE )
 
-#if defined(THORNADO_OMP_OL)
+#if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET ENTER DATA &
     !$OMP IF( do_gpu ) &
     !$OMP MAP( alloc: iE, dE )
-#elif defined(THORNADO_OACC)
+#elif defined(WEAKLIB_OACC)
     !$ACC ENTER DATA &
     !$ACC IF( do_gpu ) &
     !$ACC CREATE( iE, dE )
@@ -1097,11 +1097,11 @@ CONTAINS
 
     END DO
 
-#if defined(THORNADO_OMP_OL)
+#if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET EXIT DATA &
     !$OMP IF( do_gpu ) &
     !$OMP MAP( release: iE, dE )
-#elif defined(THORNADO_OACC)
+#elif defined(WEAKLIB_OACC)
     !$ACC EXIT DATA &
     !$ACC IF( do_gpu ) &
     !$ACC DELETE( iE, dE )
@@ -2130,11 +2130,11 @@ CONTAINS
 
     SizeE = SIZE( Interpolant, DIM = 1 )
 
-#if defined(THORNADO_OMP_OL)
+#if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET ENTER DATA &
     !$OMP IF( do_gpu ) &
     !$OMP MAP( alloc: iE, dE )
-#elif defined(THORNADO_OACC)
+#elif defined(WEAKLIB_OACC)
     !$ACC ENTER DATA &
     !$ACC IF( do_gpu ) &
     !$ACC CREATE( iE, dE )
@@ -2237,11 +2237,11 @@ CONTAINS
       END DO
     END DO
 
-#if defined(THORNADO_OMP_OL)
+#if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET EXIT DATA &
     !$OMP IF( do_gpu ) &
     !$OMP MAP( release: iE, dE )
-#elif defined(THORNADO_OACC)
+#elif defined(WEAKLIB_OACC)
     !$ACC EXIT DATA &
     !$ACC IF( do_gpu ) &
     !$ACC DELETE( iE, dE )
