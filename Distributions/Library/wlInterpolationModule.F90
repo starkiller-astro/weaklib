@@ -2808,17 +2808,17 @@ CONTAINS
   END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D
 
 
-  SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom &
-       ( E, D, T, Y, Es, Ds, Ts, Ys, OS, Table, Interpolant, Derivatives )
+  !SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom &
+  !     ( E, D, T, Y, Es, Ds, Ts, Ys, OS, Table, Interpolant, Derivatives )
 
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: E,  D,  T,  Y
-    REAL(dp), DIMENSION(:),       INTENT(in)  :: Es, Ds, Ts, Ys
-    REAL(dp),                     INTENT(in)  :: OS
-    REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
-    REAL(dp), DIMENSION(:),       INTENT(out) :: Interpolant
-    REAL(dp), DIMENSION(:,:),     INTENT(out) :: Derivatives
+  !  REAL(dp), DIMENSION(:),       INTENT(in)  :: E,  D,  T,  Y
+  !  REAL(dp), DIMENSION(:),       INTENT(in)  :: Es, Ds, Ts, Ys
+  !  REAL(dp),                     INTENT(in)  :: OS
+  !  REAL(dp), DIMENSION(:,:,:,:), INTENT(in)  :: Table
+  !  REAL(dp), DIMENSION(:),       INTENT(out) :: Interpolant
+  !  REAL(dp), DIMENSION(:,:),     INTENT(out) :: Derivatives
 
-  END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom
+  !END SUBROUTINE LogInterpolateDifferentiateSingleVariable_4D_Custom
 
 
   SUBROUTINE ComputeTempFromIntEnergy &
