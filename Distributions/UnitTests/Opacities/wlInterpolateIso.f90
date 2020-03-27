@@ -114,9 +114,10 @@ PROGRAM wlInterpolateIso
   !---------------------------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_Iso_Option = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-Iso.h5", &
+       FileName_Iso_Option &
+       = "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5", &
        EquationOfStateTableName_Option &
-       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5", &
+       = "wl-EOS-SFHo-15-25-50.h5", &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
@@ -153,7 +154,7 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e,2), TableES11, bufferIso11 )
 
-  InterpolantIso1 = bufferIso10 + bufferIso11
+  InterpolantIso1 = bufferIso10 - bufferIso11 / 3.0d0 ! (A41) in Bruenn 85
 
   CALL LogInterpolateSingleVariable_1D3D_Custom         &
          ( LOG10( Energy ), LOG10( Inte_rho ),          &
@@ -173,7 +174,7 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e_bar,2), TableES21, bufferIso21 )
 
-  InterpolantIso2 = bufferIso20 + bufferIso21
+  InterpolantIso2 = bufferIso20 - bufferIso21 / 3.0d0 ! (A41) in Bruenn 85
 
   END ASSOCIATE ! Table
 
