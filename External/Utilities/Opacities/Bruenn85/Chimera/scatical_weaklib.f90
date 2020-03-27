@@ -68,16 +68,17 @@ REAL(double), INTENT(out), DIMENSION(nez,2) :: cok
 !--------------------------------------------------------------------
 !        Local variables
 !--------------------------------------------------------------------
-REAL(double), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6
+REAL(double), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6 ! (C40)
 REAL(double), PARAMETER      :: cc = ( 2.d0 * pi )/( cvel * ( 2.d0 * pi * hbar * cvel )**3 ) * ( 4.d0 * pi ) * g2
+                             ! 0.5 * 4*pi/(c*c(hc)**3) * 4*pi*g2
 
-REAL(double), PARAMETER      :: hvp =  one - cv  
+REAL(double), PARAMETER      :: hvp =  one - cv     ! (C31)
                              ! proton vector coupling constant
-REAL(double), PARAMETER      :: hap =  0.5d0 * ga   
+REAL(double), PARAMETER      :: hap =  0.5d0 * ga   ! (C32)
                              ! proton axial vector coupling constant
-REAL(double), PARAMETER      :: hvn = -0.5d0 
+REAL(double), PARAMETER      :: hvn = -0.5d0        ! (C33)
                              ! neutron vector coupling constant
-REAL(double), PARAMETER      :: han = -0.5d0 * ga       
+REAL(double), PARAMETER      :: han = -0.5d0 * ga   ! (C34)
                              ! neutron axial vector coupling constant
 REAL(double), PARAMETER      :: cv0 =  half * ( hvp + hvn ) 
                              ! coupling constant
@@ -225,7 +226,7 @@ b0h              = 4.80d-6 * ( ah )**twothd
 IF ( ah < 1.d-10  .or.  zh < 1.d-10 ) THEN
   a02            = zero
 ELSE
-  aisov          = half * cv1 * ( 2.d0 * zh - ah )/ah
+  aisov          = half * cv1 * ( ah - 2.d0 * zh )/ah !! Diff. from Chimera ***
   a02            = ( aisosc + aisov ) * ( aisosc + aisov )
 END IF ! ah < 1.d-10  .or.  zh < 1.d-10
 
@@ -264,7 +265,7 @@ DO k = 1, nez
     sag          = 1.d0 - twothd * ec
     sbg          = ( 5.d0 - ec2 )/15.d0
   ELSE
-    eec          = 0.d0
+    eec          = zero
     IF ( ec < 15.d0 ) eec = DEXP( -2.d0 * ec )
     sag          = ( ec - 0.5d0 + 0.5d0 * eec )/ec2
     sbg          = ( ec2 - 1.5d0 * ec + 1.d0 - ( 0.5d0 * ec + 1.d0 ) * eec )/ec3
@@ -274,24 +275,25 @@ DO k = 1, nez
 !  Inverse mean free paths for coherent scattering.
 !--------------------------------------------------------------------
 
-  rmdnps0(k)     = cc * e2 * xnp * ap0
-  rmdnns0(k)     = cc * e2 * xnn * an0
+  rmdnps0(k)     = cc * e2 * xnp * ap0 !4pi/(cvel*(hc)**3)*e2*(C38p)/2
+  rmdnns0(k)     = cc * e2 * xnn * an0 !4pi/(cvel*(hc)**3)*e2*(C38n)/2
   rmdnbps0(k)    = rmdnps0(k)
   rmdnbns0(k)    = rmdnns0(k)
   rmdnhes0(k)    = cc * e2 * xheaa * a01 * saghe
+                                            ! 4pi/(cvel*(hc)**3)*e2*(C44he)/2
   rmdnhs0(k)     = cc * e2 * xhaa * a02 * sag
-  rmdnps1(k)     = cc * e2 * xnp * ( -ap1/3.d0 )
-  rmdnns1(k)     = cc * e2 * xnn * ( -an1/3.d0 )
+                                            ! 4pi/(cvel*(hc)**3)*e2*(C44a)/2
+
+  rmdnps1(k)     = cc * e2 * xnp * ( ap1/3.d0 ) * 3.0d0
+                                            ! 4pi/(cvel*(hc)**3)*e2*(C39p)*3/2
+  rmdnns1(k)     = cc * e2 * xnn * ( an1/3.d0 ) * 3.0d0
+                                            ! 4pi/(cvel*(hc)**3)*e2*(C39n)*3/2
   rmdnbps1(k)    = rmdnps1(k)
   rmdnbns1(k)    = rmdnns1(k)
-  rmdnhes1(k)    = cc * e2 * xheaa * a01 * ( -sbghe )
-  rmdnhs1(k)     = cc * e2 * xhaa * a02 * ( -sbg )
-  rmdnps(k)      = rmdnps0(k)  + rmdnps1(k)
-  rmdnns(k)      = rmdnns0(k)  + rmdnns1(k)
-  rmdnbps(k)     = rmdnps(k)
-  rmdnbns(k)     = rmdnns(k)
-  rmdnhes(k)     = rmdnhes0(k) + rmdnhes1(k)
-  rmdnhs(k)      = rmdnhs0(k)  + rmdnhs1(k)
+  rmdnhes1(k)    = cc * e2 * xheaa * a01 * sbghe * 3.0d0
+                                            ! 4pi/(cvel*(hc)**3)*e2*(C45he)/2
+  rmdnhs1(k)     = cc * e2 * xhaa * a02 * sbg * 3.0d0
+                                            ! 4pi/(cvel*(hc)**3)*e2*(C45a)/2
 
 !!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
