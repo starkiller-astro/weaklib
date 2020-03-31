@@ -226,7 +226,7 @@ b0h              = 4.80d-6 * ( ah )**twothd
 IF ( ah < 1.d-10  .or.  zh < 1.d-10 ) THEN
   a02            = zero
 ELSE
-  aisov          = half * cv1 * ( ah - 2.d0 * zh )/ah !! Diff. from Chimera ***
+  aisov          = half * cv1 * ( 2.d0 * zh - ah )/ah
   a02            = ( aisosc + aisov ) * ( aisosc + aisov )
 END IF ! ah < 1.d-10  .or.  zh < 1.d-10
 
@@ -284,9 +284,9 @@ DO k = 1, nez
   rmdnhs0(k)     = cc * e2 * xhaa * a02 * sag
                                             ! 4pi/(cvel*(hc)**3)*e2*(C44a)/2
 
-  rmdnps1(k)     = cc * e2 * xnp * ( ap1/3.d0 ) * 3.0d0
+  rmdnps1(k)     = cc * e2 * xnp * ap1
                                             ! 4pi/(cvel*(hc)**3)*e2*(C39p)*3/2
-  rmdnns1(k)     = cc * e2 * xnn * ( an1/3.d0 ) * 3.0d0
+  rmdnns1(k)     = cc * e2 * xnn * an1
                                             ! 4pi/(cvel*(hc)**3)*e2*(C39n)*3/2
   rmdnbps1(k)    = rmdnps1(k)
   rmdnbns1(k)    = rmdnns1(k)
