@@ -10,6 +10,11 @@ all: wlOpacityFieldsTest \
      wlInterpolatePair \
      wlOpacityTableResolutionTest
 
+Interpolations: wlInterpolateAb \
+                wlInterpolateIso \
+                wlInterpolateNES \
+                wlInterpolatePair
+
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityFieldsTest_$(MACHINE) \

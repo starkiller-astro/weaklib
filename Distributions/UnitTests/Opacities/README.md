@@ -72,6 +72,9 @@
     
 6.  To plot the `Interpolated*Output.h5` result, use the `plotInterpolatedCompactHDF.m` matlab script.
 
+    Keys:
+    - Change the file directory and axis limit as needed.
+
 
 ## Ask For Help
 - R. Chu : rchu@vols.utk.edu
