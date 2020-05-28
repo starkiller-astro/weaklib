@@ -57,7 +57,7 @@ CONTAINS
   SUBROUTINE WriteOpacityTableHDF &
     ( OpacityTable, FileName, WriteOpacity_EmAb_Option, &
       WriteOpacity_Iso_Option, WriteOpacity_NES_Option, &
-      WriteOpacity_Pair_Option )
+      WriteOpacity_Pair_Option, WriteOpacity_Brem_Option )
  
     TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
     CHARACTER(len=*),       INTENT(in)           :: FileName
@@ -65,11 +65,13 @@ CONTAINS
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Iso_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_NES_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Pair_Option
+    LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Brem_Option
 
     LOGICAL           :: WriteOpacity_EmAb
     LOGICAL           :: WriteOpacity_Iso 
     LOGICAL           :: WriteOpacity_NES 
     LOGICAL           :: WriteOpacity_Pair
+    LOGICAL           :: WriteOpacity_Brem
     CHARACTER(LEN=32) :: tempString(1)
     INTEGER           :: tempInteger(1)
     INTEGER(HID_T)    :: file_id
@@ -94,10 +96,16 @@ CONTAINS
       WriteOpacity_NES = .FALSE.
     END IF
 
-       IF( PRESENT( WriteOpacity_Pair_Option ) )THEN
+    IF( PRESENT( WriteOpacity_Pair_Option ) )THEN
       WriteOpacity_Pair = WriteOpacity_Pair_Option
     ELSE
       WriteOpacity_Pair = .FALSE.
+    END IF
+
+    IF( PRESENT( WriteOpacity_Brem_Option ) )THEN
+      WriteOpacity_Brem = WriteOpacity_Brem_Option
+    ELSE
+      WriteOpacity_Brem = .FALSE.
     END IF
  
     CALL OpenFileHDF( FileName, .true., file_id )
@@ -198,6 +206,25 @@ CONTAINS
 
     END IF           
 
+    IF( WriteOpacity_Brem ) THEN
+
+      IF( .NOT. ALLOCATED( OpacityTable % Scat_Brem % Names ) )THEN
+
+        ! --- Insert Appropriate Reaction ---
+        WRITE(*,'(A4,A)') &
+                '', 'OpacityTable % Scat_Brem not allocated.  Write Skipped.'
+
+      ELSE
+
+        CALL OpenGroupHDF &
+                 ( "Scat_Brem_Kernels", .true., file_id, group_id )
+        CALL WriteOpacityTableHDF_Brem( OpacityTable % Scat_Brem, group_id )
+        CALL CloseGroupHDF( group_id )
+
+      END IF
+
+    END IF
+
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE WriteOpacityTableHDF
@@ -296,10 +323,44 @@ CONTAINS
 
   END SUBROUTINE WriteOpacityTableHDF_Scat
 
+  SUBROUTINE WriteOpacityTableHDF_Brem( Brem , group_id )
+
+    TYPE(OpacityTypeScat), INTENT(in)    :: Brem
+    INTEGER(HID_T),        INTENT(in)    :: group_id
+
+    INTEGER(HSIZE_T)                     :: datasize1d(1)
+    INTEGER(HSIZE_T)                     :: datasize2d(2)
+    INTEGER(HSIZE_T)                     :: datasize4d(4)
+    INTEGER(HSIZE_T)                     :: datasize5d(5)
+    INTEGER                              :: i
+    INTEGER                              :: buffer(1)
+
+    CHARACTER(LEN=32), DIMENSION(1)             :: tempString
+    INTEGER, DIMENSION(1)                       :: tempInteger
+    REAL(dp), DIMENSION(1)                      :: tempReal
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
+
+    datasize1dtemp(1) = Brem % nOpacities
+    CALL WriteHDF&
+         ( "Units", Brem % Units, group_id, datasize1dtemp )
+
+    datasize2d = (/Brem % nOpacities, Brem % nMoments/)
+    CALL WriteHDF&
+         ( "Offsets", Brem % Offsets, group_id, datasize2d )
+
+    datasize5d(1:5) = Brem % nPoints
+
+    DO i = 1, Brem % nOpacities
+     CALL WriteHDF&
+        ( Brem % Names(i), Brem % Kernel(i) % Values(:,:,:,:,:),&
+                            group_id, datasize5d )
+    END DO
+
+  END SUBROUTINE WriteOpacityTableHDF_Brem
 
   SUBROUTINE ReadOpacityTableHDF &
     ( OpacityTable, FileName_EmAb_Option, FileName_Iso_Option, &
-      FileName_NES_Option, FileName_Pair_Option, &
+      FileName_NES_Option, FileName_Pair_Option, FileName_Brem_Option, &
       EquationOfStateTableName_Option, Verbose_Option )
  
     TYPE(OpacityTableType), INTENT(inout)          :: OpacityTable
@@ -307,6 +368,7 @@ CONTAINS
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Iso_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NES_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Pair_Option
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Brem_Option
     CHARACTER(LEN=*),       INTENT(in),   OPTIONAL :: EquationOfStateTableName_Option
     LOGICAL,                INTENT(in),   OPTIONAL :: Verbose_Option
 
@@ -314,10 +376,11 @@ CONTAINS
     INTEGER, PARAMETER :: iIso  = 2
     INTEGER, PARAMETER :: iNES  = 3
     INTEGER, PARAMETER :: iPair = 4
+    INTEGER, PARAMETER :: iBrem = 5
 
-    LOGICAL            :: ReadOpacity(4)
+    LOGICAL            :: ReadOpacity(5)
     LOGICAL            :: Verbose
-    CHARACTER(128)     :: FileName(4)
+    CHARACTER(128)     :: FileName(5)
     CHARACTER(128)     :: EquationOfStateTableName
     INTEGER            :: iOp
     INTEGER            :: nPointsE
@@ -330,6 +393,8 @@ CONTAINS
     INTEGER            :: nMom_NES
     INTEGER            :: nOpac_Pair
     INTEGER            :: nMom_Pair
+    INTEGER            :: nOpac_Brem
+    INTEGER            :: nMom_Brem
     INTEGER            :: buffer(1)
     INTEGER(HID_T)     :: file_id
     INTEGER(HID_T)     :: group_id
@@ -392,6 +457,18 @@ CONTAINS
       ReadOpacity(iPair) = .FALSE.
       nOpac_Pair = 0
       nMom_Pair  = 0
+    END IF
+
+    IF( PRESENT( FileName_Brem_Option ) &
+        .AND. ( LEN( FileName_Brem_Option ) > 1 ) )THEN
+      ReadOpacity(iBrem) = .TRUE.
+      FileName   (iBrem) = TRIM( FileName_Brem_Option )
+      nOpac_Brem = 1
+      nMom_Brem  = 1
+    ELSE
+      ReadOpacity(iBrem) = .FALSE.
+      nOpac_Brem = 0
+      nMom_Brem  = 0
     END IF
 
     IF( PRESENT( Verbose_Option ) )THEN
@@ -491,7 +568,8 @@ CONTAINS
 
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
-             nMom_NES, nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
+             nMom_NES, nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, &
+             nPointsE, nPointsEta, &
              EquationOfStateTableName_Option = EquationOfStateTableName, &
              OpacityThermoState_Option = TS, &
              Verbose_Option = Verbose )
@@ -715,6 +793,46 @@ CONTAINS
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_Pair % Names(1) ), &
                OpacityTable % Scat_Pair % Kernel(1) % Values, &
+               group_id, datasize5d )
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+
+    IF( ReadOpacity(iBrem) ) THEN
+
+      IF( Verbose )THEN
+
+        WRITE(*,'(A6,A9,A)') '', 'Reading: ', TRIM( FileName(iBrem) )
+
+      END IF
+
+      CALL OpenFileHDF( FileName(iBrem), .FALSE., file_id )
+
+      CALL OpenGroupHDF &
+             ( "Scat_Brem_Kernels", .FALSE., file_id, group_id )
+
+      datasize2d(1) = OpacityTable % Scat_Brem % nOpacities
+      datasize2d(2) = OpacityTable % Scat_Brem % nMoments
+
+      CALL ReadHDF &
+             ( "Offsets", OpacityTable % Scat_Brem % Offsets, &
+               group_id, datasize2d )
+
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_Brem % Units,   &
+               group_id, datasize2d )
+
+      datasize5d(1:2) = OpacityTable % EnergyGrid % nPoints
+      datasize5d(3:5) = OpacityTable % TS % nPoints
+
+      OpacityTable % Scat_Brem % Names(1) = "Kernel";
+
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_Brem % Names(1) ), &
+               OpacityTable % Scat_Brem % Kernel(1) % Values, &
                group_id, datasize5d )
 
       CALL CloseGroupHDF( group_id )

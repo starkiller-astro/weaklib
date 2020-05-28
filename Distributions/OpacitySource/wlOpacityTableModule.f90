@@ -69,6 +69,7 @@ MODULE wlOpacityTableModule
     INTEGER        :: nOpacities_Iso,  nMoments_Iso
     INTEGER        :: nOpacities_NES,  nMoments_NES
     INTEGER        :: nOpacities_Pair, nMoments_Pair
+    INTEGER        :: nOpacities_Brem, nMoments_Brem
     INTEGER        :: nPointsE
     INTEGER        :: nPointsEta
     INTEGER        :: nPointsTS(3)
@@ -84,6 +85,8 @@ MODULE wlOpacityTableModule
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
       Scat_Pair  ! -- Pair Production
+    TYPE(OpacityTypeScat)          :: &
+      Scat_Brem  ! -- Neutrino–Antineutrino Pair Annihilation and Production from Nucleon–Nucleon Bremsstrahlung
   END TYPE OpacityTableType
 
   PUBLIC :: AllocateOpacityTable
@@ -94,7 +97,7 @@ CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
     ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
-      nOpac_Pair, nMom_Pair, nPointsE, nPointsEta, &
+      nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, nPointsE, nPointsEta, &
       EquationOfStateTableName_Option, OpacityThermoState_Option, Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
@@ -102,6 +105,7 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nOpac_Iso, nMom_Iso
     INTEGER,                INTENT(in)           :: nOpac_NES, nMom_NES
     INTEGER,                INTENT(in)           :: nOpac_Pair, nMom_Pair
+    INTEGER,                INTENT(in)           :: nOpac_Brem, nMom_Brem
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
@@ -142,6 +146,8 @@ CONTAINS
     OpTab % nMoments_NES    = nMom_NES
     OpTab % nOpacities_Pair = nOpac_Pair
     OpTab % nMoments_Pair   = nMom_Pair
+    OpTab % nOpacities_Brem = nOpac_Brem
+    OpTab % nMoments_Brem   = nMom_Brem
     OpTab % nPointsE        = nPointsE
     OpTab % nPointsEta      = nPointsEta
 
@@ -185,6 +191,12 @@ CONTAINS
            ( OpTab % Scat_Pair, nPointsTemp(1:5), &
              nMoments = nMom_Pair, nOpacities = nOpac_Pair )
 
+    nPointsTemp(1:5) = [ nPointsE, nPointsE, nPoints ]
+
+    CALL AllocateOpacity &
+           ( OpTab % Scat_Brem, nPointsTemp(1:5), &
+             nMoments = nMom_Brem, nOpacities = nOpac_Brem )
+
     END ASSOCIATE ! nPoints
 
   END SUBROUTINE AllocateOpacityTable
@@ -212,6 +224,7 @@ CONTAINS
     CALL DeAllocateOpacity( OpTab % Scat_Iso )
     CALL DeAllocateOpacity( OpTab % Scat_NES )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
+    CALL DeAllocateOpacity( OpTab % Scat_Brem )
 
     CALL DeAllocateThermoState( OpTab % TS )
 
@@ -268,6 +281,10 @@ CONTAINS
     CALL DescribeOpacity( OpTab % Scat_Iso )
     CALL DescribeOpacity( OpTab % Scat_NES )
     CALL DescribeOpacity( OpTab % Scat_Pair )
+
+    if(OpTab % Scat_Brem % nOpacities .gt. 0) then
+    CALL DescribeOpacity( OpTab % Scat_Brem )
+    end if
 
   END SUBROUTINE DescribeOpacityTable
 
