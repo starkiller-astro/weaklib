@@ -67,7 +67,7 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eos table
 !---------------------------------------------------------------------
-   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
+   CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
 
 !---------------------------------------------------------------------
 ! Set neutrino interaction type
@@ -322,11 +322,13 @@ PRINT*, 'Filling OpacityTable ...'
                   Values(j_rho, k_t, l_ye) &
                   - DVOffs(Indices % iProtonChemicalPotential)   &
                   - epsilon 
+         write(stdout,*) 'cmpp', DVar(Indices % iProtonChemicalPotential) % Values(j_rho, k_t, l_ye),chem_p,ye,T,rho
 
          chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
                   Values(j_rho, k_t, l_ye) &
                   - DVOffs(Indices % iNeutronChemicalPotential)   &
                   - epsilon
+         write(stdout,*) 'cmpn', DVar(Indices % iNeutronChemicalPotential) % Values(j_rho, k_t, l_ye),chem_n,ye,T,rho
 
             xp  = 10**DVar(Indices % iProtonMassFraction) % &
                   Values(j_rho, k_t, l_ye) &

@@ -1,10 +1,16 @@
+!calculate the zeroth order annihilation kernel from Hannestad & Raffelt 1998
+!using:
+!neutrino energies, rho, T, free neutron mass fraction and the free proton fraction
+!calculates s_a, which is 1/2 \Phi^a_0_Brem, in subroutine bremcal_weaklib
+!calls two subroutines: s_brem and g_brem
+!https://iopscience.iop.org/article/10.1086/306303
+!https://wwwth.mpp.mpg.de/members/raffelt/mypapers/199804.pdf
+
 MODULE HR98_Bremsstrahlung
 
 USE wlKindModule, ONLY: dp
 USE wlExtPhysicalConstantsModule, ONLY: kMeV, cvel
 USE wlExtNumericalModule, ONLY: pi, half, epsilon
-
-USE, intrinsic:: iso_fortran_env, only: stdout=>output_unit, stdin=>input_unit, stderr=>error_unit
 
 IMPLICIT NONE
 
@@ -13,27 +19,27 @@ CONTAINS
 
 subroutine bremcal_weaklib( nez, egrid, rho, t, xn, xp, s_a )
 
-INTEGER,      INTENT(in) :: nez                 ! number of neutrino energy group
-REAL(dp), DIMENSION(nez), INTENT(in) :: egrid   ! neutrino energy grid
+INTEGER,                  INTENT(in) :: nez       ! number of neutrino energies
+REAL(dp), DIMENSION(nez), INTENT(in) :: egrid     ! neutrino energy grid
 
-REAL(dp), INTENT(in)       :: rho               ! density [g cm^{-3}]
-REAL(dp), INTENT(in)       :: t                 ! temperature [K]
-REAL(dp), INTENT(in)       :: xn                ! free neutron mass fraction
-REAL(dp), INTENT(in)       :: xp                ! free proton mass fraction
+REAL(dp), INTENT(in)       :: rho                 ! density [g cm^{-3}]
+REAL(dp), INTENT(in)       :: t                   ! temperature [K]
+REAL(dp), INTENT(in)       :: xn                  ! free neutron mass fraction
+REAL(dp), INTENT(in)       :: xp                  ! free proton mass fraction
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: s_a   ! differential absorption kernel
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: s_a  ! differential annihilation kernel, 1/2 \Phi^a_0
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-INTEGER                   :: i               ! do index
+INTEGER               :: i                    ! index to loop over nn, pp, and np contributions
 
-REAL(dp), PARAMETER   :: tthird = 2.d0/3.d0
+REAL(dp), PARAMETER   :: tthird   = 2.d0/3.d0
 
 REAL(dp), PARAMETER   :: C_AG_FnB = 3.79d+4/cvel             ! Raffelt constant
 REAL(dp), PARAMETER   :: conv1    = 1.d0 / ( 2.d0 * pi )**3  ! 1/(hc)**3 in natural units
@@ -42,12 +48,12 @@ REAL(dp), PARAMETER   :: coef     = conv1 * conv2 * C_AG_FnB
 REAL(dp), PARAMETER   :: coef_np  = 28.d0/3.d0
 REAL(dp)              :: rho_14          ! rho/1e+14
 REAL(dp)              :: t_10            ! tmev/10
-REAL(dp), DIMENSION(nez,nez)   :: x                          ! (enu + enubar [MeV])/tmev
+REAL(dp), DIMENSION(nez,nez)   :: x      ! (enu + enubar [MeV])/tmev
 REAL(dp)              :: tmev            ! kt [MeV]
 REAL(dp)              :: eta_star        ! degeneracy parameter
 REAL(dp)              :: gamma           ! spin fluctuation rate
 REAL(dp)              :: y               ! pion mass parameter
-REAL(dp), DIMENSION(nez,nez)   :: sb                         ! dimensionless fitting parameter
+REAL(dp), DIMENSION(nez,nez)   :: sb     ! dimensionless fitting parameter
 REAL(dp)              :: gb              ! dimensionless fitting parameter
 REAL(dp)              :: rho_x           ! density adjusted for the composition [g cm^{-3}]
 
@@ -75,7 +81,7 @@ DO i = 1, 3
     rho_x          = rho * xp
   ELSE IF ( i == 3 ) THEN
     rho_x          = rho * SQRT( ABS( xn * xp ) + epsilon )
-  END IF ! i = 1
+  END IF ! i == 1
 
 !-----------------------------------------------------------------------
 !  Initialize
@@ -202,24 +208,24 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------
 !        Input variables.
 !-----------------------------------------------------------------------
-INTEGER,      INTENT(in) :: nez                     ! number of neutrino energy group
-REAL(dp), DIMENSION(nez,nez), INTENT(in)  :: x_p ! w/tmev
-REAL(dp), INTENT(in)  :: y_p                  ! pion mass parameter
-REAL(dp), INTENT(in)  :: eta_star_p           ! degeneracy parameter
+INTEGER,                      INTENT(in)  :: nez         ! number of neutrino energy bins
+REAL(dp), DIMENSION(nez,nez), INTENT(in)  :: x_p         ! w/tmev
+REAL(dp),                     INTENT(in)  :: y_p         ! pion mass parameter
+REAL(dp),                     INTENT(in)  :: eta_star_p  ! degeneracy parameter
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: s_fit   ! dimensionless fitting parameter
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: s_fit       ! dimensionless fitting parameter
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-REAL(dp)              :: x                    ! use in place of x_p
-REAL(dp)              :: y                    ! use in place of y_p
-REAL(dp)              :: eta_star             ! use in place of eta_star_p
+REAL(dp)              :: x                               ! use in place of x_p
+REAL(dp)              :: y                               ! use in place of y_p
+REAL(dp)              :: eta_star                        ! use in place of eta_star_p
 
 REAL(dp), PARAMETER   :: x_min = 1.d-10
 REAL(dp), PARAMETER   :: y_min = 1.d-10
@@ -227,26 +233,26 @@ REAL(dp), PARAMETER   :: eta_min = 1.d-10
 REAL(dp), PARAMETER   :: fi_third = 5.d0/3.d0
 REAL(dp), PARAMETER   :: fi_sixth = 5.d0/6.d0
 
-REAL(dp)              :: pi1_2                ! pi**(1/2)
-REAL(dp)              :: pi1_8                ! pi**(1/8)
-REAL(dp)              :: s_ND_num             ! numerator of s_ND
-REAL(dp)              :: s_ND_denom           ! denominator of s_ND
-REAL(dp)              :: s_ND                 ! nondegenerate limit of s_fit
-REAL(dp)              :: u                    ! y/(2*eta_star)
-REAL(dp)              :: u2                   ! u**2
-REAL(dp)              :: u_arg                ! a function of u
-REAL(dp)              :: f_u                  ! a function of u
-REAL(dp)              :: s_D                  ! degenerate limit of s_fit
-REAL(dp)              :: C_fit                ! fitting function
-REAL(dp)              :: F_denom              ! denominator of F_fit
-REAL(dp)              :: F_fit                ! fitting function
-REAL(dp)              :: G_fit                ! fitting function
-REAL(dp)              :: h_fit                ! fitting function
-REAL(dp)              :: p_fit                ! fitting function
+REAL(dp)              :: pi1_2                           ! pi**(1/2)
+REAL(dp)              :: pi1_8                           ! pi**(1/8)
+REAL(dp)              :: s_ND_num                        ! numerator of s_ND
+REAL(dp)              :: s_ND_denom                      ! denominator of s_ND
+REAL(dp)              :: s_ND                            ! nondegenerate limit of s_fit
+REAL(dp)              :: u                               ! y/(2*eta_star)
+REAL(dp)              :: u2                              ! u**2
+REAL(dp)              :: u_arg                           ! a function of u
+REAL(dp)              :: f_u                             ! a function of u
+REAL(dp)              :: s_D                             ! degenerate limit of s_fit
+REAL(dp)              :: C_fit                           ! fitting function
+REAL(dp)              :: F_denom                         ! denominator of F_fit
+REAL(dp)              :: F_fit                           ! fitting function
+REAL(dp)              :: G_fit                           ! fitting function
+REAL(dp)              :: h_fit                           ! fitting function
+REAL(dp)              :: p_fit                           ! fitting function
 
-INTEGER               :: k, kb    ! neutrino(anti) loop variables
+INTEGER               :: k, kb                           ! neutrino(anti) loop variables
 
-REAL(KIND=dp)         :: fexp          ! exponential
+REAL(KIND=dp)         :: fexp                            ! exponential
 
 EXTERNAL fexp
 
@@ -422,7 +428,7 @@ REAL(dp)              :: alpha1_denom
 REAL(dp)              :: alpha1,alpha2,alpha3
 REAL(dp)              :: p1,p2
 
-REAL(KIND=dp)         :: fexp          ! exponential
+REAL(KIND=dp)         :: fexp                 ! exponential
 
 EXTERNAL fexp
 
