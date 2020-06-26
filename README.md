@@ -1,3 +1,10 @@
+# Welcome to WeakLib
+
+WeakLib is a code library for astrophysical applications. It provides preprocessed equation of state (EoS) and neutrino opacity tables for use in neutrino transport calculations. WeakLib tables are intended to be usable in a straightforward manner by GENASIS, CHIMERA, FLASH, thornado, and other radiation hydrodynamics codes.
+
+## Available Table Download
+[https://code.ornl.gov/astro/weaklib-tables](https://code.ornl.gov/astro/weaklib-tables)
+
 ## Build Opacity Table
 
 There are two ways to build a WeakLib opacity table.
