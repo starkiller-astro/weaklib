@@ -63,6 +63,9 @@ PROGRAM wlInterpolatePair
                                              InterpolantPair_nuebar, &
                                              InterpolantPair_mutaubar
 
+  CHARACTER(LEN=128)                      :: EosTableName, OpTableName, &
+                                             ProfileName
+
   CHARACTER(LEN=30)                       :: outfilename = &
                                              'InterpolatedPaOutput.h5'
 
@@ -80,6 +83,19 @@ PROGRAM wlInterpolatePair
   REAL(dp), DIMENSION(Inte_nPointE)       :: TP0_nuebar, TP0_mutaubar
   REAL(dp), DIMENSION(Inte_nPointE)       :: roots, widths
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: J0i, J0ii
+
+  !--------------------------------------------------
+  !   take in profile and table names
+  !--------------------------------------------------
+  OPEN(12, FILE="dataList.txt", FORM = "formatted", &
+           ACTION = 'read')
+  READ(12,*) ProfileName
+  READ(12,*) EosTableName
+  READ(12,*) OpTableName ! AbEm
+  READ(12,*) OpTableName ! Iso
+  READ(12,*) OpTableName ! NES
+  READ(12,*) OpTableName ! Pair
+  CLOSE(12, STATUS = 'keep')
 
   !------------------------------------------------
   !   interpolated energy 
@@ -111,7 +127,7 @@ PROGRAM wlInterpolatePair
   !----------------------------------------------------------------------------
   !    read in profile ( rho, T, Ye )
   !----------------------------------------------------------------------------
-  OPEN(1, FILE = "ProfileBruenn.d", FORM = "formatted", &
+  OPEN(1, FILE = TRIM(ProfileName), FORM = "formatted", &
           ACTION = 'read')
   READ( 1, Format1 ) a, datasize
   READ( 1, Format2 )
@@ -149,11 +165,11 @@ PROGRAM wlInterpolatePair
   !    read in the reference table
   !--------------------------------------------------------
   CALL InitializeHDF( )
-  CALL ReadOpacityTableHDF( OpacityTable,                &
-       FileName_Pair_Option                              &
-       = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-Pair.h5", &
-       EquationOfStateTableName_Option                   &
-       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5",     &
+  CALL ReadOpacityTableHDF( OpacityTable, &
+       FileName_Pair_Option               &
+       = TRIM(OpTableName),               &
+       EquationOfStateTableName_Option    &
+       = TRIM(EosTableName),              &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
  

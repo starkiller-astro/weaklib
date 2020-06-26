@@ -52,8 +52,21 @@ PROGRAM wlInterpolateAb
   REAL(dp), DIMENSION(:,:), ALLOCATABLE   :: InterpolantEm1, &
                                              InterpolantEm2
 
+  CHARACTER(LEN=128)                      :: EosTableName, OpTableName, &
+                                             ProfileName
+
   CHARACTER(LEN=30)                       :: Outfilename = &
                                             'InterpolatedAbOutput.h5'
+
+  !--------------------------------------------------
+  !   take in profile and table names
+  !--------------------------------------------------
+  OPEN(12, FILE="dataList.txt", FORM = "formatted", &
+           ACTION = 'read')
+  READ(12,*) ProfileName
+  READ(12,*) EosTableName
+  READ(12,*) OpTableName
+  CLOSE(12, STATUS = 'keep')
 
   !--------------------------------------------------
   !   interpolated energy 
@@ -78,7 +91,7 @@ PROGRAM wlInterpolateAb
   !-------------------------------------------------------
   !    read in profile ( rho, T, Ye )
   !-------------------------------------------------------
-  OPEN(1, FILE = "ProfileBruenn.d", FORM = "formatted", &
+  OPEN(1, FILE = TRIM(ProfileName), FORM = "formatted", &
           ACTION = 'read')
   READ( 1, Format1 ) a, datasize
   READ( 1, Format2 )
@@ -106,9 +119,10 @@ PROGRAM wlInterpolateAb
   !--------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_EmAb_Option = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-AbEm.h5", &
-       EquationOfStateTableName_Option &
-       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5", &
+       FileName_EmAb_Option               &
+       = TRIM(OpTableName),               &
+       EquationOfStateTableName_Option    &
+       = TRIM(EosTableName),              &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 

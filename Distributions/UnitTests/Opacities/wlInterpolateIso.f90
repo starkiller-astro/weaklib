@@ -56,8 +56,22 @@ PROGRAM wlInterpolateIso
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: InterpolantIso1
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: InterpolantIso2
 
+  CHARACTER(LEN=128)                      :: EosTableName, OpTableName, &
+                                             ProfileName
+
   CHARACTER(LEN=30)                     :: outfilename = &
                                            'InterpolatedIsoOutput.h5'
+
+  !--------------------------------------------------
+  !   take in profile and table names
+  !--------------------------------------------------
+  OPEN(12, FILE="dataList.txt", FORM = "formatted", &
+           ACTION = 'read')
+  READ(12,*) ProfileName
+  READ(12,*) EosTableName
+  READ(12,*) OpTableName ! AbEm's name, skipt
+  READ(12,*) OpTableName
+  CLOSE(12, STATUS = 'keep')
 
   !------------------------------------------------
   !   interpolated energy 
@@ -82,7 +96,7 @@ PROGRAM wlInterpolateIso
   !-------------------------------------------------------
   !    read in profile ( rho, T, Ye )
   !-------------------------------------------------------
-  OPEN(1, FILE = "ProfileBruenn.d", FORM = "formatted", &
+  OPEN(1, FILE = TRIM(ProfileName), FORM = "formatted", &
           ACTION = 'read')
   READ( 1, Format1 ) a, datasize
   READ( 1, Format2 )
@@ -114,9 +128,10 @@ PROGRAM wlInterpolateIso
   !---------------------------------------------------------------
   CALL InitializeHDF( )
   CALL ReadOpacityTableHDF( OpacityTable, &
-       FileName_Iso_Option = "wl-Op-LS220-15-25-50-Lower-T-E40-B85-Iso.h5", &
-       EquationOfStateTableName_Option &
-       = "wl-EOS-LS220-15-25-50-Lower-T-rewrite.h5", &
+       FileName_Iso_Option                &
+       = TRIM(OpTableName),               &
+       EquationOfStateTableName_Option    &
+       = TRIM(EosTableName),              &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
 
@@ -153,7 +168,7 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e,2), TableES11, bufferIso11 )
 
-  InterpolantIso1 = bufferIso10 + bufferIso11
+  InterpolantIso1 = bufferIso10 - bufferIso11 / 3.0d0 ! (A41) in Bruenn 85
 
   CALL LogInterpolateSingleVariable_1D3D_Custom         &
          ( LOG10( Energy ), LOG10( Inte_rho ),          &
@@ -173,7 +188,7 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e_bar,2), TableES21, bufferIso21 )
 
-  InterpolantIso2 = bufferIso20 + bufferIso21
+  InterpolantIso2 = bufferIso20 - bufferIso21 / 3.0d0 ! (A41) in Bruenn 85
 
   END ASSOCIATE ! Table
 
