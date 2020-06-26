@@ -10,13 +10,9 @@ WeakLib is a code library for astrophysical applications. It provides preprocess
 
 
 ### Build Your Own Tables
-#### Build EoS Table
+- #### Build EoS Table
 
-#### Build Opacity Table
-
-There are two ways to build a WeakLib opacity table.
-
-(1) Build the table from the source code:
+- #### Build Opacity Table
 
   * Step 1: Have the EOS table ready.
 
@@ -37,9 +33,11 @@ There are two ways to build a WeakLib opacity table.
   * Step 4: Test whether the opacity table is created correctly by runing interpolation test.
     Examples can be found under weaklib/Distributions/UnitTests/Opacities.
 
-(2) Send an email to rchu@vols.utk.edu with your requires.
-
 
 ### Interpolate in WeakLib Opacity Tables
 
 [Distributions/UnitTests/Opacities](Distributions/UnitTests/Opacities)
+
+
+## Ask For Help
+- R. Chu : rchu@vols.utk.edu
