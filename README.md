@@ -39,7 +39,7 @@ WeakLib is a code library for astrophysical applications. It provides preprocess
 [Distributions/UnitTests/Opacities](Distributions/UnitTests/Opacities)
 
 ## Guide for Developers
-- [Guide for Developers File](Guide_for_Developers)
+- [Guide for Developers File](Guide_for_Developers.md)
 
 ## Ask For Help
 - R. Chu : rchu@vols.utk.edu
