@@ -27,4 +27,4 @@ There are two ways to build a WeakLib opacity table.
 
 ## Interpolate in WeakLib Opacity Tables
 
-[Distributions/UnitTests/Opacities](Distributions/UnitTests/Opacities/README.md)
+[Distributions/UnitTests/Opacities](Distributions/UnitTests/Opacities)
