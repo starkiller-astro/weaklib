@@ -31,13 +31,15 @@ WeakLib is a code library for astrophysical applications. It provides preprocess
   * Step 3: Move the excutable and Eos table to same directory and run the excutable.
 
   * Step 4: Test whether the opacity table is created correctly by runing interpolation test.
-    Examples can be found under weaklib/Distributions/UnitTests/Opacities.
+    Examples can be found under [/Distributions/UnitTests/Opacities](/Distributions/UnitTests/Opacities).
 
 
 ### Interpolate in WeakLib Opacity Tables
 
 [Distributions/UnitTests/Opacities](Distributions/UnitTests/Opacities)
 
+## Guide for Developers
+- [Guide for Developers File](Guide_for_Developers)
 
 ## Ask For Help
 - R. Chu : rchu@vols.utk.edu
