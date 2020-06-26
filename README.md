@@ -24,3 +24,7 @@ There are two ways to build a WeakLib opacity table.
     Examples can be found under weaklib/Distributions/UnitTests/Opacities.
 
 (2) Send an email to rchu@vols.utk.edu with your requires.
+
+## Interpolate in WeakLib Opacity Tables
+
+[Distributions/UnitTests/Opacities](Distributions/UnitTests/Opacities/README.md)
