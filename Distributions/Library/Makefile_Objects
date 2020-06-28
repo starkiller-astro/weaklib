@@ -7,4 +7,5 @@ wlDependentVariablesModule.o \
 wlGridModule.o \
 wlIOModuleHDF.o \
 wlInterpolationModule.o 
+wlInterpolationUtilitiesModule.o
 

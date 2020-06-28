@@ -23,3 +23,7 @@ wlIOModuleHDF.o: \
   wlDependentVariablesModule.o \
   wlIOModuleHDF.f90
 
+wlInterpolationUtilitiesModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.F90

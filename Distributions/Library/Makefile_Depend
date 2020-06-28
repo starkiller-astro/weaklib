@@ -3,4 +3,4 @@ wlDependentVariablesModule.o: wlKindModule.o
 wlGridModule.o: wlKindModule.o
 wlIOModuleHDF.o: wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o
 wlInterpolationModule.o: wlKindModule.o wlThermoStateModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o
-
+wlInterpolationUtilitiesModule.o : wlKindModule.o wlInterpolationModule.o
