@@ -18,13 +18,6 @@ MODULE wlEOSInterpolationModule
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: ComputeTempFromIntEnergy
-  PUBLIC :: ComputeTempFromIntEnergy_Lookup
-  PUBLIC :: ComputeTempFromIntEnergy_Bisection
-  PUBLIC :: ComputeTempFromIntEnergy_Secant
-  PUBLIC :: ComputeTempFromEntropy
-  PUBLIC :: ComputeTempFromPressure
-  PUBLIC :: ComputeTempFromPressure_Bisection
   PUBLIC :: ComputeTempForVector
   PUBLIC :: LogInterpolateAllVariables
   PUBLIC :: LogInterpolateDifferentiateAllVariables
