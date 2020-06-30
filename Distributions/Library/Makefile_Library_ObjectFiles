@@ -3,6 +3,5 @@ WL_LIBRARY = \
   wlGridModule.o \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
-  wlInterpolationUtilitiesModule.o \
   wlInterpolationModule.o \
   wlIOModuleHDF.o

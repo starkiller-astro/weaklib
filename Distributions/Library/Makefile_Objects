@@ -6,6 +6,5 @@ wlThermoStateModule.o \
 wlDependentVariablesModule.o \
 wlGridModule.o \
 wlIOModuleHDF.o \
-wlInterpolationUtilitiesModule.o \
 wlInterpolationModule.o 
 

@@ -13,13 +13,8 @@ wlDependentVariablesModule.o: \
   wlKindModule.o \
   wlDependentVariablesModule.f90
 
-wlInterpolationUtilitiesModule.o: \
-  wlKindModule.o \
-  wlInterpolationUtilitiesModule.F90
-
 wlInterpolationModule.o: \
   wlKindModule.o \
-  wlInterpolationUtilitiesModule.o: \
   wlInterpolationModule.F90
 
 wlIOModuleHDF.o: \
