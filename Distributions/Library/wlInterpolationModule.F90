@@ -3898,7 +3898,7 @@ CONTAINS
 
     REAL(dp), INTENT(inout) :: Phi0a_Brem(:,:,:,:,:)
 
-    INTEGER  :: iEp, iE, iD, iT, iY
+    INTEGER  :: iD, iT, iY
     INTEGER  :: ii, jj, kk, ll, mm
     REAL(dp) :: dD, dT, dY
 
