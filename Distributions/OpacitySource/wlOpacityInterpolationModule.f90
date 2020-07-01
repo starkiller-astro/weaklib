@@ -3,7 +3,9 @@ MODULE wlOpacityInterpolationModule
   USE wlKindModule, ONLY: &
     dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateOpacity_2D1D2D
+    LogInterpolateOpacity_2D1D2D,
+    LinearInterp_Array_Point, &
+    GetIndexAndDelta
   USE wlOpacityFieldsModule, ONLY: &
     iNu_e, iNu_e_bar, &
     iHi0, iHii0, iHi1, iHii1, &
@@ -14,6 +16,7 @@ MODULE wlOpacityInterpolationModule
 
   PUBLIC :: wlInterpolateOpacity_NES
   PUBLIC :: wlInterpolateOpacity_Pair
+  PUBLIC :: wlInterpolateOpacity_Brem
 
   REAL(dp), PARAMETER :: cv = 0.96d+00 ! weak interaction constant
   REAL(dp), PARAMETER :: ca = 0.50d+00 ! weak interaction constant
@@ -230,5 +233,47 @@ CONTAINS
 
   END SUBROUTINE wlInterpolateOpacity_Pair
 
+  SUBROUTINE wlInterpolateOpacity_Brem &
+    ( LogEp, LogE, LogD, LogT, Y, LogEps, LogEs, LogDs, LogTs, Ys, OS, Table, Phi0a_Brem)
+
+    REAL(dp), INTENT(in) :: LogEp(:)
+    REAL(dp), INTENT(in) :: LogE(:)
+    REAL(dp), INTENT(in) :: LogD(:)
+    REAL(dp), INTENT(in) :: LogT(:)
+    REAL(dp), INTENT(in) :: Y(:)
+    REAL(dp), INTENT(in) :: LogEps(:)
+    REAL(dp), INTENT(in) :: LogEs(:)
+    REAL(dp), INTENT(in) :: LogDs(:)
+    REAL(dp), INTENT(in) :: LogTs(:)
+    REAL(dp), INTENT(in) :: Ys(:)
+
+    REAL(dp), INTENT(in) :: OS
+
+    REAL(dp), INTENT(in) :: Table(:,:,:,:,:)
+
+    REAL(dp), INTENT(inout) :: Phi0a_Brem(:,:,:,:,:)
+
+    INTEGER  :: iD, iT, iY
+    INTEGER  :: ii, jj, kk, ll, mm
+    REAL(dp) :: dD, dT, dY
+
+    DO mm = 1, SIZE(Y)
+      CALL GetIndexAndDelta( Y(mm), Ys, iY, dY )
+      DO ll = 1, SIZE(LogT)
+        CALL GetIndexAndDelta( LogT(ll), LogTs, iT, dT )
+        DO kk = 1, SIZE(LogD)
+          CALL GetIndexAndDelta( LogD(kk), LogDs, iD, dD )
+          DO jj = 1, SIZE(LogE)
+            DO ii = 1, SIZE(LogEp)
+
+              Phi0a_Brem(ii,jj,kk,ll,mm) = LinearInterp_Array_Point( ii, jj, iD, iT, iY, dD, dT, dY, OS, Table)
+
+            END DO
+          END DO
+        END DO
+      END DO
+    END DO
+
+  END SUBROUTINE wlInterpolateOpacity_Brem
 
 END MODULE wlOpacityInterpolationModule

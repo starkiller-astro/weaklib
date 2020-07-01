@@ -59,6 +59,10 @@ PROGRAM wlCreateOpacityTable
   USE prb_cntl_module, ONLY: &
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
       edmpa, edmpe, iaenca
+      
+  USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
 
 IMPLICIT NONE
 
