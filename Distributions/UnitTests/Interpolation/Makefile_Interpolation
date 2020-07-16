@@ -1,0 +1,15 @@
+include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+
+all: wlTestInterpolation 
+
+wlTestInterpolation: \
+        $(weaklib) wlTestInterpolation.o
+	$(FLINKER) $(FLAGS) -o wlTestInterpolation_$(MACHINE) \
+        $(weaklib) wlTestInterpolation.o \
+        $(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f *_$(MACHINE)
