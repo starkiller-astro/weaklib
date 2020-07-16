@@ -11,6 +11,7 @@ MODULE wlInterpolationModule
   PUBLIC :: locate
   PUBLIC :: Index1D
   PUBLIC :: Index1D_Lin
+  PUBLIC :: GetIndexAndDelta
   PUBLIC :: TriLinear
   PUBLIC :: LogInterpolateSingleVariable
   PUBLIC :: LogInterpolateDifferentiateSingleVariable
@@ -32,6 +33,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_P
   PUBLIC :: LogInterpolateOpacity_2D1D2D
   PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
+  PUBLIC :: LinearInterp_Array_Point
 
   REAL(dp), PARAMETER :: One = 1.0_dp
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
@@ -177,7 +179,7 @@ CONTAINS
     
     REAL(dp), INTENT(in)  :: Y, Ys(:)
     INTEGER,  INTENT(out) :: iY
-    REAL(dp), INTENT(OUT) :: dY
+    REAL(dp), INTENT(out) :: dY
       iY = Index1D_Lin( Y, Ys, SIZE( Ys ) )
       dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
 
@@ -385,10 +387,10 @@ CONTAINS
   END FUNCTION TetraLinear
 
   REAL(dp) FUNCTION PentaLinear &
-    ( p00000, p10000, p01000, p11000, p00100, p10100, p01100, p11100, &
-      p00010, p10010, p01010, p11010, p00110, p10110, p01110, p11110, &
-      p00001, p10001, p01001, p11001, p00101, p10101, p01101, p11101, &
-      p00011, p10011, p01011, p11011, p00111, p10111, p01111, p11111, &
+    ( p00000, p01000, p00100, p01100, p00010, p01010, p00110, p01110, &
+      p00001, p01001, p00101, p01101, p00011, p01011, p00111, p01111, &
+      p10000, p11000, p10100, p11100, p10010, p11010, p10110, p11110, &
+      p10001, p11001, p10101, p11101, p10011, p11011, p10111, p11111, &
       dX1, dX2, dX3, dX4, dX5)
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -397,10 +399,10 @@ CONTAINS
 #endif
 
     REAL(dp), INTENT(in) :: &
-      p00000, p10000, p01000, p11000, p00100, p10100, p01100, p11100, &
-      p00010, p10010, p01010, p11010, p00110, p10110, p01110, p11110, &
-      p00001, p10001, p01001, p11001, p00101, p10101, p01101, p11101, &
-      p00011, p10011, p01011, p11011, p00111, p10111, p01111, p11111, &
+      p00000, p01000, p00100, p01100, p00010, p01010, p00110, p01110, &
+      p00001, p01001, p00101, p01101, p00011, p01011, p00111, p01111, &
+      p10000, p11000, p10100, p11100, p10010, p11010, p10110, p11110, &
+      p10001, p11001, p10101, p11101, p10011, p11011, p10111, p11111, &
       dX1, dX2, dX3, dX4, dX5
 
     REAL(dp) :: ddX5
