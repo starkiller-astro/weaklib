@@ -147,7 +147,7 @@ PROGRAM wlTestInterpolation
   CALL GetIndexAndDelta( x4, axis4_lo_res, ix4, dx4 )
   CALL GetIndexAndDelta( x5, axis5_lo_res, ix5, dx5 )
 
-  write(stdout,*) 'Testing interpolation with linear source data'
+  write(stdout,*) 'Testing interpolation with linear source data (this should result in round-off agreement)'
   write(stdout,*) 'source(x1,x2,x3,x4,x5) = x1 + 2 x2 - 1/3 x3 - 7 x4 + x5'
 
   !test 1D 1D linear data
