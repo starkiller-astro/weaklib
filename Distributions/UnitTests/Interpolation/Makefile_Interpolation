@@ -1,4 +1,5 @@
-include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+WEAKLIB_DIR ?= ../../../
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
 
 all: wlTestInterpolation 
 
@@ -13,3 +14,8 @@ clean:
 
 clobber: clean
 	rm -f *_$(MACHINE)
+
+wlTestInterpolation.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlTestInterpolation.F90
