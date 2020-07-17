@@ -9,7 +9,6 @@ FORTRAN_titan_pgi    = ftn -Mpreprocess
 FORTRAN_darter_gnu   = ftn
 FORTRAN_darter_cray  = ftn
 FORTRAN_beacon_intel = mpiifort
-FORTRAN_paullaiu_gnu = mpif90
 FORTRAN_summitdev_gcc= mpifort -cpp
 FORTRAN_summitdev_pgi= mpifort -Mpreprocess
 FORTRAN_summitdev_xl = mpifort -qpreprocess
