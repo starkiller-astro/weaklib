@@ -14,7 +14,7 @@ MODULE wlOpacityTableModule
 !      Allocate/DeAllocate table for opacity considered EoS table.
 !
 !-----------------------------------------------------------------------
-!                         Three Opacity Type
+!                         Four Opacity Types
 !
 ! OpacityType EmAb for  ABEM( rho, T, Ye, E )
 !
@@ -26,7 +26,11 @@ MODULE wlOpacityTableModule
 !                v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
 !
 !                  and  NES ( ep, e, l, T, eta )
-!                       Pair( ep, e, l, T, eta )  
+!                       Pair( ep, e, l, T, eta )
+!
+! OpacityType Brem for  Brem( ep, e, rho, T )
+!
+!                nu nubar + N N <--> N N
 !-----------------------------------------------------------------------
  
   USE wlKindModule, ONLY: &
@@ -39,6 +43,7 @@ MODULE wlOpacityTableModule
   USE wlOpacityFieldsModule, ONLY: &
     OpacityTypeEmAb, &
     OpacityTypeScat, &
+    OpacityTypeBrem, &
     AllocateOpacity, &
     DeallocateOpacity, &
     DescribeOpacity
@@ -85,8 +90,8 @@ MODULE wlOpacityTableModule
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
       Scat_Pair  ! -- Pair Production
-    TYPE(OpacityTypeScat)          :: &
-      Scat_Brem  ! -- Neutrino–Antineutrino Pair Annihilation and Production from Nucleon–Nucleon Bremsstrahlung
+    TYPE(OpacityTypeBrem)          :: &
+      Brem       ! -- Neutrino–Antineutrino Pair Annihilation and Production from Nucleon–Nucleon Bremsstrahlung
   END TYPE OpacityTableType
 
   PUBLIC :: AllocateOpacityTable
@@ -165,7 +170,8 @@ CONTAINS
     END IF
 
     ASSOCIATE( nPoints => OpTab % TS % nPoints, &
-               iT      => OpTab % TS % Indices % iT )
+               iRho    => OpTab % TS % Indices % iRho , &
+               iT      => OpTab % TS % Indices % iT)
 
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
 
@@ -191,10 +197,10 @@ CONTAINS
            ( OpTab % Scat_Pair, nPointsTemp(1:5), &
              nMoments = nMom_Pair, nOpacities = nOpac_Pair )
 
-    nPointsTemp(1:5) = [ nPointsE, nPointsE, nPoints ]
+    !nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(iRho), nPoints(iT) ]
 
     CALL AllocateOpacity &
-           ( OpTab % Scat_Brem, nPointsTemp(1:5), &
+           ( OpTab % Brem, nPointsE, nPoints(iRho), nPoints(iT), &
              nMoments = nMom_Brem, nOpacities = nOpac_Brem )
 
     END ASSOCIATE ! nPoints
@@ -224,7 +230,7 @@ CONTAINS
     CALL DeAllocateOpacity( OpTab % Scat_Iso )
     CALL DeAllocateOpacity( OpTab % Scat_NES )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
-    CALL DeAllocateOpacity( OpTab % Scat_Brem )
+    CALL DeAllocateOpacity( OpTab % Brem )
 
     CALL DeAllocateThermoState( OpTab % TS )
 
@@ -282,8 +288,8 @@ CONTAINS
     CALL DescribeOpacity( OpTab % Scat_NES )
     CALL DescribeOpacity( OpTab % Scat_Pair )
 
-    if(OpTab % Scat_Brem % nOpacities .gt. 0) then
-    CALL DescribeOpacity( OpTab % Scat_Brem )
+    if(OpTab % Brem % nOpacities .gt. 0) then
+    CALL DescribeOpacity( OpTab % Brem )
     end if
 
   END SUBROUTINE DescribeOpacityTable

@@ -27,7 +27,8 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:&
     OpacityTypeEmAb,              &
-    OpacityTypeScat
+    OpacityTypeScat,              &
+    OpacityTypeBrem
   USE wlIOModuleHDF, ONLY:        &
     ReadHDF,                      &
     WriteHDF,                     &
@@ -208,17 +209,17 @@ CONTAINS
 
     IF( WriteOpacity_Brem ) THEN
 
-      IF( .NOT. ALLOCATED( OpacityTable % Scat_Brem % Names ) )THEN
+      IF( .NOT. ALLOCATED( OpacityTable % Brem % Names ) )THEN
 
         ! --- Insert Appropriate Reaction ---
         WRITE(*,'(A4,A)') &
-                '', 'OpacityTable % Scat_Brem not allocated.  Write Skipped.'
+                '', 'OpacityTable % Brem not allocated.  Write Skipped.'
 
       ELSE
 
         CALL OpenGroupHDF &
-                 ( "Scat_Brem_Kernels", .true., file_id, group_id )
-        CALL WriteOpacityTableHDF_Brem( OpacityTable % Scat_Brem, group_id )
+                 ( "Brem_Kernels", .true., file_id, group_id )
+        CALL WriteOpacityTableHDF_Brem( OpacityTable % Brem, group_id )
         CALL CloseGroupHDF( group_id )
 
       END IF
@@ -325,7 +326,7 @@ CONTAINS
 
   SUBROUTINE WriteOpacityTableHDF_Brem( Brem , group_id )
 
-    TYPE(OpacityTypeScat), INTENT(in)    :: Brem
+    TYPE(OpacityTypeBrem), INTENT(in)    :: Brem
     INTEGER(HID_T),        INTENT(in)    :: group_id
 
     INTEGER(HSIZE_T)                     :: datasize1d(1)
@@ -348,12 +349,12 @@ CONTAINS
     CALL WriteHDF&
          ( "Offsets", Brem % Offsets, group_id, datasize2d )
 
-    datasize5d(1:5) = Brem % nPoints
+    datasize4d(1:4) = Brem % nPoints
 
     DO i = 1, Brem % nOpacities
      CALL WriteHDF&
-        ( Brem % Names(i), Brem % Kernel(i) % Values(:,:,:,:,:),&
-                            group_id, datasize5d )
+        ( Brem % Names(i), Brem % Kernel(i) % Values(:,:,:,:),&
+                            group_id, datasize4d )
     END DO
 
   END SUBROUTINE WriteOpacityTableHDF_Brem
@@ -812,27 +813,28 @@ CONTAINS
       CALL OpenFileHDF( FileName(iBrem), .FALSE., file_id )
 
       CALL OpenGroupHDF &
-             ( "Scat_Brem_Kernels", .FALSE., file_id, group_id )
+             ( "Brem_Kernels", .FALSE., file_id, group_id )
 
-      datasize2d(1) = OpacityTable % Scat_Brem % nOpacities
-      datasize2d(2) = OpacityTable % Scat_Brem % nMoments
+      datasize2d(1) = OpacityTable % Brem % nOpacities
+      datasize2d(2) = OpacityTable % Brem % nMoments
 
       CALL ReadHDF &
-             ( "Offsets", OpacityTable % Scat_Brem % Offsets, &
+             ( "Offsets", OpacityTable % Brem % Offsets, &
                group_id, datasize2d )
 
       CALL ReadHDF &
-             ( "Units",   OpacityTable % Scat_Brem % Units,   &
+             ( "Units",   OpacityTable % Brem % Units,   &
                group_id, datasize2d )
 
-      datasize5d(1:2) = OpacityTable % EnergyGrid % nPoints
-      datasize5d(3:5) = OpacityTable % TS % nPoints
+      datasize4d(1:2) = OpacityTable % EnergyGrid % nPoints
+      datasize4d(3)   = OpacityTable % TS % nPoints(OpacityTable % TS % Indices % iRho)
+      datasize4d(4)   = OpacityTable % TS % nPoints(OpacityTable % TS % Indices % iT)
 
-      OpacityTable % Scat_Brem % Names(1) = "Kernel";
+      OpacityTable % Brem % Names(1) = "Kernel";
 
       CALL ReadHDF &
-             ( TRIM( OpacityTable % Scat_Brem % Names(1) ), &
-               OpacityTable % Scat_Brem % Kernel(1) % Values, &
+             ( TRIM( OpacityTable % Brem % Names(1) ), &
+               OpacityTable % Brem % Kernel(1) % Values, &
                group_id, datasize5d )
 
       CALL CloseGroupHDF( group_id )
@@ -938,6 +940,53 @@ CONTAINS
 
   END SUBROUTINE ReadOpacityTypeScatHDF
 
+  SUBROUTINE ReadOpacityTypeBremHDF( Brem, group_id )
+
+    TYPE(OpacityTypeBrem),INTENT(inout)                 :: Brem
+    INTEGER(HID_T), INTENT(in)                       :: group_id
+
+    INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(2)                   :: datasize2d
+    INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
+    INTEGER                                          :: i
+    INTEGER, DIMENSION(1)                            :: buffer
+    REAL(dp), DIMENSION(1)                           :: bufferReal
+    INTEGER(HID_T)                                   :: subgroup_id
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+    Brem % nOpacities = buffer(1)
+
+    CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+    Brem % nMoments   = buffer(1)
+
+    datasize1d = buffer(1)
+    Call ReadHDF( "Names", Brem % Names, group_id, datasize1d )
+
+    Call ReadHDF( "Units", Brem % Units, group_id, datasize1d )
+
+    datasize1d(1) = 4
+    CALL ReadHDF( "nPoints", Brem % nPoints, group_id, datasize1d )
+
+    datasize2d = [Brem % nOpacities, Brem % nMoments]
+    CALL ReadHDF( "Offsets", Brem % Offsets, group_id, datasize2d )
+
+    datasize4d(1:4) = Brem % nPoints
+
+    CALL OpenGroupHDF( "Kernel", .false., group_id, subgroup_id )
+
+    DO i = 1, Brem % nOpacities
+
+      CALL ReadHDF &
+             ( Brem % Names(i), &
+               Brem % Kernel(i) % Values, &
+               subgroup_id, datasize4d )
+
+    END DO ! nOpacities
+
+    CALL CloseGroupHDF( subgroup_id )
+
+  END SUBROUTINE ReadOpacityTypeBremHDF
 
   SUBROUTINE ReadGridHDF( Grid, group_id )
 

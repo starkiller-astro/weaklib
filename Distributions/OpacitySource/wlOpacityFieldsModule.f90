@@ -75,13 +75,6 @@ MODULE wlOpacityFieldsModule
 !     T:   Temperature
 !     Eta: Electron Chemical Pot. / Temperature
 !
-! OpacityTypeBrem (Nucleon-nucleon Bremsstrahlung)
-!   Dependency ( E', E, rho, T, Ye )
-!     E':  Neutrino Energy
-!     E:   Neutrino Energy
-!     rho: mass density  
-!     T:   Temperature
-!     Ye:  Electron fraction
 !---------------------------------------------
 
   TYPE, PUBLIC :: OpacityTypeScat
@@ -94,14 +87,32 @@ MODULE wlOpacityFieldsModule
     TYPE(ValueType_5D), ALLOCATABLE :: Kernel(:)
   END TYPE OpacityTypeScat
 
+
+!---------------------------------------------
+!
+! OpacityTypeBrem (Nucleon-nucleon Bremsstrahlung)
+!   Dependency ( E', E, rho, T)
+!     E':  Neutrino Energy
+!     E:   Neutrino Energy
+!     rho: mass density  
+!     T:   Temperature
+!     
+!     The composition is taken into account 
+!     by passing xp*rho, xn*rho and sqrt(xp+xn)*rho 
+!     when interpolating, resulting in three
+!     interpolations and then adding the three
+!     contributions to the overall kernel
+!
+!---------------------------------------------
+
   TYPE, PUBLIC :: OpacityTypeBrem
     INTEGER                         :: nOpacities
     INTEGER                         :: nMoments
-    INTEGER                         :: nPoints(5)
+    INTEGER                         :: nPoints(4)
     CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
     CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
     REAL(dp),           ALLOCATABLE :: Offsets(:,:)
-    TYPE(ValueType_5D), ALLOCATABLE :: Kernel(:)
+    TYPE(ValueType_4D), ALLOCATABLE :: Kernel(:)
   END TYPE OpacityTypeBrem
 
   PUBLIC :: AllocateOpacity
@@ -306,18 +317,18 @@ CONTAINS
 
   END SUBROUTINE DescribeOpacityTypeScat
 
-  SUBROUTINE AllocateOpacityTypeBrem( Opacity, nPoints, nMoments, nOpacities )
+  SUBROUTINE AllocateOpacityTypeBrem( Opacity, nE, nRho, nT, nMoments, nOpacities )
 
     INTEGER,               INTENT(in)     :: nMoments
     INTEGER,               INTENT(in)     :: nOpacities
-    INTEGER,               INTENT(in)     :: nPoints(5)
+    INTEGER,               INTENT(in)     :: nE, nRho, nT
     TYPE(OpacityTypeBrem), INTENT(inout)  :: Opacity
 
     INTEGER :: i
 
     Opacity % nOpacities = nOpacities
     Opacity % nMoments   = nMoments
-    Opacity % nPoints    = nPoints
+    Opacity % nPoints    = [nE, nE, nRho, nT]
 
     ALLOCATE( Opacity % Names(nOpacities) )
     ALLOCATE( Opacity % Units(nOpacities) )
@@ -328,7 +339,7 @@ CONTAINS
 
       ALLOCATE &
         ( Opacity % Kernel(i) % Values &
-            ( nPoints(1), nPoints(2), nPoints(3), nPoints(4), nPoints(5) ) )
+            ( nE, nE, nrho, nT ) )
 
     END DO
 

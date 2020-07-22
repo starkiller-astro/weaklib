@@ -17,15 +17,15 @@ IMPLICIT NONE
 
 CONTAINS
 
-subroutine bremcal_weaklib( nez, egrid, rho, t, xn, xp, s_a )
+subroutine bremcal_weaklib( nez, egrid, rho_x, t, s_a )
 
 INTEGER,                  INTENT(in) :: nez       ! number of neutrino energies
 REAL(dp), DIMENSION(nez), INTENT(in) :: egrid     ! neutrino energy grid
 
-REAL(dp), INTENT(in)       :: rho                 ! density [g cm^{-3}]
+REAL(dp), INTENT(in)       :: rho_x                 ! density [g cm^{-3}]
 REAL(dp), INTENT(in)       :: t                   ! temperature [K]
-REAL(dp), INTENT(in)       :: xn                  ! free neutron mass fraction
-REAL(dp), INTENT(in)       :: xp                  ! free proton mass fraction
+!REAL(dp), INTENT(in)       :: xn                  ! free neutron mass fraction
+!REAL(dp), INTENT(in)       :: xp                  ! free proton mass fraction
 
 !-----------------------------------------------------------------------
 !        Output variables.
@@ -55,11 +55,11 @@ REAL(dp)              :: gamma           ! spin fluctuation rate
 REAL(dp)              :: y               ! pion mass parameter
 REAL(dp), DIMENSION(nez,nez)   :: sb     ! dimensionless fitting parameter
 REAL(dp)              :: gb              ! dimensionless fitting parameter
-REAL(dp)              :: rho_x           ! density adjusted for the composition [g cm^{-3}]
+!REAL(dp)              :: rho_x           ! density adjusted for the composition [g cm^{-3}]
 
 INTEGER               :: k, kb           ! neutrino(anti) loop variables
 
-REAL(dp), DIMENSION(nez,nez,3) :: s_aa   ! differential absorption kernel
+!REAL(dp), DIMENSION(nez,nez) :: s_aa   ! differential absorption kernel
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -68,20 +68,20 @@ REAL(dp), DIMENSION(nez,nez,3) :: s_aa   ! differential absorption kernel
 !  Loop over nn, pp, and np contributions
 !-----------------------------------------------------------------------
 
-DO i = 1, 3
+!DO i = 1, 3
 
 
 !-----------------------------------------------------------------------
 !  Adjust density to reflect composition
 !-----------------------------------------------------------------------
 
-  IF ( i == 1 ) THEN
-    rho_x          = rho * xn
-  ELSE IF ( i == 2 ) THEN
-    rho_x          = rho * xp
-  ELSE IF ( i == 3 ) THEN
-    rho_x          = rho * SQRT( ABS( xn * xp ) + epsilon )
-  END IF ! i == 1
+!  IF ( i == 1 ) THEN
+!    rho_x          = rho * xn
+!  ELSE IF ( i == 2 ) THEN
+!    rho_x          = rho * xp
+!  ELSE IF ( i == 3 ) THEN
+!    rho_x          = rho * SQRT( ABS( xn * xp ) + epsilon )
+!  END IF ! i == 1
 
 !-----------------------------------------------------------------------
 !  Initialize
@@ -141,22 +141,22 @@ DO i = 1, 3
 
   DO kb = 1,nez
     DO k = 1,nez
-      s_aa(k,kb,i)   = gamma/( x(k,kb)**2 + ( half * gamma * gb )**2 )         &
+      s_a(k,kb)     = gamma/( x(k,kb)**2 + ( half * gamma * gb )**2 )         &
 &                    * sb(k,kb)/tmev * coef * rho_14
     END DO ! k = 1,nez
   END DO ! kb = 1,nez
 
-END DO ! i = 1, 3
+!END DO ! i = 1, 3
 
 !-----------------------------------------------------------------------
 !  Sum the contributions
 !-----------------------------------------------------------------------
 
-DO kb = 1,nez
-  DO k = 1,nez
-    s_a(k,kb)   = s_aa(k,kb,1) + s_aa(k,kb,2) + coef_np * s_aa(k,kb,3)
-  END DO ! k = 1,nez
-END DO ! kb = 1,nez
+!DO kb = 1,nez
+!  DO k = 1,nez
+!    s_a(k,kb)   = s_aa(k,kb,1) + s_aa(k,kb,2) + coef_np * s_aa(k,kb,3)
+!  END DO ! k = 1,nez
+!END DO ! kb = 1,nez
 
 RETURN
 

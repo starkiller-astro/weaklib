@@ -31,8 +31,12 @@ PROGRAM wlCreateOpacityTable
 !       e+ + e-  <--> v_i + anti(v_i);   i=e, muon, tau
 !       N + N   <--> N + N + v_i + anti(v_i)
 !                 
-! OpacityType D for nucleon-nucleon Bremsstrahlung( e_p, e, rho, T, Ye)
+! OpacityType D for nucleon-nucleon Bremsstrahlung( e_p, e, rho, T)
+!
 ! Stored is the zeroth order annihilation kernel from Hannestad and Raffelt 1998
+! for a generic rho. The composition can later be taking into account 
+! by interpolating and adding the contribution from 
+! xp*rho, xn*rho and sqrt(xp+xn)*rho
 !
 !       nu nubar NN <--> NN   i=e, muon, tau
 !---------------------------------------------------------------------
@@ -123,7 +127,7 @@ IMPLICIT NONE
    REAL(dp), DIMENSION(nPointsE) :: absor, emit 
    REAL(dp), DIMENSION(nPointsE,2) :: cok 
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
-   REAL(dp)                :: j0i, j0ii, j1i, j1ii
+   REAL(dp)                                :: j0i, j0ii, j1i, j1ii
 
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: s_a !the Bremsstrahlung annihilation kernel
    REAL(dp), PARAMETER                     :: brem_rho_min = 1.0d+07 !switch Bremsstrahlung off below rho_min
@@ -229,19 +233,20 @@ IMPLICIT NONE
    OpacityTable % Scat_Pair % Units = (/'Per Centimeter Per MeV^3'/)
    END IF
 
-! -- Set OpacityTableTypeScat Brem
+! -- Set OpacityTableTypeBrem Brem
    IF( nOpac_Brem .gt. 0 ) THEN
-   OpacityTable % Scat_Brem % nOpacities   = nOpac_Brem
+   OpacityTable % Brem % nOpacities   = nOpac_Brem
 
-   OpacityTable % Scat_Brem % nMoments     = nMom_Brem
+   OpacityTable % Brem % nMoments     = nMom_Brem
 
-   OpacityTable % Scat_Brem % nPoints(1)   = nPointsE
-   OpacityTable % Scat_Brem % nPoints(2)   = nPointsE
-   OpacityTable % Scat_Brem % nPoints(3:5) = OpacityTable % nPointsTS
+   OpacityTable % Brem % nPoints(1)   = nPointsE
+   OpacityTable % Brem % nPoints(2)   = nPointsE
+   OpacityTable % Brem % nPoints(3)   = OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho)
+   OpacityTable % Brem % nPoints(4)   = OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)
 
-   OpacityTable % Scat_Brem % Names        = (/'Kernel'/)
+   OpacityTable % Brem % Names        = (/'Kernel'/)
 
-   OpacityTable % Scat_Brem % Units        = (/'Per Centimeter Per MeV^3'/)
+   OpacityTable % Brem % Units        = (/'Per Centimeter Per MeV^3'/)
    END IF
 
 !-----------------------------   
@@ -544,53 +549,38 @@ PRINT*, 'Filling OpacityTable ...'
 
   !write(stdout,*), omp_get_max_threads()
 
-!$omp parallel do private(ye, T, rho, xp, xn) collapse(3)
-   DO l_ye = 1, OpacityTable % nPointsTS(iYe)
+   DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-     DO k_t = 1, OpacityTable % nPointsTS(iT)
+    DO j_rho = 1, OpacityTable % nPointsTS(iRho)
 
-       DO j_rho = 1, OpacityTable % nPointsTS(iRho)
-
-         ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
-         T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
-         rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
+      T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+      rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
                
-          IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
+      IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
 
-                OpacityTable % Scat_Brem % Kernel(1) % &
-                        Values (:, :, j_rho, k_t, l_ye) &
-                = 0.d0
-                cycle
+          OpacityTable % Brem % Kernel(1) % &
+                Values (:, :, j_rho, k_t) &
+          = 0.d0
+          cycle
              
-          ELSE
-            xp  = 10.d0**DVar(Indices % iProtonMassFraction) % &
-                   Values(j_rho, k_t, l_ye) &
-                   - DVOffs(Indices % iProtonMassFraction)   &
-                   - epsilon
+      ELSE
 
-            xn  = 10.d0**DVar(Indices % iNeutronMassFraction) % &
-                   Values(j_rho, k_t, l_ye) &
-                   - DVOffs(Indices % iNeutronMassFraction)   &
-                   - epsilon
+        CALL bremcal_weaklib &
+             (nPointsE, OpacityTable % EnergyGrid % Values, & 
+              rho, T, s_a)
 
-            CALL bremcal_weaklib &
-                  (nPointsE, OpacityTable % EnergyGrid % Values, & 
-                  rho, T, xn, xp, s_a)
-
-                OpacityTable % Scat_Brem % Kernel(1) % &
-                        Values (:, :, j_rho, k_t, l_ye) &
-                = TRANSPOSE(s_a(:,:)) 
+             OpacityTable % Brem % Kernel(1) % Values (:, :, j_rho, k_t) &
+             = TRANSPOSE(s_a(:,:)) 
             
-          END IF
+      END IF
 
-       END DO  !j_rho
-     END DO  !k_t
-   END DO  !l_ye
+    END DO  !j_rho
+  END DO  !k_t
    
-!------- Scat_Brem % Offsets
+!------- Brem % Offsets
 
-       minvar = MINVAL( OpacityTable % Scat_Brem % Kernel(1) % Values )
-       OpacityTable % Scat_Brem % Offsets(1, 1) = -2.d0 * MIN( 0.d0, minvar ) 
+       minvar = MINVAL( OpacityTable % Brem % Kernel(1) % Values )
+       OpacityTable % Brem % Offsets(1, 1) = -2.d0 * MIN( 0.d0, minvar ) 
        
   END IF
 
@@ -637,9 +627,9 @@ PRINT*, 'Filling OpacityTable ...'
     END DO
   END DO !i_rb
 
-        OpacityTable % Scat_Brem % Kernel(1) % Values &
-      = LOG10 ( OpacityTable % Scat_Brem % Kernel(1) % Values &
-                + OpacityTable % Scat_Brem % Offsets(1, 1) + epsilon )
+        OpacityTable % Brem % Kernel(1) % Values &
+      = LOG10 ( OpacityTable % Brem % Kernel(1) % Values &
+              + OpacityTable % Brem % Offsets(1, 1) + epsilon )
 
 ! -- write into hdf5 file
 
