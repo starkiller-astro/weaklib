@@ -63,6 +63,7 @@ PROGRAM wlCreateOpacityTable
   USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
                                             stdout=>output_unit, &
                                             stderr=>error_unit
+  USE omp_lib
 
 IMPLICIT NONE
 
@@ -71,7 +72,9 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eos table
 !---------------------------------------------------------------------
-   CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-25-40-100.h5"
+   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
 
 !---------------------------------------------------------------------
 ! Set neutrino interaction type
@@ -326,13 +329,13 @@ PRINT*, 'Filling OpacityTable ...'
                   Values(j_rho, k_t, l_ye) &
                   - DVOffs(Indices % iProtonChemicalPotential)   &
                   - epsilon 
-         write(stdout,*) 'cmpp', DVar(Indices % iProtonChemicalPotential) % Values(j_rho, k_t, l_ye),chem_p,ye,T,rho
+         !write(stdout,*) 'cmpp', DVar(Indices % iProtonChemicalPotential) % Values(j_rho, k_t, l_ye),chem_p,ye,T,rho
 
          chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
                   Values(j_rho, k_t, l_ye) &
                   - DVOffs(Indices % iNeutronChemicalPotential)   &
                   - epsilon
-         write(stdout,*) 'cmpn', DVar(Indices % iNeutronChemicalPotential) % Values(j_rho, k_t, l_ye),chem_n,ye,T,rho
+         !write(stdout,*) 'cmpn', DVar(Indices % iNeutronChemicalPotential) % Values(j_rho, k_t, l_ye),chem_n,ye,T,rho
 
             xp  = 10**DVar(Indices % iProtonMassFraction) % &
                   Values(j_rho, k_t, l_ye) &
@@ -539,17 +542,17 @@ PRINT*, 'Filling OpacityTable ...'
   IF( nOpac_Brem .gt. 0 ) THEN
   PRINT*, 'Calculating Nucleon-Nucleon Bremsstrahlung Scattering Kernel ...'
 
+  !write(stdout,*), omp_get_max_threads()
 
+!$omp parallel do private(ye, T, rho, xp, xn) collapse(3)
    DO l_ye = 1, OpacityTable % nPointsTS(iYe)
-   
-     ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
 
      DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-       T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
-
        DO j_rho = 1, OpacityTable % nPointsTS(iRho)
 
+         ye = OpacityTable % EOSTable % TS % States (iYe) % Values (l_ye)
+         T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
          rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
                
           IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
