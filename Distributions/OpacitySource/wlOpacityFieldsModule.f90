@@ -75,6 +75,18 @@ MODULE wlOpacityFieldsModule
 !     T:   Temperature
 !     Eta: Electron Chemical Pot. / Temperature
 !
+! OpacityTypeScat (Nucleon-nucleon Bremsstrahlung)
+!   Dependency ( E', E, rho, T)
+!     E':  Neutrino Energy
+!     E:   Neutrino Energy
+!     rho: mass density  
+!     T:   Temperature
+!     
+!     The composition is taken into account 
+!     by passing xp*rho, xn*rho and sqrt(xp+xn)*rho 
+!     when interpolating, resulting in three
+!     interpolations and then adding the three
+!     contributions to the overall kernel
 !---------------------------------------------
 
   TYPE, PUBLIC :: OpacityTypeScat
@@ -88,33 +100,6 @@ MODULE wlOpacityFieldsModule
   END TYPE OpacityTypeScat
 
 
-!---------------------------------------------
-!
-! OpacityTypeBrem (Nucleon-nucleon Bremsstrahlung)
-!   Dependency ( E', E, rho, T)
-!     E':  Neutrino Energy
-!     E:   Neutrino Energy
-!     rho: mass density  
-!     T:   Temperature
-!     
-!     The composition is taken into account 
-!     by passing xp*rho, xn*rho and sqrt(xp+xn)*rho 
-!     when interpolating, resulting in three
-!     interpolations and then adding the three
-!     contributions to the overall kernel
-!
-!---------------------------------------------
-
-  TYPE, PUBLIC :: OpacityTypeBrem
-    INTEGER                         :: nOpacities
-    INTEGER                         :: nMoments
-    INTEGER                         :: nPoints(4)
-    CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
-    CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
-    REAL(dp),           ALLOCATABLE :: Offsets(:,:)
-    TYPE(ValueType_4D), ALLOCATABLE :: Kernel(:)
-  END TYPE OpacityTypeBrem
-
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
   PUBLIC :: DescribeOpacity
@@ -122,19 +107,16 @@ MODULE wlOpacityFieldsModule
   INTERFACE AllocateOpacity
     MODULE PROCEDURE AllocateOpacityTypeEmAb
     MODULE PROCEDURE AllocateOpacityTypeScat
-    MODULE PROCEDURE AllocateOpacityTypeBrem
   END INTERFACE AllocateOpacity
 
   INTERFACE DeallocateOpacity
     MODULE PROCEDURE DeallocateOpacityTypeEmAb
     MODULE PROCEDURE DeallocateOpacityTypeScat
-    MODULE PROCEDURE DeallocateOpacityTypeBrem
   END INTERFACE DeallocateOpacity
 
   INTERFACE DescribeOpacity
     MODULE PROCEDURE DescribeOpacityTypeEmAb
     MODULE PROCEDURE DescribeOpacityTypeScat
-    MODULE PROCEDURE DescribeOpacityTypeBrem
   END INTERFACE DescribeOpacity
 
 CONTAINS
@@ -293,20 +275,21 @@ CONTAINS
 
       DO l = 1, Opacity % nMoments
       WRITE(*,*)
-         IF( Opacity % nMoments .eq. 4 )THEN
-           WRITE(*,'(A8,A16,I3.3)') &
-             ' ', 'For Moments l = ', l
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
-         ELSE
+         !IF( Opacity % nMoments .eq. 4 )THEN
+         IF( size(Opacity % Kernel(i) % Values, DIM=1) /= size(Opacity % Kernel(i) % Values, DIM=2) ) THEN
            WRITE(*,'(A8,A16,I3.3)') &
              ' ', 'For Moments l = ', l
            WRITE(*,'(A8,A12,ES12.4E3)') &
              ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
            WRITE(*,'(A8,A12,ES12.4E3)') &
              ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
+         ELSE
+           WRITE(*,'(A8,A16,I3.3)') &
+             ' ', 'For Moments l = ', l
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
          END IF
          WRITE(*,'(A8,A12,ES12.4E3)') &
            ' ', 'Offset    = ', Opacity % Offsets(i,l)
@@ -316,93 +299,5 @@ CONTAINS
     WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeScat
-
-  SUBROUTINE AllocateOpacityTypeBrem( Opacity, nE, nRho, nT, nMoments, nOpacities )
-
-    INTEGER,               INTENT(in)     :: nMoments
-    INTEGER,               INTENT(in)     :: nOpacities
-    INTEGER,               INTENT(in)     :: nE, nRho, nT
-    TYPE(OpacityTypeBrem), INTENT(inout)  :: Opacity
-
-    INTEGER :: i
-
-    Opacity % nOpacities = nOpacities
-    Opacity % nMoments   = nMoments
-    Opacity % nPoints    = [nE, nE, nRho, nT]
-
-    ALLOCATE( Opacity % Names(nOpacities) )
-    ALLOCATE( Opacity % Units(nOpacities) )
-    ALLOCATE( Opacity % Offsets(nOpacities, nMoments) )
-    ALLOCATE( Opacity % Kernel(nOpacities) )
-
-    DO i = 1, nOpacities
-
-      ALLOCATE &
-        ( Opacity % Kernel(i) % Values &
-            ( nE, nE, nrho, nT ) )
-
-    END DO
-
-  END SUBROUTINE AllocateOpacityTypeBrem
-
-  SUBROUTINE DeallocateOpacityTypeBrem( Opacity )
-
-    TYPE(OpacityTypeBrem), INTENT(inout) :: Opacity
-
-    INTEGER :: i
-
-    DO i = 1, Opacity % nOpacities
-      DEALLOCATE( Opacity % Kernel(i) % Values )
-    END DO
-
-    DEALLOCATE( Opacity % Kernel )
-    DEALLOCATE( Opacity % Offsets )
-    DEALLOCATE( Opacity % Units )
-    DEALLOCATE( Opacity % Names )
-
-  END SUBROUTINE DeallocateOpacityTypeBrem
-
-  SUBROUTINE DescribeOpacityTypeBrem( Opacity )
-
-    TYPE(OpacityTypeBrem), INTENT(in) :: Opacity
-
-    INTEGER :: i, l
-
-    WRITE(*,*)
-    WRITE(*,'(A4,A)') ' ', 'Opacity Type Bremsstrahlung'
-    WRITE(*,'(A4,A)') ' ', '--------------'
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nOpacities = ', Opacity % nOpacities
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nMoments   = ', Opacity % nMoments
-    WRITE(*,'(A6,A13,5I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints
-    WRITE(*,'(A6,A13,I10.10)') &
-      ' ', 'DOFs       = ', &
-      Opacity % nOpacities * PRODUCT( Opacity % nPoints )
-
-    DO i = 1, Opacity % nOpacities
-      WRITE(*,*)
-      WRITE(*,'(A6,A8,I3.3,A3,A)') &
-        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-
-      DO l = 1, Opacity % nMoments
-      WRITE(*,*)
-!         WRITE(*,'(A8,A16,I3.3)') &
-!           ' ', 'For Moments l = ', l
-!         WRITE(*,'(A8,A12,ES12.4E3)') &
-!           ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
-!         WRITE(*,'(A8,A12,ES12.4E3)') &
-!           ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,:,:,l) )
-         WRITE(*,'(A8,A12,ES12.4E3)') &
-           ' ', 'Offset    = ', Opacity % Offsets(i,l)
-      END DO ! l = nMoment
-      WRITE(*,*)
-    END DO
-    WRITE(*,*)
-
-  END SUBROUTINE DescribeOpacityTypeBrem
 
 END MODULE wlOpacityFieldsModule

@@ -27,10 +27,8 @@ MODULE wlOpacityTableModule
 !
 !                  and  NES ( ep, e, l, T, eta )
 !                       Pair( ep, e, l, T, eta )
+!                       Brem( ep, e, l, rho, T )       nu nubar + N N <--> N N
 !
-! OpacityType Brem for  Brem( ep, e, rho, T )
-!
-!                nu nubar + N N <--> N N
 !-----------------------------------------------------------------------
  
   USE wlKindModule, ONLY: &
@@ -43,7 +41,6 @@ MODULE wlOpacityTableModule
   USE wlOpacityFieldsModule, ONLY: &
     OpacityTypeEmAb, &
     OpacityTypeScat, &
-    OpacityTypeBrem, &
     AllocateOpacity, &
     DeallocateOpacity, &
     DescribeOpacity
@@ -90,8 +87,8 @@ MODULE wlOpacityTableModule
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
       Scat_Pair  ! -- Pair Production
-    TYPE(OpacityTypeBrem)          :: &
-      Brem       ! -- Neutrino–Antineutrino Pair Annihilation and Production from Nucleon–Nucleon Bremsstrahlung
+    TYPE(OpacityTypeScat)          :: &
+      Scat_Brem  ! -- Neutrino–Antineutrino Pair Annihilation and Production from Nucleon–Nucleon Bremsstrahlung
   END TYPE OpacityTableType
 
   PUBLIC :: AllocateOpacityTable
@@ -197,10 +194,10 @@ CONTAINS
            ( OpTab % Scat_Pair, nPointsTemp(1:5), &
              nMoments = nMom_Pair, nOpacities = nOpac_Pair )
 
-    !nPointsTemp(1:4) = [ nPointsE, nPointsE, nPoints(iRho), nPoints(iT) ]
+    nPointsTemp(1:5) = [ nPointsE, nPointsE, nMom_Brem, nPoints(iRho), nPoints(iT) ]
 
     CALL AllocateOpacity &
-           ( OpTab % Brem, nPointsE, nPoints(iRho), nPoints(iT), &
+           ( OpTab % Scat_Brem, nPointsTemp(1:5), &
              nMoments = nMom_Brem, nOpacities = nOpac_Brem )
 
     END ASSOCIATE ! nPoints
@@ -230,7 +227,7 @@ CONTAINS
     CALL DeAllocateOpacity( OpTab % Scat_Iso )
     CALL DeAllocateOpacity( OpTab % Scat_NES )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
-    CALL DeAllocateOpacity( OpTab % Brem )
+    CALL DeAllocateOpacity( OpTab % Scat_Brem )
 
     CALL DeAllocateThermoState( OpTab % TS )
 
@@ -281,15 +278,26 @@ CONTAINS
     END ASSOCIATE ! TS
 
     CALL DescribeGrid( OpTab % EnergyGrid )
-    CALL DescribeGrid( OpTab % EtaGrid )
+    if(OpTab % Scat_NES % nOpacities .gt. 0 .or. &
+       OpTab % Scat_Pair % nOpacities .gt. 0) then
+      CALL DescribeGrid( OpTab % EtaGrid )
+    end if
 
-    CALL DescribeOpacity( OpTab % EmAb ) 
-    CALL DescribeOpacity( OpTab % Scat_Iso )
-    CALL DescribeOpacity( OpTab % Scat_NES )
-    CALL DescribeOpacity( OpTab % Scat_Pair )
+    if(OpTab % EmAb % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % EmAb ) 
+    end if
+    if(OpTab % Scat_Iso % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % Scat_Iso )
+    end if
+    if(OpTab % Scat_NES % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % Scat_NES )
+    end if
+    if(OpTab % Scat_Pair % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % Scat_Pair )
+    end if
 
-    if(OpTab % Brem % nOpacities .gt. 0) then
-    CALL DescribeOpacity( OpTab % Brem )
+    if(OpTab % Scat_Brem % nOpacities .gt. 0) then
+    CALL DescribeOpacity( OpTab % Scat_Brem )
     end if
 
   END SUBROUTINE DescribeOpacityTable
