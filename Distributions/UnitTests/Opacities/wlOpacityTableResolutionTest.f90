@@ -743,10 +743,6 @@ PROGRAM wlOpacityTableResolutionTest
       CALL GetIndexAndDelta( LOG10(eta), LOG10(OpacityTableHi % EtaGrid % Values), idxEta, dEta )
       CALL GetIndexAndDelta( LOG10(eta), LOG10(OpacityTableLo % EtaGrid % Values), idxEta_Lo, dEta_Lo )
 
-      CALL scatergn_weaklib &
-               ( nPointsE, OpacityTableHi % EnergyGrid % Values, &
-                 TMeV, eta, H0i, H0ii, H1i, H1ii )
-
       DO kp = 1, nPointsE
         DO k = 1, nPointsE
 
