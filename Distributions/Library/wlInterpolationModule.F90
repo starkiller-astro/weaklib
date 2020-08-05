@@ -11,10 +11,10 @@ MODULE wlInterpolationModule
   PUBLIC :: locate
   PUBLIC :: Index1D
   PUBLIC :: Index1D_Lin
+  PUBLIC :: GetIndexAndDelta
   PUBLIC :: TriLinear
   PUBLIC :: LogInterpolateSingleVariable
   PUBLIC :: LogInterpolateDifferentiateSingleVariable
-
   PUBLIC :: LogInterpolateSingleVariable_2D_Custom
   PUBLIC :: LogInterpolateSingleVariable_2D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_3D_Custom
@@ -33,6 +33,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_P
   PUBLIC :: LogInterpolateOpacity_2D1D2D
   PUBLIC :: LogInterpolateOpacity_2D1D2D_Custom
+  PUBLIC :: LinearInterp_Array_Point
 
   REAL(dp), PARAMETER :: One = 1.0_dp
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
@@ -62,6 +63,7 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LinearInterp2D_2DArray_Point
     MODULE PROCEDURE LinearInterp2D_3DArray_1DAligned_Point
     MODULE PROCEDURE LinearInterp2D_4DArray_2DAligned_Point
+    MODULE PROCEDURE LinearInterp2D_5DArray_3DAligned_Point
     MODULE PROCEDURE LinearInterp3D_3DArray_Point
     MODULE PROCEDURE LinearInterp3D_4DArray_1DAligned_Point
     MODULE PROCEDURE LinearInterp3D_5DArray_2DAligned_Point
@@ -177,7 +179,7 @@ CONTAINS
     
     REAL(dp), INTENT(in)  :: Y, Ys(:)
     INTEGER,  INTENT(out) :: iY
-    REAL(dp), INTENT(OUT) :: dY
+    REAL(dp), INTENT(out) :: dY
       iY = Index1D_Lin( Y, Ys, SIZE( Ys ) )
       dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
 
@@ -385,10 +387,10 @@ CONTAINS
   END FUNCTION TetraLinear
 
   REAL(dp) FUNCTION PentaLinear &
-    ( p00000, p10000, p01000, p11000, p00100, p10100, p01100, p11100, &
-      p00010, p10010, p01010, p11010, p00110, p10110, p01110, p11110, &
-      p00001, p10001, p01001, p11001, p00101, p10101, p01101, p11101, &
-      p00011, p10011, p01011, p11011, p00111, p10111, p01111, p11111, &
+    ( p00000, p01000, p00100, p01100, p00010, p01010, p00110, p01110, &
+      p00001, p01001, p00101, p01101, p00011, p01011, p00111, p01111, &
+      p10000, p11000, p10100, p11100, p10010, p11010, p10110, p11110, &
+      p10001, p11001, p10101, p11101, p10011, p11011, p10111, p11111, &
       dX1, dX2, dX3, dX4, dX5)
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -397,10 +399,10 @@ CONTAINS
 #endif
 
     REAL(dp), INTENT(in) :: &
-      p00000, p10000, p01000, p11000, p00100, p10100, p01100, p11100, &
-      p00010, p10010, p01010, p11010, p00110, p10110, p01110, p11110, &
-      p00001, p10001, p01001, p11001, p00101, p10101, p01101, p11101, &
-      p00011, p10011, p01011, p11011, p00111, p10111, p01111, p11111, &
+      p00000, p01000, p00100, p01100, p00010, p01010, p00110, p01110, &
+      p00001, p01001, p00101, p01101, p00011, p01011, p00111, p01111, &
+      p10000, p11000, p10100, p11100, p10010, p11010, p10110, p11110, &
+      p10001, p11001, p10101, p11101, p10011, p11011, p10111, p11111, &
       dX1, dX2, dX3, dX4, dX5
 
     REAL(dp) :: ddX5
@@ -2985,6 +2987,37 @@ CONTAINS
 
   END FUNCTION LinearInterp2D_4DArray_2DAligned_Point
 
+  FUNCTION LinearInterp2D_5DArray_3DAligned_Point &
+    ( iX1, iX2, iX3, iY1, iY2, dY1, dY2, OS, Table) &
+  RESULT(Interpolant)
+
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    INTEGER,  INTENT(in) :: iX1, iX2, iX3, iY1, iY2
+    REAL(dp), INTENT(in) :: dY1, dY2, OS, Table(:,:,:,:,:)
+
+    REAL(dp) :: p00, p10, p01, p11
+
+    REAL(dp) :: Interpolant
+
+    p00 = Table(iX1, iX2, iX3, iY1  , iY2  )
+    p10 = Table(iX1, iX2, iX3, iY1+1, iY2  )
+    p01 = Table(iX1, iX2, iX3, iY1  , iY2+1)
+    p11 = Table(iX1, iX2, iX3, iY1+1, iY2+1)
+
+    Interpolant &
+      = 10.0d0**( &
+          BiLinear &
+            ( p00, p10, p01, p11, &
+              dY1, dY2) ) - OS
+
+
+  END FUNCTION LinearInterp2D_5DArray_3DAligned_Point
+
   FUNCTION LinearInterp3D_3DArray_Point &
     ( iY1, iY2, iY3, dY1, dY2, dY3, OS, Table) &
   RESULT(Interpolant)
@@ -3248,48 +3281,5 @@ CONTAINS
 
   END FUNCTION LinearInterp5D_5DArray_Point
 
-! test function to test new interface
-  SUBROUTINE Interp_Brem &
-    ( LogEp, LogE, LogD, LogT, Y, LogEps, LogEs, LogDs, LogTs, Ys, OS, Table, Phi0a_Brem)
-
-    REAL(dp), INTENT(in) :: LogEp(:)
-    REAL(dp), INTENT(in) :: LogE(:)
-    REAL(dp), INTENT(in) :: LogD(:)
-    REAL(dp), INTENT(in) :: LogT(:)
-    REAL(dp), INTENT(in) :: Y(:)
-    REAL(dp), INTENT(in) :: LogEps(:)
-    REAL(dp), INTENT(in) :: LogEs(:)
-    REAL(dp), INTENT(in) :: LogDs(:)
-    REAL(dp), INTENT(in) :: LogTs(:)
-    REAL(dp), INTENT(in) :: Ys(:)
-
-    REAL(dp), INTENT(in) :: OS
-   
-    REAL(dp), INTENT(in) :: Table(:,:,:,:,:)
-
-    REAL(dp), INTENT(inout) :: Phi0a_Brem(:,:,:,:,:)
-
-    INTEGER  :: iD, iT, iY
-    INTEGER  :: ii, jj, kk, ll, mm
-    REAL(dp) :: dD, dT, dY
-
-    DO mm = 1, SIZE(Y)
-      CALL GetIndexAndDelta( Y(mm), Ys, iY, dY )
-      DO ll = 1, SIZE(LogT)
-        CALL GetIndexAndDelta( LogT(ll), LogTs, iT, dT )
-        DO kk = 1, SIZE(LogD)
-          CALL GetIndexAndDelta( LogD(kk), LogDs, iD, dD )
-          DO jj = 1, SIZE(LogE)  
-            DO ii = 1, SIZE(LogEp)
-
-              Phi0a_Brem(ii,jj,kk,ll,mm) = LinearInterp_Array_Point( ii, jj, iD, iT, iY, dD, dT, dY, OS, Table)
-
-            END DO
-          END DO
-        END DO
-      END DO
-    END DO
-
-  END SUBROUTINE Interp_Brem
 
 END MODULE wlInterpolationModule
