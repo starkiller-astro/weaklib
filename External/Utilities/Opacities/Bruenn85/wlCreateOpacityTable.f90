@@ -115,7 +115,7 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eta grid limits
 !---------------------------------------------------------------------
-   INTEGER                 :: nPointsEta = 60
+   INTEGER                 :: nPointsEta = 120
    REAL(dp), PARAMETER     :: Etamin = 1.0d-3
    REAL(dp), PARAMETER     :: Etamax = 2.5d03
 
