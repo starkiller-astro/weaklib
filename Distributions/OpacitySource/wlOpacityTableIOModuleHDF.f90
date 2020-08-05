@@ -428,6 +428,8 @@ CONTAINS
         .AND. ( LEN( FileName_Brem_Option ) > 1 ) )THEN
       ReadOpacity(iBrem) = .TRUE.
       FileName   (iBrem) = TRIM( FileName_Brem_Option )
+      !Currently, we only tabulate the 0th moment annihilation kernel
+      !as well as the same kernel for all neutrino species
       nOpac_Brem = 1
       nMom_Brem  = 1
     ELSE

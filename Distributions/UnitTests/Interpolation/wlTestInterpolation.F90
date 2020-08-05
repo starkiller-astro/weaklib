@@ -69,35 +69,37 @@ PROGRAM wlTestInterpolation
   REAL(dp) :: linear_value
   REAL(dp) :: non_linear_value
 
-  dx1_lo = (x1_max-x1_min) / DBLE(nx_lo_res-1)
-  dx2_lo = (x2_max-x2_min) / DBLE(nx_lo_res-1)
-  dx3_lo = (x3_max-x3_min) / DBLE(nx_lo_res-1)
-  dx4_lo = (x4_max-x4_min) / DBLE(nx_lo_res-1)
-  dx5_lo = (x5_max-x5_min) / DBLE(nx_lo_res-1)
+  INTEGER :: n_errors
 
-  dx1_hi = (x1_max-x1_min) / DBLE(nx_hi_res-1)
-  dx2_hi = (x2_max-x2_min) / DBLE(nx_hi_res-1)
-  dx3_hi = (x3_max-x3_min) / DBLE(nx_hi_res-1)
-  dx4_hi = (x4_max-x4_min) / DBLE(nx_hi_res-1)
-  dx5_hi = (x5_max-x5_min) / DBLE(nx_hi_res-1)
+  dx1_lo = (x1_max-x1_min) / REAL(nx_lo_res-1)
+  dx2_lo = (x2_max-x2_min) / REAL(nx_lo_res-1)
+  dx3_lo = (x3_max-x3_min) / REAL(nx_lo_res-1)
+  dx4_lo = (x4_max-x4_min) / REAL(nx_lo_res-1)
+  dx5_lo = (x5_max-x5_min) / REAL(nx_lo_res-1)
+
+  dx1_hi = (x1_max-x1_min) / REAL(nx_hi_res-1)
+  dx2_hi = (x2_max-x2_min) / REAL(nx_hi_res-1)
+  dx3_hi = (x3_max-x3_min) / REAL(nx_hi_res-1)
+  dx4_hi = (x4_max-x4_min) / REAL(nx_hi_res-1)
+  dx5_hi = (x5_max-x5_min) / REAL(nx_hi_res-1)
 
   DO ii = 1, nx_lo_res
 
-    axis1_lo_res(ii) = x1_min + DBLE(ii-1)*dx1_lo
-    axis2_lo_res(ii) = x2_min + DBLE(ii-1)*dx2_lo
-    axis3_lo_res(ii) = x3_min + DBLE(ii-1)*dx3_lo
-    axis4_lo_res(ii) = x4_min + DBLE(ii-1)*dx4_lo
-    axis5_lo_res(ii) = x5_min + DBLE(ii-1)*dx5_lo
+    axis1_lo_res(ii) = x1_min + REAL(ii-1)*dx1_lo
+    axis2_lo_res(ii) = x2_min + REAL(ii-1)*dx2_lo
+    axis3_lo_res(ii) = x3_min + REAL(ii-1)*dx3_lo
+    axis4_lo_res(ii) = x4_min + REAL(ii-1)*dx4_lo
+    axis5_lo_res(ii) = x5_min + REAL(ii-1)*dx5_lo
 
   END DO 
 
   DO ii = 1, nx_hi_res
 
-    axis1_hi_res(ii) = x1_min + DBLE(ii-1)*dx1_hi
-    axis2_hi_res(ii) = x2_min + DBLE(ii-1)*dx2_hi
-    axis3_hi_res(ii) = x3_min + DBLE(ii-1)*dx3_hi
-    axis4_hi_res(ii) = x4_min + DBLE(ii-1)*dx4_hi
-    axis5_hi_res(ii) = x5_min + DBLE(ii-1)*dx5_hi
+    axis1_hi_res(ii) = x1_min + REAL(ii-1)*dx1_hi
+    axis2_hi_res(ii) = x2_min + REAL(ii-1)*dx2_hi
+    axis3_hi_res(ii) = x3_min + REAL(ii-1)*dx3_hi
+    axis4_hi_res(ii) = x4_min + REAL(ii-1)*dx4_hi
+    axis5_hi_res(ii) = x5_min + REAL(ii-1)*dx5_hi
 
   END DO
 
@@ -113,10 +115,10 @@ PROGRAM wlTestInterpolation
                                         - 7.0d0 * axis4_lo_res(ll) &
                                         + axis5_lo_res(mm)
 
-           non_linear_data_lo_res(ii,jj,kk,ll,mm) = sin(axis1_lo_res(ii)) &
-                                                  * cos(axis2_lo_res(jj)) &
-                                                  * sqrt(axis3_lo_res(kk)) &
-                                                  + cos(axis4_lo_res(ll) * sin(axis5_lo_res(mm)))
+           non_linear_data_lo_res(ii,jj,kk,ll,mm) = SIN(axis1_lo_res(ii)) &
+                                                  * COS(axis2_lo_res(jj)) &
+                                                  * SQRT(axis3_lo_res(kk)) &
+                                                  + COS(axis4_lo_res(ll) * SIN(axis5_lo_res(mm)))
 
           END DO
         END DO
@@ -130,10 +132,10 @@ PROGRAM wlTestInterpolation
         DO ll = 1, nx_hi_res
           DO mm = 1, nx_hi_res
 
-           non_linear_data_hi_res(ii,jj,kk,ll,mm) = sin(axis1_hi_res(ii)) &
-                                                  * cos(axis2_hi_res(jj)) &
-                                                  * sqrt(axis3_hi_res(kk)) &
-                                                  + cos(axis4_hi_res(ll) * sin(axis5_hi_res(mm)))
+           non_linear_data_hi_res(ii,jj,kk,ll,mm) = SIN(axis1_hi_res(ii)) &
+                                                  * COS(axis2_hi_res(jj)) &
+                                                  * SQRT(axis3_hi_res(kk)) &
+                                                  + COS(axis4_hi_res(ll) * SIN(axis5_hi_res(mm)))
 
           END DO
         END DO
@@ -147,34 +149,40 @@ PROGRAM wlTestInterpolation
   CALL GetIndexAndDelta( x4, axis4_lo_res, ix4, dx4 )
   CALL GetIndexAndDelta( x5, axis5_lo_res, ix5, dx5 )
 
-  write(stdout,*) 'Testing interpolation with linear source data (this should result in round-off agreement)'
-  write(stdout,*) 'source(x1,x2,x3,x4,x5) = x1 + 2 x2 - 1/3 x3 - 7 x4 + x5'
+  n_errors = 0
+
+  WRITE(stdout,*) 'Testing interpolation with linear source data (this should result in round-off agreement)'
+  WRITE(stdout,*) 'source(x1,x2,x3,x4,x5) = x1 + 2 x2 - 1/3 x3 - 7 x4 + x5'
 
   !test 1D 1D linear data
   interp_result_linear = LOG10(LinearInterp_Array_Point(ix1,dx1,0.0d0,linear_data(:,1,1,1,1)))
  
   linear_value = x1 + 2.0d0 * axis2_lo_res(1) - 1.0d0/3.0d0 * axis3_lo_res(1) - 7.0d0 * axis4_lo_res(1) + axis5_lo_res(1)
-  write(stdout,*) 'interp linear data 1D 1D absolute error', interp_result_linear-linear_value
+  WRITE(stdout,*) 'interp linear data 1D 1D absolute error', interp_result_linear-linear_value
+  IF(ABS((interp_result_linear-linear_value)/linear_value) > 1.0d-12) n_errors = n_errors + 1
 
   !test 2D 2D linear data
   interp_result_linear = LOG10(LinearInterp_Array_Point(ix1,ix2,dx1,dx2,0.0d0,linear_data(:,:,1,1,1)))
  
   linear_value = x1 + 2.0d0 * x2 - 1.0d0/3.0d0 * axis3_lo_res(1) - 7.0d0 * axis4_lo_res(1) + axis5_lo_res(1)
-  write(stdout,*) 'interp linear data 2D 2D absolute error', interp_result_linear-linear_value
+  WRITE(stdout,*) 'interp linear data 2D 2D absolute error', interp_result_linear-linear_value
+  IF(ABS((interp_result_linear-linear_value)/linear_value) > 1.0d-12) n_errors = n_errors + 1
 
   !test 3D 3D linear data
   interp_result_linear = LOG10(LinearInterp_Array_Point(ix1,ix2,ix3, &
                                                         dx1,dx2,dx3,0.0d0,linear_data(:,:,:,1,1)))
  
   linear_value = x1 + 2.0d0 * x2 - 1.0d0/3.0d0 * x3 - 7.0d0 * axis4_lo_res(1) + axis5_lo_res(1)
-  write(stdout,*) 'interp linear data 3D 3D absolute error', interp_result_linear-linear_value
+  WRITE(stdout,*) 'interp linear data 3D 3D absolute error', interp_result_linear-linear_value
+  IF(ABS((interp_result_linear-linear_value)/linear_value) > 1.0d-12) n_errors = n_errors + 1
 
   !test 4D 4D linear data
   interp_result_linear = LOG10(LinearInterp_Array_Point(ix1,ix2,ix3,ix4, &
                                                         dx1,dx2,dx3,dx4,0.0d0,linear_data(:,:,:,:,1)))
 
   linear_value = x1 + 2.0d0 * x2 - 1.0d0/3.0d0 * x3 - 7.0d0 * x4 + axis5_lo_res(1)
-  write(stdout,*) 'interp linear data 4D 4D absolute error', interp_result_linear-linear_value
+  WRITE(stdout,*) 'interp linear data 4D 4D absolute error', interp_result_linear-linear_value
+  IF(ABS((interp_result_linear-linear_value)/linear_value) > 1.0d-12) n_errors = n_errors + 1
 
   !test 5D 5D linear data
   interp_result_linear = LOG10(LinearInterp_Array_Point( ix1, ix2, ix3, ix4, ix5, &
@@ -182,11 +190,12 @@ PROGRAM wlTestInterpolation
                                                          0.0d0, linear_data))
 
   linear_value = x1 + 2.0d0 * x2 - 1.0d0/3.0d0 * x3 - 7.0d0 * x4 + x5
-  write(stdout,*) 'interp linear data 5D 5D absolute error', interp_result_linear-linear_value
+  WRITE(stdout,*) 'interp linear data 5D 5D absolute error', interp_result_linear-linear_value
+  IF(ABS((interp_result_linear-linear_value)/linear_value) > 1.0d-12) n_errors = n_errors + 1
 
 
-  write(stdout,*) 'Testing interpolation with nonlinear source data and two different source array resolutions (factor of 2)'
-  write(stdout,*) 'source(x1,x2,x3,x4,x5) = sin(x1) * cos(x2) * sqrt(x3) + cos(x4 * sin(x5))'
+  WRITE(stdout,*) 'Testing interpolation with nonlinear source data and two different source array resolutions (factor of 2)'
+  WRITE(stdout,*) 'source(x1,x2,x3,x4,x5) = SIN(x1) * COS(x2) * SQRT(x3) + COS(x4 * SIN(x5))'
 
   !test 5D 5D nonlinear data
   interp_result_non_linear_lo = LOG10(LinearInterp_Array_Point( ix1, ix2, ix3, ix4, ix5, &
@@ -204,12 +213,21 @@ PROGRAM wlTestInterpolation
                                                                 dx1, dx2, dx3, dx4, dx5, &
                                                                 0.0d0, non_linear_data_hi_res))
 
-  non_linear_value = sin(x1) * cos(x2) * sqrt(x3) + cos(x4 * sin(x5)) 
+  non_linear_value = SIN(x1) * COS(x2) * SQRT(x3) + COS(x4 * SIN(x5)) 
 
-  write(stdout,*) 'interp nonlinear data 5D 5D relative error lo res', &
+  WRITE(stdout,*) 'interp nonlinear data 5D 5D relative error lo res', &
                   (interp_result_non_linear_lo-non_linear_value)/non_linear_value
 
-  write(stdout,*) 'interp nonlinear data 5D 5D relative error hi res', &
+  WRITE(stdout,*) 'interp nonlinear data 5D 5D relative error hi res', &
                   (interp_result_non_linear_hi-non_linear_value)/non_linear_value
+
+  IF(ABS((interp_result_non_linear_lo-non_linear_value)/non_linear_value) < &
+     ABS((interp_result_non_linear_hi-non_linear_value)/non_linear_value)) n_errors = n_errors + 1
+
+  IF(n_errors > 0) THEN
+    WRITE(stdout,*) 'FAILED interpolation routines test'
+  ELSE
+    WRITE(stdout,*) 'PASSED interpolation routines test'
+  ENDIF
 
 END PROGRAM wlTestInterpolation

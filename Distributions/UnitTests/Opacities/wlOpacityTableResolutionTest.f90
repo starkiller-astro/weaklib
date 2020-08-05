@@ -35,9 +35,10 @@ PROGRAM wlOpacityTableResolutionTest
   USE prb_cntl_module, ONLY: &
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
       edmpa, edmpe, iaenca
-  USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
+  USE, INTRINSIC :: iso_fortran_env, ONLY : stdin=>input_unit, &
                                             stdout=>output_unit, &
                                             stderr=>error_unit
+  USE, INTRINSIC :: ieee_arithmetic, ONLY : ieee_is_nan
 
   IMPLICIT NONE
 
@@ -130,6 +131,10 @@ PROGRAM wlOpacityTableResolutionTest
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: s_a
   REAL(dp), PARAMETER                   :: brem_rho_min = 1.0d+07 !switch Bremsstrahlung off below rho_min
   REAL(dp), PARAMETER                   :: brem_rho_max = 1.0d+15 !switch Bremsstrahlung off above rho_max
+
+  INTEGER :: n_errors
+
+  n_errors = 0
 
   WRITE(stdout,*) 'Reading in radial rho, T, Ye profile at bounce'
 
@@ -296,7 +301,7 @@ PROGRAM wlOpacityTableResolutionTest
 
 
 
-  write(stdout,'(A,2ES17.4)') 'HiRes min/max Ye', minval(OpacityTableHi % TS % States (iYe) % Values), &
+  WRITE(stdout,'(A,2ES17.4)') 'HiRes min/max Ye', minval(OpacityTableHi % TS % States (iYe) % Values), &
                                                   maxval(OpacityTableHi % TS % States (iYe) % Values) 
 
   IF( TableFlags(1) .eq. 1 )THEN
@@ -412,6 +417,10 @@ PROGRAM wlOpacityTableResolutionTest
           EmAb_Interp(k,n_r,i_r,1) = ReferenceValue
           EmAb_Interp(k,n_r,i_r,2) = InterpLoValue
           EmAb_Interp(k,n_r,i_r,3) = InterpHiValue
+
+          IF(ieee_is_nan(ReferenceValue) .or. ieee_is_nan(InterpLoValue) .or. ieee_is_nan(InterpHiValue)) &
+            n_errors = n_errors + 1 
+
         END DO
       END DO
     END DO
@@ -564,6 +573,9 @@ PROGRAM wlOpacityTableResolutionTest
             Scat_Iso_Interp(k,n_r,i_r,t_m,1) = ReferenceValue
             Scat_Iso_Interp(k,n_r,i_r,t_m,2) = InterpLoValue
             Scat_Iso_Interp(k,n_r,i_r,t_m,3) = InterpHiValue
+
+            IF(ieee_is_nan(ReferenceValue) .or. ieee_is_nan(InterpLoValue) .or. ieee_is_nan(InterpHiValue)) &
+              n_errors = n_errors + 1 
           END DO
         END DO
       END DO
@@ -669,6 +681,8 @@ PROGRAM wlOpacityTableResolutionTest
             Scat_NES_Interp(kp,k,n_r,t_m,2) = InterpLoValue
             Scat_NES_Interp(kp,k,n_r,t_m,3) = InterpHiValue
 
+            IF(ieee_is_nan(Scat_NES_Interp(kp,k,n_r,t_m,1)) .or. ieee_is_nan(InterpLoValue) .or. ieee_is_nan(InterpHiValue)) &
+              n_errors = n_errors + 1 
           END DO
         END DO
       END DO
@@ -766,6 +780,8 @@ PROGRAM wlOpacityTableResolutionTest
             Scat_Pair_Interp(kp,k,n_r,t_m,2) = InterpLoValue
             Scat_Pair_Interp(kp,k,n_r,t_m,3) = InterpHiValue
 
+            IF(ieee_is_nan(Scat_Pair_Interp(kp,k,n_r,t_m,1)) .or. ieee_is_nan(InterpLoValue) .or. ieee_is_nan(InterpHiValue)) &
+              n_errors = n_errors + 1 
           END DO
         END DO
       END DO
@@ -841,6 +857,7 @@ PROGRAM wlOpacityTableResolutionTest
             Scat_Brem_Interp(kp,k,n_r,1) = s_a(k,kp) 
           END IF
 
+          IF(ieee_is_nan(s_a(k,kp))) n_errors = n_errors + 1
 
           DO t_m = 1, nMom_Brem
             InterpLoValue = LinearInterp_Array_Point( kp, k, idxRho_Lo, idxT_Lo, dRho_Lo, dT_Lo, &
@@ -852,6 +869,8 @@ PROGRAM wlOpacityTableResolutionTest
 
             Scat_Brem_Interp(kp,k,n_r,2) = InterpLoValue
             Scat_Brem_Interp(kp,k,n_r,3) = InterpHiValue
+            IF(ieee_is_nan(InterpLoValue) .or. ieee_is_nan(InterpHiValue)) &
+              n_errors = n_errors + 1 
 
           END DO
         END DO
@@ -908,5 +927,11 @@ PROGRAM wlOpacityTableResolutionTest
   IF(ALLOCATED(H1i))              DEALLOCATE(H1i)
   IF(ALLOCATED(H1ii))             DEALLOCATE(H1ii)
   IF(ALLOCATED(s_a))              DEALLOCATE(s_a)
+
+  IF(n_errors > 0) THEN
+    WRITE(stdout,*) 'FAILED table resolution test, nans were found in table building routines or interpolated values!'
+  ELSE
+    WRITE(stdout,*) 'PASSED table resolution test.'
+  ENDIF
 
 END PROGRAM wlOpacityTableResolutionTest
