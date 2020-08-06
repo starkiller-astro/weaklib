@@ -107,8 +107,8 @@ REAL(double), DIMENSION(nez)  :: absrnp, absrnc, emisnp, emisnc
         ( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp,  &
           cmpe, absrnc, emisnc )
 
-  absor = absrnp + absrnc
-  emit  = emisnp + emisnc
+  absor = absrnp !+ absrnc
+  emit  = emisnp !+ emisnc
 
 RETURN
 

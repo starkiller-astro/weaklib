@@ -75,6 +75,18 @@ MODULE wlOpacityFieldsModule
 !     T:   Temperature
 !     Eta: Electron Chemical Pot. / Temperature
 !
+! OpacityTypeScat (Nucleon-nucleon Bremsstrahlung)
+!   Dependency ( E', E, rho, T)
+!     E':  Neutrino Energy
+!     E:   Neutrino Energy
+!     rho: mass density  
+!     T:   Temperature
+!     
+!     The composition is taken into account 
+!     by passing xp*rho, xn*rho and sqrt(xp+xn)*rho 
+!     when interpolating, resulting in three
+!     interpolations and then adding the three
+!     contributions to the overall kernel
 !---------------------------------------------
 
   TYPE, PUBLIC :: OpacityTypeScat
@@ -86,6 +98,7 @@ MODULE wlOpacityFieldsModule
     REAL(dp),           ALLOCATABLE :: Offsets(:,:)
     TYPE(ValueType_5D), ALLOCATABLE :: Kernel(:)
   END TYPE OpacityTypeScat
+
 
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
@@ -262,20 +275,21 @@ CONTAINS
 
       DO l = 1, Opacity % nMoments
       WRITE(*,*)
-         IF( Opacity % nMoments .eq. 4 )THEN
-           WRITE(*,'(A8,A16,I3.3)') &
-             ' ', 'For Moments l = ', l
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
-         ELSE
+         !IF( Opacity % nMoments .eq. 4 )THEN
+         IF( size(Opacity % Kernel(i) % Values, DIM=1) /= size(Opacity % Kernel(i) % Values, DIM=2) ) THEN
            WRITE(*,'(A8,A16,I3.3)') &
              ' ', 'For Moments l = ', l
            WRITE(*,'(A8,A12,ES12.4E3)') &
              ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
            WRITE(*,'(A8,A12,ES12.4E3)') &
              ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
+         ELSE
+           WRITE(*,'(A8,A16,I3.3)') &
+             ' ', 'For Moments l = ', l
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+           WRITE(*,'(A8,A12,ES12.4E3)') &
+             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
          END IF
          WRITE(*,'(A8,A12,ES12.4E3)') &
            ' ', 'Offset    = ', Opacity % Offsets(i,l)
@@ -285,6 +299,5 @@ CONTAINS
     WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeScat
-
 
 END MODULE wlOpacityFieldsModule

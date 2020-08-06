@@ -25,6 +25,8 @@ PROGRAM wlReadOpacityTableTest
            = "wl-Op-SFHo-25-20-100-E40-B85-NES.h5", &
            FileName_Pair_Option &
            = "", &
+           FileName_Brem_Option &
+           = "", &
            EquationOfStateTableName_Option &
            = "wl-EOS-SFHo-25-40-100.h5" )
 
