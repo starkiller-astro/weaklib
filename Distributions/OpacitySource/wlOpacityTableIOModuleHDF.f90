@@ -268,6 +268,12 @@ CONTAINS
     INTEGER(HSIZE_T) :: datasize4d(4)
     INTEGER :: ii
 
+    INTEGER, DIMENSION(1)             :: tempInteger
+
+    datasize1d = 1
+    tempInteger(1) = EmAb % nOpacities
+    CALL WriteHDF( "nOpacities", tempInteger, group_id, datasize1d )
+    
     datasize1d = EmAb % nOpacities
     CALL WriteHDF &
            ( "Units", EmAb % Units, group_id, datasize1d ) 
@@ -304,6 +310,13 @@ CONTAINS
     INTEGER, DIMENSION(1)                       :: tempInteger
     REAL(dp), DIMENSION(1)                      :: tempReal
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
+
+    datasize1d = 1
+    tempInteger(1) = Scat % nOpacities
+    CALL WriteHDF( "nOpacities", tempInteger, group_id, datasize1d )
+    
+    tempInteger(1) = Scat % nMoments
+    CALL WriteHDF( "nMoments", tempInteger, group_id, datasize1d )
 
     datasize1dtemp(1) = Scat % nOpacities
     CALL WriteHDF&
@@ -382,7 +395,10 @@ CONTAINS
         .AND. ( LEN( FileName_EmAb_Option ) > 1 ) )THEN
       ReadOpacity(iEmAb) = .TRUE.
       FileName   (iEmAb) = TRIM( FileName_EmAb_Option )
-      nOpac_EmAb = 2
+      !nOpac_EmAb = 2
+      !nOpac_EmAb = OpacityTable % nOpacities_EmAb 
+      !nOpac_EmAb = OpacityTable % EmAb % nOpacities
+      !write(*,*) 'in read op table nopac emab', nOpac_EmAb 
     ELSE
       ReadOpacity(iEmAb) = .FALSE.
       nOpac_EmAb = 0
@@ -392,8 +408,10 @@ CONTAINS
         .AND. ( LEN( FileName_Iso_Option ) > 1 ) )THEN
       ReadOpacity(iIso) = .TRUE.
       FileName   (iIso) = TRIM( FileName_Iso_Option )
-      nOpac_Iso = 2
-      nMom_Iso  = 2
+      !nOpac_Iso = 2
+      !nMom_Iso  = 2
+      !nOpac_Iso = OpacityTable % nOpacities_Iso
+      !nMom_Iso  = OpacityTable % nMoments_Iso
     ELSE
       ReadOpacity(iIso) = .FALSE.
       nOpac_Iso = 0
@@ -404,8 +422,10 @@ CONTAINS
         .AND. ( LEN( FileName_NES_Option ) > 1 ) )THEN
       ReadOpacity(iNES) = .TRUE.
       FileName   (iNES) = TRIM( FileName_NES_Option )
-      nOpac_NES = 1
-      nMom_NES  = 4
+      !nOpac_NES = 1
+      !nMom_NES  = 4
+      !nOpac_NES = OpacityTable % nOpacities_NES
+      !nMom_NES  = OpacityTable % nMoments_NES
     ELSE
       ReadOpacity(iNES) = .FALSE.
       nOpac_NES = 0
@@ -416,8 +436,10 @@ CONTAINS
         .AND. ( LEN( FileName_Pair_Option ) > 1 ) )THEN
       ReadOpacity(iPair) = .TRUE.
       FileName   (iPair) = TRIM( FileName_Pair_Option )
-      nOpac_Pair = 1
-      nMom_Pair  = 4
+      !nOpac_Pair = 1
+      !nMom_Pair  = 4
+      !nOpac_Pair = OpacityTable % nOpacities_Pair
+      !nMom_Pair  = OpacityTable % nMoments_Pair
     ELSE
       ReadOpacity(iPair) = .FALSE.
       nOpac_Pair = 0
@@ -428,10 +450,10 @@ CONTAINS
         .AND. ( LEN( FileName_Brem_Option ) > 1 ) )THEN
       ReadOpacity(iBrem) = .TRUE.
       FileName   (iBrem) = TRIM( FileName_Brem_Option )
-      !Currently, we only tabulate the 0th moment annihilation kernel
-      !as well as the same kernel for all neutrino species
-      nOpac_Brem = 1
-      nMom_Brem  = 1
+      !nOpac_Brem = 1
+      !nMom_Brem  = 1
+      !nOpac_Brem = OpacityTable % nOpacities_Brem
+      !nMom_Brem  = OpacityTable % nMoments_Brem
     ELSE
       ReadOpacity(iBrem) = .FALSE.
       nOpac_Brem = 0
@@ -532,6 +554,103 @@ CONTAINS
       END IF
 
     END DO
+
+    ! --- Get Number of Opacities and Moments ---
+    IF(ReadOpacity(iEmAb)) THEN 
+
+      CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
+
+      CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
+
+      CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+      nOpac_EmAb = buffer(1)
+     
+    ENDIF
+
+    IF (ReadOpacity(iIso)) THEN
+
+      CALL OpenFileHDF( FileName(iIso), .FALSE., file_id )
+
+      CALL OpenGroupHDF( "Scat_Iso_Kernels", .FALSE., file_id, group_id )
+
+      CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+
+      nOpac_Iso = buffer(1)
+
+      CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+
+      nMom_Iso = buffer(1)
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+
+    IF (ReadOpacity(iNES)) THEN 
+
+      CALL OpenFileHDF( FileName(iNES), .FALSE., file_id )
+
+      CALL OpenGroupHDF( "Scat_NES_Kernels", .FALSE., file_id, group_id )
+
+      CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+
+      nOpac_NES = buffer(1)
+
+      CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+
+      nMom_NES = buffer(1)
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+
+    IF (ReadOpacity(iPair)) THEN 
+
+      CALL OpenFileHDF( FileName(iPair), .FALSE., file_id )
+
+      CALL OpenGroupHDF( "Scat_Pair_Kernels", .FALSE., file_id, group_id )
+
+      CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+
+      nOpac_Pair = buffer(1)
+
+      CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+
+      nMom_Pair = buffer(1)
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+    
+    IF (ReadOpacity(iBrem)) THEN 
+
+      CALL OpenFileHDF( FileName(iBrem), .FALSE., file_id )
+
+      CALL OpenGroupHDF( "Scat_Brem_Kernels", .FALSE., file_id, group_id )
+
+      CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+
+      nOpac_Brem = buffer(1)
+
+      CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+
+      nMom_Brem = buffer(1)
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
 
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &

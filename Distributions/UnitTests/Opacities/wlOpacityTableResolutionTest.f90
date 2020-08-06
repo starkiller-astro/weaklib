@@ -147,59 +147,69 @@ PROGRAM wlOpacityTableResolutionTest
   IF( TableFlags(1) == 1 )THEN
     FileNameHi(1) = TRIM(HighResOpTableBase)//'-EmAb.h5'
     FileNameLo(1) = TRIM(LowResOpTableBase)//'-EmAb.h5'
-    nOpac_EmAb = 2
+    !nOpac_EmAb = 2
+    !nOpac_EmAb = OpacityTableHi % nOpacities_EmAb
   ELSE
     FileNameHi(1) = ''
     FileNameLo(1) = ''
-    nOpac_EmAb = 0
+    !nOpac_EmAb = 0
   END IF
 
   IF( TableFlags(2) == 1 )THEN
     FileNameHi(2) = TRIM(HighResOpTableBase)//'-Iso.h5'
     FileNameLo(2) = TRIM(LowResOpTableBase)//'-Iso.h5'
-    nOpac_Iso = 2
-    nMom_Iso  = 2
+    !nOpac_Iso = 2
+    !nMom_Iso  = 2
+    !nOpac_Iso = OpacityTableHi % nOpacities_Iso
+    !nMom_Iso  = OpacityTableHi % nMoments_Iso
+    !write(stdout,*) 'lol', nOpac_Iso, nMom_Iso
   ELSE
     FileNameHi(2) = ''
     FileNameLo(2) = ''
-    nOpac_Iso = 0
-    nMom_Iso  = 0
+    !nOpac_Iso = 0
+    !nMom_Iso  = 0
   END IF
 
   IF( TableFlags(3) == 1 )THEN
     FileNameHi(3) = TRIM(HighResOpTableBase)//'-NES.h5'
     FileNameLo(3) = TRIM(LowResOpTableBase)//'-NES.h5'
-    nOpac_NES = 1
-    nMom_NES  = 4
+    !nOpac_NES = 1
+    !nMom_NES  = 4
+    !nOpac_NES = OpacityTableHi % nOpacities_NES
+    !nMom_NES  = OpacityTableHi % nMoments_NES
   ELSE
     FileNameHi(3) = ''
     FileNameLo(3) = ''
-    nOpac_NES = 0
-    nMom_NES  = 0
+    !nOpac_NES = 0
+    !nMom_NES  = 0
   END IF
 
   IF( TableFlags(4) == 1 )THEN
     FileNameHi(4) = TRIM(HighResOpTableBase)//'-Pair.h5'
     FileNameLo(4) = TRIM(LowResOpTableBase)//'-Pair.h5'
-    nOpac_Pair = 1
-    nMom_Pair  = 4
+    !nOpac_Pair = 1
+    !nMom_Pair  = 4
+    !nOpac_Pair = OpacityTableHi % nOpacities_Pair
+    !nMom_Pair  = OpacityTableHi % nMoments_Pair
   ELSE
     FileNameHi(4) = ''
     FileNameLo(4) = ''
-    nOpac_Pair = 0
-    nMom_Pair  = 0
+    !nOpac_Pair = 0
+    !nMom_Pair  = 0
   END IF
 
   IF( TableFlags(5) == 1 )THEN
     FileNameHi(5) = TRIM(HighResOpTableBaseBrem)//'-Brem.h5'
     FileNameLo(5) = TRIM(LowResOpTableBaseBrem)//'-Brem.h5'
-    nOpac_Brem = 1
-    nMom_Brem  = 1
+    !nOpac_Brem = 1
+    !nMom_Brem  = 1
+    !nOpac_Brem = OpacityTableHi % nOpacities_Brem
+    !nMom_Brem  = OpacityTableHi % nMoments_Brem
   ELSE
     FileNameHi(5) = ''
     FileNameLo(5) = ''
-    nOpac_Brem = 0
-    nMom_Brem  = 0
+    !nOpac_Brem = 0
+    !nMom_Brem  = 0
   END IF
 
   !------------------------------------------------------
@@ -241,6 +251,45 @@ PROGRAM wlOpacityTableResolutionTest
        = TRIM(HighResEOSTableName),                     &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
+
+!Set number nOpac and nMom for all requested processes
+  IF( TableFlags(1) == 1 )THEN
+    nOpac_EmAb = OpacityTableHi % nOpacities_EmAb
+  ELSE
+    nOpac_EmAb = 0
+  END IF
+
+  IF( TableFlags(2) == 1 )THEN
+    nOpac_Iso = OpacityTableHi % nOpacities_Iso
+    nMom_Iso  = OpacityTableHi % nMoments_Iso
+  ELSE
+    nOpac_Iso = 0
+    nMom_Iso  = 0
+  END IF
+
+  IF( TableFlags(3) == 1 )THEN
+    nOpac_NES = OpacityTableHi % nOpacities_NES
+    nMom_NES  = OpacityTableHi % nMoments_NES
+  ELSE
+    nOpac_NES = 0
+    nMom_NES  = 0
+  END IF
+
+  IF( TableFlags(4) == 1 )THEN
+    nOpac_Pair = OpacityTableHi % nOpacities_Pair
+    nMom_Pair  = OpacityTableHi % nMoments_Pair
+  ELSE
+    nOpac_Pair = 0
+    nMom_Pair  = 0
+  END IF
+
+  IF( TableFlags(5) == 1 )THEN
+    nOpac_Brem = OpacityTableHi % nOpacities_Brem
+    nMom_Brem  = OpacityTableHi % nMoments_Brem
+  ELSE
+    nOpac_Brem = 0
+    nMom_Brem  = 0
+  END IF
 
   nPointsE   = OpacityTableHi % nPointsE
   nPointsEta = OpacityTableHi % nPointsEta

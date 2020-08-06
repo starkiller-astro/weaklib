@@ -1,6 +1,10 @@
 !calculate the zeroth order annihilation kernel from Hannestad & Raffelt 1998
 !using:
-!neutrino energies, rho, T, free neutron mass fraction and the free proton fraction
+!neutrino energies, rho, T
+!The decomposition can later be taken into account by
+!passing rho*xn, rho*xp, and rho*SQRT( ABS( xn * xp ))
+!in separate calls and adding the contributions to the
+!overall kernel
 !calculates s_a, which is 1/2 \Phi^a_0_Brem, in subroutine bremcal_weaklib
 !calls two subroutines: s_brem and g_brem
 !https://iopscience.iop.org/article/10.1086/306303
