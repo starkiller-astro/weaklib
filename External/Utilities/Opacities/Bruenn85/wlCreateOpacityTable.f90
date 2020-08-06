@@ -560,38 +560,45 @@ PRINT*, 'Filling OpacityTable ...'
 
   !write(stdout,*), omp_get_max_threads()
 
-   DO k_t = 1, OpacityTable % nPointsTS(iT)
+   DO i_rb = 1, nOpac_Brem
+     DO t_m = 1, nMom_Brem
+       DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-    DO j_rho = 1, OpacityTable % nPointsTS(iRho)
+         DO j_rho = 1, OpacityTable % nPointsTS(iRho)
 
-      T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
-      rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
-               
-      IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
+           T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+           rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
+      
+           IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
 
-          OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
-          = 0.d0
-          cycle
+            OpacityTable % Scat_Brem % Kernel(i_rb) % Values (:, :, t_m, j_rho, k_t) &
+            = 0.d0
+            cycle
              
-      ELSE
+           ELSE
 
-        CALL bremcal_weaklib &
-             (nPointsE, OpacityTable % EnergyGrid % Values, & 
-              rho, T, s_a)
+             CALL bremcal_weaklib &
+                  (nPointsE, OpacityTable % EnergyGrid % Values, & 
+                   rho, T, s_a)
 
-             OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
+             OpacityTable % Scat_Brem % Kernel(i_rb) % Values (:, :, t_m, j_rho, k_t) &
              = TRANSPOSE(s_a(:,:)) 
             
-      END IF
+           END IF
 
-    END DO  !j_rho
-  END DO  !k_t
+        END DO  !j_rho
+      END DO  !k_t
+    END DO !t_m
+  END DO !i_rb
    
 !------- Brem % Offsets
 
-       minvar = MINVAL( OpacityTable % Scat_Brem % Kernel(1) % Values )
-       OpacityTable % Scat_Brem % Offsets(1, 1) = -2.d0 * MIN( 0.d0, minvar ) 
-       
+  DO i_rb = 1, nOpac_Brem
+    DO t_m = 1, nMom_Brem
+       minvar = MINVAL( OpacityTable % Scat_Brem % Kernel(i_rb) % Values )
+       OpacityTable % Scat_Brem % Offsets(i_rb, t_m) = -2.d0 * MIN( 0.d0, minvar ) 
+    END DO
+  END DO   
   END IF
 
    END ASSOCIATE ! rho-T-Ye
@@ -637,9 +644,13 @@ PRINT*, 'Filling OpacityTable ...'
     END DO
   END DO !i_rb
 
-        OpacityTable % Scat_Brem % Kernel(1) % Values &
-      = LOG10 ( OpacityTable % Scat_Brem % Kernel(1) % Values &
-              + OpacityTable % Scat_Brem % Offsets(1, 1) + epsilon )
+  DO i_rb = 1, nOpac_Brem
+    DO t_m = 1, nMom_Brem
+        OpacityTable % Scat_Brem % Kernel(i_rb) % Values &
+      = LOG10 ( OpacityTable % Scat_Brem % Kernel(i_rb) % Values &
+              + OpacityTable % Scat_Brem % Offsets(i_rb, t_m) + epsilon )
+    END DO
+  END DO !i_rb
 
 ! -- write into hdf5 file
 
