@@ -2485,7 +2485,7 @@ CONTAINS
 
         DerivativeX(i,j,k) &
           = Interpolant(i,j,k) * aX &
-              * ( Linear( p00, p10, dT ) - Linear( p01, p11, dX ) )
+              * ( Linear( p00, p10, dT ) - Linear( p01, p11, dT ) )
 
       END DO
     END DO
@@ -2542,7 +2542,7 @@ CONTAINS
 
         DerivativeX(i,j) &
           = Interpolant(i,j) * aX &
-              * ( Linear( p00, p10, dT ) - Linear( p01, p11, dX ) )
+              * ( Linear( p00, p10, dT ) - Linear( p01, p11, dT ) )
 
       END DO
     END DO
