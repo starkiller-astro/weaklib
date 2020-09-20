@@ -10,13 +10,15 @@ SUBROUTINE abemrgn_weaklib &
 !    Purpose:
 !      To call the subroutines that compute the absorption and
 !       emission inverse mean free paths and to store the total
-!       inverse mean free paths in arrays for interpolation by
-!       by subroutine abemrate.
+!       inverse mean free paths in arrays, absor and emit,
+!       respectively.
 !
 !    Subprograms called:
-!  abem_cal      : computes neutrino emission and absorption 
+!  abem_cal_weaklib
+!                : computes neutrino emission and absorption 
 !                  on free neutrons and protons
-!  abemnc        : computes neutrino emission and absorption 
+!  abemnc_weaklib
+!                : computes neutrino emission and absorption 
 !                  on heavy nuclei using the FFN formalizm
 !
 !    Input arguments:
@@ -36,7 +38,8 @@ SUBROUTINE abemrgn_weaklib &
 !                  (excluding rest mass) [MeV]
 !  cmpe          : electron chemical potential 
 !                  (including rest mass) [MeV]
-!  ye_cube       : electron fraction
+!  ye            : electron fraction
+!  nez           : size of neutrino energy array e_in
 !
 !    Output arguments:
 !  absor         : absorption inverse mean free path (/cm)

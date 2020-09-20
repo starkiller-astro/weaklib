@@ -39,8 +39,10 @@ SUBROUTINE abem_cal_weaklib &
 !                  (including rest mass) [MeV]
 !
 !    Output arguments:
-!  absor         : absorption inverse mean free path (/cm)
-!  emitnp        : emission inverse mean free path (/cm)  
+!  absornp       : inverse mean free path for absorption on free
+!                  nucleons (/cm)
+!  emitnp        : inverse mean free path for emission from free
+!                  nucleons (/cm)
 !
 !-----------------------------------------------------------------------
 

@@ -27,8 +27,8 @@ SUBROUTINE abemnc_weaklib( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  
 !                 between the exitation energy of daughter and parent nucleus [MeV]
 !
 !    Output arguments:
-!  absrnc      : absorption inverse mean free path (/cm)
-!  emitnc      : emission inverse mean free path (/cm)
+!  absrnc      : absorption inverse mean free path on nuclei (/cm)
+!  emitnc      : emission inverse mean free path on nuclei (/cm)
 !
 !    Modules used:
 !  kind_module
