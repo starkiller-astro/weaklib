@@ -50,6 +50,13 @@ elif [[ $WEAKLIB_MACHINE == sjdunham* ]]; then
 echo
 echo "INFO: Setting environment for" $WEAKLIB_MACHINE
 
+elif [[ $WEAKLIB_MACHINE == vass* ]]; then
+
+  export WEAKLIB_DIR=/Users/vv4/repos/github/weaklib/
+  export PE_ENV=GNU
+  echo
+  echo "INFO: Setting environment for" $WEAKLIB_MACHINE
+
 fi
 
 
@@ -114,6 +121,10 @@ elif [[ $WEAKLIB_MACHINE == sjdunham ]]; then
 
 echo
 
+elif [[ $WEAKLIB_MACHINE == vass ]]; then
+
+  echo $WEAKLIB_MACHINE
+  echo $WEAKLIB_DIR
 else
 
   echo "  WARNING: Unknown machine " $WEAKLIB_MACHINE
