@@ -15,7 +15,7 @@ PROGRAM wlCreateOpacityTable
 !      routines were called.
 ! 
 !---------------------------------------------------------------------
-!                         Three Opacity Type
+!                         Four Opacity Types
 !
 ! OpacityType A for emission and absorption EmAb( rho, T, Ye, E)
 !
@@ -31,6 +31,14 @@ PROGRAM wlCreateOpacityTable
 !       e+ + e-  <--> v_i + anti(v_i);   i=e, muon, tau
 !       N + N   <--> N + N + v_i + anti(v_i)
 !                 
+! OpacityType D for nucleon-nucleon Bremsstrahlung( e_p, e, rho, T)
+!
+! Stored is the zeroth order annihilation kernel from Hannestad and Raffelt 1998
+! for a generic rho. The composition can later be taken into account 
+! by interpolating and adding the contribution from 
+! xp*rho, xn*rho and sqrt(xp+xn)*rho
+!
+!       nu nubar NN <--> NN   i=e, muon, tau
 !---------------------------------------------------------------------
 
 
@@ -51,9 +59,15 @@ PROGRAM wlCreateOpacityTable
   USE B85_scattIso
   USE B85_scattNES
   USE B85_pair
+  USE HR98_Bremsstrahlung
   USE prb_cntl_module, ONLY: &
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
       edmpa, edmpe, iaenca
+      
+  USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
+  USE omp_lib
 
 IMPLICIT NONE
 
@@ -62,12 +76,15 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eos table
 !---------------------------------------------------------------------
-   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
+   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-25-40-100.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
 
 !---------------------------------------------------------------------
 ! Set neutrino interaction type
 !---------------------------------------------------------------------
    CHARACTER(256)          :: WriteTableName
+   CHARACTER(256)          :: WriteTableNameBrem
 
    TYPE(OpacityTableType)  :: OpacityTable
    INTEGER                 :: nOpac_EmAb = 2  ! 2 for electron type
@@ -85,30 +102,37 @@ IMPLICIT NONE
    INTEGER                 :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
+   INTEGER                 :: nOpac_Brem = 1  !1 just the zeroth order annihilation kernel
+   INTEGER                 :: nMom_Brem  = 1  !1 only need to calculate zeroth order kernel
+
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
-   INTEGER,  PARAMETER     :: nPointsE = 40 
+   INTEGER,  PARAMETER     :: nPointsE = 40
    REAL(dp), PARAMETER     :: Emin = 1.0d-1  
    REAL(dp), PARAMETER     :: Emax = 3.0d02
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
 !---------------------------------------------------------------------
-   INTEGER                 :: nPointsEta = 60
+   INTEGER                 :: nPointsEta = 120
    REAL(dp), PARAMETER     :: Etamin = 1.0d-3
    REAL(dp), PARAMETER     :: Etamax = 2.5d03
 
    ! --- other inner variables
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, &
-                              t_m, i_eta, i_ep, stringlength
+                              t_m, i_eta, i_ep, stringlength, stringlengthBrem
    REAL(dp)                :: energy, rho, T, TMeV, ye, Z, A, &
                               chem_e, chem_n, chem_p, xheavy, xn, &
                               xp, xhe, bb, eta, minvar 
    REAL(dp), DIMENSION(nPointsE) :: absor, emit 
    REAL(dp), DIMENSION(nPointsE,2) :: cok 
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
-   REAL(dp)                :: j0i, j0ii, j1i, j1ii
+   REAL(dp)                                :: j0i, j0ii, j1i, j1ii
+
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: s_a !the Bremsstrahlung annihilation kernel
+   REAL(dp), PARAMETER                     :: brem_rho_min = 1.0d+07 !switch Bremsstrahlung off below rho_min
+   REAL(dp), PARAMETER                     :: brem_rho_max = 1.0d+15 !switch Bremsstrahlung off above rho_max
 
    CALL idate(today)
    CALL itime(now)
@@ -120,15 +144,21 @@ IMPLICIT NONE
 ! -- Set Write-Out FileName
    stringlength = LEN(TRIM(EOSTableName))
    WRITE(WriteTableName,'(A,A,A,A,I2,A)') &
-     EOSTableName(1:3),'Op-',EOSTableName(8:stringlength-3),'-E',nPointsE,&
-     '-B85'
+         EOSTableName(1:3),'Op-',EOSTableName(8:stringlength-3),'-E',nPointsE, &
+         '-B85'
    stringlength = len(TRIM(WriteTableName))
 
+   stringlengthBrem = LEN(TRIM(EOSTableName))
+   WRITE(WriteTableNameBrem,'(A,A,A,A,I2,A)') &
+         EOSTableName(1:3),'Op-',EOSTableName(8:stringlengthBrem-3),'-E',nPointsE, &
+         '-HR98'
+   stringlengthBrem = len(TRIM(WriteTableNameBrem))
 
    CALL InitializeHDF( ) 
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
               nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
+              nOpac_Brem, nMom_Brem, &
               nPointsE, nPointsEta, &
               EquationOfStateTableName_Option = EOSTableName ) 
    CALL FinalizeHDF( )
@@ -137,9 +167,9 @@ IMPLICIT NONE
 
    IF( nOpac_EmAb .gt. 0 ) THEN
 
-   OpacityTable % EmAb % nOpacities = nOpac_EmAb
+   OpacityTable % EmAb % nOpacities   = nOpac_EmAb
 
-   OpacityTable % EmAb % nPoints(1) = nPointsE
+   OpacityTable % EmAb % nPoints(1)   = nPointsE
 
    OpacityTable % EmAb % nPoints(2:4) = OpacityTable % nPointsTS
 
@@ -155,12 +185,12 @@ IMPLICIT NONE
 ! -- Set OpacityTableTypeScat Iso
    IF( nOpac_Iso .gt. 0 ) THEN
 
-   OpacityTable % Scat_Iso % nOpacities = nOpac_Iso
+   OpacityTable % Scat_Iso % nOpacities   = nOpac_Iso
    
-   OpacityTable % Scat_Iso % nMoments = nMom_Iso
+   OpacityTable % Scat_Iso % nMoments     = nMom_Iso
    
-   OpacityTable % Scat_Iso % nPoints(1) = nPointsE
-   OpacityTable % Scat_Iso % nPoints(2) = nMom_Iso
+   OpacityTable % Scat_Iso % nPoints(1)   = nPointsE
+   OpacityTable % Scat_Iso % nPoints(2)   = nMom_Iso
    OpacityTable % Scat_Iso % nPoints(3:5) = OpacityTable % nPointsTS
 
    OpacityTable % Scat_Iso % Names = &
@@ -170,6 +200,7 @@ IMPLICIT NONE
    OpacityTable % Scat_Iso % Units = &
                                 (/'Per Centimeter              ',  &
                                   'Per Centimeter              '/)
+   
    END IF
 
 ! -- Set OpacityTableTypeScat NES
@@ -190,10 +221,12 @@ IMPLICIT NONE
 
    OpacityTable % Scat_NES % Units = &
                                 (/'Per Centimeter Per MeV^3'/)
+
    END IF
 ! -- Set OpacityTableTypeScat Pair
 
    IF( nOpac_Pair .gt. 0 ) THEN
+
    OpacityTable % Scat_Pair % nOpacities = nOpac_Pair
 
    OpacityTable % Scat_Pair % nMoments   = nMom_Pair
@@ -207,7 +240,28 @@ IMPLICIT NONE
    OpacityTable % Scat_Pair % Names = (/'Kernels'/)
 
    OpacityTable % Scat_Pair % Units = (/'Per Centimeter Per MeV^3'/)
+
    END IF
+
+! -- Set OpacityTableTypeBrem Brem
+   IF( nOpac_Brem .gt. 0 ) THEN
+
+   OpacityTable % Scat_Brem % nOpacities = nOpac_Brem
+
+   OpacityTable % Scat_Brem % nMoments   = nMom_Brem
+
+   OpacityTable % Scat_Brem % nPoints(1) = nPointsE
+   OpacityTable % Scat_Brem % nPoints(2) = nPointsE
+   OpacityTable % Scat_Brem % nPoints(3) = nMom_Brem
+   OpacityTable % Scat_Brem % nPoints(4) = OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho)
+   OpacityTable % Scat_Brem % nPoints(5) = OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)
+
+   OpacityTable % Scat_Brem % Names      = (/'Kernels'/)
+
+   OpacityTable % Scat_Brem % Units      = (/'Per Centimeter Per MeV^3'/)
+
+   END IF
+
 !-----------------------------   
 ! Generate E grid from limits
 !-----------------------------
@@ -228,7 +282,7 @@ PRINT*, "Making Energy Grid ... "
    CALL MakeLogGrid &
           ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
             EnergyGrid % nPoints,  EnergyGrid % Values )
- 
+
    END ASSOCIATE ! EnergyGrid
 
 !-----------------------------
@@ -500,6 +554,53 @@ PRINT*, 'Filling OpacityTable ...'
   END DO ! i_rb
   END IF
 
+!-----------------  Bremsstrahlung -------------------- 
+  IF( nOpac_Brem .gt. 0 ) THEN
+  PRINT*, 'Calculating Nucleon-Nucleon Bremsstrahlung Scattering Kernel ...'
+
+  !write(stdout,*), omp_get_max_threads()
+
+   DO i_rb = 1, nOpac_Brem
+     DO t_m = 1, nMom_Brem
+       DO k_t = 1, OpacityTable % nPointsTS(iT)
+
+         DO j_rho = 1, OpacityTable % nPointsTS(iRho)
+
+           T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+           rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
+      
+           IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
+
+            OpacityTable % Scat_Brem % Kernel(i_rb) % Values (:, :, t_m, j_rho, k_t) &
+            = 0.d0
+            cycle
+             
+           ELSE
+
+             CALL bremcal_weaklib &
+                  (nPointsE, OpacityTable % EnergyGrid % Values, & 
+                   rho, T, s_a)
+
+             OpacityTable % Scat_Brem % Kernel(i_rb) % Values (:, :, t_m, j_rho, k_t) &
+             = TRANSPOSE(s_a(:,:)) 
+            
+           END IF
+
+        END DO  !j_rho
+      END DO  !k_t
+    END DO !t_m
+  END DO !i_rb
+   
+!------- Brem % Offsets
+
+  DO i_rb = 1, nOpac_Brem
+    DO t_m = 1, nMom_Brem
+       minvar = MINVAL( OpacityTable % Scat_Brem % Kernel(i_rb) % Values )
+       OpacityTable % Scat_Brem % Offsets(i_rb, t_m) = -2.d0 * MIN( 0.d0, minvar ) 
+    END DO
+  END DO   
+  END IF
+
    END ASSOCIATE ! rho-T-Ye
 !---------------------------------------------------------------------
 !      Describe the Table ( give the real physical value )            
@@ -543,6 +644,14 @@ PRINT*, 'Filling OpacityTable ...'
     END DO
   END DO !i_rb
 
+  DO i_rb = 1, nOpac_Brem
+    DO t_m = 1, nMom_Brem
+        OpacityTable % Scat_Brem % Kernel(i_rb) % Values &
+      = LOG10 ( OpacityTable % Scat_Brem % Kernel(i_rb) % Values &
+              + OpacityTable % Scat_Brem % Offsets(i_rb, t_m) + epsilon )
+    END DO
+  END DO !i_rb
+
 ! -- write into hdf5 file
 
   IF( nOpac_EmAb > 0 ) THEN
@@ -581,6 +690,15 @@ PRINT*, 'Filling OpacityTable ...'
     CALL FinalizeHDF( )
   END IF
  
+  IF( nOpac_Brem > 0 ) THEN
+    WriteTableNameBrem(stringlengthBrem+1:stringlengthBrem+8) = '-Brem.h5'
+    CALL InitializeHDF( )
+    WRITE(*,*) 'Write Brem data into file ', TRIM(WriteTableNameBrem)
+    CALL WriteOpacityTableHDF &
+         ( OpacityTable, TRIM(WriteTableNameBrem), WriteOpacity_Brem_Option = .true. )
+    CALL FinalizeHDF( )
+  END IF
+
   WRITE (*,*) "HDF write successful"
 
   CALL DeAllocateOpacityTable( OpacityTable )

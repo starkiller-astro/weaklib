@@ -3,4 +3,5 @@ OPACITYBRUENN85 = \
   B85_scattIso.o \
   B85_scattNES.o \
   B85_pair.o \
+  HR98_Bremsstrahlung.o \
   GreyVariables.o

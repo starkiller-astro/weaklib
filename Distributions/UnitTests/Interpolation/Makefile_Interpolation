@@ -1,0 +1,21 @@
+WEAKLIB_DIR ?= ../../../
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+
+all: wlTestInterpolation 
+
+wlTestInterpolation: \
+        $(weaklib) wlTestInterpolation.o
+	$(FLINKER) $(FLAGS) -o wlTestInterpolation_$(MACHINE) \
+        $(weaklib) wlTestInterpolation.o \
+        $(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f *_$(MACHINE)
+
+wlTestInterpolation.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlTestInterpolation.F90
