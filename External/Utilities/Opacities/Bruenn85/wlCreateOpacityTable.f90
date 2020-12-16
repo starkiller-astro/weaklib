@@ -53,7 +53,7 @@ PROGRAM wlCreateOpacityTable
   USE B85_pair
   USE prb_cntl_module, ONLY: &
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
-      edmpa, edmpe, iaenca
+      edmpa, edmpe, iaenca, in, ip, ietann
 
 IMPLICIT NONE
 
@@ -359,6 +359,10 @@ PRINT*, 'Filling OpacityTable ...'
 
 !----------------  Scat_Iso -----------------------
          DO i_rb = 1, nOpac_Iso
+
+           in = 1
+           ip = 1
+           ietann = 1
 
            CALL scatical_weaklib &
            ( i_rb, OpacityTable % EnergyGrid % Values, &
