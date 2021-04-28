@@ -25,6 +25,7 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_2D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_3D_Custom_Point
+  PUBLIC :: LogInterpolateSingleVariable_4D_Custom
   PUBLIC :: LogInterpolateSingleVariable_1D3D
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom_Point
