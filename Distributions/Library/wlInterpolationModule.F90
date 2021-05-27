@@ -674,6 +674,8 @@ CONTAINS
     !$ACC PARALLEL LOOP GANG VECTOR &
     !$ACC IF( do_gpu ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO
 #endif
     DO i = 1, SIZE( LogE )
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
@@ -689,6 +691,11 @@ CONTAINS
     !$ACC IF( do_gpu ) &
     !$ACC PRIVATE( iD, dD, iT, dT, iY, dY ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO &
+    !$OMP PRIVATE( iD, dD, iT, dT, iY, dY, &
+    !$OMP          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+    !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #endif
     DO j = 1, SIZE( LogD )
 
@@ -1024,6 +1031,8 @@ CONTAINS
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC( async_flag ) &
     !$ACC IF( do_gpu ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO
 #endif
     DO i = 1, SizeE
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
@@ -1039,6 +1048,12 @@ CONTAINS
     !$ACC IF( do_gpu ) &
     !$ACC PRIVATE( iT, dT, iX, dX ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO &
+    !$OMP PRIVATE( iT, dT, iX, dX, &
+    !$OMP          i0, j0, i, j, &
+    !$OMP          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+    !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #endif
     DO l = 1, SIZE( LogT )
 
@@ -1226,6 +1241,10 @@ CONTAINS
     !$ACC IF( do_gpu ) &
     !$ACC PRIVATE( iT, dT, iX, dX ) &
     !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO &
+    !$OMP PRIVATE( iT, dT, iX, dX, &
+    !$OMP          i0, j0, i, j, p00, p10, p01, p11 )
 #endif
     DO k = 1, SIZE( LogT )
 
@@ -2148,6 +2167,8 @@ CONTAINS
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC( async_flag ) &
     !$ACC IF( do_gpu ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO
 #endif
     DO i = 1, SizeE
       iE(i) = Index1D_Lin( LogE(i), LogEs, SIZE( LogEs ) )
@@ -2164,6 +2185,12 @@ CONTAINS
     !$ACC PRIVATE( iT, dT, aT, iX, dX, aX ) &
     !$ACC PRESENT( iE, dE, LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, &
     !$ACC          Table, Interpolant, DerivativeT, DerivativeX )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO &
+    !$OMP PRIVATE( iT, dT, aT, iX, dX, aX, &
+    !$OMP          i0, j0, i, j, &
+    !$OMP          p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
+    !$OMP          p1000, p1001, p1010, p1011, p1100, p1101, p1110, p1111 )
 #endif
     DO l = 1, SIZE( LogT )
 
@@ -2389,6 +2416,10 @@ CONTAINS
     !$ACC IF( do_gpu ) &
     !$ACC PRIVATE( iT, dT, aT, iX, dX, aX ) &
     !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO &
+    !$OMP PRIVATE( iT, dT, aT, iX, dX, aX, &
+    !$OMP          i0, j0, i, j, p00, p10, p01, p11 )
 #endif
     DO k = 1, SIZE( LogT )
 
