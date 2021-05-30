@@ -261,15 +261,15 @@ CONTAINS
     ddX2 = One - dX2
     ddX3 = One - dX3
 
-    dTriLineardX1 &
-      = ddX3 &
-          * ( - ddX2 * p000 + ddX2 * p100   &
-              -  dX2 * p010 +  dX2 * p110 ) &
-       + dX3 &
-          * ( - ddX2 * p001 + ddX2 * p101   &
-              -  dX2 * p011 +  dX2 * p111 )
-
-!Alterntively, we could calculate this as:
+!    dTriLineardX1 &
+!      = ddX3 &
+!          * ( - ddX2 * p000 + ddX2 * p100   &
+!              -  dX2 * p010 +  dX2 * p110 ) &
+!       + dX3 &
+!          * ( - ddX2 * p001 + ddX2 * p101   &
+!              -  dX2 * p011 +  dX2 * p111 )
+!
+!!Alterntively, we could calculate this as:
 
     dTrilineardX1 &
       = Bilinear(p100, p110, p101, p111, dX2, dX3) &
@@ -297,15 +297,15 @@ CONTAINS
     ddX1 = One - dX1
     ddX3 = One - dX3
 
-    dTriLineardX2 &
-      =  ddX3 &
-           * ( - ddX1 * p000 - dX1 * p100   &
-               + ddX1 * p010 + dX1 * p110 ) &
-        + dX3 &
-           * ( - ddX1 * p001 - dX1 * p101   &
-               + ddX1 * p011 + dX1 * p111 )
-
-!Alterntively, we could calculate this as:
+!    dTriLineardX2 &
+!      =  ddX3 &
+!           * ( - ddX1 * p000 - dX1 * p100   &
+!               + ddX1 * p010 + dX1 * p110 ) &
+!        + dX3 &
+!           * ( - ddX1 * p001 - dX1 * p101   &
+!               + ddX1 * p011 + dX1 * p111 )
+!
+!!Alterntively, we could calculate this as:
 
     dTrilineardX2 &
       = Bilinear(p010, p110, p011, p111, dX1, dX3) &
@@ -333,13 +333,13 @@ CONTAINS
     ddX1 = One - dX1
     ddX2 = One - dX2
 
-    dTriLineardX3 &
-      = - ddX1 * ddX2 * p000 - dX1 * ddX2 * p100 &
-        - ddX1 *  dX2 * p010 - dX1 *  dX2 * p110 &
-        + ddX1 * ddX2 * p001 + dX1 * ddX2 * p101 &
-        + ddX1 *  dX2 * p011 + dX1 *  dX2 * p111
-
-!Alterntively, we could calculate this as:
+!    dTriLineardX3 &
+!      = - ddX1 * ddX2 * p000 - dX1 * ddX2 * p100 &
+!        - ddX1 *  dX2 * p010 - dX1 *  dX2 * p110 &
+!        + ddX1 * ddX2 * p001 + dX1 * ddX2 * p101 &
+!        + ddX1 *  dX2 * p011 + dX1 *  dX2 * p111
+!
+!!Alterntively, we could calculate this as:
 
     dTrilineardX3 &
       = Bilinear(p001, p101, p011, p111, dX1, dX2) &
