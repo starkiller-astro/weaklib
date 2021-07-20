@@ -171,15 +171,15 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD IF( do_gpu ) &
-    !$OMP PRIVATE( iD, dD, iT, dT, iY, dY )
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) IF( do_gpu ) &
+    !$OMP PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) IF( do_gpu ) &
     !$ACC PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY ) &
     !$ACC PRESENT( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
-    !$OMP PARALLEL DO &
-    !$OMP PRIVATE( iD, dD, iT, dT, iY, dY )
+    !$OMP PARALLEL DO COLLAPSE(2) &
+    !$OMP PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY )
 #endif
     DO j = 1, SIZE( LogD )
       DO i = 1, SIZE( LogE )
