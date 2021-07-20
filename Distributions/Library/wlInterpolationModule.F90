@@ -64,8 +64,6 @@ MODULE wlInterpolationModule
     MODULE PROCEDURE LogInterpolateSingleVariable_2D2D_Custom_Point
     MODULE PROCEDURE LogInterpolateSingleVariable_2D2D_Custom_Aligned
     MODULE PROCEDURE LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point
-    MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom
-    MODULE PROCEDURE LogInterpolateSingleVariable_4D_Custom_Point
   END INTERFACE LogInterpolateSingleVariable
 
   INTERFACE LogInterpolateDifferentiateSingleVariable
