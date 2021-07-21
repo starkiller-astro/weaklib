@@ -749,7 +749,7 @@ CONTAINS
     INTEGER  :: Error
 
     T = 0.0_dp
-    Error = CheckInputError( D, S, Y, MinP, MaxP )
+    Error = CheckInputError( D, S, Y, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_Guess &
              ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, T_Guess, Error )
