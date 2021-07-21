@@ -13,12 +13,15 @@ MODULE wlEOSInversionModule
 
   PUBLIC :: InitializeEOSInversion
   PUBLIC :: ComputeTemperatureWith_DEY
+  PUBLIC :: ComputeTemperatureWith_DEY_Many
   PUBLIC :: ComputeTemperatureWith_DEY_Single_Guess
   PUBLIC :: ComputeTemperatureWith_DEY_Single_NoGuess
   PUBLIC :: ComputeTemperatureWith_DPY
+  PUBLIC :: ComputeTemperatureWith_DPY_Many
   PUBLIC :: ComputeTemperatureWith_DPY_Single_Guess
   PUBLIC :: ComputeTemperatureWith_DPY_Single_NoGuess
   PUBLIC :: ComputeTemperatureWith_DSY
+  PUBLIC :: ComputeTemperatureWith_DSY_Many
   PUBLIC :: ComputeTemperatureWith_DSY_Single_Guess
   PUBLIC :: ComputeTemperatureWith_DSY_Single_NoGuess
   PUBLIC :: DescribeEOSInversionError
