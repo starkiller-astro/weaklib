@@ -10,13 +10,19 @@ PROGRAM wlEosInversionTest
   USE wlEOSIOModuleHDF, ONLY: &
     ReadEquationOfStateTableHDF
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable, &
-    ComputeTempFromIntEnergy_Lookup, &
-    ComputeTempFromEntropy
+    LogInterpolateSingleVariable_3D_Custom, &
+    LogInterpolateSingleVariable_3D_Custom_Point
   USE wlEOSInversionModule, ONLY: &
     InitializeEOSInversion, &
-    ComputeTemperatureWith_DEY, &
-    ComputeTemperatureWith_DSY, &
+    ComputeTemperatureWith_DEY_Many, &
+    ComputeTemperatureWith_DEY_Single_Guess, &
+    ComputeTemperatureWith_DEY_Single_NoGuess, &
+    ComputeTemperatureWith_DSY_Many, &
+    ComputeTemperatureWith_DSY_Single_Guess, &
+    ComputeTemperatureWith_DSY_Single_NoGuess, &
+    ComputeTemperatureWith_DPY_Many, &
+    ComputeTemperatureWith_DPY_Single_Guess, &
+    ComputeTemperatureWith_DPY_Single_NoGuess, &
     DescribeEOSInversionError
 
   IMPLICIT NONE
@@ -39,7 +45,7 @@ PROGRAM wlEosInversionTest
     tGPU, &
     T_Guess, &
     Amp, &
-    E_E
+    E_T, S_T, P_T
   REAL(dp), DIMENSION(nPoints) :: &
     D, T, Y, E, P, S, T_E, T_P, T_S, dT, &
     rndm_D, &
@@ -178,18 +184,18 @@ PROGRAM wlEosInversionTest
 
   ! --- Compute Internal Energy, Pressure, and Entropy ---
 
-  CALL LogInterpolateSingleVariable &
+  CALL LogInterpolateSingleVariable_3D_Custom &
          ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_E, Es_T, E )
 
   WRITE(*,*)
   WRITE(*,*) "Min/Max E = ", MINVAL( E ), MAXVAL( E )
 
-  CALL LogInterpolateSingleVariable &
+  CALL LogInterpolateSingleVariable_3D_Custom &
          ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P )
 
   WRITE(*,*) "Min/Max P = ", MINVAL( P ), MAXVAL( P )
 
-  CALL LogInterpolateSingleVariable &
+  CALL LogInterpolateSingleVariable_3D_Custom &
          ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S )
 
   WRITE(*,*) "Min/Max S = ", MINVAL( S ), MAXVAL( S )
@@ -232,7 +238,7 @@ PROGRAM wlEosInversionTest
 
   CALL CPU_TIME( tBegin )
 
-  CALL ComputeTemperatureWith_DEY &
+  CALL ComputeTemperatureWith_DEY_Many &
          ( D, E, Y, Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E, &
            UseInitialGuess_Option = .TRUE., &
            Error_Option = Error_E )
@@ -252,7 +258,7 @@ PROGRAM wlEosInversionTest
 #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
-    CALL ComputeTemperatureWith_DEY &
+    CALL ComputeTemperatureWith_DEY_Single_Guess &
            ( D(iP), E(iP), Y(iP), Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E(iP), T_Guess, &
              Error_Option = Error_E(iP) )
   END DO
@@ -269,9 +275,10 @@ PROGRAM wlEosInversionTest
   END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable &
-         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_E )
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "CPU MINVAL(T) = ", MINVAL( T_E )
 
 #if defined(WEAKLIB_OMP_OL)
@@ -284,7 +291,10 @@ PROGRAM wlEosInversionTest
   END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_E )
 
   ! -------------------------------------------------------------------
@@ -314,7 +324,7 @@ PROGRAM wlEosInversionTest
 
   CALL CPU_TIME( tBegin )
 
-  CALL ComputeTemperatureWith_DEY &
+  CALL ComputeTemperatureWith_DEY_Many &
          ( D, E, Y, Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E, &
            UseInitialGuess_Option = .TRUE., &
            Error_Option = Error_E )
@@ -334,7 +344,7 @@ PROGRAM wlEosInversionTest
 #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
-    CALL ComputeTemperatureWith_DEY &
+    CALL ComputeTemperatureWith_DEY_Single_Guess &
            ( D(iP), E(iP), Y(iP), Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E(iP), T_Guess, &
              Error_Option = Error_E(iP) )
   END DO
@@ -351,9 +361,10 @@ PROGRAM wlEosInversionTest
   END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable &
-         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_E )
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "CPU MINVAL(T) = ", MINVAL( T_E )
 
 #if defined(WEAKLIB_OMP_OL)
@@ -366,7 +377,10 @@ PROGRAM wlEosInversionTest
   END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_E )
 
   ! -------------------------------------------------------------------
@@ -382,7 +396,7 @@ PROGRAM wlEosInversionTest
 
   CALL CPU_TIME( tBegin )
 
-  CALL ComputeTemperatureWith_DEY &
+  CALL ComputeTemperatureWith_DEY_Many &
          ( D, E, Y, Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E, &
            UseInitialGuess_Option = .FALSE., &
            Error_Option = Error_E )
@@ -400,7 +414,7 @@ PROGRAM wlEosInversionTest
 #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
-    CALL ComputeTemperatureWith_DEY &
+    CALL ComputeTemperatureWith_DEY_Single_NoGuess &
            ( D(iP), E(iP), Y(iP), Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E(iP), &
              Error_Option = Error_E(iP) )
   END DO
@@ -417,9 +431,10 @@ PROGRAM wlEosInversionTest
   END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable &
-         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_E )
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "CPU MINVAL(T) = ", MINVAL( T_E )
 
 #if defined(WEAKLIB_OMP_OL)
@@ -432,38 +447,44 @@ PROGRAM wlEosInversionTest
   END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_E )
 
   ! -------------------------------------------------------------------
 
-  T_E = 0.0_dp
+  !T_E = 0.0_dp
 
-  CALL CPU_TIME( tBegin )
+  !CALL CPU_TIME( tBegin )
 
-  CALL ComputeTempFromIntEnergy_Lookup &
-         ( D, E, Y, Ds_T, Ts_T, Ys_T, [1,1,0], &
-           Es_T, OS_E, T_E )
+  !CALL ComputeTempFromIntEnergy_Lookup &
+  !       ( D, E, Y, Ds_T, Ts_T, Ys_T, [1,1,0], &
+  !         Es_T, OS_E, T_E )
 
-  CALL CPU_TIME( tEnd )
+  !CALL CPU_TIME( tEnd )
 
-  Error = ABS( T - T_E ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
+  !Error = ABS( T - T_E ) / T
+  !iMaxError = MAXLOC( Error, DIM=1 )
 
-  CALL LogInterpolateSingleVariable &
-         ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_E )
+  !CALL LogInterpolateSingleVariable_3D_Custom_Point &
+  !       ( D(iMaxError), T_E(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E_T )
 
-  PRINT*
-  PRINT*, "ComputeTempFromIntEnergy_Lookup:"
-  PRINT*, "CPU_TIME = ", tEnd - tBegin
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "MINVAL(T) = ", MINVAL( T_E )
+  !PRINT*
+  !PRINT*, "ComputeTempFromIntEnergy_Lookup:"
+  !PRINT*, "CPU_TIME = ", tEnd - tBegin
+  !PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  !PRINT*, "MINVAL(T) = ", MINVAL( T_E )
 
-  STOP
+  !STOP
 
   ! -------------------------------------------------------------------
   ! --- Recover Temperature from Entropy Per Baryon -------------------
   ! -------------------------------------------------------------------
+
+  Amp = 0.001_dp
+  dT = Amp * 2.0_dp * ( rndm_T - 0.5_dp ) * T
 
   associate &
     ( minT => 1.0001 * EOS % TS % MinValues(iT), &
@@ -473,44 +494,486 @@ PROGRAM wlEosInversionTest
 
   end associate
 
+  Error_S = 0
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE TO( T_S, Error_S )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE DEVICE( T_S, Error_S )
+#endif
+
   CALL CPU_TIME( tBegin )
 
-  CALL ComputeTemperatureWith_DSY &
+  CALL ComputeTemperatureWith_DSY_Many &
          ( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, &
            UseInitialGuess_Option = .TRUE., &
            Error_Option = Error_S )
 
   CALL CPU_TIME( tEnd )
-
-  Error = ABS( T - T_S ) / T
-
-  PRINT*
-  PRINT*, "ComputeTemperatureWith_DSY:"
-  PRINT*, "CPU_TIME = ", tEnd - tBegin
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "MINVAL(T) = ", MINVAL( T_S )
-
-  ! -------------------------------------------------------------------
+  tCPU = tEnd - tBegin
 
   CALL CPU_TIME( tBegin )
 
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
+  !$ACC PRESENT( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, Error_S )
+#endif
   DO iP = 1, nPoints
-
-    CALL ComputeTempFromEntropy &
-           ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, [1,1,0], &
-             Ss_T, OS_S, T_S(iP:iP) )
-
+    T_Guess = T_S(iP)
+    CALL ComputeTemperatureWith_DSY_Single_Guess &
+           ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S(iP), T_Guess, &
+             Error_Option = Error_S(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
-
-  Error = ABS( T - T_S ) / T
+  tGPU = tEnd - tBegin
 
   PRINT*
-  PRINT*, "ComputeTempFromEntropy:"
-  PRINT*, "CPU_TIME = ", tEnd - tBegin
-  PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "MINVAL(T) = ", MINVAL( T_S )
+  PRINT*, "ComputeTemperatureWith_DSY (Good Guess):"
+  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+
+  DO iP = 1, nPoints
+    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_S(iP) )
+  END DO
+  Error = ABS( T - T_S ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_S(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
+  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_S )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( T_S, Error_S )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( T_S, Error_S )
+#endif
+  DO iP = 1, nPoints
+    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_S(iP) )
+  END DO
+  Error = ABS( T - T_S ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_S(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
+  PRINT*, "GPU MINVAL(T) = ", MINVAL( T_S )
+
+  ! -------------------------------------------------------------------
+
+  associate &
+    ( minT => 1.0001 * EOS % TS % MinValues(iT), &
+      maxT => 0.9999 * EOS % TS % MaxValues(iT) )
+
+  Amp = 0.1_dp * ( maxT - minT )
+  dT = Amp * 2.0_dp * ( rndm_T - 0.5_dp ) * T
+
+  T_S = MIN( MAX( T + dT, minT ), maxT )
+
+  end associate
+
+  Error_S = 0
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE TO( T_S, Error_S )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE DEVICE( T_S, Error_S )
+#endif
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTemperatureWith_DSY_Many &
+         ( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, &
+           UseInitialGuess_Option = .TRUE., &
+           Error_Option = Error_S )
+
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
+
+  CALL CPU_TIME( tBegin )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
+  !$ACC PRESENT( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, Error_S )
+#endif
+  DO iP = 1, nPoints
+    T_Guess = T_S(iP)
+    CALL ComputeTemperatureWith_DSY_Single_Guess &
+           ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S(iP), T_Guess, &
+             Error_Option = Error_S(iP) )
+  END DO
+
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DSY (Bad Guess):"
+  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+
+  DO iP = 1, nPoints
+    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_S(iP) )
+  END DO
+  Error = ABS( T - T_S ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_S(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
+  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_S )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( T_S, Error_S )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( T_S, Error_S )
+#endif
+  DO iP = 1, nPoints
+    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_S(iP) )
+  END DO
+  Error = ABS( T - T_S ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_S(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
+  PRINT*, "GPU MINVAL(T) = ", MINVAL( T_S )
+
+  ! -------------------------------------------------------------------
+
+  T_S = 0.0_dp
+  Error_S = 0
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE TO( T_S, Error_S )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE DEVICE( T_S, Error_S )
+#endif
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTemperatureWith_DSY_Many &
+         ( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, &
+           UseInitialGuess_Option = .FALSE., &
+           Error_Option = Error_S )
+
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
+
+  CALL CPU_TIME( tBegin )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRESENT( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, Error_S )
+#endif
+  DO iP = 1, nPoints
+    T_Guess = T_S(iP)
+    CALL ComputeTemperatureWith_DSY_Single_NoGuess &
+           ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S(iP), &
+             Error_Option = Error_S(iP) )
+  END DO
+
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DSY (No Guess):"
+  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+
+  DO iP = 1, nPoints
+    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_S(iP) )
+  END DO
+  Error = ABS( T - T_S ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_S(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
+  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_S )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( T_S, Error_S )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( T_S, Error_S )
+#endif
+  DO iP = 1, nPoints
+    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_S(iP) )
+  END DO
+  Error = ABS( T - T_S ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_S(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
+  PRINT*, "GPU MINVAL(T) = ", MINVAL( T_S )
+
+  ! -------------------------------------------------------------------
+
+  ! -------------------------------------------------------------------
+  ! --- Recover Temperature from Pressure ----------------------
+  ! -------------------------------------------------------------------
+
+  Amp = 0.001_dp
+  dT = Amp * 2.0_dp * ( rndm_T - 0.5_dp ) * T
+
+  associate &
+    ( minT => 1.0001 * EOS % TS % MinValues(iT), &
+      maxT => 0.9999 * EOS % TS % MaxValues(iT) )
+
+  T_P = MIN( MAX( T + dT, minT ), maxT )
+
+  end associate
+
+  Error_P = 0
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE TO( T_P, Error_P )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE DEVICE( T_P, Error_P )
+#endif
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTemperatureWith_DPY_Many &
+         ( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, &
+           UseInitialGuess_Option = .TRUE., &
+           Error_Option = Error_P )
+
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
+
+  CALL CPU_TIME( tBegin )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
+  !$ACC PRESENT( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, Error_P )
+#endif
+  DO iP = 1, nPoints
+    T_Guess = T_P(iP)
+    CALL ComputeTemperatureWith_DPY_Single_Guess &
+           ( D(iP), P(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P(iP), T_Guess, &
+             Error_Option = Error_P(iP) )
+  END DO
+
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DPY (Good Guess):"
+  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+
+  DO iP = 1, nPoints
+    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_P(iP) )
+  END DO
+  Error = ABS( T - T_P ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_P(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
+  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_P )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( T_P, Error_P )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( T_P, Error_P )
+#endif
+  DO iP = 1, nPoints
+    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_P(iP) )
+  END DO
+  Error = ABS( T - T_P ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_P(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
+  PRINT*, "GPU MINVAL(T) = ", MINVAL( T_P )
+
+  ! -------------------------------------------------------------------
+
+  associate &
+    ( minT => 1.0001 * EOS % TS % MinValues(iT), &
+      maxT => 0.9999 * EOS % TS % MaxValues(iT) )
+
+  Amp = 0.1_dp * ( maxT - minT ) ! --- Perturbation Amplitude
+  dT = Amp * 2.0_dp * ( rndm_T - 0.5_dp ) * T
+
+  T_P = MIN( MAX( T + dT, minT ), maxT )
+
+  end associate
+
+  Error_P = 0
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE TO( T_P, Error_P )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE DEVICE( T_P, Error_P )
+#endif
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTemperatureWith_DPY_Many &
+         ( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, &
+           UseInitialGuess_Option = .TRUE., &
+           Error_Option = Error_P )
+
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
+
+  CALL CPU_TIME( tBegin )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
+  !$ACC PRESENT( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, Error_P )
+#endif
+  DO iP = 1, nPoints
+    T_Guess = T_P(iP)
+    CALL ComputeTemperatureWith_DPY_Single_Guess &
+           ( D(iP), P(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P(iP), T_Guess, &
+             Error_Option = Error_P(iP) )
+  END DO
+
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DPY (Bad Guess):"
+  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+
+  DO iP = 1, nPoints
+    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_P(iP) )
+  END DO
+  Error = ABS( T - T_P ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_P(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
+  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_P )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( T_P, Error_P )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( T_P, Error_P )
+#endif
+  DO iP = 1, nPoints
+    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_P(iP) )
+  END DO
+  Error = ABS( T - T_P ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_P(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
+  PRINT*, "GPU MINVAL(T) = ", MINVAL( T_P )
+
+  ! -------------------------------------------------------------------
+
+  T_P = 0.0_dp
+  Error_P = 0
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE TO( T_P, Error_P )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE DEVICE( T_P, Error_P )
+#endif
+
+  CALL CPU_TIME( tBegin )
+
+  CALL ComputeTemperatureWith_DPY_Many &
+         ( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, &
+           UseInitialGuess_Option = .FALSE., &
+           Error_Option = Error_P )
+
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
+
+  CALL CPU_TIME( tBegin )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRESENT( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, Error_P )
+#endif
+  DO iP = 1, nPoints
+    T_Guess = T_P(iP)
+    CALL ComputeTemperatureWith_DPY_Single_NoGuess &
+           ( D(iP), P(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P(iP), &
+             Error_Option = Error_P(iP) )
+  END DO
+
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
+
+  PRINT*
+  PRINT*, "ComputeTemperatureWith_DPY (No Guess):"
+  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+
+  DO iP = 1, nPoints
+    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_P(iP) )
+  END DO
+  Error = ABS( T - T_P ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_P(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P_T )
+  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "CPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
+  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_P )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( T_P, Error_P )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( T_P, Error_P )
+#endif
+  DO iP = 1, nPoints
+    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSInversionError( Error_P(iP) )
+  END DO
+  Error = ABS( T - T_P ) / T
+  iMaxError = MAXLOC( Error, DIM=1 )
+  CALL LogInterpolateSingleVariable_3D_Custom_Point &
+         ( D(iMaxError), T_P(iMaxError), Y(iMaxError), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P_T )
+  PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  PRINT*, "GPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
+  PRINT*, "GPU MINVAL(T) = ", MINVAL( T_P )
+
+  ! -------------------------------------------------------------------
+
+  !CALL CPU_TIME( tBegin )
+
+  !DO iP = 1, nPoints
+
+  !  CALL ComputeTempFromEntropy &
+  !         ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, [1,1,0], &
+  !           Ss_T, OS_S, T_S(iP:iP) )
+
+  !END DO
+
+  !CALL CPU_TIME( tEnd )
+
+  !Error = ABS( T - T_S ) / T
+
+  !PRINT*
+  !PRINT*, "ComputeTempFromEntropy:"
+  !PRINT*, "CPU_TIME = ", tEnd - tBegin
+  !PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
+  !PRINT*, "MINVAL(T) = ", MINVAL( T_S )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET EXIT DATA &
