@@ -39,12 +39,6 @@ wlOpacityAlignTest: \
 	$(weaklib) wlOpacityAlignTest.o \
 	$(LIBRARIES)
 
-wlGreyTableTest: \
-	$(weaklib) wlGreyTableTest.o
-	$(FLINKER) $(FLAGS) -o wlGreyTableTest_$(MACHINE) \
-	$(weaklib) wlGreyTableTest.o \
-	$(LIBRARIES)
-
 wlInterpolateAb: \
         $(weaklib) wlInterpolateAb.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateAb_$(MACHINE) \
