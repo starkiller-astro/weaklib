@@ -80,6 +80,9 @@ PROGRAM wlOpacityFieldsTest
         'Per Centimeter                  ', &
         'Per Centimeter                  ' ]
 
+  EmAb % Offsets &
+    = [ 1.0d-300, 1.0d-300, 1.0d-300, 1.0d-300 ]
+
   ASSOCIATE( Chi_Nu_e => EmAb % Opacity(iNu_e) % Values )
 
   DO iY = 1, EmAb % nPoints(4)
@@ -105,12 +108,11 @@ PROGRAM wlOpacityFieldsTest
   Scat_Iso % Names &
     = [ 'Elastic Scattering on Nuclei  ' ]
 
-!  Scat_Iso % Species &
-!    = [ 'Electron Neutrino             ' ]
-
   Scat_Iso % Units &
     = [ 'Per Centimeter                ' ]
 
+  Scat_Iso % Offsets(1,1:2) &
+    = [ 1.0d-300, 1.0d-300 ]
 
   ASSOCIATE( Sig_Nu_e => Scat_Iso % Kernel(iNu_e) % Values )
 
