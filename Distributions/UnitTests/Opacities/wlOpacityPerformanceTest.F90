@@ -10,26 +10,30 @@ PROGRAM wlOpacityPerformanceTest
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable
+    LogInterpolateSingleVariable_1D3D_Custom, &
+    LogInterpolateSingleVariable_1D3D_Custom_Point, &
+    LogInterpolateSingleVariable_4D_Custom_Point
 
   IMPLICIT NONE
 
   INTEGER :: &
     n_rndm, &
     iP, jP
-  INTEGER, DIMENSION(4) :: &
-    LogInterp = [ 1, 1, 1, 0 ]
   INTEGER, PARAMETER :: &
     iD = 1, iT = 2, iY = 3, &
     nPointsX = 2**18, &
     nPointsE = 2**05
   REAL(dp) :: &
     tBegin, &
-    tEND
+    tEnd, &
+    tCPU, &
+    tGPU
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: &
+    LogEs_T, LogDs_T, LogTs_T
   REAL(dp), DIMENSION(nPointsX) :: &
-    D, T, Y, &
-    LogD, &
-    LogT, &
+    Y, &
+    D, LogD, &
+    T, LogT, &
     rndm_D, &
     rndm_T, &
     rndm_Y
@@ -37,12 +41,16 @@ PROGRAM wlOpacityPerformanceTest
     E, LogE, &
     rndm_E
   REAL(dp), DIMENSION(nPointsE,nPointsX) :: &
-    Interpolant1, &
-    Interpolant2, &
-    Interpolant3, &
-    Interpolant4
+    opEC_CPU_1, opEC_GPU_1, &
+    opEC_CPU_2, opEC_GPU_2, &
+    opEC_CPU_3, opEC_GPU_3
   TYPE(OpacityTableType) :: &
     OpTab
+
+#if defined(WEAKLIB_OMP_OL)
+#elif defined(WEAKLIB_OACC)
+  !$ACC INIT
+#endif
 
   CALL InitializeHDF( )
 
@@ -50,6 +58,23 @@ PROGRAM wlOpacityPerformanceTest
          ( OpTab, "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
 
   CALL FinalizeHDF( )
+
+  ASSOCIATE &
+    ( Es_T    => OpTab % EnergyGrid % Values,                  &
+      Ds_T    => OpTab % EOSTable % TS % States(iD)  % Values, &
+      Ts_T    => OpTab % EOSTable % TS % States(iT)  % Values, &
+      Ys_T    => OpTab % EOSTable % TS % States(iY)  % Values, &
+      EmAb_T  => OpTab % EmAb % Opacity(1) % Values, &
+      OS_EmAb => OpTab % EmAb % Offsets(1) )
+
+  ALLOCATE( LogEs_T(SIZE( Es_T )) )
+  LogEs_T = LOG10( Es_T )
+
+  ALLOCATE( LogDs_T(SIZE( Ds_T )) )
+  LogDs_T = LOG10( Ds_T )
+
+  ALLOCATE( LogTs_T(SIZE( Ts_T )) )
+  LogTs_T = LOG10( Ts_T )
 
   WRITE(*,*)
   WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
@@ -125,109 +150,155 @@ PROGRAM wlOpacityPerformanceTest
 
   END ASSOCIATE
 
-  ASSOCIATE &
-    ( Etab => OpTab % EnergyGrid % Values,                  &
-      Dtab => OpTab % EOSTable % TS % States(iD)  % Values, &
-      Ttab => OpTab % EOSTable % TS % States(iT)  % Values, &
-      Ytab => OpTab % EOSTable % TS % States(iY)  % Values, &
-      Ctab => OpTab % EmAb % Opacity(1) % Values, &
-      OS   => OpTab % EmAb % Offsets(1) )
-
-  CALL CPU_TIME( tBegin )
-
-  CALL LogInterpolateSingleVariable &
-         ( E, D, T, Y, Etab, Dtab, Ttab, Ytab, LogInterp, OS, Ctab, &
-           Interpolant1 )
-
-  CALL CPU_TIME( tEND )
-
-  WRITE(*,*)
-  WRITE(*,'(A4,A48,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_1D3D: ', tEND - tBegin
-  WRITE(*,*)
-
-  CALL CPU_TIME( tBegin )
-
-  CALL LogInterpolateSingleVariable &
-         ( LOG10( E    ), LOG10( D    ), LOG10( T    ), Y, &
-           LOG10( Etab ), LOG10( Dtab ), LOG10( Ttab ), Ytab, &
-           OS, Ctab, Interpolant2 )
-
-  CALL CPU_TIME( tEND )
-
-  WRITE(*,*)
-  WRITE(*,'(A4,A48,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_1D3D_Custom: ', tEND - tBegin
-  WRITE(*,*)
-
-  CALL CPU_TIME( tBegin )
-
-  LogE = LOG10( E )
-
-  ASSOCIATE &
-    ( LogEtab => LOG10( OpTab % EnergyGrid % Values ), &
-      LogDtab => LOG10( OpTab % EOSTable % TS % States(iD)  % Values ), &
-      LogTtab => LOG10( OpTab % EOSTable % TS % States(iT)  % Values ) )
-
-  DO iP = 1, nPointsX
-
-    CALL LogInterpolateSingleVariable &
-           ( LogE,    LOG10( D(iP) ), LOG10( T(iP) ), Y(iP), &
-             LogEtab, LogDtab,        LogTtab,        Ytab,  &
-             OS, Ctab, Interpolant3(:,iP) )
-
-  END DO
-
-  END ASSOCIATE ! LogEtab, etc.
-
-  CALL CPU_TIME( tEND )
-
-  WRITE(*,*)
-  WRITE(*,'(A4,A48,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_1D3D_Custom_Point: ', tEND - tBegin
-  WRITE(*,*)
-
-  CALL CPU_TIME( tBegin )
-
   LogE = LOG10( E )
   LogD = LOG10( D )
   LogT = LOG10( T )
 
-  ASSOCIATE &
-    ( LogEtab => LOG10( OpTab % EnergyGrid % Values ), &
-      LogDtab => LOG10( OpTab % EOSTable % TS % States(iD)  % Values ), &
-      LogTtab => LOG10( OpTab % EOSTable % TS % States(iT)  % Values ) )
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET ENTER DATA &
+  !$OMP MAP( to: LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T ) &
+  !$OMP MAP( alloc: opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+#elif defined (WEAKLIB_OACC)
+  !$ACC ENTER DATA &
+  !$ACC COPYIN( LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T ) &
+  !$ACC CREATE( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+#endif
 
-  DO jP = 1, nPointsX
+  CALL CPU_TIME( tBegin )
+  CALL LogInterpolateSingleVariable_1D3D_Custom &
+         ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
+           opEC_CPU_1, GPU_Option = .FALSE. )
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
 
-    DO iP = 1, nPointsE
+  CALL CPU_TIME( tBegin )
+  CALL LogInterpolateSingleVariable_1D3D_Custom &
+         ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
+           opEC_GPU_1, GPU_Option = .TRUE. )
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
 
-      CALL LogInterpolateSingleVariable &
-             ( LogE(iP), LogD(jP), LogT(jP), Y(jP), &
-               LogEtab,  LogDtab,  LogTtab,  Ytab,  &
-               OS, Ctab, Interpolant4(iP,jP) )
+  WRITE(*,*)
+  WRITE(*,'(A4,A60,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D_Custom (CPU): ', tCPU
+  WRITE(*,'(A4,A60,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D_Custom (GPU): ', tGPU
+  WRITE(*,*)
 
-    END DO
+  CALL CPU_TIME( tBegin )
+  DO iP = 1, nPointsX
+
+    CALL LogInterpolateSingleVariable_1D3D_Custom_Point &
+           ( LogE,    LogD(iP), LogT(iP), Y(iP), &
+             LogEs_T, LogDs_T,  LogTs_T,  Ys_T,  &
+             OS_EmAb, EmAb_T, opEC_CPU_2(:,iP) )
 
   END DO
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
 
-  END ASSOCIATE ! LogEtab, etc.
+  CALL CPU_TIME( tBegin )
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRESENT( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, &
+  !$ACC          OS_EmAb, EmAb_T, opEC_GPU_2 )
+#endif
+  DO iP = 1, nPointsX
 
-  CALL CPU_TIME( tEND )
+    CALL LogInterpolateSingleVariable_1D3D_Custom_Point &
+           ( LogE,    LogD(iP), LogT(iP), Y(iP), &
+             LogEs_T, LogDs_T,  LogTs_T,  Ys_T,  &
+             OS_EmAb, EmAb_T, opEC_GPU_2(:,iP) )
+
+  END DO
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
 
   WRITE(*,*)
-  WRITE(*,'(A4,A48,ES10.4E2)') &
-    '', 'LogInterpolateSingleVariable_4D_Custom_Point: ', tEND - tBegin
+  WRITE(*,'(A4,A60,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D_Custom_Point (CPU): ', tCPU
+  WRITE(*,'(A4,A60,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_1D3D_Custom_Point (GPU): ', tGPU
   WRITE(*,*)
+
+  CALL CPU_TIME( tBegin )
+  DO jP = 1, nPointsX
+    DO iP = 1, nPointsE
+
+      CALL LogInterpolateSingleVariable_4D_Custom_Point &
+             ( LogE(iP), LogD(jP), LogT(jP), Y(jP), &
+               LogEs_T,  LogDs_T,  LogTs_T,  Ys_T,  &
+               OS_EmAb, EmAb_T, opEC_CPU_3(iP,jP) )
+
+    END DO
+  END DO
+  CALL CPU_TIME( tEnd )
+  tCPU = tEnd - tBegin
+
+  CALL CPU_TIME( tBegin )
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2)
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) &
+  !$ACC PRESENT( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, &
+  !$ACC          OS_EmAb, EmAb_T, opEC_GPU_3 )
+#endif
+  DO jP = 1, nPointsX
+    DO iP = 1, nPointsE
+
+      CALL LogInterpolateSingleVariable_4D_Custom_Point &
+             ( LogE(iP), LogD(jP), LogT(jP), Y(jP), &
+               LogEs_T,  LogDs_T,  LogTs_T,  Ys_T,  &
+               OS_EmAb, EmAb_T, opEC_GPU_3(iP,jP) )
+
+    END DO
+  END DO
+  CALL CPU_TIME( tEnd )
+  tGPU = tEnd - tBegin
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A60,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_4D_Custom_Point (CPU): ', tCPU
+  WRITE(*,'(A4,A60,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_4D_Custom_Point (GPU): ', tGPU
+  WRITE(*,*)
+
+  WRITE(*,*) 'CPU Results'
+  WRITE(*,*) MINVAL( opEC_CPU_1 ), MAXVAL( opEC_CPU_1 )
+  WRITE(*,*) MINVAL( opEC_CPU_2 ), MAXVAL( opEC_CPU_2 )
+  WRITE(*,*) MINVAL( opEC_CPU_3 ), MAXVAL( opEC_CPU_3 )
+  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_3 ) )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+#endif
+
+  WRITE(*,*) 'GPU Results'
+  WRITE(*,*) MINVAL( opEC_GPU_1 ), MAXVAL( opEC_GPU_1 )
+  WRITE(*,*) MINVAL( opEC_GPU_2 ), MAXVAL( opEC_GPU_2 )
+  WRITE(*,*) MINVAL( opEC_GPU_3 ), MAXVAL( opEC_GPU_3 )
+  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_3 ) )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET EXIT DATA &
+  !$OMP MAP( release: LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T, &
+  !$OMP               opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+#elif defined (WEAKLIB_OACC)
+  !$ACC EXIT DATA &
+  !$ACC DELETE( LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T )
+#endif
 
   END ASSOCIATE
 
-  WRITE(*,*) MINVAL( Interpolant1 ), MAXVAL( Interpolant1 )
-  WRITE(*,*) MINVAL( Interpolant2 ), MAXVAL( Interpolant2 )
-  WRITE(*,*) MINVAL( Interpolant3 ), MAXVAL( Interpolant3 )
-  WRITE(*,*) MINVAL( Interpolant4 ), MAXVAL( Interpolant4 )
-  WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant2 ) )
-  WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant3 ) )
-  WRITE(*,*) MAXVAL( ABS( Interpolant1 - Interpolant4 ) )
+#if defined(WEAKLIB_OMP_OL)
+#elif defined(WEAKLIB_OACC)
+  !$ACC SHUTDOWN
+#endif
 
 END PROGRAM wlOpacityPerformanceTest
