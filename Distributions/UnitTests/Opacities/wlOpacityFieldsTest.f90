@@ -20,7 +20,7 @@ PROGRAM wlOpacityFieldsTest
   CALL AllocateOpacityTable &
          ( OpacityTable, nOpac_EmAb = 4, nOpac_Iso = 1, nMom_Iso = 1, &
            nOpac_NES = 0, nMom_NES = 0, nOpac_Pair = 0, nMom_Pair = 0, &
-           nPointsE = 10, nPointsEta = 0 )
+           nPointsE = 10, nPointsEta = 4 )
 
   ! -- Energy Grid -- 
 
@@ -42,6 +42,27 @@ PROGRAM wlOpacityFieldsTest
            EnergyGrid % nPoints, EnergyGrid % Values )
 
   END ASSOCIATE ! EnergyGrid
+
+  ! -- Eta Grid --
+
+  ASSOCIATE( EtaGrid => OpacityTable % EtaGrid )
+
+  EtaGrid % Name &
+     = 'Elect. Chem. Pot. / Temperature'
+
+  EtaGrid % Unit &
+     = 'DIMENSIONLESS'
+
+  EtaGrid % MinValue = 1.0d-3
+  EtaGrid % MaxValue = 2.5d03
+
+  EtaGrid % LogInterp = 1
+
+  CALL MakeLogGrid &
+         ( EtaGrid % MinValue, EtaGrid % MaxValue, &
+           EtaGrid % nPoints, EtaGrid % Values )
+
+  END ASSOCIATE ! Eta Grid
 
   ! -- Opacity -- 
 
