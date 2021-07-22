@@ -18,15 +18,15 @@ PROGRAM wlReadOpacityTableTest
   CALL ReadOpacityTableHDF &
           ( OpacityTable, &
            FileName_EmAb_Option &
-           = "", &
+           = "wl-Op-SFHo-15-25-50-E40-B85-EmAb.h5", &
            FileName_Iso_Option &
-           = "", &
+           = "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5", &
            FileName_NES_Option &
-           = "wl-Op-SFHo-25-20-100-E40-B85-NES.h5", &
+           = "wl-Op-SFHo-15-25-50-E40-B85-NES.h5", &
            FileName_Pair_Option &
-           = "", &
+           = "wl-Op-SFHo-15-25-50-E40-B85-Pair.h5", &
            EquationOfStateTableName_Option &
-           = "wl-EOS-SFHo-25-40-100.h5" )
+           = "wl-EOS-SFHo-15-25-50.h5" )
 
   CALL FinalizeHDF( ) 
 

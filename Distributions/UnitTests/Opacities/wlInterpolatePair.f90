@@ -67,7 +67,7 @@ PROGRAM wlInterpolatePair
                                              ProfileName
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'InterpolatedPaOutput.h5'
+                                             'InterpolatedPairOutput.h5'
 
   !-------- local variables -------------------------------------------------
   INTEGER                                 :: ii, jj
@@ -198,9 +198,7 @@ PROGRAM wlInterpolatePair
          OpacityTable % EOSTable % TS % States(iEOS_Rho) % Values, &
          OpacityTable % EOSTable % TS % States(iEOS_T) % Values,   &
          OpacityTable % EOSTable % TS % States(iEOS_Ye) % Values,  &
-         LogInterp, Offset_cmpe,    &
-         Tablecmpe,                 &
-         Inte_cmpe )
+         Offset_cmpe, Tablecmpe, Inte_cmpe )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
        ( LOG10(Energy), LOG10(Inte_T), &
