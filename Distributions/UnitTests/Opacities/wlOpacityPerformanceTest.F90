@@ -164,18 +164,18 @@ PROGRAM wlOpacityPerformanceTest
   !$ACC CREATE( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
 #endif
 
-  CALL CPU_TIME( tBegin )
+  tBegin = get_wtime()
   CALL LogInterpolateSingleVariable_1D3D_Custom &
          ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
            opEC_CPU_1, GPU_Option = .FALSE. )
-  CALL CPU_TIME( tEnd )
+  tEnd = get_wtime()
   tCPU = tEnd - tBegin
 
-  CALL CPU_TIME( tBegin )
+  tBegin = get_wtime()
   CALL LogInterpolateSingleVariable_1D3D_Custom &
          ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
            opEC_GPU_1, GPU_Option = .TRUE. )
-  CALL CPU_TIME( tEnd )
+  tEnd = get_wtime()
   tGPU = tEnd - tBegin
 
   WRITE(*,*)
@@ -185,7 +185,7 @@ PROGRAM wlOpacityPerformanceTest
     '', 'LogInterpolateSingleVariable_1D3D_Custom (GPU): ', tGPU
   WRITE(*,*)
 
-  CALL CPU_TIME( tBegin )
+  tBegin = get_wtime()
   DO iP = 1, nPointsX
 
     CALL LogInterpolateSingleVariable_1D3D_Custom_Point &
@@ -194,10 +194,10 @@ PROGRAM wlOpacityPerformanceTest
              OS_EmAb, EmAb_T, opEC_CPU_2(:,iP) )
 
   END DO
-  CALL CPU_TIME( tEnd )
+  tEnd = get_wtime()
   tCPU = tEnd - tBegin
 
-  CALL CPU_TIME( tBegin )
+  tBegin = get_wtime()
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
 #elif defined (WEAKLIB_OACC)
@@ -213,7 +213,7 @@ PROGRAM wlOpacityPerformanceTest
              OS_EmAb, EmAb_T, opEC_GPU_2(:,iP) )
 
   END DO
-  CALL CPU_TIME( tEnd )
+  tEnd = get_wtime()
   tGPU = tEnd - tBegin
 
   WRITE(*,*)
@@ -223,7 +223,7 @@ PROGRAM wlOpacityPerformanceTest
     '', 'LogInterpolateSingleVariable_1D3D_Custom_Point (GPU): ', tGPU
   WRITE(*,*)
 
-  CALL CPU_TIME( tBegin )
+  tBegin = get_wtime()
   DO jP = 1, nPointsX
     DO iP = 1, nPointsE
 
@@ -234,10 +234,10 @@ PROGRAM wlOpacityPerformanceTest
 
     END DO
   END DO
-  CALL CPU_TIME( tEnd )
+  tEnd = get_wtime()
   tCPU = tEnd - tBegin
 
-  CALL CPU_TIME( tBegin )
+  tBegin = get_wtime()
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2)
 #elif defined (WEAKLIB_OACC)
@@ -255,7 +255,7 @@ PROGRAM wlOpacityPerformanceTest
 
     END DO
   END DO
-  CALL CPU_TIME( tEnd )
+  tEnd = get_wtime()
   tGPU = tEnd - tBegin
 
   WRITE(*,*)
@@ -300,5 +300,22 @@ PROGRAM wlOpacityPerformanceTest
 #elif defined(WEAKLIB_OACC)
   !$ACC SHUTDOWN
 #endif
+
+CONTAINS
+
+  REAL(dp) FUNCTION get_wtime()
+    USE, INTRINSIC :: iso_fortran_env, only: i8=>int64, dp=>real64
+    IMPLICIT NONE
+
+    INTEGER(i8) :: clock_read
+    INTEGER(i8) :: clock_rate
+    INTEGER(i8) :: clock_max
+
+    CALL SYSTEM_CLOCK(clock_read,clock_rate,clock_max)
+    get_wtime = REAL(clock_read,dp) / REAL(clock_rate,dp)
+
+    RETURN
+  END FUNCTION get_wtime
+
 
 END PROGRAM wlOpacityPerformanceTest
