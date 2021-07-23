@@ -4,11 +4,13 @@ OPENMP_summit_xl     = -qsmp=omp:noauto
 OPENMP_corigpu_pgi   = -mp
 OPENMP_poplar_cce    = -homp
 OPENMP_spock_cce     = -homp
+OPENMP_spock_gcc     = -fopenmp
 OPENMP_OL_summit_pgi = $(OPENMP_summit_pgi)
 OPENMP_OL_summit_xl  = $(OPENMP_summit_xl) -qoffload
 OPENMP_OL_corigpu_pgi= -mp=gpu -gpu=cc70,cuda11.1,ptxinfo -Minfo=accel
 OPENMP_OL_poplar_cce = -homp
 OPENMP_OL_spock_cce  = -fopenmp
+OPENMP_OL_spock_gcc  = -fopenmp
 ifeq ($(USE_OMP),TRUE)
     OPENMP               = $(OPENMP_$(MACHINE))
 else ifeq ($(USE_OMP_OL),TRUE)
@@ -22,6 +24,7 @@ OPENACC_summit_xl    =
 OPENACC_corigpu_pgi  = -acc -gpu=cc70,cuda11.1,ptxinfo -Minfo=accel
 OPENACC_poplar_cce   =
 OPENACC_spock_cce    = -hacc -hacc_model=auto_async_kernel:fast_addr:deep_copy
+OPENACC_spock_gcc    = -fopenacc
 ifeq ($(USE_OACC),TRUE)
     OPENACC              = $(OPENACC_$(MACHINE))
 endif
@@ -46,6 +49,7 @@ FORTRAN_summit_pgi   = mpifort -Mpreprocess
 FORTRAN_summit_xl    = mpifort -qpreprocess
 FORTRAN_poplar_cce   = ftn
 FORTRAN_spock_cce    = ftn
+FORTRAN_spock_gcc    = ftn
 FORTRAN_corigpu_pgi  = mpifort -Mpreprocess
 FORTRAN              = $(FORTRAN_$(MACHINE))
 
@@ -88,6 +92,7 @@ FLINKER_summit_pgi   = mpifort -Mpreprocess
 FLINKER_summit_xl    = mpifort -qpreprocess
 FLINKER_poplar_cce   = ftn
 FLINKER_spock_cce    = ftn
+FLINKER_spock_gcc    = ftn
 FLINKER_corigpu_pgi  = mpifort -Mpreprocess
 FLINKER              = $(FLINKER_$(MACHINE))
 
@@ -112,6 +117,7 @@ DEBUG_summit_pgi   = -O0 -Mbounds -Mnoopenmp
 DEBUG_summit_xl    = -g -O0 -qstrict=all -qsuppress=cmpmsg -qflag=i:w -qfloat=rngchk -qcheck=all:nounset -qflttrap=enable:invalid:nanq:overflow:zerodivide -qsigtrap=xl__trcedump
 DEBUG_poplar_cce   = -G0 -eD -hfp0 -K trap=fp -h heap_allocate
 DEBUG_spock_cce    = -g -G0 -O0
+DEBUG_spock_gcc    = -g -Og -ggdb -ftrapv -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -fbacktrace -fallow-argument-mismatch
 DEBUG_corigpu_pgi  = -g -O0 -traceback -Mbounds -Ktrap=fp
 DEBUG              = $(DEBUG_$(MACHINE))
 
@@ -136,6 +142,7 @@ OPTIMIZE_summit_pgi   = -g -O3
 OPTIMIZE_summit_xl    = -g -O3 -qnohot -qarch=pwr9 -qtune=pwr9 -qsclk=micro -qsuppress=cmpmsg -w
 OPTIMIZE_poplar_cce   = -h heap_allocate
 OPTIMIZE_spock_cce    = -O2
+OPTIMIZE_spock_gcc    = -g -O2 -fallow-argument-mismatch
 OPTIMIZE_corigpu_pgi  = -g -O2 -tp=skylake
 OPTIMIZE              = $(OPTIMIZE_$(MACHINE))
 
@@ -159,6 +166,7 @@ INCLUDE_HDF5_summit_pgi   = -I$(OLCF_HDF5_ROOT)/include
 INCLUDE_HDF5_summit_xl    = -I$(OLCF_HDF5_ROOT)/include
 INCLUDE_HDF5_poplar_cce   = -I/home/users/coe0194/sw/poplar/cce/11.0.0/hdf5-1.12.0/include
 INCLUDE_HDF5_spock_cce    =
+INCLUDE_HDF5_spock_gcc    =
 INCLUDE_HDF5_corigpu_pgi  = -I$(HDF5_DIR)/include
 INCLUDE_HDF5              = $(INCLUDE_HDF5_$(MACHINE))
 
@@ -174,7 +182,8 @@ INCLUDE_CUDA_poplar_cce   = -I$(CUDA_ROOT)/include
 INCLUDE_CUDA_corigpu_pgi  = -I$(CUDA_ROOT)/include
 INCLUDE_CUDA              = $(INCLUDE_CUDA_$(MACHINE))
 
-INCLUDE_ROCM_spock_cce    = -I$(ROCM_PATH)/include -I$(OLCF_HIPFORT_ROOT)/include/amdgcn
+INCLUDE_ROCM_spock_cce    = -I$(ROCM_PATH)/include# -I$(OLCF_HIPFORT_ROOT)/include/amdgcn
+INCLUDE_ROCM_spock_gcc    = -I$(ROCM_PATH)/include# -I$(OLCF_HIPFORT_ROOT)/include/amdgcn
 INCLUDE_ROCM              = $(INCLUDE_ROCM_$(MACHINE))
 
 INCLUDE                   = $(INCLUDE_HDF5)
@@ -199,6 +208,7 @@ LIBRARIES_HDF5_summit_pgi   = -L$(OLCF_HDF5_ROOT)/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_summit_xl    = -L$(OLCF_HDF5_ROOT)/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_poplar_cce   = -L/home/users/coe0194/sw/poplar/cce/11.0.0/hdf5-1.12.0/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_spock_cce    = -lhdf5_fortran -lhdf5
+LIBRARIES_HDF5_spock_gcc    = -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_corigpu_pgi  = -L$(HDF5_DIR)/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5              = $(LIBRARIES_HDF5_$(MACHINE))
 
@@ -214,7 +224,8 @@ LIBRARIES_CUDA_corigpu_pgi  = -cudalib
 LIBRARIES_CUDA_poplar_cce   = -L$(CUDA_ROOT)/lib64 -lcusparse -lcusolver -lcublas -lcudart -L$(CUDA_ROOT)/compat -lcuda
 LIBRARIES_CUDA              = $(LIBRARIES_CUDA_$(MACHINE))
 
-LIBRARIES_ROCM_spock_cce    = -L$(ROCM_PATH)/lib -lrocsparse -lrocsolver -lrocblas -lhipblas -lhipsparse -lamdhip64 -L$(OLCF_HIPFORT_ROOT)/lib -lhipfort-amdgcn
+LIBRARIES_ROCM_spock_cce    = -L$(ROCM_PATH)/lib -lrocsparse -lrocsolver -lrocblas -lhipblas -lhipsparse -lamdhip64# -L$(OLCF_HIPFORT_ROOT)/lib -lhipfort-amdgcn
+LIBRARIES_ROCM_spock_gcc    = -L$(ROCM_PATH)/lib -lrocsparse -lrocsolver -lrocblas -lhipblas -lhipsparse -lamdhip64# -L$(OLCF_HIPFORT_ROOT)/lib -lhipfort-amdgcn
 LIBRARIES_ROCM              = $(LIBRARIES_ROCM_$(MACHINE))
 
 LIBRARIES                   = $(LIBRARIES_HDF5)
@@ -239,6 +250,7 @@ PP_summit_pgi        = -D
 PP_summit_xl         = -D
 PP_poplar_cce        = -D
 PP_spock_cce         = -D
+PP_spock_gcc         = -D
 PP_corigpu_pgi       = -D
 PP                   = $(PP_$(MACHINE))
 
