@@ -547,7 +547,7 @@ PRINT*, 'Filling OpacityTable ...'
 ! -- write into hdf5 file
 
   IF( nOpac_EmAb > 0 ) THEN
-    WriteTableName(stringlength+1:stringlength+8) = '-EmAb.h5'
+    WriteTableName(stringlength+1:stringlength+8) = '-AbEm.h5'
     CALL InitializeHDF( )
     WRITE(*,*) 'Write EmAb data into file ', TRIM(WriteTableName)
     CALL WriteOpacityTableHDF &

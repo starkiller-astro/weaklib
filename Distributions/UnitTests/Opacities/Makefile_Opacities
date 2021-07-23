@@ -11,7 +11,6 @@ include $(WEAKLIB_DIR)/External/Build/Makefile_WeakLib_ObjectFiles
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
      wlOpacityPerformanceTest \
-     wlOpacityAlignTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
