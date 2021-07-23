@@ -13,8 +13,7 @@ all: wlOpacityFieldsTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
-     wlInterpolatePair \
-     wlOpacityTableResolutionTest
+     wlInterpolatePair
 
 Interpolations: wlInterpolateAb \
                 wlInterpolateIso \
