@@ -1,4 +1,4 @@
-VPATH = \
+VPATH += \
 $(WEAKLIB_DIR)/Distributions/Library: \
 $(WEAKLIB_DIR)/Distributions/EOSSource: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource: \
