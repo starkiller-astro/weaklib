@@ -10,40 +10,60 @@ PROGRAM wlOpacityPerformanceTest
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
   USE wlInterpolationModule, ONLY: &
+    LogInterpolateSingleVariable_2D_Custom_Point, &
+    LogInterpolateSingleVariable_3D_Custom, &
     LogInterpolateSingleVariable_1D3D_Custom, &
     LogInterpolateSingleVariable_1D3D_Custom_Point, &
+    LogInterpolateSingleVariable_2D2D_Custom, &
+    LogInterpolateSingleVariable_2D2D_Custom_Point, &
+    LogInterpolateSingleVariable_2D2D_Custom_Aligned, &
+    LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point, &
     LogInterpolateSingleVariable_4D_Custom_Point
 
   IMPLICIT NONE
 
   INTEGER :: &
     n_rndm, &
-    iP, jP
+    iP, jP, &
+    iM, iEta, iT, iE2, iE1, &
+    iH1, iH2, &
+    iMe_T
   INTEGER, PARAMETER :: &
-    iD = 1, iT = 2, iY = 3, &
-    nPointsX = 2**18, &
+    iD_T = 1, iT_T = 2, iY_T = 3, &
+    nPointsX = 2**15, &
     nPointsE = 2**05
   REAL(dp) :: &
     tBegin, &
     tEnd, &
     tCPU, &
     tGPU
-  REAL(dp), DIMENSION(:), ALLOCATABLE :: &
-    LogEs_T, LogDs_T, LogTs_T
+  REAL(dp), PARAMETER :: &
+    kMeV = 8.61733e-11_dp
   REAL(dp), DIMENSION(nPointsX) :: &
     Y, &
     D, LogD, &
     T, LogT, &
+    Me, &
+    LogEta, &
     rndm_D, &
     rndm_T, &
     rndm_Y
   REAL(dp), DIMENSION(nPointsE) :: &
     E, LogE, &
     rndm_E
-  REAL(dp), DIMENSION(nPointsE,nPointsX) :: &
+  REAL(dp), DIMENSION(:), ALLOCATABLE :: &
+    LogEs_T, LogDs_T, LogTs_T, LogEtas_T
+  REAL(dp), DIMENSION(:,:,:,:,:), ALLOCATABLE :: &
+    NES_T, NES_AT
+  REAL(dp), DIMENSION(:,:), ALLOCATABLE :: &
     opEC_CPU_1, opEC_GPU_1, &
     opEC_CPU_2, opEC_GPU_2, &
     opEC_CPU_3, opEC_GPU_3
+  REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: &
+    opH1_CPU_1, opH1_GPU_1, &
+    opH1_CPU_2, opH1_GPU_2, &
+    opH1_CPU_3, opH1_GPU_3, &
+    opH1_CPU_4, opH1_GPU_4
   TYPE(OpacityTableType) :: &
     OpTab
 
@@ -55,17 +75,44 @@ PROGRAM wlOpacityPerformanceTest
   CALL InitializeHDF( )
 
   CALL ReadOpacityTableHDF &
-         ( OpTab, "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5" )
+         ( OpTab, &
+           FileName_EmAb_Option = "wl-Op-SFHo-15-25-50-E40-B85-AbEm.h5", &
+           FileName_Iso_Option  = "wl-Op-SFHo-15-25-50-E40-B85-Iso.h5", &
+           FileName_NES_Option  = "wl-Op-SFHo-15-25-50-E40-B85-NES.h5", &
+           FileName_Pair_Option = "wl-Op-SFHo-15-25-50-E40-B85-Pair.h5", &
+           EquationOfStateTableName_Option = "EquationOfStateTable.h5" )
 
   CALL FinalizeHDF( )
 
+  ALLOCATE( opEC_CPU_1(nPointsE,nPointsX) )
+  ALLOCATE( opEC_CPU_2(nPointsE,nPointsX) )
+  ALLOCATE( opEC_CPU_3(nPointsE,nPointsX) )
+  ALLOCATE( opEC_GPU_1(nPointsE,nPointsX) )
+  ALLOCATE( opEC_GPU_2(nPointsE,nPointsX) )
+  ALLOCATE( opEC_GPU_3(nPointsE,nPointsX) )
+
+  ALLOCATE( opH1_CPU_1(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_CPU_2(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_CPU_3(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_CPU_4(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_GPU_1(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_GPU_2(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_GPU_3(nPointsE,nPointsE,nPointsX) )
+  ALLOCATE( opH1_GPU_4(nPointsE,nPointsE,nPointsX) )
+
+  iMe_T = OpTab % EOSTable % DV % Indices % iElectronChemicalPotential
+
   ASSOCIATE &
-    ( Es_T    => OpTab % EnergyGrid % Values,                  &
-      Ds_T    => OpTab % EOSTable % TS % States(iD)  % Values, &
-      Ts_T    => OpTab % EOSTable % TS % States(iT)  % Values, &
-      Ys_T    => OpTab % EOSTable % TS % States(iY)  % Values, &
+    ( Es_T    => OpTab % EnergyGrid % Values, &
+      Ds_T    => OpTab % EOSTable % TS % States(iD_T) % Values, &
+      Ts_T    => OpTab % EOSTable % TS % States(iT_T) % Values, &
+      Ys_T    => OpTab % EOSTable % TS % States(iY_T) % Values, &
+      Me_T    => OpTab % EOSTable % DV % Variables(iMe_T) % Values, &
+      OS_Me   => OpTab % EOSTable % DV % Offsets(iMe_T), &
+      Etas_T  => OpTab % EtaGrid % Values, &
       EmAb_T  => OpTab % EmAb % Opacity(1) % Values, &
-      OS_EmAb => OpTab % EmAb % Offsets(1) )
+      OS_EmAb => OpTab % EmAb % Offsets(1), &
+      OS_NES  => OpTab % Scat_NES % Offsets )
 
   ALLOCATE( LogEs_T(SIZE( Es_T )) )
   LogEs_T = LOG10( Es_T )
@@ -76,19 +123,38 @@ PROGRAM wlOpacityPerformanceTest
   ALLOCATE( LogTs_T(SIZE( Ts_T )) )
   LogTs_T = LOG10( Ts_T )
 
+  ALLOCATE( LogEtas_T(SIZE( Etas_T )) )
+  LogEtas_T = LOG10( Etas_T )
+
+  ALLOCATE( NES_T(OpTab % Scat_NES % nPoints(1), &
+                  OpTab % Scat_NES % nPoints(2), &
+                  OpTab % Scat_NES % nPoints(4), &
+                  OpTab % Scat_NES % nPoints(5), &
+                  OpTab % Scat_NES % nMoments) )
+  DO iM = 1, OpTab % Scat_NES % nMoments
+    NES_T(:,:,:,:,iM) = OpTab % Scat_NES % Kernel(1) % Values(:,:,iM,:,:)
+  END DO
+
+  ALLOCATE( NES_AT(nPointsE, &
+                   nPointsE, &
+                   OpTab % Scat_NES % nPoints(4), &
+                   OpTab % Scat_NES % nPoints(5), &
+                   OpTab % Scat_NES % nMoments) )
+  NES_AT = 0.0d0
+
   WRITE(*,*)
   WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
     '', 'Max/Min E = ', OpTab % EnergyGrid % MinValue, &
     ' / ', OpTab % EnergyGrid % MaxValue
   WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min D = ', OpTab % EOSTable % TS % MinValues(iD), &
-    ' / ', OpTab % EOSTable % TS % MaxValues(iD)
+    '', 'Max/Min D = ', OpTab % EOSTable % TS % MinValues(iD_T), &
+    ' / ', OpTab % EOSTable % TS % MaxValues(iD_T)
   WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min T = ', OpTab % EOSTable % TS % MinValues(iT), &
-    ' / ', OpTab % EOSTable % TS % MaxValues(iT)
+    '', 'Max/Min T = ', OpTab % EOSTable % TS % MinValues(iT_T), &
+    ' / ', OpTab % EOSTable % TS % MaxValues(iT_T)
   WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min Y = ', OpTab % EOSTable % TS % MinValues(iY), &
-    ' / ', OpTab % EOSTable % TS % MaxValues(iY)
+    '', 'Max/Min Y = ', OpTab % EOSTable % TS % MinValues(iY_T), &
+    ' / ', OpTab % EOSTable % TS % MaxValues(iY_T)
   WRITE(*,*)
   WRITE(*,'(A4,A14,I10.10,A7)') &
     '', 'Interpolating ', nPointsE * nPointsX, ' points'
@@ -117,8 +183,8 @@ PROGRAM wlOpacityPerformanceTest
   CALL RANDOM_NUMBER( rndm_D )
 
   ASSOCIATE &
-    ( minD => OpTab % EOSTable % TS % MinValues(iD), &
-      maxD => OpTab % EOSTable % TS % MaxValues(iD) )
+    ( minD => OpTab % EOSTable % TS % MinValues(iD_T), &
+      maxD => OpTab % EOSTable % TS % MaxValues(iD_T) )
 
   D(:) = 10**( LOG10(minD) + ( LOG10(maxD) - LOG10(minD) ) * rndm_D )
 
@@ -130,8 +196,8 @@ PROGRAM wlOpacityPerformanceTest
   CALL RANDOM_NUMBER( rndm_T )
 
   ASSOCIATE &
-    ( minT => OpTab % EOSTable % TS % MinValues(iT), &
-      maxT => OpTab % EOSTable % TS % MaxValues(iT) )
+    ( minT => OpTab % EOSTable % TS % MinValues(iT_T), &
+      maxT => OpTab % EOSTable % TS % MaxValues(iT_T) )
 
   T(:) = 10**( LOG10(minT) + ( LOG10(maxT) - LOG10(minT) ) * rndm_T )
 
@@ -143,8 +209,8 @@ PROGRAM wlOpacityPerformanceTest
   CALL RANDOM_NUMBER( rndm_Y )
 
   ASSOCIATE &
-    ( minY => OpTab % EOSTable % TS % MinValues(iY), &
-      maxY => OpTab % EOSTable % TS % MaxValues(iY) )
+    ( minY => OpTab % EOSTable % TS % MinValues(iY_T), &
+      maxY => OpTab % EOSTable % TS % MaxValues(iY_T) )
 
   Y(:) = minY + ( maxY - minY ) * rndm_Y
 
@@ -154,14 +220,55 @@ PROGRAM wlOpacityPerformanceTest
   LogD = LOG10( D )
   LogT = LOG10( T )
 
+  CALL LogInterpolateSingleVariable_3D_Custom &
+         ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_Me, Me_T, Me )
+
+  LogEta = LOG10( Me / ( kMeV * T ) )
+
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET ENTER DATA &
-  !$OMP MAP( to: LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T ) &
-  !$OMP MAP( alloc: opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+  !$OMP MAP( to: LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
+  !$OMP          LogE, LogD, LogT, Y, LogEta, &
+  !$OMP          OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT ) &
+  !$OMP MAP( alloc: opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$OMP             opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #elif defined (WEAKLIB_OACC)
   !$ACC ENTER DATA &
-  !$ACC COPYIN( LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T ) &
-  !$ACC CREATE( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+  !$ACC COPYIN( LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
+  !$ACC         LogE, LogD, LogT, Y, LogEta, &
+  !$ACC         OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT ) &
+  !$ACC CREATE( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$ACC         opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
+#endif
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(5)
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(5) &
+  !$ACC PRESENT( LogE, LogEs_T, OS_NES, NES_T, NES_AT )
+#endif
+  DO iM = 1, OpTab % Scat_NES % nMoments
+    DO iEta = 1, OpTab % Scat_NES % nPoints(5)
+      DO iT = 1, OpTab % Scat_NES % nPoints(4)
+        DO iE2 = 1, nPointsE
+          DO iE1 = 1, nPointsE
+
+            CALL LogInterpolateSingleVariable_2D_Custom_Point &
+                   ( LogE(iE1), LogE(iE2), LogEs_T, LogEs_T, OS_NES(1,iM), &
+                     NES_T(:,:,iT_T,iEta,iM), NES_AT(iE1,iE2,iT_T,iEta,iM) )
+
+            NES_AT(iE1,iE2,iT_T,iEta,iM) &
+              = LOG10( NES_AT(iE1,iE2,iT_T,iEta,iM) + OS_NES(1,iM) )
+
+          END DO
+        END DO
+      END DO
+    END DO
+  END DO
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( NES_AT )
+#elif defined(WEAKLIB_OACC)
+  !$ACC UPDATE HOST( NES_AT )
 #endif
 
   tBegin = get_wtime()
@@ -179,9 +286,9 @@ PROGRAM wlOpacityPerformanceTest
   tGPU = tEnd - tBegin
 
   WRITE(*,*)
-  WRITE(*,'(A4,A60,ES10.4E2)') &
+  WRITE(*,'(A4,A64,ES10.4E2)') &
     '', 'LogInterpolateSingleVariable_1D3D_Custom (CPU): ', tCPU
-  WRITE(*,'(A4,A60,ES10.4E2)') &
+  WRITE(*,'(A4,A64,ES10.4E2)') &
     '', 'LogInterpolateSingleVariable_1D3D_Custom (GPU): ', tGPU
   WRITE(*,*)
 
@@ -217,9 +324,9 @@ PROGRAM wlOpacityPerformanceTest
   tGPU = tEnd - tBegin
 
   WRITE(*,*)
-  WRITE(*,'(A4,A60,ES10.4E2)') &
+  WRITE(*,'(A4,A64,ES10.4E2)') &
     '', 'LogInterpolateSingleVariable_1D3D_Custom_Point (CPU): ', tCPU
-  WRITE(*,'(A4,A60,ES10.4E2)') &
+  WRITE(*,'(A4,A64,ES10.4E2)') &
     '', 'LogInterpolateSingleVariable_1D3D_Custom_Point (GPU): ', tGPU
   WRITE(*,*)
 
@@ -259,13 +366,13 @@ PROGRAM wlOpacityPerformanceTest
   tGPU = tEnd - tBegin
 
   WRITE(*,*)
-  WRITE(*,'(A4,A60,ES10.4E2)') &
+  WRITE(*,'(A4,A64,ES10.4E2)') &
     '', 'LogInterpolateSingleVariable_4D_Custom_Point (CPU): ', tCPU
-  WRITE(*,'(A4,A60,ES10.4E2)') &
+  WRITE(*,'(A4,A64,ES10.4E2)') &
     '', 'LogInterpolateSingleVariable_4D_Custom_Point (GPU): ', tGPU
   WRITE(*,*)
 
-  WRITE(*,*) 'CPU Results'
+  WRITE(*,*) 'EmAb (CPU)'
   WRITE(*,*) MINVAL( opEC_CPU_1 ), MAXVAL( opEC_CPU_1 )
   WRITE(*,*) MINVAL( opEC_CPU_2 ), MAXVAL( opEC_CPU_2 )
   WRITE(*,*) MINVAL( opEC_CPU_3 ), MAXVAL( opEC_CPU_3 )
@@ -278,7 +385,157 @@ PROGRAM wlOpacityPerformanceTest
   !$ACC UPDATE HOST( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
 #endif
 
-  WRITE(*,*) 'GPU Results'
+  WRITE(*,*) 'EmAb (GPU)'
+  WRITE(*,*) MINVAL( opEC_GPU_1 ), MAXVAL( opEC_GPU_1 )
+  WRITE(*,*) MINVAL( opEC_GPU_2 ), MAXVAL( opEC_GPU_2 )
+  WRITE(*,*) MINVAL( opEC_GPU_3 ), MAXVAL( opEC_GPU_3 )
+  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_3 ) )
+
+  iM = 1
+  iH1 = ( iM - 1 ) * 2 + 1
+  iH2 = ( iM - 1 ) * 2 + 2
+
+  tBegin = get_wtime()
+  CALL LogInterpolateSingleVariable_2D2D_Custom &
+         ( LogE,    LogT,    LogEta, &
+           LogEs_T, LogTs_T, LogEtas_T, &
+           OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_CPU_1, &
+           GPU_Option = .FALSE. )
+  tEnd = get_wtime()
+  tCPU = tEnd - tBegin
+
+  tBegin = get_wtime()
+  CALL LogInterpolateSingleVariable_2D2D_Custom &
+         ( LogE,    LogT,    LogEta, &
+           LogEs_T, LogTs_T, LogEtas_T, &
+           OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_GPU_1, &
+           GPU_Option = .TRUE. )
+  tEnd = get_wtime()
+  tGPU = tEnd - tBegin
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom (CPU): ', tCPU
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom (GPU): ', tGPU
+  WRITE(*,*)
+
+  tBegin = get_wtime()
+  DO iP = 1, nPointsX
+
+    CALL LogInterpolateSingleVariable_2D2D_Custom_Point &
+           ( LogE,    LogT(iP), LogEta(iP), &
+             LogEs_T, LogTs_T,  LogEtas_T,   &
+             OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_CPU_2(:,:,iP) )
+
+  END DO
+  tEnd = get_wtime()
+  tCPU = tEnd - tBegin
+
+  tBegin = get_wtime()
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRESENT( LogE, LogT, LogEta, LogEs_T, LogTs_T, LogEtas_T, &
+  !$ACC          OS_NES, NES_T, opH1_GPU_2 )
+#endif
+  DO iP = 1, nPointsX
+
+    CALL LogInterpolateSingleVariable_2D2D_Custom_Point &
+           ( LogE,    LogT(iP), LogEta(iP), &
+             LogEs_T, LogTs_T,  LogEtas_T,   &
+             OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_GPU_2(:,:,iP) )
+
+  END DO
+  tEnd = get_wtime()
+  tGPU = tEnd - tBegin
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom_Point (CPU): ', tCPU
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom_Point (GPU): ', tGPU
+  WRITE(*,*)
+
+  tBegin = get_wtime()
+  CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned &
+         ( LogT,    LogEta, &
+           LogTs_T, LogEtas_T, &
+           OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_CPU_3, &
+           GPU_Option = .FALSE. )
+  tEnd = get_wtime()
+  tCPU = tEnd - tBegin
+
+  tBegin = get_wtime()
+  CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned &
+         ( LogT,    LogEta, &
+           LogTs_T, LogEtas_T, &
+           OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_GPU_3, &
+           GPU_Option = .TRUE. )
+  tEnd = get_wtime()
+  tGPU = tEnd - tBegin
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom_Aligned (CPU): ', tCPU
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom_Aligned (GPU): ', tGPU
+  WRITE(*,*)
+
+  tBegin = get_wtime()
+  DO iP = 1, nPointsX
+
+    CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point &
+           ( LogT(iP), LogEta(iP), &
+             LogTs_T,  LogEtas_T, &
+             OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_CPU_4(:,:,iP) )
+
+  END DO
+  tEnd = get_wtime()
+  tCPU = tEnd - tBegin
+
+  tBegin = get_wtime()
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+#elif defined (WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRESENT( LogT, LogEta, LogTs_T, LogEtas_T, &
+  !$ACC          OS_NES, NES_AT, opH1_GPU_4 )
+#endif
+  DO iP = 1, nPointsX
+
+    CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point &
+           ( LogT(iP), LogEta(iP), &
+             LogTs_T,  LogEtas_T, &
+             OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_GPU_4(:,:,iP) )
+
+  END DO
+  tEnd = get_wtime()
+  tGPU = tEnd - tBegin
+
+  WRITE(*,*)
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point (CPU): ', tCPU
+  WRITE(*,'(A4,A64,ES10.4E2)') &
+    '', 'LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point (GPU): ', tGPU
+  WRITE(*,*)
+
+  WRITE(*,*) 'NES (CPU)'
+  WRITE(*,*) MINVAL( opEC_CPU_1 ), MAXVAL( opEC_CPU_1 )
+  WRITE(*,*) MINVAL( opEC_CPU_2 ), MAXVAL( opEC_CPU_2 )
+  WRITE(*,*) MINVAL( opEC_CPU_3 ), MAXVAL( opEC_CPU_3 )
+  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_3 ) )
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET UPDATE FROM( opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
+#elif defined (WEAKLIB_OACC)
+  !$ACC UPDATE HOST( opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
+#endif
+
+  WRITE(*,*) 'NES (GPU)'
   WRITE(*,*) MINVAL( opEC_GPU_1 ), MAXVAL( opEC_GPU_1 )
   WRITE(*,*) MINVAL( opEC_GPU_2 ), MAXVAL( opEC_GPU_2 )
   WRITE(*,*) MINVAL( opEC_GPU_3 ), MAXVAL( opEC_GPU_3 )
@@ -287,11 +544,18 @@ PROGRAM wlOpacityPerformanceTest
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET EXIT DATA &
-  !$OMP MAP( release: LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T, &
-  !$OMP               opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+  !$OMP MAP( release: LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
+  !$OMP               LogE, LogD, LogT, Y, LogEta, &
+  !$OMP               OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT, &
+  !$OMP               opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$OMP               opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #elif defined (WEAKLIB_OACC)
   !$ACC EXIT DATA &
-  !$ACC DELETE( LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, LogE, LogD, LogT, Y, EmAb_T )
+  !$ACC DELETE( LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
+  !$ACC         LogE, LogD, LogT, Y, LogEta, &
+  !$ACC         OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT, &
+  !$ACC         opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$ACC         opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #endif
 
   END ASSOCIATE
