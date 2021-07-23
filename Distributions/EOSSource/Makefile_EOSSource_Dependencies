@@ -7,11 +7,13 @@ wlEquationOfStateTableModule.o: \
 wlEOSInversionModule.o: \
   wlKindModule.o \
   wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
   wlEOSInversionModule.F90
 
 wlEOSInterpolationModule.o: \
   wlKindModule.o \
   wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
   wlEquationOfStateTableModule.o \

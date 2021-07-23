@@ -1,14 +1,20 @@
-include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+include $(WEAKLIB_DIR)/External/Build/Makefile_Path
+include $(WEAKLIB_DIR)/External/Build/Makefile_WeakLib_ObjectFiles
+#include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+
+.DEFAULT_GOAL := all
 
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
      wlOpacityPerformanceTest \
-     wlOpacityAlignTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
-     wlInterpolatePair \
-     wlOpacityTableResolutionTest
+     wlInterpolatePair
 
 Interpolations: wlInterpolateAb \
                 wlInterpolateIso \
@@ -37,12 +43,6 @@ wlOpacityAlignTest: \
 	$(weaklib) wlOpacityAlignTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityAlignTest_$(MACHINE) \
 	$(weaklib) wlOpacityAlignTest.o \
-	$(LIBRARIES)
-
-wlGreyTableTest: \
-	$(weaklib) wlGreyTableTest.o
-	$(FLINKER) $(FLAGS) -o wlGreyTableTest_$(MACHINE) \
-	$(weaklib) wlGreyTableTest.o \
 	$(LIBRARIES)
 
 wlInterpolateAb: \
@@ -80,3 +80,11 @@ clean:
 
 clobber: clean
 	rm -f *_$(MACHINE)
+
+wlOpacityPerformanceTest.o: \
+  wlKindModule.o \
+  wlOpacityTableModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlOpacityPerformanceTest.F90

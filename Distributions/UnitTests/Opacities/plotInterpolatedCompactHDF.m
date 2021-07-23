@@ -1,5 +1,6 @@
 clear all
-clf
+close all
+fig = figure(1);
 
 flag = [1,1,1,1]; % Ab, Iso, NES, TP
 
@@ -7,7 +8,7 @@ indexRadius = 1;
 indexEnergy = 13;
 
 fileNames = {'InterpolatedAbOutput','InterpolatedIsoOutput',...
-    'InterpolatedNESOutput','InterpolatedPaOutput'};
+    'InterpolatedNESOutput','InterpolatedPairOutput'};
 
 for ii = 1:max(size(flag))
     if (flag(ii) == 1 )
@@ -80,4 +81,4 @@ y0=5;
 width=400;
 height=600;
 set(gcf,'units','points','position',[x0,y0,width,height])
-
+saveas(fig,'Test.png','png');

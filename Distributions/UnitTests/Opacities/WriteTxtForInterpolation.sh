@@ -9,15 +9,15 @@ done
 for f in wl-EOS-*.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done
-for f in *AbEm.h5; do
+for f in wl-*Ab*.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done
-for f in *Iso.h5; do
+for f in wl-*Iso.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done
-for f in *NES.h5; do
+for f in wl-*NES.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done
-for f in *Pair.h5; do
+for f in wl-*Pair.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done

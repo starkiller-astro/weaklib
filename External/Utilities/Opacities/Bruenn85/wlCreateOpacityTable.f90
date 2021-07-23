@@ -48,9 +48,6 @@ PROGRAM wlCreateOpacityTable
       WriteOpacityTableHDF
   USE wlExtPhysicalConstantsModule, ONLY: kMeV
   USE wlExtNumericalModule, ONLY: epsilon
-  USE B85_scattIso
-  USE B85_scattNES
-  USE B85_pair
   USE prb_cntl_module, ONLY: &
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
       edmpa, edmpe, iaenca, in, ip, ietann
@@ -550,7 +547,7 @@ PRINT*, 'Filling OpacityTable ...'
 ! -- write into hdf5 file
 
   IF( nOpac_EmAb > 0 ) THEN
-    WriteTableName(stringlength+1:stringlength+8) = '-EmAb.h5'
+    WriteTableName(stringlength+1:stringlength+8) = '-AbEm.h5'
     CALL InitializeHDF( )
     WRITE(*,*) 'Write EmAb data into file ', TRIM(WriteTableName)
     CALL WriteOpacityTableHDF &
