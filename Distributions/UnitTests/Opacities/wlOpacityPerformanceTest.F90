@@ -255,10 +255,10 @@ PROGRAM wlOpacityPerformanceTest
 
             CALL LogInterpolateSingleVariable_2D_Custom_Point &
                    ( LogE(iE1), LogE(iE2), LogEs_T, LogEs_T, OS_NES(1,iM), &
-                     NES_T(:,:,iT_T,iEta,iM), NES_AT(iE1,iE2,iT_T,iEta,iM) )
+                     NES_T(:,:,iT,iEta,iM), NES_AT(iE1,iE2,iT,iEta,iM) )
 
-            NES_AT(iE1,iE2,iT_T,iEta,iM) &
-              = LOG10( NES_AT(iE1,iE2,iT_T,iEta,iM) + OS_NES(1,iM) )
+            NES_AT(iE1,iE2,iT,iEta,iM) &
+              = LOG10( NES_AT(iE1,iE2,iT,iEta,iM) + OS_NES(1,iM) )
 
           END DO
         END DO
