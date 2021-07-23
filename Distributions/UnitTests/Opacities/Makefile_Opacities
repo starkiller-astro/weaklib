@@ -2,7 +2,7 @@ WEAKLIB_DIR ?= $(HOME)/weaklib
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
-#include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+include $(WEAKLIB_DIR)/External/Build/Makefile_Build
 
 .DEFAULT_GOAL := all
 
@@ -13,8 +13,7 @@ all: wlOpacityFieldsTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
-     wlInterpolatePair \
-     wlOpacityTableResolutionTest
+     wlInterpolatePair
 
 Interpolations: wlInterpolateAb \
                 wlInterpolateIso \
@@ -43,12 +42,6 @@ wlOpacityAlignTest: \
 	$(weaklib) wlOpacityAlignTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityAlignTest_$(MACHINE) \
 	$(weaklib) wlOpacityAlignTest.o \
-	$(LIBRARIES)
-
-wlGreyTableTest: \
-	$(weaklib) wlGreyTableTest.o
-	$(FLINKER) $(FLAGS) -o wlGreyTableTest_$(MACHINE) \
-	$(weaklib) wlGreyTableTest.o \
 	$(LIBRARIES)
 
 wlInterpolateAb: \
