@@ -26,8 +26,7 @@ PROGRAM wlOpacityPerformanceTest
     n_rndm, &
     iP, jP, &
     iM, iEta, iT, iE2, iE1, &
-    iH1, iH2, &
-    iMe_T
+    iH1, iH2
   INTEGER, PARAMETER :: &
     iD_T = 1, iT_T = 2, iY_T = 3, &
     nPointsX = 2**15, &
@@ -43,11 +42,11 @@ PROGRAM wlOpacityPerformanceTest
     Y, &
     D, LogD, &
     T, LogT, &
-    Me, &
-    LogEta, &
+    Eta, LogEta, &
     rndm_D, &
     rndm_T, &
-    rndm_Y
+    rndm_Y, &
+    rndm_Eta
   REAL(dp), DIMENSION(nPointsE) :: &
     E, LogE, &
     rndm_E
@@ -100,15 +99,11 @@ PROGRAM wlOpacityPerformanceTest
   ALLOCATE( opH1_GPU_3(nPointsE,nPointsE,nPointsX) )
   ALLOCATE( opH1_GPU_4(nPointsE,nPointsE,nPointsX) )
 
-  iMe_T = OpTab % EOSTable % DV % Indices % iElectronChemicalPotential
-
   ASSOCIATE &
     ( Es_T    => OpTab % EnergyGrid % Values, &
       Ds_T    => OpTab % EOSTable % TS % States(iD_T) % Values, &
       Ts_T    => OpTab % EOSTable % TS % States(iT_T) % Values, &
       Ys_T    => OpTab % EOSTable % TS % States(iY_T) % Values, &
-      Me_T    => OpTab % EOSTable % DV % Variables(iMe_T) % Values, &
-      OS_Me   => OpTab % EOSTable % DV % Offsets(iMe_T), &
       Etas_T  => OpTab % EtaGrid % Values, &
       EmAb_T  => OpTab % EmAb % Opacity(1) % Values, &
       OS_EmAb => OpTab % EmAb % Offsets(1), &
@@ -143,18 +138,21 @@ PROGRAM wlOpacityPerformanceTest
   NES_AT = 0.0d0
 
   WRITE(*,*)
-  WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min E = ', OpTab % EnergyGrid % MinValue, &
+  WRITE(*,'(A4,A14,ES10.4E2,A3,ES10.4E2)') &
+    '', 'Max/Min E   = ', OpTab % EnergyGrid % MinValue, &
     ' / ', OpTab % EnergyGrid % MaxValue
-  WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min D = ', OpTab % EOSTable % TS % MinValues(iD_T), &
+  WRITE(*,'(A4,A14,ES10.4E2,A3,ES10.4E2)') &
+    '', 'Max/Min D   = ', OpTab % EOSTable % TS % MinValues(iD_T), &
     ' / ', OpTab % EOSTable % TS % MaxValues(iD_T)
-  WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min T = ', OpTab % EOSTable % TS % MinValues(iT_T), &
+  WRITE(*,'(A4,A14,ES10.4E2,A3,ES10.4E2)') &
+    '', 'Max/Min T   = ', OpTab % EOSTable % TS % MinValues(iT_T), &
     ' / ', OpTab % EOSTable % TS % MaxValues(iT_T)
-  WRITE(*,'(A4,A12,ES10.4E2,A3,ES10.4E2)') &
-    '', 'Max/Min Y = ', OpTab % EOSTable % TS % MinValues(iY_T), &
+  WRITE(*,'(A4,A14,ES10.4E2,A3,ES10.4E2)') &
+    '', 'Max/Min Y   = ', OpTab % EOSTable % TS % MinValues(iY_T), &
     ' / ', OpTab % EOSTable % TS % MaxValues(iY_T)
+  WRITE(*,'(A4,A14,ES10.4E2,A3,ES10.4E2)') &
+    '', 'Max/Min Eta = ', OpTab % EtaGrid % MinValue, &
+    ' / ', OpTab % EtaGrid % MaxValue
   WRITE(*,*)
   WRITE(*,'(A4,A14,I10.10,A7)') &
     '', 'Interpolating ', nPointsE * nPointsX, ' points'
@@ -216,14 +214,23 @@ PROGRAM wlOpacityPerformanceTest
 
   END ASSOCIATE
 
+  ! --- Initialize Eta Points ---
+
+  CALL RANDOM_SEED( SIZE = n_rndm )
+  CALL RANDOM_NUMBER( rndm_Eta )
+
+  ASSOCIATE &
+    ( minEta => OpTab % EtaGrid % MinValue, &
+      maxEta => OpTab % EtaGrid % MaxValue )
+
+  Eta(:) = minEta + ( maxEta - minEta ) * rndm_Eta
+
+  END ASSOCIATE
+
   LogE = LOG10( E )
   LogD = LOG10( D )
   LogT = LOG10( T )
-
-  CALL LogInterpolateSingleVariable_3D_Custom &
-         ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_Me, Me_T, Me )
-
-  LogEta = LOG10( Me / ( kMeV * T ) )
+  LogEta = LOG10( Eta )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET ENTER DATA &
