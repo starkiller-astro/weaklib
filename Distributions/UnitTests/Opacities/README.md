@@ -1,6 +1,6 @@
-# WeakLib Opacity UnitTests
+## WeakLib Opacity UnitTests
 
-## Implement Examples
+### Implement Examples
 
 - WeakLib Opacity table IO test:
     
@@ -14,7 +14,7 @@
     - `wlInterpolatePair.f90` for pair process table
 
 
-## Step-by-step instruction for obtaining the comprehensive opacities with a given profile:
+### Step-by-step instruction for obtaining the comprehensive opacities with a given profile:
 
 1.  Write the profile into the stardard format, as `ProfileExample.profile`.
 
@@ -75,6 +75,37 @@
     Keys:
     - Change the file directory and axis limit as needed.
 
+### Copy-To-Go Bash Script
+You can copy the following code and save it as '/weaklib/unitTest.sh' and do '$source unitTest.sh'.
 
-## Ask For Help
+  **Note 1**: it assumes you have done the table creating first and the table to test is under `External/Utilities/Opacities/Bruenn85/Executables`. 
+
+  **Note 2**: change machine setting, 'summit', to the one you're running on. (Check [Distributions/Workflow/SetEnvironment.sh](Distributions/Workflow/SetEnvironment.sh) for the options)
+
+
+```
+cd Distributions/UnitTests/Opacities/Executables
+export WEAKLIB_DIR='../../../../../weaklib'
+source ../../../Workflow/SetEnvironment.sh ranchuair
+[ -e TableReadingLog ] && rm TableReadingLog
+[ -e wl-EOS-SFHo-15-25-50.h5 ] && rm wl*.h5
+[ -e InterpolatedAbOutput.h5 ] && rm Interpolated*.h5
+make clobber
+make all
+ln -s ../../../../External/Utilities/Opacities/Bruenn85/Executables/wl*.h5 .
+./wlOpacityFieldsTest_ranchuair > OpacityFieldsTestLog
+./wlReadOpacityTableTest_ranchuair > TableReadingLog
+[ -e *.profile ] && rm *.profile
+cp ProfileBruenn.d ProfileBruenn.profile
+../WriteTxtForInterpolation.sh
+./wlInterpolateAb_ranchuair
+./wlInterpolateIso_ranchuair
+./wlInterpolateNES_ranchuair
+./wlInterpolatePair_ranchuair
+./wlOpacityPerformanceTest_ranchuair
+```
+
+To view the result, you can use UnitTests/Opacities/plotInterpolatedCompactHDF.m and compare your plot with those examples at [https://code.ornl.gov/astro/weaklib-tables/SFHo/LowRes/Example.png](https://code.ornl.gov/astro/weaklib-tables)
+
+### Ask For Help
 - R. Chu : rchu@vols.utk.edu
