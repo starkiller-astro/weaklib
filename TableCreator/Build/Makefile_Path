@@ -3,6 +3,6 @@ $(WEAKLIB_DIR)/Distributions/Library: \
 $(WEAKLIB_DIR)/Distributions/EOSSource: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource: \
 $(WEAKLIB_DIR)/TableCreator/SharedModules: \
-$(WEAKLIB_DIR)/TableCreator/Utilities/Opacities/Bruenn85: \
-$(WEAKLIB_DIR)/TableCreator/Utilities/Opacities/Bruenn85/Chimera: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/Opacities/Bruenn85: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/Opacities/Bruenn85/Chimera: \
 ..
