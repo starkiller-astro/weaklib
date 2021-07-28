@@ -2,9 +2,9 @@ WEAKLIB_DIR ?= $(HOME)/weaklib
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
-include $(WEAKLIB_DIR)/External/Build/Makefile_Path
-include $(WEAKLIB_DIR)/External/Build/Makefile_WeakLib_ObjectFiles
-#include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Path
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
+#include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
 
 .DEFAULT_GOAL := all
 
@@ -58,21 +58,21 @@ wlInterpolateIso: \
         $(LIBRARIES)
 
 wlInterpolateNES: \
-	$(Weaklib_External) wlInterpolateNES.o
+	$(Weaklib_TableCreator) wlInterpolateNES.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateNES_$(MACHINE) \
-        $(Weaklib_External) wlInterpolateNES.o \
+        $(Weaklib_TableCreator) wlInterpolateNES.o \
         $(LIBRARIES)
 
 wlInterpolatePair: \
-        $(Weaklib_External) wlInterpolatePair.o
+        $(Weaklib_TableCreator) wlInterpolatePair.o
 	$(FLINKER) $(FLAGS) -o wlInterpolatePair_$(MACHINE) \
-        $(Weaklib_External) wlInterpolatePair.o \
+        $(Weaklib_TableCreator) wlInterpolatePair.o \
         $(LIBRARIES)
 
 wlOpacityTableResolutionTest: \
-	$(Weaklib_External) wlOpacityTableResolutionTest.o
+	$(Weaklib_TableCreator) wlOpacityTableResolutionTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityTableResolutionTest_$(MACHINE) \
-	$(Weaklib_External) wlOpacityTableResolutionTest.o \
+	$(Weaklib_TableCreator) wlOpacityTableResolutionTest.o \
 	$(LIBRARIES)
 
 clean:
