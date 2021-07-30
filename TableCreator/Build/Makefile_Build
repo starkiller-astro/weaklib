@@ -1,0 +1,6 @@
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Path
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Compilers
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Suffixes

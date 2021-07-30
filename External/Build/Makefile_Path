@@ -1,8 +1,0 @@
-VPATH += \
-$(WEAKLIB_DIR)/Distributions/Library: \
-$(WEAKLIB_DIR)/Distributions/EOSSource: \
-$(WEAKLIB_DIR)/Distributions/OpacitySource: \
-$(WEAKLIB_DIR)/External/SharedModules: \
-$(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85: \
-$(WEAKLIB_DIR)/External/Utilities/Opacities/Bruenn85/Chimera: \
-..

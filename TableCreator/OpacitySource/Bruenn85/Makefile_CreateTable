@@ -1,11 +1,11 @@
-include ../../../../Build/Makefile_Build
+include ../../../Build/Makefile_Build
 
 all: wlCreateOpacityTable 
 
 wlCreateOpacityTable: \
-	$(Weaklib_External) wlCreateOpacityTable.o
+	$(Weaklib_TableCreator) wlCreateOpacityTable.o
 	$(FLINKER) $(FLAGS) -o wlCreateOpacityTable_$(MACHINE) \
-	$(Weaklib_External) wlCreateOpacityTable.o \
+	$(Weaklib_TableCreator) wlCreateOpacityTable.o \
 	$(LIBRARIES) 
 
 clean:
