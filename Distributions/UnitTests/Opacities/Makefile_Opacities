@@ -4,7 +4,6 @@ include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Path
 include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
-#include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
 
 .DEFAULT_GOAL := all
 
@@ -14,12 +13,14 @@ all: wlOpacityFieldsTest \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
-     wlInterpolatePair
+     wlInterpolatePair \
+     wlInterpolateBrem
 
 Interpolations: wlInterpolateAb \
                 wlInterpolateIso \
                 wlInterpolateNES \
-                wlInterpolatePair
+                wlInterpolatePair \
+		wlInterpolateBrem
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -37,12 +38,6 @@ wlOpacityPerformanceTest: \
 	$(weaklib) wlOpacityPerformanceTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityPerformanceTest_$(MACHINE) \
 	$(weaklib) wlOpacityPerformanceTest.o \
-	$(LIBRARIES)
-
-wlOpacityAlignTest: \
-	$(weaklib) wlOpacityAlignTest.o
-	$(FLINKER) $(FLAGS) -o wlOpacityAlignTest_$(MACHINE) \
-	$(weaklib) wlOpacityAlignTest.o \
 	$(LIBRARIES)
 
 wlInterpolateAb: \
@@ -69,10 +64,10 @@ wlInterpolatePair: \
         $(Weaklib_TableCreator) wlInterpolatePair.o \
         $(LIBRARIES)
 
-wlOpacityTableResolutionTest: \
-	$(Weaklib_TableCreator) wlOpacityTableResolutionTest.o
-	$(FLINKER) $(FLAGS) -o wlOpacityTableResolutionTest_$(MACHINE) \
-	$(Weaklib_TableCreator) wlOpacityTableResolutionTest.o \
+wlInterpolateBrem: \
+        $(Weaklib_TableCreator) wlInterpolateBrem.o
+	$(FLINKER) $(FLAGS) -o wlInterpolateBrem_$(MACHINE) \
+	$(Weaklib_TableCreator) wlInterpolateBrem.o \
 	$(LIBRARIES)
 
 clean:

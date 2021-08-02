@@ -82,6 +82,8 @@ IMPLICIT NONE
    INTEGER                 :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
+   INTEGER                 :: nOpac_Brem = 0
+   INTEGER                 :: nMom_Brem  = 0
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
@@ -126,6 +128,7 @@ IMPLICIT NONE
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
               nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
+              nOpac_Brem, nMom_Brem, &
               nPointsE, nPointsEta, &
               EquationOfStateTableName_Option = EOSTableName ) 
    CALL FinalizeHDF( )
