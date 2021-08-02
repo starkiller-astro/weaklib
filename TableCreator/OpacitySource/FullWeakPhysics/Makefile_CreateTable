@@ -1,0 +1,25 @@
+include ../../../Build/Makefile_Build
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_ObjectFiles
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera: \
+..
+
+Weaklib_TableCreator = \
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYFULLWEAK) $(CHIMERA)
+
+all: wlCreateOpacityTable 
+
+wlCreateOpacityTable: \
+	$(Weaklib_TableCreator) wlCreateOpacityTable.o
+	$(FLINKER) $(FLAGS) -o wlCreateOpacityTable_$(MACHINE) \
+	$(Weaklib_TableCreator) wlCreateOpacityTable.o \
+	$(LIBRARIES) 
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateOpacityTable_$(MACHINE)
