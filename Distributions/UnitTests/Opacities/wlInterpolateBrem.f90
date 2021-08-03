@@ -78,7 +78,7 @@ PROGRAM wlInterpolateBrem
   INTEGER    :: idxRho_xp, idxRho_xn, idxRho_xpxn
   REAL(dp)   :: dRho_xp, dRho_xn, dRho_xpxn
 
-  INTEGER, PARAMETER :: n_rows = 2
+  INTEGER, PARAMETER :: n_rows = 213
   INTEGER, PARAMETER :: n_cols = 4
 
   REAL(dp), dimension(n_rows,n_cols) :: TS_profile
