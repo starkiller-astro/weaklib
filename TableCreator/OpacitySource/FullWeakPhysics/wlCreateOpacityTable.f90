@@ -94,8 +94,8 @@ IMPLICIT NONE
    INTEGER                 :: EmAb_nucleons_full_kinematics = 0 !Use Fischer et al 2020 full kinematics rates for
                                                                 !EmAb on free nucleons
 
-   INTEGER                 :: neutron_decay_full_kinematics = 0 !Use Fischer et al 2020 full kinematics rates for
-                                                                !neutron decay 
+   INTEGER                 :: inv_n_decay_full_kinematics   = 0 !Use Fischer et al 2020 full kinematics rates for
+                                                                !inverse neutron decay 
 
    INTEGER                 :: EmAb_nucleons_isoenergetic    = 1 !EmAb on free nucleons using isoenergetic approximation
                                                                 !Bruenn 1985
@@ -157,10 +157,10 @@ IMPLICIT NONE
 
    REAL(dp), DIMENSION(nPointsE) :: absor, emit
 
-   REAL(dp), DIMENSION(nPointsE) :: em_nucleons,   ab_nucleons
-   REAL(dp), DIMENSION(nPointsE) :: em_n_decay,    ab_n_decay
-   REAL(dp), DIMENSION(nPointsE) :: em_nuclei_FFN, ab_nuclei_FFN
-   REAL(dp), DIMENSION(nPointsE) :: em_nuclei_Hix, ab_nuclei_Hix
+   REAL(dp), DIMENSION(nPointsE) :: em_nucleons,    ab_nucleons
+   REAL(dp), DIMENSION(nPointsE) :: em_inv_n_decay, ab_inv_n_decay
+   REAL(dp), DIMENSION(nPointsE) :: em_nuclei_FFN,  ab_nuclei_FFN
+   REAL(dp), DIMENSION(nPointsE) :: em_nuclei_Hix,  ab_nuclei_Hix
 
    !arrays for weak magnetism corrections
    REAL(dp), DIMENSION(nPointsE) :: xi_n_wm, xib_p_wm
@@ -451,11 +451,11 @@ PRINT*, 'Filling OpacityTable ...'
              roaenct = TINY(1.d0)
 
 ! Initialise the opacity arrays to zero
-             ab_nucleons   = 0.0d0
-             em_nucleons   = 0.0d0
+             ab_nucleons = 0.0d0
+             em_nucleons = 0.0d0
 
-             ab_n_decay    = 0.0d0
-             em_n_decay    = 0.0d0
+             ab_inv_n_decay = 0.0d0
+             em_inv_n_decay = 0.0d0
 
              ab_nuclei_FFN = 0.0d0
              em_nuclei_FFN = 0.0d0
@@ -473,8 +473,6 @@ PRINT*, 'Filling OpacityTable ...'
              ENDIF
 
              IF(EmAb_nucleons_recoil .gt. 0 ) THEN
-
-               CALL load_polylog_weaklib
 
                IF (rho .gt. 1.d+09) THEN
 
@@ -516,7 +514,7 @@ PRINT*, 'Filling OpacityTable ...'
 
              ENDIF
 
-             IF(neutron_decay_full_kinematics .gt. 0) THEN
+             IF(inv_n_decay_full_kinematics .gt. 0) THEN
 
              ENDIF
 
@@ -531,10 +529,10 @@ PRINT*, 'Filling OpacityTable ...'
              DO i_e = 1, OpacityTable % nPointsE
                 OpacityTable % EmAb % Opacity(i_r) % &
                         Values (i_e, j_rho, k_t, l_ye) &
-                = ab_nucleons(i_e)   + em_nucleons(i_e) &
-                + ab_n_decay(i_e)    + em_n_decay(i_e) &
-                + ab_nuclei_FFN(i_e) + em_nuclei_FFN(i_e) &
-                + ab_nuclei_Hix(i_e) + em_nuclei_Hix(i_e)
+                = ab_nucleons(i_e)    + em_nucleons(i_e) &
+                + ab_inv_n_decay(i_e) + em_inv_n_decay(i_e) &
+                + ab_nuclei_FFN(i_e)  + em_nuclei_FFN(i_e) &
+                + ab_nuclei_Hix(i_e)  + em_nuclei_Hix(i_e)
              END DO  !i_e
 
          END DO !i_r

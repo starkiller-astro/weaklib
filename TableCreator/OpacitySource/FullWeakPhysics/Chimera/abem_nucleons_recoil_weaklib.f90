@@ -1,5 +1,5 @@
 SUBROUTINE abem_nucleons_recoil_weaklib &
-           ( n, e_in, rho, t, ye, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
+           ( nu_type, e_in, rho, t, ye, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
              cmpe, absornp, emitnp, nez)
 !-----------------------------------------------------------------------
 !
@@ -23,7 +23,7 @@ SUBROUTINE abem_nucleons_recoil_weaklib &
 !                   when chemical potential data are not available
 !
 !    Input arguments:
-!  n             : neutrino type
+!  nu_type       : neutrino type
 !                  (1, e-neutrino; 2, e-antineutrino; 3, t-neutrino)
 !  e_in          : neutrino energy [MeV]
 !  rho           : matter density [g cm^{-3}]
@@ -63,7 +63,7 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-INTEGER, INTENT(in)          :: n             ! neutrino flavor index
+INTEGER, INTENT(in)          :: nu_type       ! neutrino flavor index
 INTEGER, INTENT(in)          :: nez           ! number of energy groups
 
 REAL(dp), DIMENSION(nez), INTENT(in) :: e_in
@@ -141,9 +141,11 @@ EXTERNAL fexp
   CALL gquad(nleg_a,x_a,wt_a,nleg_a)
   CALL gquad(nleg_e,x_e,wt_e,nleg_e)
 
+  CALL load_polylog_weaklib
+
   DO k = 1,nez
 
-  IF ( n == 1 ) THEN
+  IF ( nu_type == 1 ) THEN
     tmev           = kmev * t
     m_trgt_i       = mn
     m_trgt_f       = mp
@@ -151,7 +153,7 @@ EXTERNAL fexp
     cmp_trgt_i     = cmpn + dmnp + mn
     cmp_trgt_f     = cmpp + dmnp + mp
     cmp_lep        = cmpe
-    CALL nu_N_absr_momts( n, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
+    CALL nu_N_absr_momts( nu_type, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
 &    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nu, ab_r1_nu, e_out_e )
     absornp(k)     = ab_r0_nu
     etam           = - ( e_in(k) + dmnp + cmpn - cmpp - cmpe )/tmev
@@ -165,7 +167,7 @@ EXTERNAL fexp
 !   nucleon blocking
 !-----------------------------------------------------------------------
 
-  ELSE IF ( n == 2 ) THEN
+  ELSE IF ( nu_type == 2 ) THEN
     tmev           = kmev * t
     m_trgt_i       = mp
     m_trgt_f       = mn
@@ -173,7 +175,7 @@ EXTERNAL fexp
     cmp_trgt_i     = cmpp + dmnp + mp
     cmp_trgt_f     = cmpn + dmnp + mn
     cmp_lep        = - cmpe
-    CALL nu_N_absr_momts( n, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
+    CALL nu_N_absr_momts( nu_type, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
 &    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nub, ab_r1_nub, e_out_p )
     absornp(k)     = ab_r0_nub
     etap           = - ( e_in(k) + cmpp + cmpe - dmnp - cmpn )/tmev

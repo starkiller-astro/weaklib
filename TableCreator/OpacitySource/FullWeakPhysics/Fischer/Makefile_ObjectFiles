@@ -1,0 +1,2 @@
+FULL_KINEMATICS = \
+ CC_module_weaklib.o

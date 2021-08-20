@@ -6,7 +6,7 @@
 
 MODULE nes_module
 
-USE wlKindModule
+USE wlKindModule, ONLY: dp
 
 !-----------------------------------------------------------------------
 !  Neutrino energies

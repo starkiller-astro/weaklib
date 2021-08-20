@@ -1,14 +1,22 @@
 include ../../../Build/Makefile_Build
 include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_ObjectFiles
 include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Fischer/Makefile_ObjectFiles
 
 VPATH += \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Fischer: \
 ..
 
 Weaklib_TableCreator = \
-  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYFULLWEAK) $(CHIMERA)
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(WL_OPACITYSOURCE) \
+  $(SHAREDMODULES) \
+  $(OPACITYFULLWEAK) \
+  $(CHIMERA) \
+  $(FULL_KINEMATICS)
 
 all: wlCreateOpacityTable 
 
