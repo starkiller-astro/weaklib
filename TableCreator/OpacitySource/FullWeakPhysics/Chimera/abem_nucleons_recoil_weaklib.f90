@@ -1,7 +1,6 @@
-SUBROUTINE abem_cal_weaklib &
+SUBROUTINE abem_nucleons_recoil_weaklib &
            ( n, e_in, rho, t, ye, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-             cmpe, absornp, emitnp, nez, &
-             EmAb_nucleons_recoil, EmAb_nucleons_weak_magnetism )
+             cmpe, absornp, emitnp, nez)
 !-----------------------------------------------------------------------
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
@@ -10,7 +9,9 @@ SUBROUTINE abem_cal_weaklib &
 !    Created:      10/23/18
 !
 !    Purpose:
-!      To call calculate the neutrino absorption and emission rates.
+!      To calculate the recoil, thermla motions and special relativistic 
+!      corrections to neutrino absorption and emission rates on free nucleons,
+!      following Reddy et al 1998.
 !
 !    Variables that must be passed through common:
 !        none
@@ -40,13 +41,11 @@ SUBROUTINE abem_cal_weaklib &
 !  cmpe          : electron chemical potential
 !                  (including rest mass) [MeV]
 !
-!  EmAb_nucleons_recoil : Include corrections to nucleons EmAb due to Reddy98
-!  EmAb_nucleons_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
 !
-!    Output arguments:
-!  absornp       : inverse mean free path for absorption on free
+!    Input/Output arguments:
+!  absornp       : corrected inverse mean free path for absorption on free
 !                  nucleons (/cm)
-!  emitnp        : inverse mean free path for emission from free
+!  emitnp        : corrected inverse mean free path for emission from free
 !                  nucleons (/cm)
 !
 !-----------------------------------------------------------------------
@@ -56,6 +55,7 @@ USE numerical_module, ONLY: &
       zero, one, epsilon, pi
 USE physcnst_module, ONLY: &
       cvel, hbar, gv, ga, mn, mp, me, Gw, kmev, dmnp, rmu
+USE abem_module_weaklib
 
 IMPLICIT none
 
@@ -80,9 +80,6 @@ REAL(double), INTENT(in)    :: cmpn          ! neutron chemical porential
 REAL(double), INTENT(in)    :: cmpp          ! proton chemical porential
 REAL(double), INTENT(in)    :: cmpe          ! electron chemical porential
 
-INTEGER, INTENT(in)         :: EmAb_nucleons_recoil         ! Flag to recoil, nucleon final-state blocking,
-                                                            !and special relativity corrections
-INTEGER, INTENT(in)         :: EmAb_nucleons_weak_magnetism ! Flag to include weak_magnetism corrections
 
 !-----------------------------------------------------------------------
 !        Output variables.
@@ -134,103 +131,15 @@ REAL(double)                :: fexp
 
 EXTERNAL fexp
 
-!-----------------------------------------------------------------------
-!
-!             \\\\\ ADJUST XNEUT AND XPROT IF NECESSARY ////
-!
-!  Adjust xneut and xprot if ye > yep or if ye < 0.03 to cover regions
-!   out of range of the EOS.
-!
-!-----------------------------------------------------------------------
-
-xneutp             = xneut
-xprotp             = xprot
-i_abemetanp        = .true.
-
-IF ( ye > 0.5d0 ) THEN
-
-  yep              = DMIN1( ye, 0.99d0 )
-  xhe              = DMAX1( one - xneut - xprot - xh, zero )
-  i_abemetanp      = .false.
-
-!-----------------------------------------------------------------------
-!
-!  Are there enough nucleons to shuffle between neutrons and protons
-!   to reproduce yep?
-!  If so, adjust xneut and xprot to reproduce yep.
-!
-!-----------------------------------------------------------------------
-
-  IF ( xneut + xprot + 0.5d0 * xhe + xh * zh/( ah + epsilon ) > yep ) THEN
-
-    xprotp         = DMAX1( yep - 0.5d0 * xhe - xh * zh/( ah + epsilon ), x_min )
-    xneutp         = DMAX1( xneut + xprot - xprotp, x_min )
-
-  ELSE ! if not, do the best possible
-
-    xprotp         = xneut + xprot
-    xneutp         = 1.d-30
-
-  END IF ! xneut + xprot + 0.5d0 * xhe + xh * zh/( ah + epsilon ) > yep
-
-END IF ! ye > 0.5d0
-
-IF ( ye < 0.03d0 ) THEN
-  xprotp           = ye
-  xneutp           = one - ye
-  i_abemetanp      = .false.
-END IF ! ye < 0.03d0
-
-!-----------------------------------------------------------------------
-!
-!           \\\\\ COMPUTE EMISSION AND ABSORPTION RATES ////
-!
-!-----------------------------------------------------------------------
-
-IF ( EmAb_nucleons_recoil == 0  .or.  rho < 1.d+09 ) THEN
-
-!-----------------------------------------------------------------------
-!  IF rho < 1.d+10 use abemfrnp instead of abemfrnpetanp to avoid
-!   potential numerical problems
-!-----------------------------------------------------------------------
-
-  IF ( rho < rho_etanp ) i_abemetanp = .false.
-
-  IF ( i_abemetanp ) THEN
-
-!-----------------------------------------------------------------------
-!  Neutrino and antineutrino absorption on neutrons and protons with
-!   approximate nucleon blocking but no recoil or thermal motions
-!-----------------------------------------------------------------------
-
-  DO k = 1,nez
-    CALL abemfrnpetanp &
-         ( n, e_in(k), rho, t, xneutp, xprotp, cmpn, cmpp, &
-           cmpe, absornp(k), emitnp(k) )
-
-  END DO
-
-  ELSE
-
-!-----------------------------------------------------------------------
-!  Neutrino and antineutrino absorption on neutrons and protons with
-!   no recoil, thermal motions, or nucleon blocking
-!-----------------------------------------------------------------------
-
-  DO k = 1,nez
-
-    CALL abemfrnp &
-         ( n, e_in(k), rho, t, xneutp, xprotp, cmpe, &
-           absornp(k), emitnp(k) )
-
-  END DO
-  END IF ! i_abemetanp
-ELSE ! i_aeps /= 0  .or.  rho >= 1.d+09
+!IF ( EmAb_nucleons_recoil == 0  .or.  rho < 1.d+09 ) THEN
 
 !-----------------------------------------------------------------------
 !  Neutrino absorption on neutrons with recoil, thermal motions, and
 !   nucleon blocking
 !-----------------------------------------------------------------------
+
+  CALL gquad(nleg_a,x_a,wt_a,nleg_a)
+  CALL gquad(nleg_e,x_e,wt_e,nleg_e)
 
   DO k = 1,nez
 
@@ -283,29 +192,6 @@ ELSE ! i_aeps /= 0  .or.  rho >= 1.d+09
 
 END DO
 
-END IF ! i_aeps == 0  .or.  rho < 1.d+09
-
-!-----------------------------------------------------------------------
-!  Weak magnetism corrections for neutrino and antineutrino absorptions
-!   on nucleons.
-!-----------------------------------------------------------------------
-IF(EmAb_nucleons_weak_magnetism .gt. 0) THEN
-
-  DO k = 1,nez
-  CALL cc_weak_mag_weaklib( e_in(k), xi_n_wm, xib_p_wm )
-
-  IF ( n == 1 ) THEN
-    absornp(k)          = xi_n_wm * absornp(k)
-    emitnp(k)           = xi_n_wm * emitnp(k)
-  ELSE IF ( n == 2 ) THEN
-    absornp(k)          = xib_p_wm * absornp(k)
-    emitnp(k)           = xib_p_wm * emitnp(k)
-  END IF ! n == 1
-
-END DO
-
-ENDIF
-
 RETURN
 
-  END SUBROUTINE abem_cal_weaklib
+  END SUBROUTINE abem_nucleons_recoil_weaklib

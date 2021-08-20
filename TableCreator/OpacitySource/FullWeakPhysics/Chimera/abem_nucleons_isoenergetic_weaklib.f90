@@ -1,7 +1,6 @@
-SUBROUTINE abem_cal_weaklib &
+SUBROUTINE abem_nucleons_isoenergetic_weaklib &
            ( n, e_in, rho, t, ye, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-             cmpe, absornp, emitnp, nez, &
-             EmAb_nucleons_recoil, EmAb_nucleons_weak_magnetism )
+             cmpe, absornp, emitnp, nez)
 !-----------------------------------------------------------------------
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
@@ -79,10 +78,6 @@ REAL(double), INTENT(in)    :: zh            ! heavy nuclei charge number
 REAL(double), INTENT(in)    :: cmpn          ! neutron chemical porential
 REAL(double), INTENT(in)    :: cmpp          ! proton chemical porential
 REAL(double), INTENT(in)    :: cmpe          ! electron chemical porential
-
-INTEGER, INTENT(in)         :: EmAb_nucleons_recoil         ! Flag to recoil, nucleon final-state blocking,
-                                                            !and special relativity corrections
-INTEGER, INTENT(in)         :: EmAb_nucleons_weak_magnetism ! Flag to include weak_magnetism corrections
 
 !-----------------------------------------------------------------------
 !        Output variables.
@@ -187,8 +182,6 @@ END IF ! ye < 0.03d0
 !
 !-----------------------------------------------------------------------
 
-IF ( EmAb_nucleons_recoil == 0  .or.  rho < 1.d+09 ) THEN
-
 !-----------------------------------------------------------------------
 !  IF rho < 1.d+10 use abemfrnp instead of abemfrnpetanp to avoid
 !   potential numerical problems
@@ -225,87 +218,7 @@ IF ( EmAb_nucleons_recoil == 0  .or.  rho < 1.d+09 ) THEN
 
   END DO
   END IF ! i_abemetanp
-ELSE ! i_aeps /= 0  .or.  rho >= 1.d+09
-
-!-----------------------------------------------------------------------
-!  Neutrino absorption on neutrons with recoil, thermal motions, and
-!   nucleon blocking
-!-----------------------------------------------------------------------
-
-  DO k = 1,nez
-
-  IF ( n == 1 ) THEN
-    tmev           = kmev * t
-    m_trgt_i       = mn
-    m_trgt_f       = mp
-    m_lep          = me
-    cmp_trgt_i     = cmpn + dmnp + mn
-    cmp_trgt_f     = cmpp + dmnp + mp
-    cmp_lep        = cmpe
-    CALL nu_N_absr_momts( n, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
-&    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nu, ab_r1_nu, e_out_e )
-    absornp(k)     = ab_r0_nu
-    etam           = - ( e_in(k) + dmnp + cmpn - cmpp - cmpe )/tmev
-    emitnp(k)      = fexp(etam) * absornp(k)
-!    WRITE (6,3001) n,m_trgt_i,m_trgt_f,m_lep,cmp_trgt_i,cmp_trgt_f,cmp_lep,e_in,e_out_e
-! 3001 FORMAT (' n=',i4,' m_trgt_i=',es11.3,' m_trgt_f=',es11.3,' m_lep=',es11.3, &
-!& ' cmp_trgt_i=',es11.3,' cmp_trgt_f=',es11.3,' cmp_lep=',es11.3,' e_in=',es11.3,' e_out_e=',es11.3)
-
-!-----------------------------------------------------------------------
-!  Antieutrino absorption on protons with recoil, thermal motions, and
-!   nucleon blocking
-!-----------------------------------------------------------------------
-
-  ELSE IF ( n == 2 ) THEN
-    tmev           = kmev * t
-    m_trgt_i       = mp
-    m_trgt_f       = mn
-    m_lep          = me
-    cmp_trgt_i     = cmpp + dmnp + mp
-    cmp_trgt_f     = cmpn + dmnp + mn
-    cmp_lep        = - cmpe
-    CALL nu_N_absr_momts( n, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
-&    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nub, ab_r1_nub, e_out_p )
-    absornp(k)     = ab_r0_nub
-    etap           = - ( e_in(k) + cmpp + cmpe - dmnp - cmpn )/tmev
-    emitnp(k)      = fexp(etap) * absornp(k)
-!    WRITE (6,3001) n,m_trgt_i,m_trgt_f,m_lep,cmp_trgt_i,cmp_trgt_f,cmp_lep,e_in,e_out_p
-
-!-----------------------------------------------------------------------
-!  Absorption and emission on free nucleons is zero for mu and tau
-!   neutrinos and antineutrinos
-!-----------------------------------------------------------------------
-
-  ELSE
-    absornp(k)        = zero
-    emitnp(k)         = zero
-  END IF ! n == 1
-
-END DO
-
-END IF ! i_aeps == 0  .or.  rho < 1.d+09
-
-!-----------------------------------------------------------------------
-!  Weak magnetism corrections for neutrino and antineutrino absorptions
-!   on nucleons.
-!-----------------------------------------------------------------------
-IF(EmAb_nucleons_weak_magnetism .gt. 0) THEN
-
-  DO k = 1,nez
-  CALL cc_weak_mag_weaklib( e_in(k), xi_n_wm, xib_p_wm )
-
-  IF ( n == 1 ) THEN
-    absornp(k)          = xi_n_wm * absornp(k)
-    emitnp(k)           = xi_n_wm * emitnp(k)
-  ELSE IF ( n == 2 ) THEN
-    absornp(k)          = xib_p_wm * absornp(k)
-    emitnp(k)           = xib_p_wm * emitnp(k)
-  END IF ! n == 1
-
-END DO
-
-ENDIF
 
 RETURN
 
-  END SUBROUTINE abem_cal_weaklib
+  END SUBROUTINE abem_nucleons_isoenergetic_weaklib

@@ -1,6 +1,8 @@
 SUBROUTINE abemrgn_weaklib &
        ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-         cmpe, absor, emit, ye, nez )
+         cmpe, absor, emit, ye, nez, & 
+         EmAb_nucleons_isoenergetic, EmAb_nuclei_FFN, &
+         EmAb_nucleons_recoil, EmAb_nucleons_weak_magnetism )
 !--------------------------------------------------------------------
 !    Author:       R. Chu, Dept. Phys. & Astronomy
 !                  U. Tennesee, Knoxville
@@ -27,6 +29,7 @@ SUBROUTINE abemrgn_weaklib &
 !  e_in          : neutrino energy [MeV]
 !  rho           : matter density [g cm^{-3}]
 !  t             : matter temperature [K]
+!  ye            : electron fraction
 !  xneut         : free neutron mass fraction
 !  xprot         : free proton mass fraction
 !  xh            : heavy nucleus mass fraction
@@ -41,9 +44,14 @@ SUBROUTINE abemrgn_weaklib &
 !  ye            : electron fraction
 !  nez           : size of neutrino energy array e_in
 !
+!  EmAb_nucleons_isoenergetic : Include isoenergetic EmAb on free nucleons using Bruenn85 formalism
+!  EmAb_nuclei_FFN : Include EmAb on nuclei using FFN formalism
+!  EmAb_nucleons_recoil : Include corrections to nucleons EmAb due to Reddy98
+!  EmAb_nucleons_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
+!
 !    Output arguments:
 !  absor         : absorption inverse mean free path (/cm)
-!  emit          : emission inverse mean free path (/cm)! 
+!  emit          : emission inverse mean free path (/cm)!
 !--------------------------------------------------------------------
 
 USE kind_module, ONLY: &
@@ -78,6 +86,13 @@ REAL(double), INTENT(in)    :: cmpn     ! neutron chemical porential
 REAL(double), INTENT(in)    :: cmpp     ! proton chemical porential
 REAL(double), INTENT(in)    :: cmpe     ! electron chemical porential
 
+INTEGER, INTENT(in)         :: EmAb_nucleons_isoenergetic   ! Flag to calculate isoenergetic EmAb on free nucleons 
+                                                            ! using Bruenn85
+INTEGER, INTENT(in)         :: EmAb_nuclei_FFN              ! Flag to calculate EmAb on nuclei using FFN formalism
+INTEGER, INTENT(in)         :: EmAb_nucleons_recoil         ! Flag to recoil, nucleon final-state blocking, 
+                                                            !and special relativity corrections
+INTEGER, INTENT(in)         :: EmAb_nucleons_weak_magnetism ! Flag to include weak_magnetism corrections
+
 !--------------------------------------------------------------------
 !        Output variables.
 !--------------------------------------------------------------------
@@ -90,28 +105,37 @@ REAL(double), DIMENSION(nez), INTENT(out) :: emit
 !--------------------------------------------------------------------
 !        Local variables
 !--------------------------------------------------------------------
-REAL(double), DIMENSION(nez)  :: absrnp, absrnc, emisnp, emisnc
+REAL(double), DIMENSION(nez)  :: ab_nucleons, ab_nuclei, em_nucleons, em_nuclei
 
 !--------------------------------------------------------------------
 !  n-neutrino - free nucleon absorption and emission inverse mean
 !   free paths (/cm)
 !--------------------------------------------------------------------
 
-  CALL abem_cal_weaklib &
-        ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-          cmpe, absrnp, emisnp, nez )
+  IF(EmAb_nucleons_isoenergetic .gt. 0) THEN
+
+    CALL abem_cal_weaklib &
+         ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
+           cmpe, ab_nucleons, em_nucleons, nez, EmAb_nucleons_recoil, &
+           EmAb_nucleons_weak_magnetism )
+
+  ENDIF
 
 !--------------------------------------------------------------------
 !  n-neutrino - nuclei absorption and emission inverse mean free
 !   paths (/cm).
 !--------------------------------------------------------------------
 
-  CALL abemnc_weaklib &
-        ( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp,  &
-          cmpe, absrnc, emisnc )
+  IF(EmAb_nuclei_FFN .gt. 0) THEN
 
-  absor = absrnp + absrnc
-  emit  = emisnp + emisnc
+    CALL abemnc_weaklib &
+         ( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp,  &
+           cmpe, ab_nuclei, em_nuclei )
+
+  ENDIF
+
+  absor = ab_nucleons + ab_nuclei
+  emit  = em_nucleons + em_nuclei
 
 RETURN
 

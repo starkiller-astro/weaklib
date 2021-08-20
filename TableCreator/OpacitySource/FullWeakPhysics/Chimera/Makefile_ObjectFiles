@@ -39,9 +39,17 @@ ChimeraNES = \
   scatergn_weaklib.o
 
 ChimeraAB = \
+ abem_module_weaklib.o \
  abemfrnpetanp.o \
  abemfrnp.o \
  abem_cal_weaklib.o \
  abemnc_weaklib.o \
- abemrgn_weaklib.o
+ abemrgn_weaklib.o \
+ cc_weak_mag_weaklib.o \
+ polylog_module_weaklib.o \
+ load_polylog_weaklib.o \
+ cc_difcs_weaklib.o \
+ nu_N_absr_momts_weaklib.o \
+ abem_nucleons_isoenergetic_weaklib.o \
+ abem_nucleons_recoil_weaklib.o
 
