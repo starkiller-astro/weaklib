@@ -68,6 +68,8 @@ PROGRAM wlCreateOpacityTable
 
   USE abem_module_weaklib
 
+  USE CC_module_weaklib
+
   USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
                                             stdout=>output_unit, &
                                             stderr=>error_unit
