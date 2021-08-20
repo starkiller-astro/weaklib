@@ -40,7 +40,7 @@ SUBROUTINE scatergn_weaklib &
 !
 !-------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: one, zero, pi
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, kmev, cv, ca
 
@@ -51,18 +51,18 @@ IMPLICIT NONE
 !--------------------------------------------------------------------
 
 INTEGER,      INTENT(in) :: nez    ! number of neutrino energy group
-REAL(double), INTENT(in) :: tmev   ! temperature [MeV]
-REAL(double), INTENT(in) :: eta    ! electron chemical potential/TMeV
-REAL(double), DIMENSION(nez), INTENT(in) :: egrid   ! neutrino energy grid
+REAL(dp), INTENT(in) :: tmev   ! temperature [MeV]
+REAL(dp), INTENT(in) :: eta    ! electron chemical potential/TMeV
+REAL(dp), DIMENSION(nez), INTENT(in) :: egrid   ! neutrino energy grid
 
 !--------------------------------------------------------------------
 !        Output variables
 !-------------------------------------------------------------------
 
-REAL(double), DIMENSION(nez,nez), INTENT(out) :: h0i
-REAL(double), DIMENSION(nez,nez), INTENT(out) :: h0ii
-REAL(double), DIMENSION(nez,nez), INTENT(out) :: h1i
-REAL(double), DIMENSION(nez,nez), INTENT(out) :: h1ii
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: h0i
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: h0ii
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: h1i
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: h1ii
 
 !--------------------------------------------------------------------
 !        Local variables
@@ -72,27 +72,27 @@ INTEGER                     :: i             ! loop counter over points to build
 INTEGER                     :: k             ! incomiong neutrino energy zone index
 INTEGER                     :: kp            ! outgoing neutrino energy zone index
 
-REAL(double), DIMENSION(nez) :: wk2   ! egrid**2
-REAL(double)                :: enuin         ! incoming neutrino energy/tmev
-REAL(double)                :: enuout        ! outgoing neutrino energy/tmev
+REAL(dp), DIMENSION(nez) :: wk2   ! egrid**2
+REAL(dp)                :: enuin         ! incoming neutrino energy/tmev
+REAL(dp)                :: enuout        ! outgoing neutrino energy/tmev
 
-REAL(double), PARAMETER     :: coc = 2.d0 * ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**3 * hbar * cvel )
-REAL(double)                :: cxct          ! coc*t**6
-REAL(double)                :: cxc           ! cxc/egrid**2
-REAL(double)                 :: fexp          ! exponential function
-REAL(double)                :: hout0i        ! zero moment of outgoing scattering function type i
-REAL(double)                :: hout0ii       ! zero moment of outgoing scattering function type ii
-REAL(double)                :: hout1i        ! first moment of outgoing scattering function type i
-REAL(double)                :: hout1ii       ! first moment of outgoing scattering function type ii
+REAL(dp), PARAMETER     :: coc = 2.d0 * ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**3 * hbar * cvel )
+REAL(dp)                :: cxct          ! coc*t**6
+REAL(dp)                :: cxc           ! cxc/egrid**2
+REAL(dp)                 :: fexp          ! exponential function
+REAL(dp)                :: hout0i        ! zero moment of outgoing scattering function type i
+REAL(dp)                :: hout0ii       ! zero moment of outgoing scattering function type ii
+REAL(dp)                :: hout1i        ! first moment of outgoing scattering function type i
+REAL(dp)                :: hout1ii       ! first moment of outgoing scattering function type ii
 
-REAL(double), DIMENSION(nez,nez) :: scate_0i  ! zero moment of electron scatering, type i
-REAL(double), DIMENSION(nez,nez) :: scate_0ii ! zero moment of electron scatering, type ii
-REAL(double), DIMENSION(nez,nez) :: scatp_0i  ! zero moment of positron scatering, type i
-REAL(double), DIMENSION(nez,nez) :: scatp_0ii ! zero moment of positron scatering, type ii
-REAL(double), DIMENSION(nez,nez) :: scate_1i  ! first moment of electron scatering, type i
-REAL(double), DIMENSION(nez,nez) :: scate_1ii ! first moment of electron scatering, type ii
-REAL(double), DIMENSION(nez,nez) :: scatp_1i  ! first moment of positron scatering, type i
-REAL(double), DIMENSION(nez,nez) :: scatp_1ii ! first moment of positron scatering, type ii
+REAL(dp), DIMENSION(nez,nez) :: scate_0i  ! zero moment of electron scatering, type i
+REAL(dp), DIMENSION(nez,nez) :: scate_0ii ! zero moment of electron scatering, type ii
+REAL(dp), DIMENSION(nez,nez) :: scatp_0i  ! zero moment of positron scatering, type i
+REAL(dp), DIMENSION(nez,nez) :: scatp_0ii ! zero moment of positron scatering, type ii
+REAL(dp), DIMENSION(nez,nez) :: scate_1i  ! first moment of electron scatering, type i
+REAL(dp), DIMENSION(nez,nez) :: scate_1ii ! first moment of electron scatering, type ii
+REAL(dp), DIMENSION(nez,nez) :: scatp_1i  ! first moment of positron scatering, type i
+REAL(dp), DIMENSION(nez,nez) :: scatp_1ii ! first moment of positron scatering, type ii
 
 EXTERNAL fexp
 !--------------------------------------------------------------------

@@ -24,10 +24,10 @@ SUBROUTINE gquad( nquad, x, wt, ndim )
 !  wt             : integration weights
 !
 !    Mudules used: 
-!  kind_module
+!  wlKindModule
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 
 IMPLICIT NONE
 
@@ -42,9 +42,9 @@ INTEGER, INTENT(IN)            :: ndim         ! physical dimenisons of x and wt
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(OUT), DIMENSION(ndim)                              &
+REAL(dp), INTENT(OUT), DIMENSION(ndim)                              &
 &                              :: x            ! quadrature points
-REAL(double), INTENT(OUT), DIMENSION(ndim)                              &
+REAL(dp), INTENT(OUT), DIMENSION(ndim)                              &
 &                              :: wt           ! quadrature weights
 
 !-----------------------------------------------------------------------

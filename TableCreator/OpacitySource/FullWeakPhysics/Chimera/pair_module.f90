@@ -5,7 +5,7 @@
 
 MODULE pair_module
 
-USE kind_module
+USE wlKindModule
 USE numerical_module, ONLY : zero
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, pi
 
@@ -17,8 +17,8 @@ USE physcnst_module, ONLY: Gw, mp, hbar, cvel, pi
 
 INTEGER, PARAMETER                                         :: nnud=4
 
-REAL(KIND=double), DIMENSION(nnud)                         :: cpair1
-REAL(KIND=double), DIMENSION(nnud)                         :: cpair2
+REAL(dp), DIMENSION(nnud)                         :: cpair1
+REAL(dp), DIMENSION(nnud)                         :: cpair2
 
 !-----------------------------------------------------------------------
 !   Gauss-Legendre parameters for Pairs
@@ -30,8 +30,8 @@ REAL(KIND=double), DIMENSION(nnud)                         :: cpair2
 
 INTEGER, PARAMETER                                         :: nleg = 24
 
-REAL(KIND=double), DIMENSION(nleg)                         :: xe
-REAL(KIND=double), DIMENSION(nleg)                         :: wte
+REAL(dp), DIMENSION(nleg)                         :: xe
+REAL(dp), DIMENSION(nleg)                         :: wte
 
 !-----------------------------------------------------------------------
 !   Constants for paircal
@@ -40,8 +40,8 @@ REAL(KIND=double), DIMENSION(nleg)                         :: wte
 ! coef     : combination of physical constants
 !-----------------------------------------------------------------------
 
-REAL(KIND=double)    :: g2 = ( Gw/mp**2 )**2 * hbar**2 * cvel**3 ! cm3/MeV2 s
-REAL(KIND=double)    :: coef = 2.d0 * pi * ( 1.d0/cvel ) * ( 1.d0/( 2.d0 * pi * hbar * cvel ) )**3 &
+REAL(dp)    :: g2 = ( Gw/mp**2 )**2 * hbar**2 * cvel**3 ! cm3/MeV2 s
+REAL(dp)    :: coef = 2.d0 * pi * ( 1.d0/cvel ) * ( 1.d0/( 2.d0 * pi * hbar * cvel ) )**3 &
                                * ( Gw/mp**2 )**2 * hbar**2 * cvel**3 / pi
 
 

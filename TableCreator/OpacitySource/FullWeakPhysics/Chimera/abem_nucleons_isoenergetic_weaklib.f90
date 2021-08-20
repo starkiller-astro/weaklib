@@ -50,7 +50,7 @@ SUBROUTINE abem_nucleons_isoenergetic_weaklib &
 !
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: &
       zero, one, epsilon, pi
 USE physcnst_module, ONLY: &
@@ -65,27 +65,27 @@ IMPLICIT none
 INTEGER, INTENT(in)          :: n             ! neutrino flavor index
 INTEGER, INTENT(in)          :: nez           ! number of energy groups
 
-REAL(double), DIMENSION(nez), INTENT(in) :: e_in
+REAL(dp), DIMENSION(nez), INTENT(in) :: e_in
                             ! zone centered incoming neutrino energy [MeV]
-REAL(double), INTENT(in)    :: rho           ! density (g/cm^3)
-REAL(double), INTENT(in)    :: t             ! temperature [K]
-REAL(double), INTENT(in)    :: ye            ! electron fraction
-REAL(double), INTENT(in)    :: xneut         ! free neutron mass fraction
-REAL(double), INTENT(in)    :: xprot         ! free proton mass fraction
-REAL(double), INTENT(in)    :: xh            ! heavy nuclei mass fraction
-REAL(double), INTENT(in)    :: ah            ! heavy nuclei mass number
-REAL(double), INTENT(in)    :: zh            ! heavy nuclei charge number
-REAL(double), INTENT(in)    :: cmpn          ! neutron chemical porential
-REAL(double), INTENT(in)    :: cmpp          ! proton chemical porential
-REAL(double), INTENT(in)    :: cmpe          ! electron chemical porential
+REAL(dp), INTENT(in)    :: rho           ! density (g/cm^3)
+REAL(dp), INTENT(in)    :: t             ! temperature [K]
+REAL(dp), INTENT(in)    :: ye            ! electron fraction
+REAL(dp), INTENT(in)    :: xneut         ! free neutron mass fraction
+REAL(dp), INTENT(in)    :: xprot         ! free proton mass fraction
+REAL(dp), INTENT(in)    :: xh            ! heavy nuclei mass fraction
+REAL(dp), INTENT(in)    :: ah            ! heavy nuclei mass number
+REAL(dp), INTENT(in)    :: zh            ! heavy nuclei charge number
+REAL(dp), INTENT(in)    :: cmpn          ! neutron chemical porential
+REAL(dp), INTENT(in)    :: cmpp          ! proton chemical porential
+REAL(dp), INTENT(in)    :: cmpe          ! electron chemical porential
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), DIMENSION(nez), INTENT(out) :: absornp
+REAL(dp), DIMENSION(nez), INTENT(out) :: absornp
                  ! inverse mean free path for absorption on free nucleons
-REAL(double), DIMENSION(nez), INTENT(out) :: emitnp
+REAL(dp), DIMENSION(nez), INTENT(out) :: emitnp
                  ! inverse mean free path for emission from free nucleons
 
 !-----------------------------------------------------------------------
@@ -98,34 +98,34 @@ INTEGER                     :: k             ! energy group index
 
 LOGICAL                     :: i_abemetanp
 
-REAL(double)                :: xneutp        ! free neutron mass fraction
-REAL(double)                :: xprotp        ! free proton mass fraction
-REAL(double)                :: xhe           ! helium mass fraction
-REAL(double)                :: yep           ! electron fraction
+REAL(dp)                :: xneutp        ! free neutron mass fraction
+REAL(dp)                :: xprotp        ! free proton mass fraction
+REAL(dp)                :: xhe           ! helium mass fraction
+REAL(dp)                :: yep           ! electron fraction
 
-REAL(double)                :: tmev          ! temperature [MeV]
-REAL(double)                :: m_trgt_i      ! mass of the initial target particle [MeV]
-REAL(double)                :: m_trgt_f      ! mass of the final target particle [MeV]
-REAL(double)                :: m_lep         ! mass of the final lepton [MeV]
-REAL(double)                :: cmp_trgt_i    ! chemical potential of the initial target particle [MeV]
-REAL(double)                :: cmp_trgt_f    ! chemical potential of the transformed target particle [MeV]
-REAL(double)                :: cmp_lep       ! chemcal potential of the secondary lepton [MeV]
-REAL(double)                :: ab_r0_nu      ! zero moment of he inverse mean free path for neutrino absorption on free neutrons
-REAL(double)                :: ab_r1_nu      ! first moment of he inverse mean free path for neutrino absorption on free neutrons
-REAL(double)                :: e_out_e       ! mean energy of the emitted electron
-REAL(double)                :: ab_r0_nub     ! zero moment of he inverse mean free path for antineutrino absorption on free protons
-REAL(double)                :: ab_r1_nub     ! first moment of he inverse mean free path for antineutrino absorption on free protons
-REAL(double)                :: e_out_p       ! mean energy of the emitted positron
-REAL(double)                :: etam          ! - ( e_in + dmnp + cmpn - cmpp - cmpe )/tmev
-REAL(double)                :: etap          ! - ( e_in + cmpp + cmpe - dmnp - cmpn )/tmev
+REAL(dp)                :: tmev          ! temperature [MeV]
+REAL(dp)                :: m_trgt_i      ! mass of the initial target particle [MeV]
+REAL(dp)                :: m_trgt_f      ! mass of the final target particle [MeV]
+REAL(dp)                :: m_lep         ! mass of the final lepton [MeV]
+REAL(dp)                :: cmp_trgt_i    ! chemical potential of the initial target particle [MeV]
+REAL(dp)                :: cmp_trgt_f    ! chemical potential of the transformed target particle [MeV]
+REAL(dp)                :: cmp_lep       ! chemcal potential of the secondary lepton [MeV]
+REAL(dp)                :: ab_r0_nu      ! zero moment of he inverse mean free path for neutrino absorption on free neutrons
+REAL(dp)                :: ab_r1_nu      ! first moment of he inverse mean free path for neutrino absorption on free neutrons
+REAL(dp)                :: e_out_e       ! mean energy of the emitted electron
+REAL(dp)                :: ab_r0_nub     ! zero moment of he inverse mean free path for antineutrino absorption on free protons
+REAL(dp)                :: ab_r1_nub     ! first moment of he inverse mean free path for antineutrino absorption on free protons
+REAL(dp)                :: e_out_p       ! mean energy of the emitted positron
+REAL(dp)                :: etam          ! - ( e_in + dmnp + cmpn - cmpp - cmpe )/tmev
+REAL(dp)                :: etap          ! - ( e_in + cmpp + cmpe - dmnp - cmpn )/tmev
 
-REAL(double)                :: xi_n_wm       ! weak magnetism correction for antineutrino absorption on neutrons
-REAL(double)                :: xib_p_wm      ! weak magnetism correction for antineutrino-proton scattering
+REAL(dp)                :: xi_n_wm       ! weak magnetism correction for antineutrino absorption on neutrons
+REAL(dp)                :: xib_p_wm      ! weak magnetism correction for antineutrino-proton scattering
 
-REAL(double), PARAMETER     :: x_min = 1.d-30 ! minimum mass fraction fraction
-REAL(double), PARAMETER     :: rho_etanp = 1.d+10 ! minimum density to comopute approximate nucleon blocking factors
+REAL(dp), PARAMETER     :: x_min = 1.d-30 ! minimum mass fraction fraction
+REAL(dp), PARAMETER     :: rho_etanp = 1.d+10 ! minimum density to comopute approximate nucleon blocking factors
 
-REAL(double)                :: fexp
+REAL(dp)                :: fexp
 
 EXTERNAL fexp
 

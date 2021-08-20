@@ -35,7 +35,7 @@ SUBROUTINE nu_N_absr_momts( enu_in, tmev, m_trgt_i, m_trgt_f, m_lep, &
 !      cc_difcs
 !
 !    Include files:
-!  kind_module
+!  wlKindModule
 !  numerical_module
 !  physcnst_module
 !
@@ -43,7 +43,7 @@ SUBROUTINE nu_N_absr_momts( enu_in, tmev, m_trgt_i, m_trgt_f, m_lep, &
 !
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, half, one, epsilon
 USE physcnst_module, ONLY: cvel, gv, ga
 
@@ -55,60 +55,60 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(in)    :: enu_in        ! incoming neutrino energy
-REAL(double), INTENT(in)    :: tmev          ! temperature [MeV]
-REAL(double), INTENT(in)    :: m_trgt_i      ! mass of the initial target particle [MeV]
-REAL(double), INTENT(in)    :: m_trgt_f      ! mass of the final target particle [MeV]
-REAL(double), INTENT(in)    :: m_lep         ! mass of the final lepton [MeV]
-REAL(double), INTENT(in)    :: cmp_trgt_i    ! chemical potential of the initial target particle [MeV]
-REAL(double), INTENT(in)    :: cmp_trgt_f    ! chemical potential of the transformed target particle [MeV]
-REAL(double), INTENT(in)    :: cmp_lep       ! chemcal potential of the secondary lepton [MeV]
+REAL(dp), INTENT(in)    :: enu_in        ! incoming neutrino energy
+REAL(dp), INTENT(in)    :: tmev          ! temperature [MeV]
+REAL(dp), INTENT(in)    :: m_trgt_i      ! mass of the initial target particle [MeV]
+REAL(dp), INTENT(in)    :: m_trgt_f      ! mass of the final target particle [MeV]
+REAL(dp), INTENT(in)    :: m_lep         ! mass of the final lepton [MeV]
+REAL(dp), INTENT(in)    :: cmp_trgt_i    ! chemical potential of the initial target particle [MeV]
+REAL(dp), INTENT(in)    :: cmp_trgt_f    ! chemical potential of the transformed target particle [MeV]
+REAL(dp), INTENT(in)    :: cmp_lep       ! chemcal potential of the secondary lepton [MeV]
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(out)   :: ab_r0         ! zero angular moment of the inverse absorption mean free path (cm^{-1})
-REAL(double), INTENT(out)   :: ab_r1         ! first angular moment of the inverse absorption mean free path (cm^{-1})
-REAL(double), INTENT(out)   :: e_out         ! mean energy of the emitted lepton
+REAL(dp), INTENT(out)   :: ab_r0         ! zero angular moment of the inverse absorption mean free path (cm^{-1})
+REAL(dp), INTENT(out)   :: ab_r1         ! first angular moment of the inverse absorption mean free path (cm^{-1})
+REAL(dp), INTENT(out)   :: e_out         ! mean energy of the emitted lepton
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-REAL(double), PARAMETER     :: m_cm = 1.d-2  ! meters/cm
-REAL(double)                :: m_trgt_i2     ! m_trgt_i^{2}
-REAL(double)                :: m_trgt_f2     ! m_trgt_f^{2}
-REAL(double)                :: m_lep2        ! m_lep/cm^{2}
-REAL(double)                :: dm_trgt       ! m_trgt_i - m_trgt_f
-REAL(double)                :: dm_trgtp      ! - dm_trgt
+REAL(dp), PARAMETER     :: m_cm = 1.d-2  ! meters/cm
+REAL(dp)                :: m_trgt_i2     ! m_trgt_i^{2}
+REAL(dp)                :: m_trgt_f2     ! m_trgt_f^{2}
+REAL(dp)                :: m_lep2        ! m_lep/cm^{2}
+REAL(dp)                :: dm_trgt       ! m_trgt_i - m_trgt_f
+REAL(dp)                :: dm_trgtp      ! - dm_trgt
 
 INTEGER                     :: i_a           ! summation index of angular Gauss-Lagendre quadrature
-REAL(double)                :: xu_a          ! upper limit of lepton angular quadrature
-REAL(double)                :: xl_a          ! lower limit of lepton angular quadrature
-REAL(double)                :: mid_a         ! midpoint of lepton angular quadrature
-REAL(double)                :: width_a       ! half-width of lepton angular quadrature
-REAL(double)                :: c_a           ! scaled points of angular quadrature
-REAL(double)                :: costh         ! points of angular quadrature
+REAL(dp)                :: xu_a          ! upper limit of lepton angular quadrature
+REAL(dp)                :: xl_a          ! lower limit of lepton angular quadrature
+REAL(dp)                :: mid_a         ! midpoint of lepton angular quadrature
+REAL(dp)                :: width_a       ! half-width of lepton angular quadrature
+REAL(dp)                :: c_a           ! scaled points of angular quadrature
+REAL(dp)                :: costh         ! points of angular quadrature
 
-REAL(double)                :: ab_r0_e       ! zero moment of the neutrino absorption inverse mean free path per angle
-REAL(double)                :: ab_r1_e       ! first moment of the neutrino absorption inverse mean free path per angle
-REAL(double)                :: e_out_e       ! parameter to estimate energy quadrature widths per angle
+REAL(dp)                :: ab_r0_e       ! zero moment of the neutrino absorption inverse mean free path per angle
+REAL(dp)                :: ab_r1_e       ! first moment of the neutrino absorption inverse mean free path per angle
+REAL(dp)                :: e_out_e       ! parameter to estimate energy quadrature widths per angle
 
-REAL(double), PARAMETER     :: mult = 10.d0  ! boundary multiplier
-REAL(double)                :: t_m           ! paremeter of the energy limits
-REAL(double)                :: prin          ! paremeter of the energy limits
-REAL(double)                :: radical       ! paremeter of the energy limits
+REAL(dp), PARAMETER     :: mult = 10.d0  ! boundary multiplier
+REAL(dp)                :: t_m           ! paremeter of the energy limits
+REAL(dp)                :: prin          ! paremeter of the energy limits
+REAL(dp)                :: radical       ! paremeter of the energy limits
 
 INTEGER                     :: i_e           ! summation index of ouitgoing lepton energy Gauss-Lagendre quadrature
-REAL(double)                :: xu_e          ! upper limit of lepton energy quadrature
-REAL(double)                :: xl_e          ! lower limit of lepton energy quadrature
-REAL(double)                :: mid_e         ! midpoint of lepton energy quadrature
-REAL(double)                :: width_e       ! half-width of lepton energy quadrature
-REAL(double)                :: c_e           ! scaled points of energy quadrature
-REAL(double)                :: e_lep_f       ! energy quadrature points
+REAL(dp)                :: xu_e          ! upper limit of lepton energy quadrature
+REAL(dp)                :: xl_e          ! lower limit of lepton energy quadrature
+REAL(dp)                :: mid_e         ! midpoint of lepton energy quadrature
+REAL(dp)                :: width_e       ! half-width of lepton energy quadrature
+REAL(dp)                :: c_e           ! scaled points of energy quadrature
+REAL(dp)                :: e_lep_f       ! energy quadrature points
 
-REAL(double)                :: absr_eomega   ! absorption cross section per unit energy and solid angle
+REAL(dp)                :: absr_eomega   ! absorption cross section per unit energy and solid angle
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -124,7 +124,7 @@ dm_trgt            = m_trgt_i - m_trgt_f
 dm_trgtp           = - dm_trgt
 
 !-----------------------------------------------------------------------
-!  Initialize for double (angle and energy) integration
+!  Initialize for dp (angle and energy) integration
 !-----------------------------------------------------------------------
 
 ab_r0              = zero

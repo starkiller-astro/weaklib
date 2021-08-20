@@ -54,8 +54,8 @@ SUBROUTINE abemrgn_weaklib &
 !  emit          : emission inverse mean free path (/cm)!
 !--------------------------------------------------------------------
 
-USE kind_module, ONLY: &
-      double
+USE wlKindModule, ONLY: &
+      dp
 USE numerical_module, ONLY: &
       zero, one, epsilon
 USE physcnst_module, ONLY: &
@@ -72,19 +72,19 @@ IMPLICIT NONE
 INTEGER, INTENT(in)          :: n       ! neutrino flavor index
 INTEGER, INTENT(in)          :: nez     ! number of energy groups
 
-REAL(double), DIMENSION(nez), INTENT(in) :: e_in 
+REAL(dp), DIMENSION(nez), INTENT(in) :: e_in 
                       ! zone centered incoming neutrino energy [MeV]
-REAL(double), INTENT(in)    :: rho      ! density (g/cm^3)
-REAL(double), INTENT(in)    :: t        ! temperature [K]
-REAL(double), INTENT(in)    :: ye       ! electron fraction
-REAL(double), INTENT(in)    :: xneut    ! free neutron mass fraction
-REAL(double), INTENT(in)    :: xprot    ! free proton mass fraction
-REAL(double), INTENT(in)    :: xh       ! heavy nuclei mass fraction
-REAL(double), INTENT(in)    :: ah       ! heavy nuclei mass number
-REAL(double), INTENT(in)    :: zh       ! heavy nuclei charge number
-REAL(double), INTENT(in)    :: cmpn     ! neutron chemical porential
-REAL(double), INTENT(in)    :: cmpp     ! proton chemical porential
-REAL(double), INTENT(in)    :: cmpe     ! electron chemical porential
+REAL(dp), INTENT(in)    :: rho      ! density (g/cm^3)
+REAL(dp), INTENT(in)    :: t        ! temperature [K]
+REAL(dp), INTENT(in)    :: ye       ! electron fraction
+REAL(dp), INTENT(in)    :: xneut    ! free neutron mass fraction
+REAL(dp), INTENT(in)    :: xprot    ! free proton mass fraction
+REAL(dp), INTENT(in)    :: xh       ! heavy nuclei mass fraction
+REAL(dp), INTENT(in)    :: ah       ! heavy nuclei mass number
+REAL(dp), INTENT(in)    :: zh       ! heavy nuclei charge number
+REAL(dp), INTENT(in)    :: cmpn     ! neutron chemical porential
+REAL(dp), INTENT(in)    :: cmpp     ! proton chemical porential
+REAL(dp), INTENT(in)    :: cmpe     ! electron chemical porential
 
 INTEGER, INTENT(in)         :: EmAb_nucleons_isoenergetic   ! Flag to calculate isoenergetic EmAb on free nucleons 
                                                             ! using Bruenn85
@@ -97,15 +97,15 @@ INTEGER, INTENT(in)         :: EmAb_nucleons_weak_magnetism ! Flag to include we
 !        Output variables.
 !--------------------------------------------------------------------
 
-REAL(double), DIMENSION(nez), INTENT(out) :: absor 
+REAL(dp), DIMENSION(nez), INTENT(out) :: absor 
                       ! inverse mean free path for absorption
-REAL(double), DIMENSION(nez), INTENT(out) :: emit 
+REAL(dp), DIMENSION(nez), INTENT(out) :: emit 
                       ! inverse mean free path for emission 
 
 !--------------------------------------------------------------------
 !        Local variables
 !--------------------------------------------------------------------
-REAL(double), DIMENSION(nez)  :: ab_nucleons, ab_nuclei, em_nucleons, em_nuclei
+REAL(dp), DIMENSION(nez)  :: ab_nucleons, ab_nuclei, em_nucleons, em_nuclei
 
 !--------------------------------------------------------------------
 !  n-neutrino - free nucleon absorption and emission inverse mean

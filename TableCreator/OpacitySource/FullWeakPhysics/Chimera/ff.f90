@@ -14,7 +14,7 @@ FUNCTION ff( x ,y )
 !
 !----------------------------------------------------------------------c
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: one
 
 IMPLICIT NONE
@@ -23,20 +23,20 @@ IMPLICIT NONE
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(IN)  :: x               ! function argument
-REAL(KIND=double), INTENT(IN)  :: y               ! function argument
+REAL(dp), INTENT(IN)  :: x               ! function argument
+REAL(dp), INTENT(IN)  :: y               ! function argument
 
 !-----------------------------------------------------------------------
 !        Output variables
 !-----------------------------------------------------------------------
 
-REAL(KIND=double)              :: ff              ! declare function
+REAL(dp)              :: ff              ! declare function
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-REAL(KIND=double)              :: fexp            ! exponential
+REAL(dp)              :: fexp            ! exponential
 
 EXTERNAL fexp
 

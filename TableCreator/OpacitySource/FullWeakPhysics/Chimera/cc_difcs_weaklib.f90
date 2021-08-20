@@ -20,7 +20,7 @@
 !           dimensions of MeV^-1 m^-1
 !-------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: &
       zero, one, epsilon, pi
 !USE physcnst_module, ONLY: &
@@ -28,18 +28,18 @@ USE numerical_module, ONLY: &
 
       Implicit none
 
-      real(double) :: e,ep,costh,fwqt,qo,qu2,q,T,s,dm,gv,ga
-      real(double) :: forfac,mun,mup,mue,muh,efac,beta
-      real(double), parameter :: pi2=9.8696044d0
-      real(double), parameter :: G2= 6.79d-10
+      real(dp) :: e,ep,costh,fwqt,qo,qu2,q,T,s,dm,gv,ga
+      real(dp) :: forfac,mun,mup,mue,muh,efac,beta
+      real(dp), parameter :: pi2=9.8696044d0
+      real(dp), parameter :: G2= 6.79d-10
 !
 !                 G2 in MeV^-5 * m^-1
 !
 
-      real(double) eminus,l,u,z,arg1,arg2,pd,fd
-      real(double) I0, I1, I2, uli1, uli2, uli3, bli1, bli2, bli3
-      real(double) zi1, zi2, zi3, I2U, I2D, impl, impt, impa, impva
-      real(double) r1, r2, r3, A, B, C
+      real(dp) eminus,l,u,z,arg1,arg2,pd,fd
+      real(dp) I0, I1, I2, uli1, uli2, uli3, bli1, bli2, bli3
+      real(dp) zi1, zi2, zi3, I2U, I2D, impl, impt, impa, impva
+      real(dp) r1, r2, r3, A, B, C
 
 !------------------------------
 !--      KINEMATICAL FACTORS
@@ -168,7 +168,7 @@ USE numerical_module, ONLY: &
 SUBROUTINE POLYLOG(x,pl1,pl2,pl3)
 !--------------------------------------------------
   use polylog_module_weaklib
-  USE kind_module, ONLY: double
+  USE wlKindModule, ONLY: dp
   USE numerical_module, ONLY: &
         zero, one, epsilon, pi
   !USE physcnst_module, ONLY: &
@@ -176,9 +176,9 @@ SUBROUTINE POLYLOG(x,pl1,pl2,pl3)
 
   implicit none
 
-  real(double) :: x,pl1,pl2,pl3
+  real(dp) :: x,pl1,pl2,pl3
   integer j
-  real(double) :: pi2,arg,a,b
+  real(dp) :: pi2,arg,a,b
   parameter (pi2=9.8696044d0)
 
   pl1 = x+dlog(1.d0+dexp(-x))

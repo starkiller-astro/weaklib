@@ -36,7 +36,7 @@ SUBROUTINE etaxx( rho, t, xn, xp, etann, etapp )
 !        none
 !
 !    Include files:
-!  kind_module
+!  wlKindModule
 !  numerical_module
 !  physcnst_module
 !
@@ -44,7 +44,7 @@ SUBROUTINE etaxx( rho, t, xn, xp, etann, etapp )
 !
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, pi
 USE physcnst_module, ONLY: rmu, hbarc, mn, mp, kmev
 
@@ -56,32 +56,32 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(IN)    :: rho           ! density (g/cm3)
-REAL(double), INTENT(IN)    :: t             ! temperature [K]
-REAL(double), INTENT(IN)    :: xn            ! neutron mass fraction
-REAL(double), INTENT(IN)    :: xp            ! proton mass fraction
+REAL(dp), INTENT(IN)    :: rho           ! density (g/cm3)
+REAL(dp), INTENT(IN)    :: t             ! temperature [K]
+REAL(dp), INTENT(IN)    :: xn            ! neutron mass fraction
+REAL(dp), INTENT(IN)    :: xp            ! proton mass fraction
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(OUT)   :: etann         ! neutron number corrected for blocking
-REAL(double), INTENT(OUT)   :: etapp         ! proton number corrected for blocking
+REAL(dp), INTENT(OUT)   :: etann         ! neutron number corrected for blocking
+REAL(dp), INTENT(OUT)   :: etapp         ! proton number corrected for blocking
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-REAL(double)                :: nn            ! neutron number uncorrected for blocking (cm^{-3})
-REAL(double)                :: np            ! proton number uncorrected for blocking (cm^{-3})
-REAL(double)                :: dn            ! neutron number uncorrected for blocking (fm^{-3})
-REAL(double)                :: dp            ! proton number uncorrected for blocking (fm^{-3})
-REAL(double)                :: efn           ! degenerate expression
-REAL(double)                :: efp           ! degenerate expression
-REAL(double)                :: etanndgnt     ! nondegenerate expression
-REAL(double)                :: etappdgnt     ! nondegenerate expression
+REAL(dp)                :: nn            ! neutron number uncorrected for blocking (cm^{-3})
+REAL(dp)                :: np            ! proton number uncorrected for blocking (cm^{-3})
+REAL(dp)                :: dn            ! neutron number uncorrected for blocking (fm^{-3})
+REAL(dp)                :: d_p            ! proton number uncorrected for blocking (fm^{-3})
+REAL(dp)                :: efn           ! degenerate expression
+REAL(dp)                :: efp           ! degenerate expression
+REAL(dp)                :: etanndgnt     ! nondegenerate expression
+REAL(dp)                :: etappdgnt     ! nondegenerate expression
 
-REAL(double), PARAMETER     :: tthird = 2.d0/3.d0
+REAL(dp), PARAMETER     :: tthird = 2.d0/3.d0
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -111,9 +111,9 @@ IF ( ietann == 0  .or.  nn <= zero  .or.  np <= zero ) RETURN
 !-----------------------------------------------------------------------
 
 dn                 = nn * 1.d-39
-dp                 = np * 1.d-39
-efn                = ( hbarc**2/( 2.d+00 * mn ) ) * ( 3.d+00 * pi**2 * dn )**tthird
-efp                = ( hbarc**2/( 2.d+00 * mp ) ) * ( 3.d+00 * pi**2 * dp )**tthird
+d_p                = np * 1.d-39
+efn                = ( hbarc**2/( 2.d+00 * mn ) ) * ( 3.d+00 * pi**2 * dn  )**tthird
+efp                = ( hbarc**2/( 2.d+00 * mp ) ) * ( 3.d+00 * pi**2 * d_p )**tthird
 etanndgnt          = 1.5d+00 * ( kmev * t/efn )
 etappdgnt          = 1.5d+00 * ( kmev * t/efp )
 etann              = nn * etanndgnt/DSQRT( 1.d+00 + etanndgnt**2 )

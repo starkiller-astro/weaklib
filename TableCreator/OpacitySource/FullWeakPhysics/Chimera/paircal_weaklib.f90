@@ -51,7 +51,7 @@ SUBROUTINE paircal_weaklib &
 !
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, one
 USE physcnst_module, ONLY: kmev
 
@@ -64,29 +64,29 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(in)    :: enu           ! zone centered neutrino energy [MeV]
-REAL(KIND=double), INTENT(in)    :: enubar        ! zone centered antineutrino energy [MeV]
-REAL(KIND=double), INTENT(in)    :: cmpe          ! electron chemical potential [MeV]
-REAL(KIND=double), INTENT(in)    :: t             ! temperature [K]
+REAL(dp), INTENT(in)    :: enu           ! zone centered neutrino energy [MeV]
+REAL(dp), INTENT(in)    :: enubar        ! zone centered antineutrino energy [MeV]
+REAL(dp), INTENT(in)    :: cmpe          ! electron chemical potential [MeV]
+REAL(dp), INTENT(in)    :: t             ! temperature [K]
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(out)   :: j0i           ! zero moment of the "i" pair annihilation kernal
-REAL(KIND=double), INTENT(out)   :: j0ii          ! zero moment of the "ii" pair annihilation kernal
-REAL(KIND=double), INTENT(out)   :: j1i           ! first moment of the "i" pair annihilation kernal
-REAL(KIND=double), INTENT(out)   :: j1ii          ! first moment of the "ii" pair annihilation kernal
+REAL(dp), INTENT(out)   :: j0i           ! zero moment of the "i" pair annihilation kernal
+REAL(dp), INTENT(out)   :: j0ii          ! zero moment of the "ii" pair annihilation kernal
+REAL(dp), INTENT(out)   :: j1i           ! first moment of the "i" pair annihilation kernal
+REAL(dp), INTENT(out)   :: j1ii          ! first moment of the "ii" pair annihilation kernal
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-REAL(KIND=double)                :: tmev          ! temperature [MeV]
-REAL(KIND=double)                :: eta           ! cmpe/tmev
-REAL(KIND=double)                :: beta          ! 1/tmev
+REAL(dp)                :: tmev          ! temperature [MeV]
+REAL(dp)                :: eta           ! cmpe/tmev
+REAL(dp)                :: beta          ! 1/tmev
 
-REAL(KIND=double)                :: fexp          ! exponential
+REAL(dp)                :: fexp          ! exponential
 
 EXTERNAL fexp
 

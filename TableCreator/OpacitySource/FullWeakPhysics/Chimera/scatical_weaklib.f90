@@ -34,7 +34,7 @@ SUBROUTINE scatical_weaklib &
 !  
 !-------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, half, twothd, one, epsilon, pi
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, cv, ga, rmu
 
@@ -46,132 +46,132 @@ IMPLICIT NONE
 
 INTEGER,      INTENT(in)     :: n       ! neutrino flavor index
 INTEGER,      INTENT(in)     :: nez     ! number of energy groups
-REAL(double), INTENT(in)     :: rho     ! density [g cm^{-3}]
-REAL(double), INTENT(in)     :: t       ! temperature [K]
-REAL(double), INTENT(in)     :: xn      ! neutron mass fraction
-REAL(double), INTENT(in)     :: xp      ! proton mass fraction
-REAL(double), INTENT(in)     :: xhe     ! helium mass fraction
-REAL(double), INTENT(in)     :: xh      ! heavy nucleus mass fraction
-REAL(double), INTENT(in)     :: ah      ! heavy nucleus mass number
-REAL(double), INTENT(in)     :: zh      ! heavy nucleus charge number
-REAL(double), DIMENSION(nez), INTENT(in) :: egrid 
+REAL(dp), INTENT(in)     :: rho     ! density [g cm^{-3}]
+REAL(dp), INTENT(in)     :: t       ! temperature [K]
+REAL(dp), INTENT(in)     :: xn      ! neutron mass fraction
+REAL(dp), INTENT(in)     :: xp      ! proton mass fraction
+REAL(dp), INTENT(in)     :: xhe     ! helium mass fraction
+REAL(dp), INTENT(in)     :: xh      ! heavy nucleus mass fraction
+REAL(dp), INTENT(in)     :: ah      ! heavy nucleus mass number
+REAL(dp), INTENT(in)     :: zh      ! heavy nucleus charge number
+REAL(dp), DIMENSION(nez), INTENT(in) :: egrid 
                                         ! neutrino energy grid[MeV] 
 
 !--------------------------------------------------------------------
 !        Output variables.
 !--------------------------------------------------------------------
 
-REAL(double), INTENT(out), DIMENSION(nez,2) :: cok 
+REAL(dp), INTENT(out), DIMENSION(nez,2) :: cok 
                                   ! legendre coefs scattering kernel
                                   !  cok(:,1) - zeroth
                                   !  cok(:,2) - first
 !--------------------------------------------------------------------
 !        Local variables
 !--------------------------------------------------------------------
-REAL(double), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6 ! (C40)
-REAL(double), PARAMETER      :: cc = ( 2.d0 * pi )/( cvel * ( 2.d0 * pi * hbar * cvel )**3 ) * ( 4.d0 * pi ) * g2
+REAL(dp), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6 ! (C40)
+REAL(dp), PARAMETER      :: cc = ( 2.d0 * pi )/( cvel * ( 2.d0 * pi * hbar * cvel )**3 ) * ( 4.d0 * pi ) * g2
                              ! 0.5 * 4*pi/(c*c(hc)**3) * 4*pi*g2
 
-REAL(double), PARAMETER      :: hvp =  one - cv     ! (C31)
+REAL(dp), PARAMETER      :: hvp =  one - cv     ! (C31)
                              ! proton vector coupling constant
-REAL(double), PARAMETER      :: hap =  0.5d0 * ga   ! (C32)
+REAL(dp), PARAMETER      :: hap =  0.5d0 * ga   ! (C32)
                              ! proton axial vector coupling constant
-REAL(double), PARAMETER      :: hvn = -0.5d0        ! (C33)
+REAL(dp), PARAMETER      :: hvn = -0.5d0        ! (C33)
                              ! neutron vector coupling constant
-REAL(double), PARAMETER      :: han = -0.5d0 * ga   ! (C34)
+REAL(dp), PARAMETER      :: han = -0.5d0 * ga   ! (C34)
                              ! neutron axial vector coupling constant
-REAL(double), PARAMETER      :: cv0 =  half * ( hvp + hvn ) 
+REAL(dp), PARAMETER      :: cv0 =  half * ( hvp + hvn ) 
                              ! coupling constant
-REAL(double), PARAMETER      :: cv1 =  hvp - hvn      
+REAL(dp), PARAMETER      :: cv1 =  hvp - hvn      
                              ! coupling constant
 
-REAL(double), PARAMETER      :: ap0 =  hvp**2 + 3.d0 * hap**2 
+REAL(dp), PARAMETER      :: ap0 =  hvp**2 + 3.d0 * hap**2 
                              ! proton zero moment coupling constant
-REAL(double), PARAMETER      :: ap1 =  hvp**2 - hap**2   
+REAL(dp), PARAMETER      :: ap1 =  hvp**2 - hap**2   
                              ! proton first moment coupling constant
-REAL(double), PARAMETER      :: an0 =  hvn**2 + 3.d0 * han**2
+REAL(dp), PARAMETER      :: an0 =  hvn**2 + 3.d0 * han**2
                              ! neutron zero moment coupling constant
-REAL(double), PARAMETER      :: an1 =  hvn**2 - han**2    
+REAL(dp), PARAMETER      :: an1 =  hvn**2 - han**2    
                              ! neutron first moment coupling constant
 
-REAL(double)                 :: eeche        
+REAL(dp)                 :: eeche        
                              ! helium opacity calculation
-REAL(double)                 :: eche          
+REAL(dp)                 :: eche          
                              ! helium opacity calculation
-REAL(double)                 :: eche2         
+REAL(dp)                 :: eche2         
                              ! helium opacity calculation
-REAL(double)                 :: eche3         
+REAL(dp)                 :: eche3         
                              ! helium opacity calculation
-REAL(double)                 :: b0he          
+REAL(dp)                 :: b0he          
                              ! helium opacity calculation
-REAL(double)                 :: saghe         
+REAL(dp)                 :: saghe         
                              ! helium opacity calculation
-REAL(double)                 :: sbghe         
+REAL(dp)                 :: sbghe         
                              ! helium opacity calculation
 
-REAL(double)                 :: eec           
+REAL(dp)                 :: eec           
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: ec            
+REAL(dp)                 :: ec            
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: ec2           
+REAL(dp)                 :: ec2           
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: ec3          
+REAL(dp)                 :: ec3          
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: b0h           
+REAL(dp)                 :: b0h           
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: sag           
+REAL(dp)                 :: sag           
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: sbg           
+REAL(dp)                 :: sbg           
                              ! heavy nucleus opacity calculation
-REAL(double)                 :: xnh          
+REAL(dp)                 :: xnh          
                              ! heavy nucleus opacity calculation
 
-REAL(double)                 :: aisov         
+REAL(dp)                 :: aisov         
                              ! vector coupling constant
-REAL(double), PARAMETER      :: aisosc = cv0  
+REAL(dp), PARAMETER      :: aisosc = cv0  
                              ! vector coupling constant
-REAL(double), PARAMETER      :: a01 = cv0 * cv0 
+REAL(dp), PARAMETER      :: a01 = cv0 * cv0 
                              ! vector coupling constant
-REAL(double)                 :: a02           
+REAL(dp)                 :: a02           
                              ! coupling constant
-REAL(double)                 :: e2            
+REAL(dp)                 :: e2            
                              ! neutrino energy squared
-REAL(double)                 :: etann         
+REAL(dp)                 :: etann         
                              ! neutron number corrected for blocking
-REAL(double)                 :: xnn           
+REAL(dp)                 :: xnn           
                              ! neutron number corrected for blocking
-REAL(double)                 :: etapp         
+REAL(dp)                 :: etapp         
                              ! proton number corrected for blocking
-REAL(double)                 :: xnp           ! proton number corrected for blocking
-REAL(double)                 :: xnhe          ! helium number
-REAL(double)                 :: xheaa         ! heavy nucleus number * a_he^2
-REAL(double)                 :: xhaa          ! heavy nucleus number * ah^2
+REAL(dp)                 :: xnp           ! proton number corrected for blocking
+REAL(dp)                 :: xnhe          ! helium number
+REAL(dp)                 :: xheaa         ! heavy nucleus number * a_he^2
+REAL(dp)                 :: xhaa          ! heavy nucleus number * ah^2
 
-REAL(double)                 :: ciicr         ! ion-ion correlation correction
+REAL(dp)                 :: ciicr         ! ion-ion correlation correction
 
-REAL(double), DIMENSION(nez) :: xi_p_wm       ! weak magnetism correction for neutrino-proton scattering
-REAL(double), DIMENSION(nez) :: xi_n_wm       ! weak magnetism correction for neutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: xib_p_wm      ! weak magnetism correction for antineutrino-proton scattering
-REAL(double), DIMENSION(nez) :: xib_n_wm      ! weak magnetism correction for antineutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: xi_p_wm       ! weak magnetism correction for neutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: xi_n_wm       ! weak magnetism correction for neutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: xib_p_wm      ! weak magnetism correction for antineutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: xib_n_wm      ! weak magnetism correction for antineutrino-neutron scattering
 
-REAL(double), DIMENSION(nez) :: rmdnns   ! mfp^-1 for neutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: rmdnns0  ! mfp^-1 for neutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: rmdnns1  ! mfp^-1 for neutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: rmdnps   ! mfp^-1 for neutrino-proton scattering
-REAL(double), DIMENSION(nez) :: rmdnps0  ! mfp^-1 for neutrino-proton scattering
-REAL(double), DIMENSION(nez) :: rmdnps1  ! mfp^-1 for neutrino-proton scattering
-REAL(double), DIMENSION(nez) :: rmdnbns  ! mfp^-1 for antineutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: rmdnbns0 ! mfp^-1 for antineutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: rmdnbns1 ! mfp^-1 for antineutrino-neutron scattering
-REAL(double), DIMENSION(nez) :: rmdnbps  ! mfp^-1 for antineutrino-proton scattering
-REAL(double), DIMENSION(nez) :: rmdnbps0 ! mfp^-1 for antineutrino-proton scattering
-REAL(double), DIMENSION(nez) :: rmdnbps1 ! mfp^-1 for antineutrino-proton scattering
-REAL(double), DIMENSION(nez) :: rmdnhes  ! mfp^-1 for neutrino-helium scattering
-REAL(double), DIMENSION(nez) :: rmdnhes0 ! mfp^-1 for neutrino-helium scattering
-REAL(double), DIMENSION(nez) :: rmdnhes1 ! mfp^-1 for neutrino-helium scattering
-REAL(double), DIMENSION(nez) :: rmdnhs   ! mfp^-1 for neutrino-heavy nucleus scattering
-REAL(double), DIMENSION(nez) :: rmdnhs0  ! mfp^-1 for neutrino-heavy nucleus scattering
-REAL(double), DIMENSION(nez) :: rmdnhs1  ! mfp^-1 for neutrino-heavy nucleus scattering
+REAL(dp), DIMENSION(nez) :: rmdnns   ! mfp^-1 for neutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: rmdnns0  ! mfp^-1 for neutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: rmdnns1  ! mfp^-1 for neutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: rmdnps   ! mfp^-1 for neutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: rmdnps0  ! mfp^-1 for neutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: rmdnps1  ! mfp^-1 for neutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: rmdnbns  ! mfp^-1 for antineutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: rmdnbns0 ! mfp^-1 for antineutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: rmdnbns1 ! mfp^-1 for antineutrino-neutron scattering
+REAL(dp), DIMENSION(nez) :: rmdnbps  ! mfp^-1 for antineutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: rmdnbps0 ! mfp^-1 for antineutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: rmdnbps1 ! mfp^-1 for antineutrino-proton scattering
+REAL(dp), DIMENSION(nez) :: rmdnhes  ! mfp^-1 for neutrino-helium scattering
+REAL(dp), DIMENSION(nez) :: rmdnhes0 ! mfp^-1 for neutrino-helium scattering
+REAL(dp), DIMENSION(nez) :: rmdnhes1 ! mfp^-1 for neutrino-helium scattering
+REAL(dp), DIMENSION(nez) :: rmdnhs   ! mfp^-1 for neutrino-heavy nucleus scattering
+REAL(dp), DIMENSION(nez) :: rmdnhs0  ! mfp^-1 for neutrino-heavy nucleus scattering
+REAL(dp), DIMENSION(nez) :: rmdnhs1  ! mfp^-1 for neutrino-heavy nucleus scattering
 
 INTEGER                           :: k             ! energy loop counter
 INTEGER                           :: nezl          ! local energy loop extent (nez or nez+nezext)
