@@ -496,7 +496,8 @@ PRINT*, 'Filling OpacityTable ...'
 
              IF(EmAb_nucleons_weak_magnetism .gt. 0) THEN
 
-                 CALL cc_weak_mag_weaklib(OpacityTable % EnergyGrid % Values, xi_n_wm, xib_p_wm, nPointsE)
+                 CALL cc_weak_mag_weaklib( OpacityTable % EnergyGrid % Values, &
+                                           xi_n_wm, xib_p_wm, nPointsE )
 
                  IF (i_r .eq. 1) THEN !electron neutrino weak mag correction
 
@@ -520,7 +521,12 @@ PRINT*, 'Filling OpacityTable ...'
 
              ENDIF
 
-             IF(EmAb_nuclei_FFN .gt. 0) THEN
+             IF(EmAb_nuclei_FFN .gt. 0 .and. i_r .eq. 1) THEN
+
+               CALL abem_nuclei_FFN_weaklib( OpacityTable % EnergyGrid % Values, &
+                                             rho, T, xheavy, A, Z, chem_n, chem_p, &
+                                             chem_e, ab_nuclei_FFN, em_nuclei_FFN, &
+                                             nPointsE )
 
              ENDIF
 

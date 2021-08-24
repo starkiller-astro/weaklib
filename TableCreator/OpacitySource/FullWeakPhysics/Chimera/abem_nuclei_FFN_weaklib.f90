@@ -1,6 +1,13 @@
-SUBROUTINE abemnc_weaklib( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  &
-& absrnc, emitnc )
+!SUBROUTINE abem_nuclei_FFN_weaklib( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  &
+!& absrnc, emitnc, nse )
+SUBROUTINE abem_nuclei_FFN_weaklib( e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  &
+& absrnc, emitnc, nez )
 !-----------------------------------------------------------------------
+!
+!    Author:       S. W. Bruenn, Dept of Physics, FAU,
+!                  Boca Raton, FL 33431-0991
+!
+!    Date:         8/15/93
 !
 !    Purpose:
 !      To computes the inverse mean free path for the absorption of e-type neutrinos
@@ -17,7 +24,8 @@ SUBROUTINE abemnc_weaklib( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  
 !  n           : neutrino type (1, e-neutrino; 2, e-antineutrino; 3, t-neutrino)
 !  nez         : number of energy groups
 !  e_in        : neutrino energy [MeV]
-!  rho         : matter density [g cm^{-3}]!  t           : matter temperature [K]
+!  rho         : matter density [g cm^{-3}]
+!  t           : matter temperature [K]
 !  xh          : heavy nuclei mass fraction
 !  ah          : heavy nuclei mass number
 !  zh          : heavy nuclei charge number
@@ -27,22 +35,16 @@ SUBROUTINE abemnc_weaklib( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  
 !                 between the exitation energy of daughter and parent nucleus [MeV]
 !
 !    Output arguments:
-!  absrnc      : absorption inverse mean free path on nuclei (/cm)
-!  emitnc      : emission inverse mean free path on nuclei (/cm)
-!
-!    Modules used:
-!  wlKindModule
-!  numerical_module
-!  physcnst_module
-!
-!  prb_cntl_module
+!  absrnc      : absorption inverse mean free path (/cm)
+!  emitnc      : emission inverse mean free path (/cm)
 !
 !-----------------------------------------------------------------------
 
-USE wlKindModule
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, one, epsilon, pi
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, ga, kmev, me, dmnp, rmu
 
+!USE math_functions_module, ONLY: fexp
 USE prb_cntl_module, ONLY: iaence, edmpe
 
 IMPLICIT none
@@ -51,8 +53,9 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-INTEGER, INTENT(IN)         :: n             ! neutrino flavor index
+!INTEGER, INTENT(IN)         :: n             ! neutrino flavor index
 INTEGER, INTENT(IN)         :: nez           ! number of energy groups
+!INTEGER, INTENT(IN)         :: nse           ! NSE flag
 
 REAL(dp), INTENT(in), DIMENSION(nez) :: e_in ! zone centered incoming neutrino energy [MeV]
 REAL(dp), INTENT(in)    :: rho           ! density (g/cm^3)
@@ -91,8 +94,9 @@ REAL(dp)                :: eta           ! (eelec - cmpe)/tmev
 REAL(dp)                :: F_e           ! electron occupation number
 REAL(dp)                :: tmev          ! temperature [MeV]
 REAL(dp)                :: etam          ! ( e_in + dmnp + cmpn - cmpp - cmpe )/tmev
-REAL(dp), EXTERNAL      :: fexp          ! exponential function
 REAL(dp), PARAMETER     :: maxeta = 4.d1 ! limit where 1/(1+e(x)) = e^-x (ln(1e16))
+
+REAL(dp), EXTERNAL      :: fexp
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -101,11 +105,11 @@ REAL(dp), PARAMETER     :: maxeta = 4.d1 ! limit where 1/(1+e(x)) = e^-x (ln(1e1
 !  Set rates to zero and return if iaence = 0 or if n ne 1
 !-----------------------------------------------------------------------
 
-IF ( iaence == 0  .or.  n /= 1 ) THEN
-  emitnc           = zero
-  absrnc           = zero
-  RETURN
-END IF ! iaence == 0  .or.  n /= 1 .or. nse == 0
+!IF ( iaence == 0  .or.  n /= 1 .or. nse == 0 ) THEN
+!  emitnc           = zero
+!  absrnc           = zero
+!  RETURN
+!END IF ! iaence == 0  .or.  n /= 1 .or. nse == 0
 
 !-----------------------------------------------------------------------
 !  Compute coefn, the number of neutron holes
@@ -187,4 +191,4 @@ DO k = 1, nez
 END DO ! k = 1,nez
 
 RETURN
-END SUBROUTINE abemnc_weaklib
+END SUBROUTINE abem_nuclei_FFN_weaklib
