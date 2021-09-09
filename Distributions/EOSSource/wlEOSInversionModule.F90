@@ -160,6 +160,8 @@ CONTAINS
 
     CHARACTER(64) :: ErrorString(00:13)
 
+    IF( Error > 13 ) STOP 'ERROR in EOSInversionError flag'
+
     ErrorString(00) = 'Returned Successfully'
     ErrorString(01) = 'First Argument (D) Outside Table Bounds'
     ErrorString(02) = 'Second Argument (E, P, or S) Outside Table Bounds'
@@ -390,6 +392,7 @@ CONTAINS
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
     ! -------------------------------------------------------------------
+    Error = 0
 
     LogD = LOG10( D )
 
