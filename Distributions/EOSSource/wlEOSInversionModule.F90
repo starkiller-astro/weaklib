@@ -223,7 +223,7 @@ CONTAINS
     ! -------------------------------------------------------------------
 
     T = 0.0_dp
-    Error = CheckInputError( D, X, Y, MinX, MaxX )
+    Error = 0
 
     LogD = LOG10( D )
 
@@ -392,7 +392,7 @@ CONTAINS
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
     ! -------------------------------------------------------------------
-    Error = CheckInputError( D, X, Y, MinX, MaxX )
+    Error = 0
 
     LogD = LOG10( D )
 
@@ -559,7 +559,6 @@ CONTAINS
 
     T = 0.0_dp
     Error = CheckInputError( D, E, Y, MinE, MaxE )
-
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_Guess &
              ( D, E, Y, Ds, Ts, Ys, Es, Os, T, T_Guess, Error )
@@ -588,7 +587,6 @@ CONTAINS
 
     T = 0.0_dp
     Error = CheckInputError( D, E, Y, MinE, MaxE )
-
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_NoGuess &
              ( D, E, Y, Ds, Ts, Ys, Es, Os, T, Error )
@@ -658,7 +656,6 @@ CONTAINS
 
     T = 0.0_dp
     Error = CheckInputError( D, P, Y, MinP, MaxP )
-
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_Guess &
              ( D, P, Y, Ds, Ts, Ys, Ps, Os, T, T_Guess, Error )
@@ -687,7 +684,6 @@ CONTAINS
 
     T = 0.0_dp
     Error = CheckInputError( D, P, Y, MinP, MaxP )
-
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_NoGuess &
              ( D, P, Y, Ds, Ts, Ys, Ps, Os, T, Error )
@@ -757,7 +753,6 @@ CONTAINS
 
     T = 0.0_dp
     Error = CheckInputError( D, S, Y, MinS, MaxS )
-
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_Guess &
              ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, T_Guess, Error )
@@ -786,7 +781,6 @@ CONTAINS
 
     T = 0.0_dp
     Error = CheckInputError( D, S, Y, MinS, MaxS )
-
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXY_NoGuess &
              ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, Error )
