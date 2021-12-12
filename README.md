@@ -14,9 +14,7 @@ WeakLib is a code library for astrophysical applications. It provides preprocess
 
 ### Build Your Own Tables
 
-- #### [Build EoS Table](External/Utilities/EquationsOfState/BuildEoSTable.md)
-
-- #### [Build Opacity Table](External/Utilities/Opacities/BuildOpacityTable.md)
+- #### [Build Opacity Table](TableCreator/OpacitySource/BuildOpacityTable.md)
 
 
 ### Interpolate in WeakLib Opacity Tables
