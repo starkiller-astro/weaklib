@@ -128,6 +128,8 @@ CONTAINS
 
     IF ( .NOT. InversionInitialized ) THEN
       CheckInputError = 10
+    ELSE IF ( D /= D .OR. X /= X .OR. Y /= Y ) THEN
+      CheckInputError = 11
     ELSE IF ( D < MinD .OR. D > MaxD ) THEN
       CheckInputError = 01
 #if EOS_DEBUG
@@ -167,6 +169,7 @@ CONTAINS
     ErrorString(02) = 'Second Argument (E, P, or S) Outside Table Bounds'
     ErrorString(03) = 'Third Argument (Y) Outside Table Bounds'
     ErrorString(10) = 'EOS Inversion Not Initialized'
+    ErrorString(11) = 'NAN in Argument(s)'
     ErrorString(13) = 'Unable to Find Any Root'
 
     WRITE(*,*)
