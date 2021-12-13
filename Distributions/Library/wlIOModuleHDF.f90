@@ -31,7 +31,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadNumberVariablesHDF
   PUBLIC ReadHDF
   PUBLIC WriteHDF
-  PUBLIC WriteAttributeHDF_string
+  PUBLIC WriteDatasetAttributeHDF_string
 
   INTERFACE ReadHDF
     MODULE PROCEDURE Read1dHDF_double
@@ -563,8 +563,8 @@ CONTAINS
 
   END SUBROUTINE Read1dHDF_string
 
-  SUBROUTINE WriteAttributeHDF_string( dset_name, attr_name, attr_data, group_id, & 
-               desc_option, unit_option)
+  SUBROUTINE WriteDatasetAttributeHDF_string( dset_name, attr_name, &
+              attr_data, group_id, desc_option, unit_option)
 
     CHARACTER(*), INTENT(in)                    :: dset_name
     CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
@@ -605,7 +605,7 @@ CONTAINS
 
     CALL h5sclose_f(aspace_id, hdferr)
 
-  END SUBROUTINE WriteAttributeHDF_string
+  END SUBROUTINE WriteDatasetAttributeHDF_string
   
   SUBROUTINE WriteThermoStateHDF( TS, group_id )
 

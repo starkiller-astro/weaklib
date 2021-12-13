@@ -20,30 +20,30 @@ MODULE wlOpacityTableIOModuleHDF
 !        needs to be added for future use.
 !-----------------------------------------------------------------------
 
-  USE wlKindModule, ONLY:         &
+  USE wlKindModule, ONLY:            &
     dp
-  USE wlGridModule, ONLY:         &
+  USE wlGridModule, ONLY:            &
     GridType
-  USE wlOpacityTableModule, ONLY: &
-    OpacityTableType,             &
+  USE wlOpacityTableModule, ONLY:    &
+    OpacityTableType,                &
     AllocateOpacityTable
-  USE wlOpacityFieldsModule, ONLY:&
-    OpacityTypeEmAb,              &
+  USE wlOpacityFieldsModule, ONLY:   &
+    OpacityTypeEmAb,                 &
     OpacityTypeScat
-  USE wlIOModuleHDF, ONLY:        &
-    ReadHDF,                      &
-    WriteHDF,                     &
-    WriteAttributeHDF_string,    &
-    OpenFileHDF,                  &
-    CloseFileHDF,                 &
-    OpenGroupHDF,                 &
-    CloseGroupHDF,                &
-    WriteThermoStateHDF,          &
+  USE wlIOModuleHDF, ONLY:           &
+    ReadHDF,                         &
+    WriteHDF,                        &
+    WriteDatasetAttributeHDF_string, &
+    OpenFileHDF,                     &
+    CloseFileHDF,                    &
+    OpenGroupHDF,                    &
+    CloseGroupHDF,                   &
+    WriteThermoStateHDF,             &
     ReadThermoStateHDF
   USE wlEquationOfStateTableModule
-  USE wlThermoStateModule, ONLY:  &
-    ThermoStateType, &
-    AllocateThermoState, &
+  USE wlThermoStateModule, ONLY:     &
+    ThermoStateType,                 &
+    AllocateThermoState,             &
     DeAllocateThermoState
   USE HDF5
 
@@ -168,7 +168,7 @@ CONTAINS
 
             DO ii = 1, OpacityTable % Scat_Iso % nOpacities
 
-              CALL WriteAttributeHDF_string(OpacityTable % Scat_Iso % Names (ii), &
+              CALL WriteDatasetAttributeHDF_string(OpacityTable % Scat_Iso % Names (ii), &
                                             "Opacity description", tempString, group_id) 
 
             ENDDO
@@ -213,7 +213,7 @@ CONTAINS
 
             DO ii = 1, OpacityTable % Scat_NES % nOpacities
 
-              CALL WriteAttributeHDF_string(OpacityTable % Scat_NES % Names (ii), &
+              CALL WriteDatasetAttributeHDF_string(OpacityTable % Scat_NES % Names (ii), &
                                             "Opacity description", tempString, group_id) 
 
             ENDDO
@@ -251,7 +251,7 @@ CONTAINS
 
             DO ii = 1, OpacityTable % Scat_Pair % nOpacities
 
-              CALL WriteAttributeHDF_string(OpacityTable % Scat_Pair % Names (ii), &
+              CALL WriteDatasetAttributeHDF_string(OpacityTable % Scat_Pair % Names (ii), &
                                             "Opacity description", tempString, group_id) 
 
             ENDDO
@@ -290,7 +290,7 @@ CONTAINS
 
           DO ii = 1, OpacityTable % Scat_Brem % nOpacities
 
-            CALL WriteAttributeHDF_string(OpacityTable % Scat_Brem % Names (ii), &
+            CALL WriteDatasetAttributeHDF_string(OpacityTable % Scat_Brem % Names (ii), &
                                           "Opacity description", tempString, group_id) 
 
           ENDDO
@@ -392,7 +392,7 @@ CONTAINS
           tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
           tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
 
-          CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nucleons", tempString, group_id) 
+          CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nucleons", tempString, group_id) 
 
         END BLOCK
 
@@ -409,7 +409,7 @@ CONTAINS
         tempString(3) = "Only used for rho > 1e9"
         tempString(4) = "https://ui.adsabs.harvard.edu/link_gateway/1998PhRvD..58a3009R/doi:10.1103/PhysRevD.58.013009"
 
-        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb recoil corrections", tempString, group_id) 
+        CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb recoil corrections", tempString, group_id) 
 
         END BLOCK
 
@@ -424,7 +424,7 @@ CONTAINS
         tempString(1) = "Weak magnetism corrections for EmAb on free nucleons, Horowitz (1997)"
         tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
 
-        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb weak magnetism corrections", tempString, group_id) 
+        CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb weak magnetism corrections", tempString, group_id) 
 
         END BLOCK
 
@@ -439,7 +439,7 @@ CONTAINS
         tempString(1) = "Full kinematics rates for EmAb on free nucleons, Fischer et al (2020)"
         tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
 
-        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb full kinematics", tempString, group_id) 
+        CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb full kinematics", tempString, group_id) 
 
         END BLOCK
 
@@ -454,7 +454,8 @@ CONTAINS
         tempString(1) = "Full kinematics rates for inverse neutron decay, Fischer et al (2020)"
         tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
 
-        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "Inverse neutron decay full kinematics", tempString, group_id) 
+        CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "Inverse neutron decay full kinematics", &
+              tempString, group_id) 
 
         END BLOCK
 
@@ -470,7 +471,7 @@ CONTAINS
         tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1982ApJ...252..715F/doi:10.1086/159597"
         tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
 
-        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nuclei", tempString, group_id) 
+        CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nuclei", tempString, group_id) 
 
         END BLOCK
 
@@ -486,7 +487,7 @@ CONTAINS
         tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..90x1102L/doi:10.1103/PhysRevLett.90.241102"
         tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..91t1102H/doi:10.1103/PhysRevLett.91.201102"
 
-        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nuclei", tempString, group_id) 
+        CALL WriteDatasetAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nuclei", tempString, group_id) 
 
         END BLOCK
 
