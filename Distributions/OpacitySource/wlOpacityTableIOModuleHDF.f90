@@ -156,6 +156,25 @@ CONTAINS
         CALL OpenGroupHDF &
                ( "Scat_Iso_Kernels", .true., file_id, group_id )
         CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Iso, group_id )
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+            INTEGER                          :: ii
+
+            tempString(1) = "Opacity from isoenergetic scattering, Bruenn and Mezzacappa (1997), Horowitz 1997"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..56.7529B/doi:10.1103/PhysRevD.56.7529"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
+
+            DO ii = 1, OpacityTable % Scat_Iso % nOpacities
+
+              CALL WriteAttributeHDF_string(OpacityTable % Scat_Iso % Names (ii), &
+                                            "Opacity description", tempString, group_id) 
+
+            ENDDO
+
+          END BLOCK
+
         CALL CloseGroupHDF( group_id )
 
       END IF
