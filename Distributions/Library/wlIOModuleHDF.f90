@@ -6,6 +6,10 @@ MODULE wlIOModuleHDF
 
   USE HDF5 
 
+  USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
+
   IMPLICIT NONE
   PRIVATE
 
@@ -27,6 +31,7 @@ MODULE wlIOModuleHDF
   PUBLIC ReadNumberVariablesHDF
   PUBLIC ReadHDF
   PUBLIC WriteHDF
+  PUBLIC WriteAttributeHDF_string
 
   INTERFACE ReadHDF
     MODULE PROCEDURE Read1dHDF_double
@@ -557,6 +562,50 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Read1dHDF_string
+
+  SUBROUTINE WriteAttributeHDF_string( dset_name, attr_name, attr_data, group_id, & 
+               desc_option, unit_option)
+
+    CHARACTER(*), INTENT(in)                    :: dset_name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+    INTEGER(HID_T)                              :: group_id
+    CHARACTER(len=*), INTENT(in) :: attr_name
+    CHARACTER(len=*), DIMENSION(:), INTENT(in) :: attr_data
+   
+    INTEGER(HSIZE_T)                            :: sizechar
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(HID_T)                              :: aspace_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims
+    INTEGER                                     :: arank = 1
+
+    adims = (/size(attr_data)/)
+
+    attr_len = len(attr_data(1))
+
+    CALL h5dopen_f( group_id, dset_name, dataset_id, hdferr )
+
+    CALL h5screate_simple_f( arank, adims, aspace_id, hdferr )
+
+    CALL h5tcopy_f( H5T_NATIVE_CHARACTER, atype_id, hdferr )
+
+    CALL h5tset_size_f( atype_id, attr_len, hdferr )
+
+    CALL h5acreate_f( dataset_id, attr_name, atype_id, aspace_id, &
+                      attr_id, hdferr )
+
+    CALL h5awrite_f( attr_id, atype_id, attr_data, &
+                     adims, hdferr )
+
+    CALL h5aclose_f( attr_id, hdferr ) 
+
+    CALL h5sclose_f(aspace_id, hdferr)
+
+  END SUBROUTINE WriteAttributeHDF_string
   
   SUBROUTINE WriteThermoStateHDF( TS, group_id )
 

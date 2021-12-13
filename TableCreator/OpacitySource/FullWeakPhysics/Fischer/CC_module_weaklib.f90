@@ -1,6 +1,19 @@
 MODULE CC_module_weaklib
 
   USE wlKindModule, ONLY: dp
+  
+  USE HDF5
+  USE wlIOModuleHDF
+  USE wlEOSIOModuleHDF
+  USE wlInterpolationUtilitiesModule, ONLY: &
+    GetIndexAndDelta_Lin, &
+    GetIndexAndDelta_Log, &
+    LinearInterp_Array_Point
+  
+ 
+  USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
 
   implicit none
 
@@ -18,9 +31,450 @@ MODULE CC_module_weaklib
 
    real(dp), parameter :: Tfac=100.0d0,Tfac2=100.0d0
 
+   real(dp), parameter :: Q = 1.2935d0
+
    integer:: anti,opt0
 
   CONTAINS
+
+
+
+  SUBROUTINE Get_LS220_UnUp(D, T, Y, Un, Up)
+
+    USE el_eos_module, ONLY: EPRESS, EU, ES
+    USE eos_m4c_module, ONLY: PTOT, UTOT, STOT, XNUT, XPROT, XH, MUN, &
+        MUPROT, A, X, GAM_S, BUNUC, VNOUT, VPOUT
+    USE wlExtPhysicalConstantsModule, ONLY: dmnp, kmev, rmu, cm3fm3, ergmev, &
+        asig
+    USE e_p_eos_module
+
+    implicit none
+
+    real(dp), dimension(:), intent(in)        :: D, T, Y
+    real(dp), dimension(:,:,:), intent(inout) :: Un, Up
+
+    real(dp), parameter     :: kfm = cm3fm3/rmu    ! ( # nucleons/gram )( cm3/fm3 )
+    real(dp), parameter     :: kp  = ergmev/cm3fm3 ! ( erg/cm3 ) / ( mev/fm3 )
+    real(dp), parameter     :: ku  = ergmev/rmu    ! ( # nucleons/gram )( erg/mev )
+    real(dp), parameter     :: UTOT0 = 8.9d0       ! change in the zero of energy [MeV]
+    real(dp), parameter     :: me = 0.510998d+00   ! electron mass [MeV
+
+    !loop indices
+    integer :: ii, jj, kk
+
+    !original table size
+    integer :: nD, nT, nY
+
+    integer                 :: iflag       ! LS input type flag
+    integer                 :: eosflg      ! LS output EoS type flag
+    integer                 :: forflg      ! LS EoS forcing flag
+    integer                 :: sf          ! eos success flag
+    integer                 :: ieos        ! eos counter
+
+    real(dp), dimension(4)  :: inpvar      ! input variables for LS EoS
+
+    real(dp)                :: pe          ! raw electron pressure [dynes cm^{-2}]
+    real(dp)                :: ee          ! raw electron energy [ergs cm^{-3}]
+    real(dp)                :: entrop_e    ! entropy of electron/photon gas
+    real(dp)                :: yeplus      ! positron fraction [unused]
+    real(dp)                :: rel         ! relativity parameter [unused]
+    real(dp)                :: tmev        ! temperature [MeV]
+    real(dp)                :: brydns      ! LS input baryon density [fm^-3]
+
+    real(dp)                :: xprev       ! LS input protron fraction
+    real(dp)                :: pprev       ! previous value of proton density
+    real(dp)                :: t_old       ! old value of temperature
+
+    real(dp) :: ye_loc
+
+    character(len=3)        :: LScompress
+    character(len=128)      :: LSFilePath
+
+    iflag     = 1
+    forflg    = 0
+    sf        = 1
+
+    nD = size(D)
+    nT = size(T)
+    nY = size(Y)
+
+    LScompress = '220'
+    LSFilePath = '../../../Old/LS/Data/'
+
+write(*,*) 5.2d-08 / kfm
+write(*,*) 1d-12 / kfm
+
+
+    CALL wlExtInitializeEOS( LSFilePath, LScompress )
+
+    do ii = nD, nD
+      do jj = nT, nT
+        do kk = 45, 45
+
+          brydns    = 11.937766417144367d0 !D(ii) * kfm
+
+          tmev      = 181.97008586099830d0 !T(jj) * kmev
+ 
+          t_old     = tmev
+
+          ye_loc    = 3.0d-2
+ 
+          pprev     = ye_loc * brydns !Y(kk) * brydns
+  
+          inpvar(1) = tmev
+          inpvar(2) = 0.155d0
+          inpvar(3) = -15.d0
+          inpvar(4) = -10.d0
+
+!write(*,*) ii, jj, kk
+!write(*,*) D(ii), T(jj), Y(kk)
+!write(*,*) brydns, tmev, pprev, xprev
+!stop
+          CALL inveos( inpvar, t_old, ye_loc, brydns, iflag, eosflg, forflg, sf,    &
+               xprev, pprev )
+
+
+          if ( sf == 0 ) then
+write(*,*) 'Direct LS220 call failed at' ,ii ,jj ,kk   
+Write(*,*) D(ii), T(jj), Y(kk)
+          else
+write(*,*) 'Direct LS220 call succeedes at' ,ii ,jj ,kk   
+Write(*,*) D(ii), T(jj), Y(kk)
+write(*,*) brydns, tmev
+Write(*,*) VNOUT, VPOUT
+            Un(ii,jj,kk) = VNOUT
+            Up(ii,jj,kk) = VPOUT
+          end if
+
+         
+
+        end do
+      end do
+    end do
+
+write (*,*) 'Un', minval(Un), maxval(Un)
+write (*,*) 'Up', minval(Up), maxval(Up)
+
+  END SUBROUTINE Get_LS220_UnUp
+
+  SUBROUTINE Interp_UnUp(filename, D, T, Y, Un, Up, massn, massp, which_EOS)
+
+    character(len=*), intent(in)              :: filename 
+    real(dp), dimension(:), intent(in)        :: D, T, Y
+    real(dp), dimension(:,:,:), intent(inout) :: Un, Up
+    real(dp), dimension(:,:,:), intent(inout) :: massn, massp
+    integer, intent(in)                       :: which_EOS !1 for LS220, 2 for SFHo
+
+    !interpolation indices and deltas
+    integer :: iD, iT, iY
+    real(dp) :: dD, dT, dY
+
+    !loop indices
+    integer :: ii, jj, kk
+
+    !original table size
+    integer :: nD, nT, nY
+
+    !UnUp table size and data
+    integer :: nDs, nTs, nYs
+    real(dp), dimension(:), allocatable :: Ds, Ts, Ys
+    real(dp), dimension(:,:,:), allocatable :: Uns, Ups
+    real(dp), dimension(:,:,:), allocatable :: massns, massps
+
+    integer(HID_T) :: file_id
+    integer(HID_T) :: group_id
+    integer(HSIZE_T), dimension(1) :: datasize1d    
+    integer(HSIZE_T), dimension(3) :: datasize3d    
+
+    integer, dimension(3) :: table_dimensions
+   
+    real(dp), dimension(4) :: offsets
+
+    integer :: d_under, d_over, t_under, t_over
+
+    real(dp), parameter :: mp =  938.272046d0  !proton restmass
+    real(dp), parameter :: mn =  939.565379d0  !neutron restmass
+
+    massn = mn
+    massp = mp
+
+    nD = size(D)
+    nT = size(T)
+    nY = size(Y)
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+    CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+
+    datasize1d = size(table_dimensions)
+    if(which_EOS .eq. 1) then
+      CALL ReadHDF("Dimensions_ls220", table_dimensions(:), group_id, datasize1d )
+    else if (which_EOS .eq. 2) then
+      CALL ReadHDF("Dimensions_sfho", table_dimensions(:), group_id, datasize1d )
+    endif
+
+    nDs = table_dimensions(1)
+    nTs = table_dimensions(2)
+    nYs = table_dimensions(3) 
+
+    ALLOCATE(Ds (nDs))
+    ALLOCATE(Ts (nTs))
+    ALLOCATE(Ys (nYs))
+    ALLOCATE(Uns(nDs,nTs,nYs))
+    ALLOCATE(Ups(nDs,nTs,nYs))
+
+    if(which_EOS .eq. 2) then
+
+      ALLOCATE(massns(nDs,nTs,nYs))
+      ALLOCATE(massps(nDs,nTs,nYs))
+
+    endif
+
+    datasize1d = nDs
+    if(which_EOS .eq. 1) then
+      CALL ReadHDF("Density_ls220", Ds(:), group_id, datasize1d)
+    else if (which_EOS .eq. 2) then
+      CALL ReadHDF("Density_sfho", Ds(:), group_id, datasize1d)
+    endif
+
+    datasize1d = nTs
+    if(which_EOS .eq. 1) then
+      CALL ReadHDF("Temperature_ls220", Ts(:), group_id, datasize1d)
+    else if (which_EOS .eq. 2) then
+      CALL ReadHDF("Temperature_sfho", Ts(:), group_id, datasize1d)
+    endif
+    
+    datasize1d = nYs
+    if(which_EOS .eq. 1) then
+      CALL ReadHDF("Electron Fraction_ls220", Ys(:), group_id, datasize1d)
+    else if (which_EOS .eq. 2) then
+      CALL ReadHDF("Electron Fraction_sfho", Ys(:), group_id, datasize1d)
+    endif
+
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+
+    datasize1D = size(offsets)
+    if(which_EOS .eq. 1) then
+      CALL ReadHDF("Offsets_ls220", offsets(:), group_id, datasize1d )
+    else if (which_EOS .eq. 2) then
+      CALL ReadHDF("Offsets_sfho", offsets(:), group_id, datasize1d )
+    endif 
+
+    datasize3d = [nDs,nTs,nYs]
+    if(which_EOS .eq. 1) then
+      CALL READHDF("Un_ls220", Uns(:,:,:), group_id, datasize3d)
+      CALL READHDF("Up_ls220", Ups(:,:,:), group_id, datasize3d)
+    else if (which_EOS .eq. 2) then
+      CALL READHDF("Un_sfho", Uns(:,:,:), group_id, datasize3d)
+      CALL READHDF("Up_sfho", Ups(:,:,:), group_id, datasize3d)
+      CALL READHDF("massn_sfho", massns(:,:,:), group_id, datasize3d)
+      CALL READHDF("massp_sfho", massps(:,:,:), group_id, datasize3d)
+    endif
+
+    CALL CloseGroupHDF( group_id )
+
+    CALL CloseFileHDF( file_id )
+
+write(*,*) 'min/max D', minval(D), maxval(D)
+write(*,*) 'min/max Ds', minval(Ds), maxval(Ds)
+
+write(*,*) 'min/max T', minval(T), maxval(T)
+write(*,*) 'min/max Ts', minval(Ts), maxval(Ts)
+
+write(*,*) 'min/max Y', minval(Y), maxval(Y)
+write(*,*) 'min/max Ys', minval(Ys), maxval(Ys)
+
+write (*,*) 'min/max Uns', minval(10**Uns)-offsets(1), maxval(10**Uns)-offsets(1)
+write (*,*) 'min/max Ups', minval(10**Ups)-offsets(2), maxval(10**Ups)-offsets(2)
+
+write (*,*) 'min/max Un', minval(Un), maxval(Un)
+write (*,*) 'min/max Up', minval(Up), maxval(Up)
+write (*,*) 'min/max massn', minval(massn), maxval(massn)
+write (*,*) 'min/max massp', minval(massp), maxval(massp)
+
+write(*,*) 'offsets', offsets(1), offsets(2)
+if(which_EOS .eq. 2) then
+  write(*,*) 'offsets', offsets(3), offsets(4)
+endif
+
+!write(*,*) nDs, nTs, nYs
+!write(*,*) nD, nT, nY
+
+d_under = 0
+d_over  = 0
+t_under = 0
+t_over  = 0
+
+    do ii = 1, nD
+      do jj = 1, nT
+        do kk = 1, nY
+ 
+          if(D(ii) .le. minval(Ds)) then
+            iD = 1
+            dD = LOG10( D(ii) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )     
+            d_under = d_under + 1
+          else if (D(ii) .ge. maxval(Ds)) then
+            iD = nDs-1
+            dD = LOG10( D(ii) / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )     
+            d_over = d_over + 1
+          else
+            CALL GetIndexAndDelta_Log( D(ii), Ds, iD, dD )
+          endif
+
+          if(T(jj) .le. minval(Ts)) then
+            iT = 1
+            dT = LOG10( T(jj) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )     
+            t_under = t_under + 1
+          else if (T(jj) .ge. maxval(Ts)) then
+            iT = nTs-1
+            dT = LOG10( T(jj) / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )     
+            t_over = t_over + 1
+          else
+            CALL GetIndexAndDelta_Log( T(jj), Ts, iT, dT )
+          endif
+
+          if(Y(kk) .le. minval(Ys)) then
+            iY = 1
+            dY = ( Y(kk) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+          else if (Y(kk) .ge. maxval(Ys)) then
+            iY = nYs-1
+            dY = ( Y(kk) - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+          else
+            CALL GetIndexAndDelta_Lin( Y(kk), Ys, iY, dY )
+          endif
+
+          CALL LinearInterp_Array_Point &
+               (iD, iT, iY, dD, dT, dY, offsets(1), Uns, Un(ii,jj,kk))
+  
+          CALL LinearInterp_Array_Point &
+               (iD, iT, iY, dD, dT, dY, offsets(2), Ups, Up(ii,jj,kk))
+
+          if(which_EOS .eq. 2) then
+            CALL LinearInterp_Array_Point &
+                 (iD, iT, iY, dD, dT, dY, offsets(3), massns, massn(ii,jj,kk))
+  
+            CALL LinearInterp_Array_Point &
+                 (iD, iT, iY, dD, dT, dY, offsets(4), massps, massp(ii,jj,kk))
+
+          endif
+
+        end do
+      end do
+    end do
+
+write (*,*) 'Un interp min/max', minval(Un), maxval(Un)
+write (*,*) 'Up interp min/max', minval(Up), maxval(Up)
+write (*,*) 'Un interp min/max loc', minloc(Un), maxloc(Un)
+write (*,*) 'Up interp min/max loc', minloc(Up), maxloc(Up)
+
+write (*,*) 'massn interp min/max', minval(massn), maxval(massn)
+write (*,*) 'massp interp min/max', minval(massp), maxval(massp)
+
+!stop
+  
+
+    DEALLOCATE(Ds)
+    DEALLOCATE(Ts)
+    DEALLOCATE(Ys)
+
+    DEALLOCATE(Uns)
+    DEALLOCATE(Ups)
+
+    if(which_EOS .eq. 2) then
+
+      DEALLOCATE(massns)
+      DEALLOCATE(massps)
+
+    endif
+
+  END SUBROUTINE Interp_UnUp
+
+  SUBROUTINE CC_EmAb(e_nu, xTem, m, cheme, chemn, chemp, &
+                     massn, massp, xUn, xUp,             &
+                     species, inv_n_decay, absor, emit,  &
+                     ab_inv_n_decay, em_inv_n_decay, nPointsE)
+
+  real(dp), intent(in) :: xTem, m, cheme, chemn, chemp, &
+                          massn, massp, xUn, xUp
+
+  integer, intent(in)  :: species, inv_n_decay, nPointsE
+
+  !process=1: v + n -> e- + p
+  !process=2: vb + p -> e+ + n
+  !process=3: vb + p + e- -> n
+
+  real(dp), dimension(nPointsE), intent(in) :: e_nu ! neutrino energy grid [MeV]
+
+  real(dp), dimension(nPointsE), intent(inout) :: absor, emit
+  real(dp), dimension(nPointsE), intent(inout) :: ab_inv_n_decay
+  real(dp), dimension(nPointsE), intent(inout) :: em_inv_n_decay
+
+  integer :: k
+  real(dp) :: op3, chemhat
+
+  chemhat = chemn-chemp
+
+  me   = m
+  Tem  = xTem
+
+  if(species .eq. 1) then
+
+    mue  = cheme
+    mn   = massn
+    mp   = massp
+    Un   = xUn
+    Up   = xUp
+    mun  = chemn
+    mup  = chemp
+    anti = 1
+    opt0 = 1
+write(*,*) 'hello there', Tem, species, inv_n_decay
+    do k = 1, nPointsE
+      call Integral_2D(e_nu(k),absor(k))
+      absor(k) = absor(k) / 1.0d2
+      write(*,*) e_nu(k), absor(k)
+      !detailed balance
+      emit(k) = absor(k) / (exp((e_nu(k)-cheme+chemhat+Q)/Tem))
+    end do
+
+  endif
+
+  if(species .eq. 2) then
+
+    if(inv_n_decay .eq. 1) then
+      mp   = massn
+      mn   = massp
+      Up   = xUn
+      Un   = xUp
+      mup  = chemn
+      mun  = chemp
+      anti = -1
+      opt0 = 3
+      do k = 1,nPointsE
+        call Integral_2D_D(e_nu(k),ab_inv_n_decay(k))
+        ab_inv_n_decay(k) = ab_inv_n_decay(k) / 1.0d2
+        !detailed balance
+        em_inv_n_decay(k) = ab_inv_n_decay(k) / &
+                            (exp((e_nu(k)+cheme-chemhat-Q)/Tem))
+      enddo
+
+    else
+      mue = -cheme
+      opt0 = 2
+      do k = 1, nPointsE
+        call Integral_2D(e_nu(k),absor(k))
+        absor(k) = absor(k) / 1.0d2
+        !detailed balance
+        emit(k)  = absor(k) / &
+                            (exp((e_nu(k)+cheme-chemhat-Q)/Tem))
+      enddo
+
+    endif
+  endif
+
+  END SUBROUTINE CC_EmAb
 
 
   SUBROUTINE Integral_2D(xEnu,res)   ! captures
@@ -49,6 +503,7 @@ MODULE CC_module_weaklib
     Enu = xEnu
     res = 0.0d0
     call Range_pn()
+    !write(*,*) '2D int pnmin pnmax', pnmin, pnmax
     if ( pnmin > pnmax ) goto 12
 
     En_min = sqrt(pnmin**2+mn**2) + Un
@@ -65,6 +520,7 @@ MODULE CC_module_weaklib
       call gaulegg( Ee_min,Ee_max,Eea,wEe,N2 )
       do j=1,N2
         xEe = Eea(j)
+!write(*,*) j, En, xEe
         xf3 = 1.0d0/( exp((xEe-mue)/Tem) + 1.0d0 )
         Ep = Enu+En-xEe
         call Calc_ampsq(En,xEe,xamp)
@@ -176,13 +632,25 @@ MODULE CC_module_weaklib
     E4f = E4 - U4
     E2f = E2 - U2
     P1 = E1
-    P3 = sqrt( E3**2 - m3**2 )
-    P2 = sqrt( (E2 - U2)**2 - m2f**2 )
-    P4 = sqrt( (E4 - U4)**2 - m4f**2 )
+    if(E3**2 .ge. m3**2) then
+      P3 = sqrt( E3**2 - m3**2 )
+    else
+      P3 = 0.0d0
+    endif
+    if((E2 - U2)**2 .ge. m2f**2) then
+      P2 = sqrt( (E2 - U2)**2 - m2f**2 )
+    else
+      P2 = 0.0d0
+    endif
+    if((E4 - U4)**2 .ge. m4f**2) then 
+      P4 = sqrt( (E4 - U4)**2 - m4f**2 )
+    else
+      P4 = 0.0d0
+    endif
 
-    if( P1 .ne. P1) pause 'hh1_a'
-    if( P2 .ne. P2) pause 'hh2_a'
-    if( P3 .ne. P3)then
+    if( P1 .ne. P1) write(*,*) 'nan in hh1_a'
+    if( P2 .ne. P2) write(*,*) 'nan in hh2_a'
+    if( P3 .ne. P3) then
    ! debug. TF
    !        write(*,*) 'hh3_a'
       P3 = 0.
@@ -433,7 +901,11 @@ MODULE CC_module_weaklib
      integer  :: i
 
      pnmin = 0.d0
-     pnmax = sqrt( (Tfac*Tem + mun - Un)**2 - mn**2 )
+     if((Tfac*Tem + mun - Un)**2 .ge. mn**2) then
+       pnmax = sqrt( (Tfac*Tem + mun - Un)**2 - mn**2 )
+     else 
+       pnmax = 0.0d0
+     endif
      pnmax0 = pnmax
 
      mpt = mp + me
@@ -537,14 +1009,26 @@ MODULE CC_module_weaklib
     E4f = E4 - U4
     E2f = E2 - U2
     P1 = E1
-    P3 = sqrt( E3**2 - m3**2 )
-    P2 = sqrt( (E2 - U2)**2 - m2f**2 )
-    P4 = sqrt( (E4 - U4)**2 - m4f**2 )
+    if(E3**2 .ge. m3**2) then
+      P3 = sqrt( E3**2 - m3**2 )
+    else
+      P3 = 0.0d0
+    endif
+    if((E2 - U2)**2 .ge. m2f**2) then
+      P2 = sqrt( (E2 - U2)**2 - m2f**2 )
+    else
+      P2 = 0.0d0
+    endif
+    if((E4 - U4)**2 .ge. m4f**2) then
+      P4 = sqrt( (E4 - U4)**2 - m4f**2 )
+    else
+      P4 = 0.0d0
+    endif
 
-    if( P1 .ne. P1) pause 'hh1_b'
-    if( P2 .ne. P2) pause 'hh2_b'
-    if( P3 .ne. P3) pause 'hh3_b'
-    if( P4 .ne. P4) pause 'hh4_b'
+    if( P1 .ne. P1) write(*,*) 'nan in hh1_b'
+    if( P2 .ne. P2) write(*,*) 'nan in hh2_b'
+    if( P3 .ne. P3) write(*,*) 'nan in hh3_b'
+    if( P4 .ne. P4) write(*,*) 'nan in hh4_b'
 
     if ((P1+P2)>(P3+P4)) then
       Pmax = P3+P4
@@ -784,10 +1268,18 @@ MODULE CC_module_weaklib
     real(dp) :: Lmax,Lmin,Hmin,Hmax,xq
 
     pnmin = 0.d0
-    ppmax = sqrt( (Tfac*Tem + mup - Up)**2 - mp**2 )
+    if((Tfac*Tem + mup - Up)**2 .ge. mp**2) then
+      ppmax = sqrt( (Tfac*Tem + mup - Up)**2 - mp**2 )
+    else
+      ppmax = 0.0d0
+    endif
     select case(opt0)
       case (3)  ! inverse decay
-        pnmax = sqrt( (Tfac*Tem + mun - Un)**2 - mn**2 )
+        if((Tfac*Tem + mun - Un)**2 .ge. mn**2) then
+          pnmax = sqrt( (Tfac*Tem + mun - Un)**2 - mn**2 )
+        else
+          pnmax = 0.0d0
+        endif
       case (4)  ! decay
         pnmin = sqrt( (max(mn,mun-Tfac*Tem-Un))**2 - mn**2 )
         pnmax = sqrt( (sqrt(ppmax**2+mp**2)+Up-Un)**2-mn**2 )

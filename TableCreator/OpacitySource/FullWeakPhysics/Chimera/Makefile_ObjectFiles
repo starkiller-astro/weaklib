@@ -52,5 +52,6 @@ ChimeraAB = \
  nu_N_absr_momts_weaklib.o \
  abem_nucleons_isoenergetic_weaklib.o \
  abem_nucleons_recoil_weaklib.o \
- abem_nuclei_FFN_weaklib.o
+ abem_nuclei_FFN_weaklib.o \
+ ec_module_weaklib.o
 

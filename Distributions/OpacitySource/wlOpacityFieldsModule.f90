@@ -53,6 +53,24 @@ MODULE wlOpacityFieldsModule
     INTEGER                         :: nPoints(4)
     CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
     CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
+    INTEGER                         :: nucleons_full_kinematics    !Fischer et al 2020 full kinematics rates for
+                                                                   !EmAb on free nucleons
+    INTEGER                         :: inv_n_decay_full_kinematics !Fischer et al 2020 full kinematics rates for
+                                                                   !inverse neutron decay
+    INTEGER                         :: nucleons_isoenergetic       !EmAb on free nucleons using isoenergetic approximation
+                                                                   !Bruenn 1985
+                                                                   !Mezzacappa & Bruenn (1993)
+    INTEGER                         :: nucleons_recoil             !EmAb on free nucleons taking into account recoil,
+                                                                   !nucleon final-state blocking, and special relativity
+                                                                   !Reddy et al 1998
+                                                                   !Only used for rho > 1e9
+    INTEGER                         :: nucleons_weak_magnetism     !Weak magnetism corrections for EmAb on free nucleons
+                                                                   !Horowitz 1997
+    INTEGER                         :: nuclei_FFN                  !EmAb on nuclei using FFN formalism
+                                                                   !Fuller, Fowler, Neuman 1982, Ap. J. 252, 715
+                                                                   !Bruenn 1985
+    INTEGER                         :: nuclei_Hix                  !EmAb on nuclei using NSE-folded tabular data
+                                                                   !Langanke et al. (2003), Hix et al. (2003)
     REAL(dp),           ALLOCATABLE :: Offsets(:)
     TYPE(ValueType_4D), ALLOCATABLE :: Opacity(:)
   END TYPE OpacityTypeEmAb
@@ -182,6 +200,14 @@ CONTAINS
       WRITE(*,'(A8,A12,ES12.4E3)') &
         ' ', 'Offset    = ', Opacity % Offsets(i)
     END DO
+
+    WRITE(*,*) 'EmAb on nucleons using full kinematics rates      ', Opacity % nucleons_full_kinematics
+    WRITE(*,*) 'inverse neutron decay using full kinematics rates ', Opacity % inv_n_decay_full_kinematics
+    WRITE(*,*) 'EmAb on nucleons, isoenergetic                    ', Opacity % nucleons_isoenergetic
+    WRITE(*,*) 'EmAb on nucleons, recoil corrections              ', Opacity % nucleons_recoil
+    WRITE(*,*) 'EmAb on nucleons, weak magnetism corrections      ', Opacity % nucleons_weak_magnetism
+    WRITE(*,*) 'EmAb on nuclei, FFN formalism                     ', Opacity % nuclei_FFN
+    WRITE(*,*) 'EmAb on nuclei, NSE-folded tabular data           ', Opacity % nuclei_Hix
     WRITE(*,*)
 
   END SUBROUTINE DescribeOpacityTypeEmAb

@@ -1,2 +1,6 @@
 OPACITYFULLWEAK = \
   HR98_Bremsstrahlung.o
+EOS_MODS  = \
+  EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o
+EOS_OBJ  = \
+  LattimerSwesty.o initferm.o loadmx.o wlExtInitializeEOS.o e_p_eos.o BCK_EoS.o net.o

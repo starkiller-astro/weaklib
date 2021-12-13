@@ -33,6 +33,7 @@ MODULE wlOpacityTableIOModuleHDF
   USE wlIOModuleHDF, ONLY:        &
     ReadHDF,                      &
     WriteHDF,                     &
+    WriteAttributeHDF_string,    &
     OpenFileHDF,                  &
     CloseFileHDF,                 &
     OpenGroupHDF,                 &
@@ -181,6 +182,25 @@ CONTAINS
           CALL OpenGroupHDF &
                  ( "Scat_NES_Kernels", .true., file_id, group_id )
           CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_NES, group_id )
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+            INTEGER                          :: ii
+
+            tempString(1) = "Opacity from NES, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+
+            DO ii = 1, OpacityTable % Scat_NES % nOpacities
+
+              CALL WriteAttributeHDF_string(OpacityTable % Scat_NES % Names (ii), &
+                                            "Opacity description", tempString, group_id) 
+
+            ENDDO
+
+          END BLOCK
+
           CALL CloseGroupHDF( group_id )
   
         END IF
@@ -200,6 +220,25 @@ CONTAINS
           CALL OpenGroupHDF &
                  ( "Scat_Pair_Kernels", .true., file_id, group_id )
           CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Pair, group_id )
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+            INTEGER                          :: ii
+
+            tempString(1) = "Opacity from pair production, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+
+            DO ii = 1, OpacityTable % Scat_Pair % nOpacities
+
+              CALL WriteAttributeHDF_string(OpacityTable % Scat_Pair % Names (ii), &
+                                            "Opacity description", tempString, group_id) 
+
+            ENDDO
+
+          END BLOCK
+
           CALL CloseGroupHDF( group_id )
 
         END IF
@@ -221,6 +260,24 @@ CONTAINS
         CALL OpenGroupHDF &
                  ( "Scat_Brem_Kernels", .true., file_id, group_id )
         CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_Brem, group_id )
+
+        BLOCK
+
+          CHARACTER(LEN=100), DIMENSION(2) :: tempString
+          INTEGER                          :: ii
+
+          tempString(1) = "Opacity from nucleon-nucleon Bremsstrahlung, Hannestad and Raffelt (1998)"
+          tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1998ApJ...507..339H/doi:10.1086/306303"
+
+          DO ii = 1, OpacityTable % Scat_Brem % nOpacities
+
+            CALL WriteAttributeHDF_string(OpacityTable % Scat_Brem % Names (ii), &
+                                          "Opacity description", tempString, group_id) 
+
+          ENDDO
+
+        END BLOCK
+
         CALL CloseGroupHDF( group_id )
 
       END IF
@@ -276,6 +333,21 @@ CONTAINS
     tempInteger(1) = EmAb % nOpacities
     CALL WriteHDF( "nOpacities", tempInteger, group_id, datasize1d )
 
+    tempInteger(1) = EmAb % nucleons_full_kinematics
+    CALL WriteHDF( "nucleons_full_kinematics", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % inv_n_decay_full_kinematics
+    CALL WriteHDF( "inv_n_decay_full_kinematics", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nucleons_isoenergetic
+    CALL WriteHDF( "nucleons_isoenergetic", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nucleons_recoil
+    CALL WriteHDF( "nucleons_recoil", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nucleons_weak_magnetism
+    CALL WriteHDF( "nucleons_weak_magnetism", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nuclei_FFN
+    CALL WriteHDF( "nuclei_FFN", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nuclei_Hix
+    CALL WriteHDF( "nuclei_Hix", tempInteger, group_id, datasize1d )
+
     datasize1d = EmAb % nOpacities
     CALL WriteHDF &
            ( "Units", EmAb % Units, group_id, datasize1d ) 
@@ -290,6 +362,116 @@ CONTAINS
       CALL WriteHDF &
              ( TRIM( EmAb % Names(ii) ), &
                EmAb % Opacity(ii) % Values(:,:,:,:), group_id, datasize4d )
+
+      IF(EmAb % nucleons_isoenergetic .gt. 0) THEN
+
+        BLOCK
+
+          character(len=100), dimension(3) :: tempString
+
+          tempString(1) = "Isoenergetic approximation, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+          tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+          tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+
+          CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nucleons", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
+
+      IF(EmAb % nucleons_recoil .gt. 0) THEN
+
+        BLOCK
+
+        character(len=100), dimension(4) :: tempString
+
+        tempString(1) = "Recoil, nucleon final-state blocking, and special relativity corrections to EmAb on nucleons"
+        tempString(2) = "Reddy et al 1998"
+        tempString(3) = "Only used for rho > 1e9"
+        tempString(4) = "https://ui.adsabs.harvard.edu/link_gateway/1998PhRvD..58a3009R/doi:10.1103/PhysRevD.58.013009"
+
+        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb recoil corrections", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
+
+      IF(EmAb % nucleons_weak_magnetism .gt. 0) THEN
+
+        BLOCK
+
+        character(len=100), dimension(2) :: tempString
+
+        tempString(1) = "Weak magnetism corrections for EmAb on free nucleons, Horowitz (1997)"
+        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
+
+        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb weak magnetism corrections", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
+
+      IF(EmAb % nucleons_full_kinematics .gt. 0) THEN
+
+        BLOCK
+
+        character(len=100), dimension(2) :: tempString
+
+        tempString(1) = "Full kinematics rates for EmAb on free nucleons, Fischer et al (2020)"
+        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
+
+        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb full kinematics", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
+
+      IF(EmAb % inv_n_decay_full_kinematics .gt. 0 .and. ii == 2) THEN
+
+        BLOCK
+
+        character(len=100), dimension(2) :: tempString
+
+        tempString(1) = "Full kinematics rates for inverse neutron decay, Fischer et al (2020)"
+        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
+
+        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "Inverse neutron decay full kinematics", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
+    
+      IF(EmAb % nuclei_FFN .gt. 0 .and. ii == 1) THEN
+
+        BLOCK
+
+        character(len=100), dimension(3) :: tempString
+
+        tempString(1) = "Using FFN formalism, Fuller et al (1982), Bruenn 1985"
+        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1982ApJ...252..715F/doi:10.1086/159597"
+        tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+
+        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nuclei", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
+
+      IF(EmAb % nuclei_Hix .gt. 0 .and. ii == 1) THEN
+
+        BLOCK
+
+        character(len=100), dimension(3) :: tempString
+
+        tempString(1) = "NSE-folded tabular data, Langanke et al. (2003), Hix et al. (2003)"
+        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..90x1102L/doi:10.1103/PhysRevLett.90.241102"
+        tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..91t1102H/doi:10.1103/PhysRevLett.91.201102"
+
+        CALL WriteAttributeHDF_string(TRIM( EmAb % Names(ii) ), "EmAb on nuclei", tempString, group_id) 
+
+        END BLOCK
+
+      ENDIF
 
     END DO
   

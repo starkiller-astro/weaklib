@@ -7,6 +7,9 @@ VPATH += \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera: \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Fischer: \
+$(WEAKLIB_DIR)/TableCreator/Old/LS: \
+$(WEAKLIB_DIR)/TableCreator/Old/BCK: \
+$(WEAKLIB_DIR)/TableCreator/Old/EOSInterface: \
 ..
 
 Weaklib_TableCreator = \
@@ -16,6 +19,8 @@ Weaklib_TableCreator = \
   $(SHAREDMODULES) \
   $(OPACITYFULLWEAK) \
   $(CHIMERA) \
+  $(EOS_MODS) \
+  $(EOS_OBJ) \
   $(FULL_KINEMATICS)
 
 all: wlCreateOpacityTable 
