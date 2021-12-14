@@ -174,6 +174,21 @@ IMPLICIT NONE
    10000 format ( ' Date ', i2.2, '/', i2.2, '/', i4.4, '; Time ',&
      &         i2.2, ':', i2.2, ':', i2.2 )
 
+
+#if defined(GIT_HASH)
+        write(*,*) 'Git version: ', GIT_HASH
+#else
+        write(*,*) 'Git version: unknown'
+#endif
+
+#if defined(GIT_DATE)
+        write(*,*) 'Git date: ', GIT_DATE
+#else
+        write(*,*) 'Git date: unknown'
+#endif
+
+stop
+
 ! -- Set Write-Out FileName
    stringlength = LEN(TRIM(EOSTableName))
    WRITE(WriteTableName,'(A,A,A,A,I2,A)') &
