@@ -1,12 +1,14 @@
 GIT_HASH := $(shell git --no-pager describe --tags --always --dirty)
 GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" --name-only))
+GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
+GIT_URL :=$(shell git config --get remote.origin.url)
 
 
 FORTRAN_mac_gnu      = mpif90 -fopenmp -cpp
 FORTRAN_sn1987b      = mpif90
 FORTRAN_ranchu       = mpif90
 FORTRAN_ranchuair    = mpif90
-FORTRAN_vass         = mpif90 -cpp -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\""
+FORTRAN_vass         = mpif90 -cpp -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\"" -DGIT_URL="\"$(GIT_URL)\""
 FORTRAN_sjdunham     = mpif90
 FORTRAN_titan_gnu    = ftn
 FORTRAN_titan_cray   = ftn

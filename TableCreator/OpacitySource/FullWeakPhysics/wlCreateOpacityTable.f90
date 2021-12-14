@@ -181,13 +181,18 @@ IMPLICIT NONE
         write(*,*) 'Git version: unknown'
 #endif
 
+#if defined(GIT_BRANCH)
+        write(*,*) 'Git branch: ', GIT_BRANCH
+#else
+        write(*,*) 'Git branch: unknown'
+#endif
+
 #if defined(GIT_DATE)
         write(*,*) 'Git date: ', GIT_DATE
 #else
         write(*,*) 'Git date: unknown'
 #endif
 
-stop
 
 ! -- Set Write-Out FileName
    stringlength = LEN(TRIM(EOSTableName))
@@ -531,16 +536,16 @@ PRINT*, 'Filling OpacityTable ...'
 
    ENDIF
 
-   DO l_ye = 1, 1 !nYe
+   DO l_ye = 1, nYe
 
      ye = OpacityTable % TS % States (iYe) % Values (l_ye)
 
-     DO k_t = 1, 1 !nT
+     DO k_t = 1, nT
 
        T = OpacityTable % TS % States (iT) % Values (k_t)
        TMeV = T * kMeV
 
-       DO j_rho = 1, 1 !nRho
+       DO j_rho = 1, nRho
 
          rho = OpacityTable % TS % States (iRho) % &
                Values (j_rho)
@@ -673,27 +678,27 @@ PRINT*, 'Filling OpacityTable ...'
 
              IF(EmAb_nucleons_full_kinematics .gt. 0) THEN
 
-write(*,*) 'i=', i_r, 'j=', j_rho, 'k=', k_t, 'l=', l_ye
-write(*,*) 'T =',TMeV,'Density =',rho,'Ye =',Ye
-write(*,*) 'n =',xn,'p =',xp,'heavy =',xheavy,'A =',A,'Z =',Z
-write(*,*) 'chemn =',chem_n,'chemp =',chem_p,'Un =',Un_loc,'Up =',Up_loc
-write(*,*) 'mn =',massn_loc,'mp =',massp_loc
-write(*,*) 'cheme =',chem_e
+!write(*,*) 'i=', i_r, 'j=', j_rho, 'k=', k_t, 'l=', l_ye
+!write(*,*) 'T =',TMeV,'Density =',rho,'Ye =',Ye
+!write(*,*) 'n =',xn,'p =',xp,'heavy =',xheavy,'A =',A,'Z =',Z
+!write(*,*) 'chemn =',chem_n,'chemp =',chem_p,'Un =',Un_loc,'Up =',Up_loc
+!write(*,*) 'mn =',massn_loc,'mp =',massp_loc
+!write(*,*) 'cheme =',chem_e
 
 !stop
                IF(i_r .le. 2) THEN
-                 !CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
-                 !              TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
-                 !              massn_loc, massp_loc, Un_loc, Up_loc,   &
-                 !              i_r, inv_n_decay_full_kinematics,       &
-                 !              ab_nucleons, em_nucleons,               &
-                 !              ab_inv_n_decay, em_inv_n_decay, nPointsE)
-                 CALL CC_EmAb( nu_E,     &
-                               0.1d0, mass_e, 0.3148d-03, -0.1656d+01+mass_n, -0.2020d+02+mass_p,      &
-                               0.9396d+03, 0.9383d+03, 0.1935d-08, -0.1317d-03,   &
+                 CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
+                               TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
+                               massn_loc, massp_loc, Un_loc, Up_loc,   &
                                i_r, inv_n_decay_full_kinematics,       &
                                ab_nucleons, em_nucleons,               &
                                ab_inv_n_decay, em_inv_n_decay, nPointsE)
+                 !CALL CC_EmAb( nu_E,     &
+                 !              0.1d0, mass_e, 0.3148d-03, -0.1656d+01+mass_n, -0.2020d+02+mass_p,      &
+                 !              0.9396d+03, 0.9383d+03, 0.1935d-08, -0.1317d-03,   &
+                 !              i_r, inv_n_decay_full_kinematics,       &
+                 !              ab_nucleons, em_nucleons,               &
+                 !              ab_inv_n_decay, em_inv_n_decay, nPointsE)
 
                ENDIF
 
@@ -772,11 +777,11 @@ write(*,*) 'cheme =',chem_e
   IF( nOpac_NES .gt. 0 ) THEN
   PRINT*, 'Calculating Scat_NES Kernel ... '
 
-      DO i_eta = 1, 1!nPointsEta
+      DO i_eta = 1, nPointsEta
 
         eta = OpacityTable % EtaGrid % Values(i_eta)
 
-        DO k_t = 1, 1!OpacityTable % nPointsTS(iT)
+        DO k_t = 1, OpacityTable % nPointsTS(iT)
 
           T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
@@ -822,11 +827,11 @@ write(*,*) 'cheme =',chem_e
   IF( nOpac_Pair .gt. 0 ) THEN
   PRINT*, 'Calculating Scat_Pair Kernel ... '
 
-      DO i_eta = 1, 1!nPointsEta
+      DO i_eta = 1, nPointsEta
 
         eta = OpacityTable % EtaGrid % Values(i_eta)
 
-        DO k_t = 1, 1!OpacityTable % nPointsTS(iT)
+        DO k_t = 1, OpacityTable % nPointsTS(iT)
 
           T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
@@ -878,11 +883,9 @@ write(*,*) 'cheme =',chem_e
   IF( nOpac_Brem .gt. 0 ) THEN
   PRINT*, 'Calculating Nucleon-Nucleon Bremsstrahlung Scattering Kernel ...'
 
-  !write(stdout,*), omp_get_max_threads()
+   DO k_t = 1, OpacityTable % nPointsTS(iT)
 
-   DO k_t = 1, 1 !OpacityTable % nPointsTS(iT)
-
-    DO j_rho = 1, 1!OpacityTable % nPointsTS(iRho)
+    DO j_rho = 1, OpacityTable % nPointsTS(iRho)
 
       T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
       rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
