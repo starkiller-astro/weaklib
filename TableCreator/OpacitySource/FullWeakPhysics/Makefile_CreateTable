@@ -23,18 +23,6 @@ Weaklib_TableCreator = \
   $(EOS_OBJ) \
   $(FULL_KINEMATICS)
 
-GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
-
-GIT_HASH := $(shell git --no-pager describe --tags --always --dirty)
-GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" --name-only))
-
-#GIT_HASH=`git rev-parse HEAD`
-#COMPILE_TIME=`date -u +'%Y-%m-%d %H:%M:%S UTC'`
-#GIT_BRANCH=`git branch | grep "^\*" | sed 's/^..//'`
-#VERSION_FLAGS = -cpp -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\""
-
-VERSION_FLAGS = -cpp -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\""
-
 all: wlCreateOpacityTable 
 
 wlCreateOpacityTable: \
