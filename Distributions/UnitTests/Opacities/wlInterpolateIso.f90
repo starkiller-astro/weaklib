@@ -29,8 +29,8 @@ PROGRAM wlInterpolateIso
 
   !--------- parameters for creating energy grid ----------------------------
   INTEGER, PARAMETER :: Inte_nPointE = 40
-  REAL(dp)           :: Inte_Emin = 2.0d00
-  REAL(dp)           :: Inte_Emax = 2.0d02
+  REAL(dp)           :: Inte_Emin = 1.0d-1
+  REAL(dp)           :: Inte_Emax = 3.0d02
   TYPE(GridType)     :: Inte_E
 
   !-------- variables for reading opacity table -----------------------------
