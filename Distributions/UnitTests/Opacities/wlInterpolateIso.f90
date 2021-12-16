@@ -1,6 +1,7 @@
 PROGRAM wlInterpolateIso
 
   USE wlKindModule, ONLY: dp
+  USE wlExtNumericalModule, ONLY: twpi
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable_1D3D_Custom
   USE wlOpacityFieldsModule, ONLY: &
@@ -28,7 +29,7 @@ PROGRAM wlInterpolateIso
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER :: Inte_nPointE = 40
+  INTEGER, PARAMETER :: Inte_nPointE = 80
   REAL(dp)           :: Inte_Emin = 1.0d-1
   REAL(dp)           :: Inte_Emax = 3.0d02
   TYPE(GridType)     :: Inte_E
@@ -168,7 +169,7 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e,2), TableES11, bufferIso11 )
 
-  InterpolantIso1 = bufferIso10 - bufferIso11 / 3.0d0 ! (A41) in Bruenn 85
+  InterpolantIso1 = twpi * ( bufferIso10 - bufferIso11 / 3.0d0 )! (A41) in Bruenn 85
 
   CALL LogInterpolateSingleVariable_1D3D_Custom         &
          ( LOG10( Energy ), LOG10( Inte_rho ),          &
@@ -188,7 +189,7 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e_bar,2), TableES21, bufferIso21 )
 
-  InterpolantIso2 = bufferIso20 - bufferIso21 / 3.0d0 ! (A41) in Bruenn 85
+  InterpolantIso2 = twpi * ( bufferIso20 - bufferIso21 / 3.0d0 )! (A41) in Bruenn 85
 
   END ASSOCIATE ! Table
 

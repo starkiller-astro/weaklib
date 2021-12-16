@@ -31,7 +31,7 @@ PROGRAM wlInterpolatePair
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  INTEGER, PARAMETER     :: Inte_nPointE = 80
   REAL(dp)               :: Inte_Emin = 1.0d-1
   REAL(dp)               :: Inte_Emax = 3.0d02
   TYPE(GridType)         :: Inte_E
@@ -216,10 +216,10 @@ PROGRAM wlInterpolatePair
          LOG10(OpacityTable % EtaGrid % Values),         &
          Offset_TP(iJii0)  , TableTPJ0ii  , J0ii )
 
-  InterpolantPair_nue      = cparpe  * J0i + cparne  * J0ii
-  InterpolantPair_nuebar   = cparne  * J0i + cparpe  * J0ii
-  InterpolantPair_mutau    = cparpmt * J0i + cparnmt * J0ii
-  InterpolantPair_mutaubar = cparnmt * J0i + cparpmt * J0ii
+  InterpolantPair_nue      = twpi * ( cparpe  * J0i + cparne  * J0ii )
+  InterpolantPair_nuebar   = twpi * ( cparne  * J0i + cparpe  * J0ii )
+  InterpolantPair_mutau    = twpi * ( cparpmt * J0i + cparnmt * J0ii )
+  InterpolantPair_mutaubar = twpi * ( cparnmt * J0i + cparpmt * J0ii )
 
   DO i = 1,datasize
     DO ii = 1, Inte_nPointE

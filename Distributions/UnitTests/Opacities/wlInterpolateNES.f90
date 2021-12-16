@@ -31,7 +31,7 @@ PROGRAM wlInterpolateNES
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  INTEGER, PARAMETER     :: Inte_nPointE = 80
   REAL(dp)               :: Inte_Emin = 1.0d-1
   REAL(dp)               :: Inte_Emax = 3.0d02
   TYPE(GridType)         :: Inte_E
@@ -212,11 +212,11 @@ PROGRAM wlInterpolateNES
            LOG10(OpacityTable % EtaGrid % Values),         &
            Offset_NES(iHii0), TableNES_H0ii, InterH0ii )
 
-  InterpolantNES_nue      = cparpe  * InterH0i + cparne  * InterH0ii
-  InterpolantNES_nuebar   = cparne  * InterH0i + cparpe  * InterH0ii
+  InterpolantNES_nue      = twpi * ( cparpe  * InterH0i + cparne  * InterH0ii )
+  InterpolantNES_nuebar   = twpi * ( cparne  * InterH0i + cparpe  * InterH0ii )
 
-  InterpolantNES_mutau    = cparpmt * InterH0i + cparnmt * InterH0ii
-  InterpolantNES_mutaubar = cparnmt * InterH0i + cparpmt * InterH0ii
+  InterpolantNES_mutau    = twpi * ( cparpmt * InterH0i + cparnmt * InterH0ii )
+  InterpolantNES_mutaubar = twpi * ( cparnmt * InterH0i + cparpmt * InterH0ii )
 
   DO i = 1,datasize
     DO ii = 1, Inte_nPointE
