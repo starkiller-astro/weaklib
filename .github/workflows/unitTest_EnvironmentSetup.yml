@@ -35,4 +35,7 @@ jobs:
             #mkdir $HDF5_DIR
             #cd hdf5
             source Distributions/Workflow/SetEnvironment.sh ubuntu
-            cd Distributions/UnitTests/Opacities/Executables && make && make clobber
+            cd Distributions/UnitTests/Opacities/Executables
+            pwd
+            make wlReadOpacityTableTest
+            make clobber
