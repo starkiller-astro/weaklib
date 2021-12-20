@@ -3,12 +3,14 @@ GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" 
 GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
 GIT_URL :=$(shell git config --get remote.origin.url)
 
+VERSION_FLAGS := -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\"" -DGIT_URL="\"$(GIT_URL)\""
+
 
 FORTRAN_mac_gnu      = mpif90 -fopenmp -cpp
 FORTRAN_sn1987b      = mpif90
 FORTRAN_ranchu       = mpif90
 FORTRAN_ranchuair    = mpif90
-FORTRAN_vass         = mpif90 -cpp -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\"" -DGIT_URL="\"$(GIT_URL)\""
+FORTRAN_vass         = mpif90 -cpp
 FORTRAN_sjdunham     = mpif90
 FORTRAN_titan_gnu    = ftn
 FORTRAN_titan_cray   = ftn
@@ -22,7 +24,7 @@ FORTRAN_summitdev_xl = mpifort -qpreprocess
 FORTRAN_summit_gcc   = mpifort -cpp
 FORTRAN_summit_pgi   = mpifort -Mpreprocess
 FORTRAN_summit_xl    = mpifort -qpreprocess
-FORTRAN              = $(FORTRAN_$(MACHINE))
+FORTRAN              = $(FORTRAN_$(MACHINE)) $(VERSION_FLAGS)
 
 SUFFIX_f90_mac_gnu      =
 SUFFIX_f90_sn1987b      = 
