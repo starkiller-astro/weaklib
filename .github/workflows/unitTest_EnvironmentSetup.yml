@@ -16,13 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     env: 
         WEAKLIB_MACHINE: ubuntu
-        mydir="$PWD"
-        WEAKLIB_DIR: $mydir
+        
     steps:
       - uses: actions/checkout@v2
         with: 
             ref: 'master'
       - run: |
+           mydir="$PWD"
+           export WEAKLIB_DIR=$mydir
            sudo apt-get update -y
            sudo apt-get install -y libhdf5-dev liblapack-dev libopenmpi-dev
            pwd
