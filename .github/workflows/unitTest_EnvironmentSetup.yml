@@ -33,4 +33,5 @@ jobs:
            source Distributions/Workflow/SetEnvironment.sh ubuntu
            cd Distributions/UnitTests/Opacities/Executables
            env
-           #make clobber
+           make clobber
+           make
