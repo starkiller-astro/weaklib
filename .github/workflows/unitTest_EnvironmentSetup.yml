@@ -26,6 +26,8 @@ jobs:
            export WEAKLIB_DIR=$mydir
            sudo apt-get update -y
            sudo apt-get install -y libhdf5-dev liblapack-dev libopenmpi-dev
+           export HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial
+           ls $HDF5_DIR
            pwd
            ls
            source Distributions/Workflow/SetEnvironment.sh ubuntu
