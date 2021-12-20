@@ -3,12 +3,10 @@ MODULE wlEOSInterpolationModule
   USE wlKindModule,                 ONLY: &
     dp
   USE wlInterpolationModule,        ONLY: &
-    locate, &
+    LogInterpolateDifferentiateSingleVariable_3D_Custom
+  USE wlInterpolationUtilitiesModule, ONLY: &
     Index1D, &
-    TriLinear, &
-    LogInterpolateDifferentiateSingleVariable, &
-    ComputeTempFromIntEnergy, &
-    ComputeTempFromEntropy
+    TriLinear
   USE wlThermoStateModule,          ONLY: &
     ThermoStateType
   USE wlDependentVariablesModule,   ONLY: &
@@ -21,7 +19,6 @@ MODULE wlEOSInterpolationModule
 
   PUBLIC :: LogInterpolateAllVariables
   PUBLIC :: LogInterpolateDifferentiateAllVariables
-  PUBLIC :: ComputeTempForVector
   PUBLIC :: GetGamma1
   PUBLIC :: EOSTableQuery
   PUBLIC :: MonotonicityCheck
@@ -79,9 +76,9 @@ CONTAINS
                  Coordinate2 => TS % States(2) % Values, &    
                  Coordinate3 => TS % States(3) % Values )   
 
-      CALL locate( Coordinate1, dim1, x1(i), il1(i) )
-      CALL locate( Coordinate2, dim2, x2(i), il2(i) )
-      CALL locate( Coordinate3, dim3, x3(i), il3(i) )
+      il1(i)  = Index1D( x1(i), Coordinate1, dim1 )
+      il2(i)  = Index1D( x2(i), Coordinate2, dim2 )
+      il3(i)  = Index1D( x3(i), Coordinate3, dim3 )
 
       IF ( LogInterp(1) == 1 ) THEN
         delta(1,i) = LOG10( x1(i) / Coordinate1(il1(i)) ) &
@@ -261,9 +258,9 @@ CONTAINS
                  Coordinate2 => TS % States(2) % Values, &
                  Coordinate3 => TS % States(3) % Values )
 
-      CALL locate( Coordinate1, dim1, x1(i), il1(i) )
-      CALL locate( Coordinate2, dim2, x2(i), il2(i) )
-      CALL locate( Coordinate3, dim3, x3(i), il3(i) )
+      il1(i) = Index1D( x1(i), Coordinate1, dim1 )
+      il2(i) = Index1D( x2(i), Coordinate2, dim2 )
+      il3(i) = Index1D( x3(i), Coordinate3, dim3 )
 
       IF ( LogInterp(1) == 1 ) THEN
         alpha(1,i) = ( 1.0d0 ) / ( x1(i) * LOG10( Coordinate1(il1(i)+1) / Coordinate1(il1(i)) ) )
@@ -364,79 +361,6 @@ CONTAINS
   END SUBROUTINE LogInterpolateDifferentiateAllVariables
 
 
-  SUBROUTINE ComputeTempForVector &
-    ( rho, alt, ye, EOSTable, InputFlag, InputMask, Temperature )
-
-    REAL(dp), DIMENSION(:), INTENT(in)         :: rho
-    REAL(dp), DIMENSION(:), INTENT(in)         :: alt
-    REAL(dp), DIMENSION(:), INTENT(in)         :: ye
-    TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
-    INTEGER, DIMENSION(:), INTENT(in)          :: InputFlag
-    LOGICAL, DIMENSION(:), INTENT(in)          :: InputMask
-    REAL(dp), DIMENSION(:), INTENT(out)        :: Temperature
-
-    INTEGER                                    :: i, ni, nf
-    REAL(dp), DIMENSION(1)                     :: tbuff
-
-    ni = LBOUND( rho, DIM = 1 )
-    nf = UBOUND( rho, DIM = 1 )
-
-    ASSOCIATE &
-      ( WL_EINT    => EOSTable % DV % Indices % iInternalEnergyDensity, &
-        WL_ENTROPY => EOSTable % DV % Indices % iEntropyPerBaryon,      &
-        WL_PRESS   => EOSTable % DV % Indices % iPressure )
-
-    DO i = ni, nf
-
-      IF ( .not. InputMask(i) ) CYCLE
-
-      IF ( InputFlag(i) == WL_EINT ) THEN
-
-        CALL ComputeTempFromIntEnergy( rho(i), alt(i), ye(i),      &
-           EOSTable % TS % States(1) % Values,                     &
-           EOSTable % TS % States(2) % Values,                     &
-           EOSTable % TS % States(3) % Values,                     &
-           EOSTable % TS % LogInterp,                              &
-           EOSTable % DV % Variables(WL_EINT) % Values(:,:,:),     &
-           EOSTable % DV % Offsets(WL_EINT), tbuff )
-
-      ELSEIF ( InputFlag(i) == WL_ENTROPY ) THEN
-
-        CALL ComputeTempFromEntropy( rho(i), alt(i), ye(i),        &
-           EOSTable % TS % States(1) % Values,                     &
-           EOSTable % TS % States(2) % Values,                     &
-           EOSTable % TS % States(3) % Values,                     &
-           EOSTable % TS % LogInterp,                              &
-           EOSTable % DV % Variables(WL_ENTROPY) % Values(:,:,:),  &
-           EOSTable % DV % Offsets(WL_ENTROPY), tbuff )
-
-      ELSEIF ( InputFlag(i) == WL_PRESS ) THEN
-
-        CALL ComputeTempFromIntEnergy( rho(i), alt(i), ye(i),      &
-           EOSTable % TS % States(1) % Values,                     &
-           EOSTable % TS % States(2) % Values,                     &
-           EOSTable % TS % States(3) % Values,                     &
-           EOSTable % TS % LogInterp,                              &
-           EOSTable % DV % Variables(WL_PRESS) % Values(:,:,:),    &
-           EOSTable % DV % Offsets(WL_PRESS), tbuff )
-
-      ELSE
-
-        WRITE(*,*) &
-          "Invalid thermodynamic variable flag in ComputeTempForVector: ", &
-          InputMask(i)
-        STOP
-
-      END IF
-      Temperature(i) = tbuff(1) 
-
-    END DO
-
-    END ASSOCIATE
-
-  END SUBROUTINE ComputeTempForVector
-
-
   SUBROUTINE GetGamma1 &
     ( x1, x2, x3, Coordinate1, Coordinate2, Coordinate3, LogInterp, &
       TS, DV, Gamma1 ) 
@@ -460,12 +384,12 @@ CONTAINS
     ALLOCATE( Gamma1     ( SIZE(x1)    ) )
     ALLOCATE( Derivative ( SIZE(x1), 3 ) )
 
-    CALL LogInterpolateDifferentiateSingleVariable &
+    CALL LogInterpolateDifferentiateSingleVariable_3D_Custom &
            ( x1, x2, x3, &
              TS % States(1) % Values(:), &
              TS % States(2) % Values(:), &
              TS % States(3) % Values(:), &
-             LogInterp, DV % Offsets(1), &
+             DV % Offsets(1), &
              DV % Variables(1) % Values(:,:,:), &
              Interpolant(:), Derivative(:,:) )
 

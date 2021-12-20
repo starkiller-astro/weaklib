@@ -33,7 +33,7 @@ PROGRAM wlInterpolatePair
   !--------- parameters for creating energy grid ----------------------------
   INTEGER, PARAMETER     :: Inte_nPointE = 40
   REAL(dp)               :: Inte_Emin = 1.0d-1
-  REAL(dp)               :: Inte_Emax = 2.9d02
+  REAL(dp)               :: Inte_Emax = 3.0d02
   TYPE(GridType)         :: Inte_E
 
   !-------- variables for reading opacity table
@@ -67,7 +67,7 @@ PROGRAM wlInterpolatePair
                                              ProfileName
 
   CHARACTER(LEN=30)                       :: outfilename = &
-                                             'InterpolatedPaOutput.h5'
+                                             'InterpolatedPairOutput.h5'
 
   !-------- local variables -------------------------------------------------
   INTEGER                                 :: ii, jj
@@ -198,9 +198,7 @@ PROGRAM wlInterpolatePair
          OpacityTable % EOSTable % TS % States(iEOS_Rho) % Values, &
          OpacityTable % EOSTable % TS % States(iEOS_T) % Values,   &
          OpacityTable % EOSTable % TS % States(iEOS_Ye) % Values,  &
-         LogInterp, Offset_cmpe,    &
-         Tablecmpe,                 &
-         Inte_cmpe )
+         Offset_cmpe, Tablecmpe, Inte_cmpe )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
        ( LOG10(Energy), LOG10(Inte_T), &

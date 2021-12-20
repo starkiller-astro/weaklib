@@ -1,4 +1,9 @@
-include ../../../Build/Makefile_Build
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+
+.DEFAULT_GOAL := all
 
 all: wlEosInversionTest
 
@@ -21,4 +26,4 @@ wlEosInversionTest.o: \
   wlEOSIOModuleHDF.o \
   wlInterpolationModule.o \
   wlEOSInversionModule.o \
-  wlEosInversionTest.f90
+  wlEosInversionTest.F90

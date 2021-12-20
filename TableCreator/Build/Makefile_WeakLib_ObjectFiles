@@ -1,0 +1,7 @@
+include $(WEAKLIB_DIR)/Distributions/Library/Makefile_Library_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/EOSSource/Makefile_EOSSource_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
+
+Weaklib_TableCreator = \
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES)

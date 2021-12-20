@@ -3,6 +3,11 @@ PP ?= -D
 
 ifeq ($(USE_GPU),TRUE)
    DEFINES      += $(MDEFS)$(PP)WEAKLIB_GPU
+   ifeq ($(USE_CUDA),TRUE)
+      DEFINES   += $(MDEFS)$(PP)WEAKLIB_CUDA
+   else ifeq ($(USE_HIP),TRUE)
+      DEFINES   += $(MDEFS)$(PP)WEAKLIB_HIP
+   endif
    ifeq ($(USE_OACC),TRUE)
       DEFINES   += $(MDEFS)$(PP)WEAKLIB_OACC
    else ifeq ($(USE_OMP_OL),TRUE)

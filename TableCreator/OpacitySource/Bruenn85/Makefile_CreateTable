@@ -1,0 +1,24 @@
+include ../../../Build/Makefile_Build
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/Bruenn85/Chimera/Makefile_ObjectFiles
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/Bruenn85: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/Bruenn85/Chimera: \
+..
+
+Weaklib_TableCreator = \
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYBRUENN85) $(CHIMERABRUENN85)
+
+all: wlCreateOpacityTable 
+
+wlCreateOpacityTable: \
+	$(Weaklib_TableCreator) wlCreateOpacityTable.o
+	$(FLINKER) $(FLAGS) -o wlCreateOpacityTable_$(MACHINE) \
+	$(Weaklib_TableCreator) wlCreateOpacityTable.o \
+	$(LIBRARIES) 
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateOpacityTable_$(MACHINE)

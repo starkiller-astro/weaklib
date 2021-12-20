@@ -1,6 +1,7 @@
 ifeq ($(USE_OACC),TRUE)
    USE_GPU = TRUE
-else ifeq ($(USE_OMP_OL),TRUE)
+endif
+ifeq ($(USE_OMP_OL),TRUE)
    USE_GPU = TRUE
 endif
 
@@ -8,6 +9,13 @@ USE_GPU ?= FALSE
 ifeq ($(USE_GPU),TRUE)
 
    USE_OMP   ?= FALSE
+
+   USE_HIP   ?= FALSE
+   ifeq ($(USE_HIP),TRUE)
+      USE_CUDA  ?= FALSE
+   else
+      USE_CUDA  ?= TRUE
+   endif
 
    USE_OACC  ?= FALSE
    ifeq ($(USE_OACC),TRUE)
@@ -21,5 +29,7 @@ else
    USE_OMP    ?= FALSE
    USE_OACC   ?= FALSE
    USE_OMP_OL ?= FALSE
+   USE_CUDA   ?= FALSE
+   USE_HIP    ?= FALSE
 
 endif

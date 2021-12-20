@@ -1,0 +1,47 @@
+CHIMERA = \
+  $(ChimeraShare) \
+  $(ChimeraTP) \
+  $(ChimeraIS) \
+  $(ChimeraNES) \
+  $(ChimeraAB)
+
+ChimeraShare = \
+  kind_module.o \
+  gquad.o \
+  numerical_module.o \
+  physcnst_module.o \
+  ff.o \
+  PRB_CNTL_MODULE.o \
+
+ChimeraTP = \
+  nes_module.o \
+  pair_module.o \
+  pr_w_gt_wp_e_lt_wp.o \
+  pr_w_gt_wp_lt_e_lt_w.o \
+  pr_w_gt_wp_w_lt_e.o \
+  pr_w_lt_wp_e_lt_w.o \
+  pr_w_lt_wp_e_lt_wp.o \
+  pr_w_lt_wp_wp_lt_e.o \
+  paircal_weaklib.o
+
+ChimeraIS = \
+  etaxx.o \
+  scatical_weaklib.o
+
+ChimeraNES = \
+  w_gt_wp_e_gt_wp.o \
+  w_gt_wp_e_lt_wp.o \
+  w_gt_wp_e_to_inf.o \
+  w_lt_wp_e_gt_wp.o \
+  w_lt_wp_e_lt_wp.o \
+  w_lt_wp_e_to_inf.o \
+  sctlgndv_weaklib.o \
+  scatergn_weaklib.o
+
+ChimeraAB = \
+ abemfrnpetanp.o \
+ abemfrnp.o \
+ abem_cal_weaklib.o \
+ abemnc_weaklib.o \
+ abemrgn_weaklib.o
+
