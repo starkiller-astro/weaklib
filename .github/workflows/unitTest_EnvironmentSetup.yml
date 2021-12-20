@@ -27,6 +27,7 @@ jobs:
       - name: Dependencies1
         run: |
             mydir="$PWD"
+            export THORNADO_DIR=$mydir
             sudo apt-get update -y
             sudo apt-get install -y libhdf5-mpi-dev libhdf5-dev
             ## hdf5
@@ -37,5 +38,6 @@ jobs:
             source Distributions/Workflow/SetEnvironment.sh ubuntu
             cd Distributions/UnitTests/Opacities/Executables
             pwd
+            source Distributions/Workflow/SetEnvironment.sh ubuntu
             make wlReadOpacityTableTest
             make clobber
