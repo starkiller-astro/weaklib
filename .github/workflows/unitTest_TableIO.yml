@@ -1,8 +1,5 @@
-# This is a basic workflow to help you get started with Actions
+name: UnitTest_TableIO
 
-name: CI
-
-# Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
@@ -11,7 +8,7 @@ on:
     branches: [ master ]
 
   # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  workflow_dispatch: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -25,9 +22,14 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
+      - name: Set up environment
+        run: source Distributions/Workflow/SetEnvironment.sh ubuntu
+
       # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Compule IO unit test driver
+        run: |
+          cd Distributions/UnitTests/Opacities/Executables
+          make wlReadOpacityTableTest
 
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
