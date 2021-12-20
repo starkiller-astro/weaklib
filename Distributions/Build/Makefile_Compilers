@@ -55,6 +55,7 @@ FORTRAN_birch_cce    = ftn
 FORTRAN_spock_cce    = ftn
 FORTRAN_spock_gcc    = ftn
 FORTRAN_corigpu_pgi  = mpifort -Mpreprocess
+FORTRAN_ubuntu       = mpif90 -cpp
 FORTRAN              = $(FORTRAN_$(MACHINE))
 
 SUFFIX_f90_sn1987b      =
@@ -74,6 +75,7 @@ SUFFIX_f90_summitdev_xl =
 SUFFIX_f90_summit_gcc   =
 SUFFIX_f90_summit_pgi   =
 SUFFIX_f90_summit_xl    =
+SUFFIX_f90_ubuntu       =
 SUFFIX_f90              = $(SUFFIX_f90_$(MACHINE))
 
 FLINKER_sn1987b      = mpif90
@@ -99,6 +101,7 @@ FLINKER_birch_cce    = ftn
 FLINKER_spock_cce    = ftn
 FLINKER_spock_gcc    = ftn
 FLINKER_corigpu_pgi  = mpifort -Mpreprocess
+FLINKER_ubuntu       = mpif90
 FLINKER              = $(FLINKER_$(MACHINE))
 
 FLAGS_DEBUG        = $(DEBUG) $(OPENMP) $(OPENACC)
@@ -125,6 +128,7 @@ DEBUG_birch_cce    = -g -G0 -O0
 DEBUG_spock_cce    = -g -G0 -O0
 DEBUG_spock_gcc    = -g -Og -ggdb -ftrapv -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -fbacktrace -fallow-argument-mismatch
 DEBUG_corigpu_pgi  = -g -O0 -traceback -Mbounds -Ktrap=fp
+DEBUG_ubuntu       = -g -fbacktrace -ffpe-trap=invalid,zero -ffpe-summary=invalid,zero -fbounds-check
 DEBUG              = $(DEBUG_$(MACHINE))
 
 FLAGS_OPTIMIZE        = $(OPTIMIZE) $(OPENMP) $(OPENACC)
@@ -151,6 +155,7 @@ OPTIMIZE_birch_cce    = -O1
 OPTIMIZE_spock_cce    = -O2
 OPTIMIZE_spock_gcc    = -g -O2 -fallow-argument-mismatch
 OPTIMIZE_corigpu_pgi  = -g -O2 -tp=skylake
+OPTIMIZE_ubuntu       = -g -O2
 OPTIMIZE              = $(OPTIMIZE_$(MACHINE))
 
 INCLUDE_HDF5_sn1987b      = -I/usr/local/Cellar/hdf5/1.10.5/include
@@ -176,6 +181,7 @@ INCLUDE_HDF5_birch_cce    =
 INCLUDE_HDF5_spock_cce    =
 INCLUDE_HDF5_spock_gcc    =
 INCLUDE_HDF5_corigpu_pgi  = -I$(HDF5_DIR)/include
+INCLUDE_HDF5_ubuntu       = -I/usr/include/hdf5/serial
 INCLUDE_HDF5              = $(INCLUDE_HDF5_$(MACHINE))
 
 INCLUDE_CUDA_titan_gnu    = -I$(CUDATOOLKIT_HOME)/include
@@ -220,6 +226,7 @@ LIBRARIES_HDF5_birch_cce    = -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_spock_cce    = -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_spock_gcc    = -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_corigpu_pgi  = -L$(HDF5_DIR)/lib -lhdf5_fortran -lhdf5
+LIBRARIES_HDF5_ubuntu       = -L$(HDF5_DIR)/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5              = $(LIBRARIES_HDF5_$(MACHINE))
 
 LIBRARIES_CUDA_titan_gnu    = -L$(CUDATOOLKIT_HOME)/lib64 -lcublas -lcudart -lcuda
@@ -264,6 +271,7 @@ PP_birch_cce         = -D
 PP_spock_cce         = -D
 PP_spock_gcc         = -D
 PP_corigpu_pgi       = -D
+PP_ubuntu            = -D
 PP                   = $(PP_$(MACHINE))
 
 MDEFS_sn1987b        =
