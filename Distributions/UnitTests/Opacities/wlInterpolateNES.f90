@@ -273,7 +273,7 @@ PROGRAM wlInterpolateNES
                                             + NES0_mutaubar(jj)   * root2n
       END DO ! jj
 
-      SumNES_nue(ii,i)      = sum_NES_nue
+      SumNES_nue(ii,i)      = sum_NES_nue  ! (A38) in Bruenn 85
       SumNES_nuebar(ii,i)   = sum_NES_nuebar
       SumNES_mutau(ii,i)    = sum_NES_mutau
       SumNES_mutaubar(ii,i) = sum_NES_mutaubar

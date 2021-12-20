@@ -265,7 +265,7 @@ PROGRAM wlInterpolatePair
                                               + TP0_mutaubar(jj)   * root2n
       END DO ! jj
 
-      SumPair_nue(ii,i)      = sum_TP0_nue
+      SumPair_nue(ii,i)      = sum_TP0_nue    ! (A47) in Bruenn 85
       SumPair_nuebar(ii,i)   = sum_TP0_nuebar
       SumPair_mutau(ii,i)    = sum_TP0_mutau
       SumPair_mutaubar(ii,i) = sum_TP0_mutaubar
