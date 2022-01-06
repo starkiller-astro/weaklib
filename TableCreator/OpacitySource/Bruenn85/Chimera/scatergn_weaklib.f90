@@ -125,7 +125,6 @@ scatp_1ii(:,:)       = zero
       cxc            = cxct/wk2(k)
       enuin          = egrid(k)/tmev
 
-!     DO kp = 1,nez !!! fix me
       DO kp = 1,k
 
         enuout       = egrid(kp)/tmev
