@@ -288,35 +288,35 @@ DO k = 1, nez
 !  Inverse mean free paths for coherent scattering.
 !--------------------------------------------------------------------
 
-! Compute Equation C38 for proton with coeff.: (cvel*(hc)**3)*e2* ( C38 )
-  rmdnps0(k)     = cc * e2 * xnp * ap0
+! Compute Equation C38 for proton with coeff. : (cvel*(hc)**3) * ( C38 ) / 2
+  rmdnps0(k)     = half * cc * xnp * ap0
 
-! Compute Equation C38 for neutron with coeff.: (cvel*(hc)**3)*e2*( C38 )
-  rmdnns0(k)     = cc * e2 * xnn * an0
+! Compute Equation C38 for neutron with coeff.: (cvel*(hc)**3) * ( C38 ) / 2
+  rmdnns0(k)     = half * cc * xnn * an0
 
   rmdnbps0(k)    = rmdnps0(k)
   rmdnbns0(k)    = rmdnns0(k)
 
-! Compute Equation C44 for He with coeff.:  (cvel*(hc)**3)*e2* ( C44 )
-  rmdnhes0(k)    = cc * e2 * xheaa * a01 * saghe
+! Compute Equation C44 for He with coeff.:  (cvel*(hc)**3) * ( C44 ) / 2
+  rmdnhes0(k)    = half * cc * xheaa * a01 * saghe
 
-! Compute Equation C44 for heavy element with coeff.: (cvel*(hc)**3)*e2* ( C44 )
-  rmdnhs0(k)     = cc * e2 * xhaa * a02 * sag
+! Compute Equation C44 for heavy element with coeff.: (cvel*(hc)**3) * ( C44 ) / 2
+  rmdnhs0(k)     = half * cc * xhaa * a02 * sag
 
-! Compute Equation C39 for proton with coeff.: (cvel*(hc)**3)*e2*( C39 ) * 3
-  rmdnps1(k)     = cc * e2 * xnp * ap1
+! Compute Equation C39 for proton with coeff.: (cvel*(hc)**3) * ( C39 ) * 3 / 2
+  rmdnps1(k)     = half * cc * xnp * ap1
 
-! Compute Equation C39 for neutron with coeff.: (cvel*(hc)**3)*e2*( C39 ) * 3
-  rmdnns1(k)     = cc * e2 * xnn * an1
+! Compute Equation C39 for neutron with coeff.: (cvel*(hc)**3) * ( C39 ) * 3 / 2
+  rmdnns1(k)     = half * cc * xnn * an1
 
   rmdnbps1(k)    = rmdnps1(k)
   rmdnbns1(k)    = rmdnns1(k)
 
-! Compute Equation C45 for He with coeff.: (cvel*(hc)**3)*e2*( C45 )
-  rmdnhes1(k)    = cc * e2 * xheaa * a01 * sbghe * 3.0d0
+! Compute Equation C45 for He with coeff.: (cvel*(hc)**3) * ( C45 ) * 3 / 2
+  rmdnhes1(k)    = half * cc * xheaa * a01 * sbghe * 3.0d0
 
-! Compute Equation C45 for heavy element with coeff.: (cvel*(hc)**3)*e2*( C45 )
-  rmdnhs1(k)     = cc * e2 * xhaa * a02 * sbg * 3.0d0
+! Compute Equation C45 for heavy element with coeff.: (cvel*(hc)**3)*e2*( C45 ) * 3 / 2
+  rmdnhs1(k)     = half * cc * xhaa * a02 * sbg * 3.0d0
 
 !!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
