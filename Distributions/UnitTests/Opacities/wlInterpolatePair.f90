@@ -25,7 +25,7 @@ PROGRAM wlInterpolatePair
     DescribeGrid, &
     MakeLogGrid
   USE wlExtPhysicalConstantsModule, ONLY: kMeV, ca, cv 
-  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero
+  USE wlExtNumericalModule, ONLY: pi, half, frpi, zero
   USE HDF5
 
   IMPLICIT NONE
@@ -216,10 +216,10 @@ PROGRAM wlInterpolatePair
          LOG10(OpacityTable % EtaGrid % Values),         &
          Offset_TP(iJii0)  , TableTPJ0ii  , J0ii )
 
-  InterpolantPair_nue      = twpi * ( cparpe  * J0i + cparne  * J0ii )
-  InterpolantPair_nuebar   = twpi * ( cparne  * J0i + cparpe  * J0ii )
-  InterpolantPair_mutau    = twpi * ( cparpmt * J0i + cparnmt * J0ii )
-  InterpolantPair_mutaubar = twpi * ( cparnmt * J0i + cparpmt * J0ii )
+  InterpolantPair_nue      = frpi * ( cparpe  * J0i + cparne  * J0ii )
+  InterpolantPair_nuebar   = frpi * ( cparne  * J0i + cparpe  * J0ii )
+  InterpolantPair_mutau    = frpi * ( cparpmt * J0i + cparnmt * J0ii )
+  InterpolantPair_mutaubar = frpi * ( cparnmt * J0i + cparpmt * J0ii )
 
   DO i = 1,datasize
     DO ii = 1, Inte_nPointE

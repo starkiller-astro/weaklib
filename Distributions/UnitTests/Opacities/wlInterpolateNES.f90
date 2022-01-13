@@ -25,7 +25,7 @@ PROGRAM wlInterpolateNES
     DescribeGrid, &
     MakeLogGrid
   USE wlExtPhysicalConstantsModule, ONLY: kMeV, ca, cv
-  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero
+  USE wlExtNumericalModule, ONLY: pi, half, frpi, zero
   USE HDF5
 
   IMPLICIT NONE
@@ -212,11 +212,11 @@ PROGRAM wlInterpolateNES
            LOG10(OpacityTable % EtaGrid % Values),         &
            Offset_NES(iHii0), TableNES_H0ii, InterH0ii )
 
-  InterpolantNES_nue      = twpi * ( cparpe  * InterH0i + cparne  * InterH0ii )
-  InterpolantNES_nuebar   = twpi * ( cparne  * InterH0i + cparpe  * InterH0ii )
+  InterpolantNES_nue      = frpi * ( cparpe  * InterH0i + cparne  * InterH0ii )
+  InterpolantNES_nuebar   = frpi * ( cparne  * InterH0i + cparpe  * InterH0ii )
 
-  InterpolantNES_mutau    = twpi * ( cparpmt * InterH0i + cparnmt * InterH0ii )
-  InterpolantNES_mutaubar = twpi * ( cparnmt * InterH0i + cparpmt * InterH0ii )
+  InterpolantNES_mutau    = frpi * ( cparpmt * InterH0i + cparnmt * InterH0ii )
+  InterpolantNES_mutaubar = frpi * ( cparnmt * InterH0i + cparpmt * InterH0ii )
 
   DO i = 1,datasize
     DO ii = 1, Inte_nPointE

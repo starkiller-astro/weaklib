@@ -46,6 +46,7 @@ PROGRAM wlInterpolateIso
   INTEGER                             :: i, datasize
 
   !-------- variables for interpolation -------------------------------------
+  INTEGER                               :: iE
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: bufferIso10, bufferIso11, &
                                            bufferIso20, bufferIso21
 
@@ -169,7 +170,11 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e,2), TableES11, bufferIso11 )
 
-  InterpolantIso1 = frpi * ( bufferIso10 - bufferIso11 / 3.0d0 )! (A41) in Bruenn 85
+  DO iE = 1, Inte_nPointE
+    InterpolantIso1(iE,:) = frpi * Energy(iE)**2 &
+                            * ( bufferIso10(iE,:) - bufferIso11(iE,:) / 3.0d0 )
+                     ! (A41) in Bruenn 85
+  END DO
 
   CALL LogInterpolateSingleVariable_1D3D_Custom         &
          ( LOG10( Energy ), LOG10( Inte_rho ),          &
@@ -189,7 +194,11 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e_bar,2), TableES21, bufferIso21 )
 
-  InterpolantIso2 = frpi * ( bufferIso20 - bufferIso21 / 3.0d0 )! (A41) in Bruenn 85
+  DO iE = 1, Inte_nPointE
+    InterpolantIso2(iE,:) = frpi * Energy(iE)**2 &
+                            * ( bufferIso20(iE,:) - bufferIso21(iE,:) / 3.0d0 )
+                     ! (A41) in Bruenn 85
+  END DO
 
   END ASSOCIATE ! Table
 
