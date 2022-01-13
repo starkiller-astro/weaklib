@@ -168,8 +168,8 @@ IMPLICIT NONE
                                   'Electron Antineutrino       '/)
 
    OpacityTable % Scat_Iso % Units = &
-                                (/'Per Centimeter              ',  &
-                                  'Per Centimeter              '/)
+                                (/'Per Centimeter Per MeV^2    ',  &
+                                  'Per Centimeter Per MeV^2    '/)
    END IF
 
 ! -- Set OpacityTableTypeScat NES
