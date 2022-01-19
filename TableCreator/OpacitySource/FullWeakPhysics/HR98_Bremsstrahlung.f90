@@ -45,11 +45,10 @@ INTEGER               :: i                    ! index to loop over nn, pp, and n
 
 REAL(dp), PARAMETER   :: tthird   = 2.d0/3.d0
 
-!REAL(dp), PARAMETER   :: C_AG_FnB = 3.79d+4/cvel             ! Raffelt constant
-!REAL(dp), PARAMETER   :: conv1    = 1.d0 / ( 2.d0 * pi )**3  ! 1/(hc)**3 in natural units
-!REAL(dp), PARAMETER   :: conv2    = 3.d0 * 4.d0 * pi               ! integrates ( 3 - costh ) over solid angle
-!REAL(dp), PARAMETER   :: coef     = conv1 * conv2 * C_AG_FnB
-
+REAL(dp), PARAMETER   :: C_AG_FnB = 3.79d+4/cvel             ! Raffelt constant
+REAL(dp), PARAMETER   :: conv1    = 1.d0 / ( 2.d0 * pi )**3  ! 1/(hc)**3 in natural units
+REAL(dp), PARAMETER   :: conv2    = 3.d0 * 4.d0 * pi               ! integrates ( 3 - costh ) over solid angle
+REAL(dp), PARAMETER   :: coef     = conv1 * conv2 * C_AG_FnB
 REAL(dp), PARAMETER   :: coef_np  = 28.d0/3.d0
 REAL(dp)              :: rho_14          ! rho/1e+14
 REAL(dp)              :: t_10            ! tmev/10
@@ -146,12 +145,8 @@ INTEGER               :: k, kb           ! neutrino(anti) loop variables
 
   DO kb = 1,nez
     DO k = 1,nez
-!-----------------------------------
-! (Equation 35 Hannestad & Raffelt)
-!  rho_14 * gamma * sb(k,kb)  / ( tmev * (x(k,kb)**2 + ( half * gamma * gb )**2 ) )
-!-----------------------------------
       s_a(k,kb)     = gamma/( x(k,kb)**2 + ( half * gamma * gb )**2 )         &
-&                    * sb(k,kb)/tmev * rho_14
+&                    * sb(k,kb)/tmev * coef * rho_14
     END DO ! k = 1,nez
   END DO ! kb = 1,nez
 
