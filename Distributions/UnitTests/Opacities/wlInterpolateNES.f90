@@ -25,13 +25,13 @@ PROGRAM wlInterpolateNES
     DescribeGrid, &
     MakeLogGrid
   USE wlExtPhysicalConstantsModule, ONLY: kMeV, ca, cv
-  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero
+  USE wlExtNumericalModule, ONLY: pi, half, frpi, zero
   USE HDF5
 
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  INTEGER, PARAMETER     :: Inte_nPointE = 80
   REAL(dp)               :: Inte_Emin = 1.0d-1
   REAL(dp)               :: Inte_Emax = 3.0d02
   TYPE(GridType)         :: Inte_E
@@ -212,11 +212,11 @@ PROGRAM wlInterpolateNES
            LOG10(OpacityTable % EtaGrid % Values),         &
            Offset_NES(iHii0), TableNES_H0ii, InterH0ii )
 
-  InterpolantNES_nue      = cparpe  * InterH0i + cparne  * InterH0ii
-  InterpolantNES_nuebar   = cparne  * InterH0i + cparpe  * InterH0ii
+  InterpolantNES_nue      = frpi * ( cparpe  * InterH0i + cparne  * InterH0ii )
+  InterpolantNES_nuebar   = frpi * ( cparne  * InterH0i + cparpe  * InterH0ii )
 
-  InterpolantNES_mutau    = cparpmt * InterH0i + cparnmt * InterH0ii
-  InterpolantNES_mutaubar = cparnmt * InterH0i + cparpmt * InterH0ii
+  InterpolantNES_mutau    = frpi * ( cparpmt * InterH0i + cparnmt * InterH0ii )
+  InterpolantNES_mutaubar = frpi * ( cparnmt * InterH0i + cparpmt * InterH0ii )
 
   DO i = 1,datasize
     DO ii = 1, Inte_nPointE
@@ -273,7 +273,7 @@ PROGRAM wlInterpolateNES
                                             + NES0_mutaubar(jj)   * root2n
       END DO ! jj
 
-      SumNES_nue(ii,i)      = sum_NES_nue
+      SumNES_nue(ii,i)      = sum_NES_nue  ! (A38) in Bruenn 85
       SumNES_nuebar(ii,i)   = sum_NES_nuebar
       SumNES_mutau(ii,i)    = sum_NES_mutau
       SumNES_mutaubar(ii,i) = sum_NES_mutaubar

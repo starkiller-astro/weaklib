@@ -16,9 +16,9 @@ all: wlOpacityFieldsTest \
      wlInterpolatePair \
      wlInterpolateBrem
 
-Interpolations: wlInterpolateAb \
-                wlInterpolateIso \
-                wlInterpolateNES \
+Interpolations: wlInterpolateAb   \
+                wlInterpolateIso  \
+                wlInterpolateNES  \
                 wlInterpolatePair \
 		wlInterpolateBrem
 
@@ -47,7 +47,7 @@ wlInterpolateAb: \
         $(LIBRARIES)
 
 wlInterpolateIso: \
-        $(weaklib) wlInterpolateIso.o
+        $(Weaklib_TableCreator) wlInterpolateIso.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateIso_$(MACHINE) \
         $(weaklib) wlInterpolateIso.o \
         $(LIBRARIES)

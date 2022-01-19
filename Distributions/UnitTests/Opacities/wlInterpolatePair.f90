@@ -25,13 +25,13 @@ PROGRAM wlInterpolatePair
     DescribeGrid, &
     MakeLogGrid
   USE wlExtPhysicalConstantsModule, ONLY: kMeV, ca, cv 
-  USE wlExtNumericalModule, ONLY: pi, half, twpi, zero
+  USE wlExtNumericalModule, ONLY: pi, half, frpi, zero
   USE HDF5
 
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  INTEGER, PARAMETER     :: Inte_nPointE = 80
   REAL(dp)               :: Inte_Emin = 1.0d-1
   REAL(dp)               :: Inte_Emax = 3.0d02
   TYPE(GridType)         :: Inte_E
@@ -216,10 +216,10 @@ PROGRAM wlInterpolatePair
          LOG10(OpacityTable % EtaGrid % Values),         &
          Offset_TP(iJii0)  , TableTPJ0ii  , J0ii )
 
-  InterpolantPair_nue      = cparpe  * J0i + cparne  * J0ii
-  InterpolantPair_nuebar   = cparne  * J0i + cparpe  * J0ii
-  InterpolantPair_mutau    = cparpmt * J0i + cparnmt * J0ii
-  InterpolantPair_mutaubar = cparnmt * J0i + cparpmt * J0ii
+  InterpolantPair_nue      = frpi * ( cparpe  * J0i + cparne  * J0ii )
+  InterpolantPair_nuebar   = frpi * ( cparne  * J0i + cparpe  * J0ii )
+  InterpolantPair_mutau    = frpi * ( cparpmt * J0i + cparnmt * J0ii )
+  InterpolantPair_mutaubar = frpi * ( cparnmt * J0i + cparpmt * J0ii )
 
   DO i = 1,datasize
     DO ii = 1, Inte_nPointE
@@ -265,7 +265,7 @@ PROGRAM wlInterpolatePair
                                               + TP0_mutaubar(jj)   * root2n
       END DO ! jj
 
-      SumPair_nue(ii,i)      = sum_TP0_nue
+      SumPair_nue(ii,i)      = sum_TP0_nue    ! (A47) in Bruenn 85
       SumPair_nuebar(ii,i)   = sum_TP0_nuebar
       SumPair_mutau(ii,i)    = sum_TP0_mutau
       SumPair_mutaubar(ii,i) = sum_TP0_mutaubar

@@ -6,15 +6,16 @@ SUBROUTINE scatergn_weaklib &
 !                  U. Tennesee, Knoxville
 !
 !    Created:      12/04/2018
+!    Edited :      12/15/2021   --- Dropped 2*pi from coeff.
 !
 !    Purpose:
 !      To compute the neutrino-electron scattering function elements
 !      h0i/h1i and h1i/h1ii (zeroth and first order), which have the 
 !      forms
 !
-!      h0i/h1i   = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLi(w,w')
+!      h0i/h1i   = ( 1/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLi(w,w')
 !   
-!      h1ii/h1ii = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLii(w,w') 
+!      h1ii/h1ii = ( 1/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLii(w,w') 
 !
 !--------------------------------------------------------------------
 !
@@ -72,11 +73,11 @@ INTEGER                     :: i             ! loop counter over points to build
 INTEGER                     :: k             ! incomiong neutrino energy zone index
 INTEGER                     :: kp            ! outgoing neutrino energy zone index
 
-REAL(double), DIMENSION(nez) :: wk2   ! egrid**2
+REAL(double), DIMENSION(nez) :: wk2          ! egrid**2
 REAL(double)                :: enuin         ! incoming neutrino energy/tmev
 REAL(double)                :: enuout        ! outgoing neutrino energy/tmev
 
-REAL(double), PARAMETER     :: coc = 2.d0 * ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**3 * hbar * cvel )
+REAL(double), PARAMETER     :: coc = ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**4 * hbar * cvel )
 REAL(double)                :: cxct          ! coc*t**6
 REAL(double)                :: cxc           ! cxc/egrid**2
 REAL(double)                 :: fexp          ! exponential function
@@ -113,7 +114,6 @@ scatp_1ii(:,:)       = zero
 !--------------------------------------------------------------------
 
   cxct             = coc * (tmev)**6
-!!!???????????
 
 !--------------------------------------------------------------------
 !  cxc has dimensions of 1 /[ energy length ]
@@ -125,7 +125,6 @@ scatp_1ii(:,:)       = zero
       cxc            = cxct/wk2(k)
       enuin          = egrid(k)/tmev
 
-!     DO kp = 1,nez !!! fix me
       DO kp = 1,k
 
         enuout       = egrid(kp)/tmev

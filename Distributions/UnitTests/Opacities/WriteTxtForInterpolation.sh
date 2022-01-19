@@ -3,9 +3,13 @@
 if [ -e "dataList.txt" ]; then
 rm dataList.txt
 fi
-for f in *.profile; do
-  [ -e "$f" ] && echo $f >> dataList.txt
-done
+if [ -e *.profile ]; then
+  for f in *.profile; do
+    [ -e "$f" ] && echo $f >> dataList.txt
+  done
+else
+  echo 'No profile!'>> dataList.txt
+fi
 for f in wl-EOS-*.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done
@@ -19,5 +23,8 @@ for f in wl-*NES.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done
 for f in wl-*Pair.h5; do
+  [ -e "$f" ] && echo $f >> dataList.txt
+done
+for f in wl-*Brem.h5; do
   [ -e "$f" ] && echo $f >> dataList.txt
 done

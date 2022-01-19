@@ -28,7 +28,7 @@ PROGRAM wlInterpolateAb
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid --------------------------
-  INTEGER, PARAMETER     :: Inte_nPointE = 40
+  INTEGER, PARAMETER     :: Inte_nPointE = 80
   REAL(dp)               :: Inte_Emin = 1.0d-1
   REAL(dp)               :: Inte_Emax = 3.0d02
   TYPE(GridType)         :: Inte_E
