@@ -176,9 +176,9 @@ OPTIMIZE_summit_pgi   = -g -O3
 OPTIMIZE_summit_nvhpc = -g -O2 -tp=pwr9
 OPTIMIZE_summit_xl    = -g -O3 -qnohot -qarch=pwr9 -qtune=pwr9 -qsclk=micro -qsuppress=cmpmsg -w
 OPTIMIZE_poplar_cce   = -h heap_allocate
-OPTIMIZE_crusher_cce  = -O3
+OPTIMIZE_crusher_cce  = -O2
 OPTIMIZE_crusher_gcc  = -g -O2 -fallow-argument-mismatch
-OPTIMIZE_birch_cce    = -O3
+OPTIMIZE_birch_cce    = -O2
 OPTIMIZE_birch_gcc    = -g -O2 -fallow-argument-mismatch
 OPTIMIZE_spock_cce    = -O2
 OPTIMIZE_spock_gcc    = -g -O2 -fallow-argument-mismatch
