@@ -19,8 +19,16 @@
 *.a
 *.o
 *.mod
+*.lst
+*.ptx
+*.dSYM
+*.acc.s
+pgipar*
 
 # Sam's files to ignore
 *.DS_Store
 *main*ex
 *tmp_build_dir
+
+# core dumps
+core*
