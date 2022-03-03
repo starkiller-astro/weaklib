@@ -548,7 +548,7 @@ CONTAINS
           i = i0
         END IF
 
-        SumInterp = Zero
+        SumInterp = 0.0d0
         DO l = 1, SIZE( Alpha )
           CALL LinearInterp2D_4DArray_2DAligned_Point &
                  ( i, j, iD(l), iT, dD(l), dT, OS, Table, Interp )
