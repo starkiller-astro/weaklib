@@ -48,6 +48,8 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned
   PUBLIC :: LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned_P
 
+  PUBLIC :: SumLogInterpolateSingleVariable_2D2D_Custom_Aligned
+
   REAL(dp), PARAMETER :: One = 1.0_dp
   REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 
@@ -466,6 +468,98 @@ CONTAINS
     END DO
 
   END SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned_Point
+
+
+  SUBROUTINE SumLogInterpolateSingleVariable_2D2D_Custom_Aligned &
+    ( LogD, LogT, LogDs, LogTs, Alpha, OS, Table, Interpolant, GPU_Option, ASYNC_Option )
+
+    REAL(dp), INTENT(in)  :: LogD (:,:), LogT (:)
+    REAL(dp), INTENT(in)  :: LogDs(:)  , LogTs(:)
+    REAL(dp), INTENT(in)  :: Alpha(:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
+    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
+
+    INTEGER  :: async_flag
+    INTEGER  :: i, j, k, l, ij, i0, j0, SizeE
+    INTEGER  :: iD(SIZE(Alpha)), iT
+    REAL(dp) :: dD(SIZE(Alpha)), dT
+    REAL(dp) :: Interp, SumInterp
+    LOGICAL  :: do_gpu
+
+    IF( PRESENT( GPU_Option ) )THEN
+      do_gpu = GPU_Option
+    ELSE
+      do_gpu = .FALSE.
+    END IF
+
+    IF( PRESENT( ASYNC_Option ) )THEN
+      async_flag = ASYNC_Option
+    ELSE
+#if defined(WEAKLIB_OMP_OL)
+      async_flag = -1
+#elif defined(WEAKLIB_OACC)
+      async_flag = acc_async_sync
+#endif
+    END IF
+
+    SizeE = SIZE( Interpolant, DIM = 1 )
+
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE IF( do_gpu ) &
+    !$OMP PRIVATE( iT, dT, iD, dD )
+#elif defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG IF( do_gpu ) ASYNC( async_flag ) &
+    !$ACC PRIVATE( iT, dT, iD, dD ) &
+    !$ACC PRESENT( LogT, LogTs, LogD, LogDs, OS, Table, Interpolant )
+#elif defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DO &
+    !$OMP PRIVATE( iT, dT, iD, dD, Interp, SumInterp, &
+    !$OMP          i0, j0, i, j )
+#endif
+    DO k = 1, SIZE( LogT )
+
+      !CALL GetIndexAndDelta_Lin( LogT(k), LogTs, iT, dT )
+      !CALL GetIndexAndDelta_Lin( LogD(k), LogDs, iD, dD )
+      iT = Index1D_Lin( LogT(k), LogTs )
+      dT = ( LogT(k) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
+      DO l = 1, SIZE( Alpha )
+        iD(l) = Index1D_Lin( LogD(l,k), LogDs )
+        dD(l) = ( LogD(l,k) - LogDs(iD(l)) ) / ( LogDs(iD(l)+1) - LogDs(iD(l)) )
+      END DO
+
+#if defined(WEAKLIB_OMP_OL)
+      !$OMP PARALLEL DO SIMD &
+      !$OMP PRIVATE( i0, j0, i, j, Interp, SumInterp )
+#elif defined(WEAKLIB_OACC)
+      !$ACC LOOP VECTOR &
+      !$ACC PRIVATE( i0, j0, i, j, Interp, SumInterp )
+#endif
+      DO ij = 1, SizeE*(SizeE+1)/2 ! Collapsed triangular loop: DO j = 1, SizeE ; DO i = 1, j
+        j0 = MOD( (ij-1) / ( SizeE + 1 ), SizeE + 1 ) + 1
+        i0 = MOD( (ij-1)                , SizeE + 1 ) + 1
+        IF ( i0 > j0 ) THEN
+          j = SizeE - j0 + 1
+          i = SizeE - i0 + 2
+        ELSE
+          j = j0
+          i = i0
+        END IF
+
+        SumInterp = 0.0d0
+        DO l = 1, SIZE( Alpha )
+          CALL LinearInterp2D_4DArray_2DAligned_Point &
+                 ( i, j, iD(l), iT, dD(l), dT, OS, Table, Interp )
+          SumInterp = SumInterp + Alpha(l) * Interp
+        END DO
+        Interpolant(i,j,k) = SumInterp
+
+      END DO
+    END DO
+
+  END SUBROUTINE SumLogInterpolateSingleVariable_2D2D_Custom_Aligned
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
