@@ -67,8 +67,8 @@ CONTAINS
 
   SUBROUTINE InitializeEOSInversion( Ds, Ts, Ys, Es, Ps, Ss, Verbose_Option )
 
-    REAL(dp), INTENT(in) :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in) :: Es(:,:,:), Ps(:,:,:), Ss(:,:,:)
+    REAL(dp), INTENT(in) :: Ds(1:)      , Ts(1:)      , Ys(1:)
+    REAL(dp), INTENT(in) :: Es(1:,1:,1:), Ps(1:,1:,1:), Ss(1:,1:,1:)
     LOGICAL,  INTENT(in), OPTIONAL :: Verbose_Option
 
     LOGICAL :: Verbose
@@ -204,9 +204,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , X    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)  :: Xs(:,:,:)
+    REAL(dp), INTENT(in)  :: D     , X     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
@@ -377,9 +377,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , X    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)  :: Xs(:,:,:)
+    REAL(dp), INTENT(in)  :: D     , X     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     INTEGER,  INTENT(out) :: Error
@@ -505,13 +505,13 @@ CONTAINS
   SUBROUTINE ComputeTemperatureWith_DEY_Many &
     ( D, E, Y, Ds, Ts, Ys, Es, OS, T, UseInitialGuess_Option, Error_Option )
 
-    REAL(dp), INTENT(in)    :: D (:), E (:), Y (:)
-    REAL(dp), INTENT(in)    :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)    :: Es(:,:,:)
+    REAL(dp), INTENT(in)    :: D (1:), E (1:), Y (1:)
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
-    REAL(dp), INTENT(inout) :: T(:)
+    REAL(dp), INTENT(inout) :: T(1:)
     LOGICAL,  INTENT(in),  OPTIONAL :: UseInitialGuess_Option
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option(:)
+    INTEGER,  INTENT(out), OPTIONAL :: Error_Option(1:)
 
     REAL(dp) :: T_Guess
     LOGICAL  :: UseInitialGuess
@@ -550,9 +550,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , E    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)  :: Es(:,:,:)
+    REAL(dp), INTENT(in)  :: D     , E     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
@@ -579,9 +579,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D    , E    , Y
-    REAL(dp), INTENT(in)    :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)    :: Es(:,:,:)
+    REAL(dp), INTENT(in)    :: D     , E     , Y
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option
@@ -602,13 +602,13 @@ CONTAINS
   SUBROUTINE ComputeTemperatureWith_DPY_Many &
     ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, UseInitialGuess_Option, Error_Option )
 
-    REAL(dp), INTENT(in)    :: D (:), P (:), Y (:)
-    REAL(dp), INTENT(in)    :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)    :: Ps(:,:,:)
+    REAL(dp), INTENT(in)    :: D (1:), P (1:), Y (1:)
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
-    REAL(dp), INTENT(inout) :: T(:)
+    REAL(dp), INTENT(inout) :: T(1:)
     LOGICAL,  INTENT(in),  OPTIONAL :: UseInitialGuess_Option
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option(:)
+    INTEGER,  INTENT(out), OPTIONAL :: Error_Option(1:)
 
     REAL(dp) :: T_Guess
     LOGICAL  :: UseInitialGuess
@@ -647,9 +647,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , P    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)  :: Ps(:,:,:)
+    REAL(dp), INTENT(in)  :: D     , P     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
@@ -676,9 +676,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D    , P    , Y
-    REAL(dp), INTENT(in)    :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)    :: Ps(:,:,:)
+    REAL(dp), INTENT(in)    :: D     , P     , Y
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option
@@ -699,13 +699,13 @@ CONTAINS
   SUBROUTINE ComputeTemperatureWith_DSY_Many &
     ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, UseInitialGuess_Option, Error_Option )
 
-    REAL(dp), INTENT(in)    :: D (:), S (:), Y (:)
-    REAL(dp), INTENT(in)    :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)    :: Ss(:,:,:)
+    REAL(dp), INTENT(in)    :: D (1:), S (1:), Y (1:)
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
-    REAL(dp), INTENT(inout) :: T(:)
+    REAL(dp), INTENT(inout) :: T(1:)
     LOGICAL,  INTENT(in),  OPTIONAL :: UseInitialGuess_Option
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option(:)
+    INTEGER,  INTENT(out), OPTIONAL :: Error_Option(1:)
 
     REAL(dp) :: T_Guess
     LOGICAL  :: UseInitialGuess
@@ -744,9 +744,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , S    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)  :: Ss(:,:,:)
+    REAL(dp), INTENT(in)  :: D     , S     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
@@ -773,9 +773,9 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D    , S    , Y
-    REAL(dp), INTENT(in)    :: Ds(:), Ts(:), Ys(:)
-    REAL(dp), INTENT(in)    :: Ss(:,:,:)
+    REAL(dp), INTENT(in)    :: D     , S     , Y
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option

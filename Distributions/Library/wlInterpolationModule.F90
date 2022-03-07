@@ -81,24 +81,16 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D_Custom &
-    ( X, Y, Xs, Ys, OS, Table, Interpolant, Error_Option, GPU_Option )
+    ( X, Y, Xs, Ys, OS, Table, Interpolant, Error_Option )
 
-    REAL(dp), INTENT(in)  :: X (:), Y (:)
-    REAL(dp), INTENT(in)  :: Xs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: X (1:), Y (1:)
+    REAL(dp), INTENT(in)  :: Xs(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:)
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option
-    LOGICAL,  INTENT(in),  OPTIONAL :: GPU_Option
 
     INTEGER :: iP, Error
-    LOGICAL :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     Error = 0
     IF( .NOT. SIZE(X) == SIZE(Y) )THEN
@@ -108,9 +100,9 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD IF( do_gpu )
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR IF( do_gpu ) &
+    !$ACC PARALLEL LOOP GANG VECTOR &
     !$ACC PRESENT( X, Xs, Y, Ys, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO
@@ -133,10 +125,10 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: X, Y
-    REAL(dp), INTENT(in)  :: Xs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: X     , Y
+    REAL(dp), INTENT(in)  :: Xs(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     INTEGER  :: iX, iY
@@ -152,31 +144,23 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_1D3D_Custom &
-    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant, GPU_Option )
+    ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, OS, Table, Interpolant )
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogD (:), LogT (:), Y (:)
-    REAL(dp), INTENT(in)  :: LogEs(:), LogDs(:), LogTs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogD (1:), LogT (1:), Y (1:)
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogDs(1:), LogTs(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:)
-    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:)
 
     INTEGER  :: i, j
     INTEGER  :: iD, iT, iY, iE
     REAL(dp) :: dD, dT, dY, dE
-    LOGICAL  :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) IF( do_gpu ) &
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) &
     !$OMP PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) IF( do_gpu ) &
+    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) &
     !$ACC PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY ) &
     !$ACC PRESENT( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
@@ -208,11 +192,11 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogD    , LogT    , Y
-    REAL(dp), INTENT(in)  :: LogEs(:), LogDs(:), LogTs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogD     , LogT     , Y
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogDs(1:), LogTs(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:)
 
     INTEGER  :: i
     INTEGER  :: iD, iT, iY, iE
@@ -235,27 +219,19 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom &
-    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, GPU_Option, ASYNC_Option )
+    ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, ASYNC_Option )
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogT (:), LogX (:)
-    REAL(dp), INTENT(in)  :: LogEs(:), LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogT (1:), LogX (1:)
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
-    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:,1:)
     INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
     INTEGER  :: async_flag
     INTEGER  :: i, j, l, ij, i0, j0, SizeE
     INTEGER  :: iT, iX, iE1, iE2
     REAL(dp) :: dT, dX, dE1, dE2
-    LOGICAL  :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     IF( PRESENT( ASYNC_Option ) )THEN
       async_flag = ASYNC_Option
@@ -270,11 +246,11 @@ CONTAINS
     SizeE = SIZE( LogE )
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) IF( do_gpu ) &
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) &
     !$OMP PRIVATE( iE1, dE1, iE2, dE2, iT, dT, iX, dX, &
     !$OMP          i0, j0, i, j )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) IF( do_gpu ) ASYNC( async_flag ) &
+    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) ASYNC( async_flag ) &
     !$ACC PRIVATE( iE1, dE1, iE2, dE2, iT, dT, iX, dX, &
     !$ACC          i0, j0, i, j ), &
     !$ACC PRESENT( LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
@@ -317,11 +293,11 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogT    , LogX
-    REAL(dp), INTENT(in)  :: LogEs(:), LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogT     , LogX
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:)
 
     INTEGER  :: i, j, ij, i0, j0, SizeE
     INTEGER  :: iT, iX, iE1, iE2
@@ -355,27 +331,19 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_2D2D_Custom_Aligned &
-    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, GPU_Option, ASYNC_Option )
+    ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, ASYNC_Option )
 
-    REAL(dp), INTENT(in)  :: LogT (:), LogX (:)
-    REAL(dp), INTENT(in)  :: LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogT (1:), LogX (1:)
+    REAL(dp), INTENT(in)  :: LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
-    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:,1:)
     INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
     INTEGER  :: async_flag
     INTEGER  :: i, j, k, ij, i0, j0, SizeE
     INTEGER  :: iT, iX
     REAL(dp) :: dT, dX
-    LOGICAL  :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     IF( PRESENT( ASYNC_Option ) )THEN
       async_flag = ASYNC_Option
@@ -390,10 +358,10 @@ CONTAINS
     SizeE = SIZE( Interpolant, DIM = 1 )
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE IF( do_gpu ) &
+    !$OMP TARGET TEAMS DISTRIBUTE &
     !$OMP PRIVATE( iT, dT, iX, dX )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG IF( do_gpu ) ASYNC( async_flag ) &
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC PRIVATE( iT, dT, iX, dX ) &
     !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
@@ -445,11 +413,11 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: LogT    , LogX
-    REAL(dp), INTENT(in)  :: LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogT     , LogX
+    REAL(dp), INTENT(in)  :: LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:)
 
     INTEGER  :: i, j
     INTEGER  :: iT, iX
@@ -471,15 +439,14 @@ CONTAINS
 
 
   SUBROUTINE SumLogInterpolateSingleVariable_2D2D_Custom_Aligned &
-    ( LogD, LogT, LogDs, LogTs, Alpha, OS, Table, Interpolant, GPU_Option, ASYNC_Option )
+    ( LogD, LogT, LogDs, LogTs, Alpha, OS, Table, Interpolant, ASYNC_Option )
 
-    REAL(dp), INTENT(in)  :: LogD (:,:), LogT (:)
-    REAL(dp), INTENT(in)  :: LogDs(:)  , LogTs(:)
-    REAL(dp), INTENT(in)  :: Alpha(:)
+    REAL(dp), INTENT(in)  :: LogD (1:,1:), LogT (1:)
+    REAL(dp), INTENT(in)  :: LogDs(1:)   , LogTs(1:)
+    REAL(dp), INTENT(in)  :: Alpha(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
-    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:,1:)
     INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
     INTEGER  :: async_flag
@@ -487,13 +454,6 @@ CONTAINS
     INTEGER  :: iD(SIZE(Alpha)), iT
     REAL(dp) :: dD(SIZE(Alpha)), dT
     REAL(dp) :: Interp, SumInterp
-    LOGICAL  :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     IF( PRESENT( ASYNC_Option ) )THEN
       async_flag = ASYNC_Option
@@ -508,10 +468,10 @@ CONTAINS
     SizeE = SIZE( Interpolant, DIM = 1 )
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE IF( do_gpu ) &
+    !$OMP TARGET TEAMS DISTRIBUTE &
     !$OMP PRIVATE( iT, dT, iD, dD )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG IF( do_gpu ) ASYNC( async_flag ) &
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC PRIVATE( iT, dT, iD, dD ) &
     !$ACC PRESENT( LogT, LogTs, LogD, LogDs, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
@@ -563,24 +523,16 @@ CONTAINS
 
 
   SUBROUTINE LogInterpolateSingleVariable_3D_Custom &
-    ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Error_Option, GPU_Option )
+    ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Error_Option )
 
-    REAL(dp), INTENT(in)  :: D (:), T (:), Y (:)
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: D (1:), T (1:), Y (1:)
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:)
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option
-    LOGICAL,  INTENT(in),  OPTIONAL :: GPU_Option
 
     INTEGER :: iP, Error
-    LOGICAL :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     Error = 0
     IF( .NOT. ALL( [ SIZE(T), SIZE(Y) ] == SIZE(D) ) )THEN
@@ -590,9 +542,9 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD IF( do_gpu )
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR IF( do_gpu ) &
+    !$ACC PARALLEL LOOP GANG VECTOR &
     !$ACC PRESENT( D, Ds, T, Ts, Y, Ys, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO
@@ -617,10 +569,10 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , T    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: D     , T     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     INTEGER  :: iD, iT, iY
@@ -638,24 +590,16 @@ CONTAINS
 
   SUBROUTINE LogInterpolateSingleVariable_4D_Custom &
       ( LogE, LogD, LogT, Y, LogEs, LogDs, LogTs, Ys, &
-        OS, Table, Interpolant, Error_Option, GPU_Option )
+        OS, Table, Interpolant, Error_Option )
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogD (:), LogT (:),  Y(:)
-    REAL(dp), INTENT(in)  :: LogEs(:), LogDs(:), LogTs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogD (1:), LogT (1:),  Y(1:)
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogDs(1:), LogTs(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:)
     INTEGER,  INTENT(out), OPTIONAL :: Error_Option
-    LOGICAL,  INTENT(in),  OPTIONAL :: GPU_Option
 
     INTEGER :: iP, Error
-    LOGICAL :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     Error = 0
     IF( .NOT. ALL( [ SIZE(LogD), SIZE(LogT), SIZE(Y) ] == SIZE(LogE) ) )THEN
@@ -665,9 +609,9 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD IF( do_gpu )
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR IF( do_gpu ) &
+    !$ACC PARALLEL LOOP GANG VECTOR &
     !$ACC PRESENT( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO
@@ -693,10 +637,10 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: LogE    , LogD    , LogT    , Y
-    REAL(dp), INTENT(in)  :: LogEs(:), LogDs(:), LogTs(:), Ys(:)
+    REAL(dp), INTENT(in)  :: LogE     , LogD     , LogT     , Y
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogDs(1:), LogTs(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     INTEGER  :: iD, iT, iY, iE
@@ -716,12 +660,12 @@ CONTAINS
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom &
     ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Derivative )
 
-    REAL(dp), INTENT(in)  :: D (:), T (:), Y (:)
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: D (1:), T (1:), Y (1:)
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:)
-    REAL(dp), INTENT(out) :: Derivative(:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:)
+    REAL(dp), INTENT(out) :: Derivative(1:,1:)
 
     INTEGER  :: iD, iT, iY, iP
     REAL(dp) :: dD, dT, dY
@@ -753,12 +697,12 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D    , T    , Y
-    REAL(dp), INTENT(in)  :: Ds(:), Ts(:), Ys(:)
+    REAL(dp), INTENT(in)  :: D     , T     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
-    REAL(dp), INTENT(out) :: Derivative(:)
+    REAL(dp), INTENT(out) :: Derivative(1:)
 
     INTEGER  :: iD, iT, iY
     REAL(dp) :: dD, dT, dY
@@ -780,16 +724,15 @@ CONTAINS
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom &
     ( LogE, LogT, LogX, LogEs, LogTs, LogXs, OS, Table, Interpolant, &
-      DerivativeT, DerivativeX, GPU_Option, ASYNC_Option )
+      DerivativeT, DerivativeX, ASYNC_Option )
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogT (:), LogX (:)
-    REAL(dp), INTENT(in)  :: LogEs(:), LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogT (1:), LogX (1:)
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
-    REAL(dp), INTENT(out) :: DerivativeT(:,:,:)
-    REAL(dp), INTENT(out) :: DerivativeX(:,:,:)
-    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeT(1:,1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeX(1:,1:,1:)
     INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
     INTEGER  :: async_flag
@@ -797,13 +740,6 @@ CONTAINS
     INTEGER  :: iT, iX, iE1, iE2
     REAL(dp) :: dT, dX, dE1, dE2
     REAL(dp) :: aT, aX, dI1, dI2
-    LOGICAL  :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     IF( PRESENT( ASYNC_Option ) )THEN
       async_flag = ASYNC_Option
@@ -818,11 +754,11 @@ CONTAINS
     SizeE = SIZE( Interpolant, DIM = 1 )
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) IF( do_gpu ) &
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) &
     !$OMP PRIVATE( iE1, dE1, iE2, dE2, iT, dT, aT, iX, dX, aX, dI1, dI2, &
     !$OMP          i0, j0, i, j )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) IF( do_gpu ) ASYNC( async_flag ) &
+    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) ASYNC( async_flag ) &
     !$ACC PRIVATE( iE1, dE1, iE2, dE2, iT, dT, aT, iX, dX, aX, dI1, dI2, &
     !$ACC          i0, j0, i, j ), &
     !$ACC PRESENT( LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, &
@@ -870,13 +806,13 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: LogE (:), LogT    , LogX
-    REAL(dp), INTENT(in)  :: LogEs(:), LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogE (1:), LogT     , LogX
+    REAL(dp), INTENT(in)  :: LogEs(1:), LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:)
-    REAL(dp), INTENT(out) :: DerivativeT(:,:)
-    REAL(dp), INTENT(out) :: DerivativeX(:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeT(1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeX(1:,1:)
 
     INTEGER  :: i, j
     INTEGER  :: iT, iX, iE1, iE2
@@ -905,29 +841,21 @@ CONTAINS
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_2D2D_Custom_Aligned &
     ( LogT, LogX, LogTs, LogXs, OS, Table, Interpolant, &
-      DerivativeT, DerivativeX, GPU_Option, ASYNC_Option )
+      DerivativeT, DerivativeX, ASYNC_Option )
 
-    REAL(dp), INTENT(in)  :: LogT (:), LogX (:)
-    REAL(dp), INTENT(in)  :: LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogT (1:), LogX (1:)
+    REAL(dp), INTENT(in)  :: LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:,:)
-    REAL(dp), INTENT(out) :: DerivativeT(:,:,:)
-    REAL(dp), INTENT(out) :: DerivativeX(:,:,:)
-    LOGICAL,  INTENT(in), OPTIONAL :: GPU_Option
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeT(1:,1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeX(1:,1:,1:)
     INTEGER,  INTENT(in), OPTIONAL :: ASYNC_Option
 
     INTEGER  :: async_flag
     INTEGER  :: i, j, k, ij, i0, j0, SizeE
     INTEGER  :: iT, iX
     REAL(dp) :: dT, aT, dX, aX
-    LOGICAL  :: do_gpu
-
-    IF( PRESENT( GPU_Option ) )THEN
-      do_gpu = GPU_Option
-    ELSE
-      do_gpu = .FALSE.
-    END IF
 
     IF( PRESENT( ASYNC_Option ) )THEN
       async_flag = ASYNC_Option
@@ -942,10 +870,10 @@ CONTAINS
     SizeE = SIZE( Interpolant, DIM = 1 )
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE IF( do_gpu ) &
+    !$OMP TARGET TEAMS DISTRIBUTE &
     !$OMP PRIVATE( iT, dT, aT, iX, dX, aX )
 #elif defined(WEAKLIB_OACC)
-    !$ACC PARALLEL LOOP GANG IF( do_gpu ) ASYNC( async_flag ) &
+    !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC PRIVATE( iT, dT, aT, iX, dX, aX ) &
     !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, &
     !$ACC          DerivativeT, DerivativeX, Interpolant )
@@ -1002,13 +930,13 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: LogT    , LogX
-    REAL(dp), INTENT(in)  :: LogTs(:), LogXs(:)
+    REAL(dp), INTENT(in)  :: LogT     , LogX
+    REAL(dp), INTENT(in)  :: LogTs(1:), LogXs(1:)
     REAL(dp), INTENT(in)  :: OS
-    REAL(dp), INTENT(in)  :: Table(:,:,:,:)
-    REAL(dp), INTENT(out) :: Interpolant(:,:)
-    REAL(dp), INTENT(out) :: DerivativeT(:,:)
-    REAL(dp), INTENT(out) :: DerivativeX(:,:)
+    REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant(1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeT(1:,1:)
+    REAL(dp), INTENT(out) :: DerivativeX(1:,1:)
 
     INTEGER  :: i, j
     INTEGER  :: iT, iX
