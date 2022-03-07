@@ -184,20 +184,22 @@ PROGRAM wlEosInversionTest
 
   ! --- Compute Internal Energy, Pressure, and Entropy ---
 
-  CALL LogInterpolateSingleVariable_3D_Custom &
-         ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_E, Es_T, E )
+  DO iP = 1, nPoints
+
+    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+           ( D(iP), T(iP), Y(iP), Ds_T, Ts_T, Ys_T, OS_E, Es_T, E(iP) )
+
+    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+           ( D(iP), T(iP), Y(iP), Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P(iP) )
+
+    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+           ( D(iP), T(iP), Y(iP), Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S(iP) )
+
+  END DO
 
   WRITE(*,*)
   WRITE(*,*) "Min/Max E = ", MINVAL( E ), MAXVAL( E )
-
-  CALL LogInterpolateSingleVariable_3D_Custom &
-         ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_P, Ps_T, P )
-
   WRITE(*,*) "Min/Max P = ", MINVAL( P ), MAXVAL( P )
-
-  CALL LogInterpolateSingleVariable_3D_Custom &
-         ( D, T, Y, Ds_T, Ts_T, Ys_T, OS_S, Ss_T, S )
-
   WRITE(*,*) "Min/Max S = ", MINVAL( S ), MAXVAL( S )
 
 #if defined(WEAKLIB_OMP_OL)
