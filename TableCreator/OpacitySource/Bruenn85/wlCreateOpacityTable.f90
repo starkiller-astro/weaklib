@@ -371,7 +371,8 @@ PRINT*, 'Filling OpacityTable ...'
            DO t_m = 1, nMom_Iso
 
              OpacityTable % Scat_Iso % Kernel(i_rb) % Values &
-             ( :, t_m, j_rho, k_t, l_ye )  = cok(:,t_m) 
+             ( :, t_m, j_rho, k_t, l_ye )  &
+             = cok(:,t_m) * ( (t_m - 1) * 2.d0 + 1.d0 ) / 2.d0
 
            END DO !t_m         
 

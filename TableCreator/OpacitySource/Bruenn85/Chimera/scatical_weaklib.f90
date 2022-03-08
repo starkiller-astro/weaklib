@@ -7,10 +7,12 @@ SUBROUTINE scatical_weaklib &
 !
 !    Created: 10/23/18
 !    Edited : 12/15/19   --- Dropped the 2*pi from coeff.
+!             03/08/22   --- Move legendre coeffs to creator driver
 !
 !    Purpose:
 !      To calculate the zero and first legendre coefs for the 
-!      n-type isoenergetic scattering functions.
+!      n-type isoenergetic scattering functions without 1/2 and 3/2.
+!      (1/2 and 3/2 are moved to creator driver)
 !
 !    Subprograms called:
 !      etaxx, scatiicr
@@ -72,9 +74,10 @@ REAL(double), INTENT(out), DIMENSION(nez,2) :: cok
 ! Equation C40 Bruenn 85
 REAL(double), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6
 
-! Compute 1/(c*(hc)**3) * 4*pi*g2
-! 1/(c*(hc)**3) A19, 4*pi from integral over phase space: int 4*pi*e**2 de
-REAL(double), PARAMETER      :: cc = 1.0d0 /( cvel * ( 2.d0 * pi * hbar * cvel )**3 ) * ( 4.d0 * pi ) * g2
+! Compute 1/(c*(hc)**3) * 4*pi*g2 in (C38) (C39), where
+! 1/(c*(hc)**3) from (A19), 4*pi from integral over phase space: int 4*pi*e**2 de
+REAL(double), PARAMETER      :: cc = 1.0d0 /( cvel * ( 2.d0 * pi * hbar * cvel )**3 )&
+                                * ( 4.d0 * pi ) * g2
 
 ! Equation C31 Bruenn 85, proton vector coupling constant
 REAL(double), PARAMETER      :: hvp =  one - cv
@@ -288,35 +291,35 @@ DO k = 1, nez
 !  Inverse mean free paths for coherent scattering.
 !--------------------------------------------------------------------
 
-! Compute Equation C38 for proton with coeff. : (cvel*(hc)**3) * ( C38 ) / 2
-  rmdnps0(k)     = half * cc * xnp * ap0
+! Compute Equation C38 for proton with coeff. : (cvel*(hc)**3) * ( C38 )
+  rmdnps0(k)     = cc * xnp * ap0
 
-! Compute Equation C38 for neutron with coeff.: (cvel*(hc)**3) * ( C38 ) / 2
-  rmdnns0(k)     = half * cc * xnn * an0
+! Compute Equation C38 for neutron with coeff.: (cvel*(hc)**3) * ( C38 )
+  rmdnns0(k)     = cc * xnn * an0
 
   rmdnbps0(k)    = rmdnps0(k)
   rmdnbns0(k)    = rmdnns0(k)
 
-! Compute Equation C44 for He with coeff.:  (cvel*(hc)**3) * ( C44 ) / 2
-  rmdnhes0(k)    = half * cc * xheaa * a01 * saghe
+! Compute Equation C44 for He with coeff.:  (cvel*(hc)**3) * ( C44 )
+  rmdnhes0(k)    = cc * xheaa * a01 * saghe
 
-! Compute Equation C44 for heavy element with coeff.: (cvel*(hc)**3) * ( C44 ) / 2
-  rmdnhs0(k)     = half * cc * xhaa * a02 * sag
+! Compute Equation C44 for heavy element with coeff.: (cvel*(hc)**3) * ( C44 )
+  rmdnhs0(k)     = cc * xhaa * a02 * sag
 
-! Compute Equation C39 for proton with coeff.: (cvel*(hc)**3) * ( C39 ) * 3 / 2
-  rmdnps1(k)     = half * cc * xnp * ap1
+! Compute Equation C39 for proton with coeff.:  (cvel*(hc)**3) * ( C39 )
+  rmdnps1(k)     = cc * xnp * ap1 / 3.0d0
 
-! Compute Equation C39 for neutron with coeff.: (cvel*(hc)**3) * ( C39 ) * 3 / 2
-  rmdnns1(k)     = half * cc * xnn * an1
+! Compute Equation C39 for neutron with coeff.: (cvel*(hc)**3) * ( C39 )
+  rmdnns1(k)     = cc * xnn * an1 / 3.0d0
 
   rmdnbps1(k)    = rmdnps1(k)
   rmdnbns1(k)    = rmdnns1(k)
 
-! Compute Equation C45 for He with coeff.: (cvel*(hc)**3) * ( C45 ) * 3 / 2
-  rmdnhes1(k)    = half * cc * xheaa * a01 * sbghe * 3.0d0
+! Compute Equation C45 for He with coeff.: (cvel*(hc)**3) * ( C45 )
+  rmdnhes1(k)    = cc * xheaa * a01 * sbghe
 
-! Compute Equation C45 for heavy element with coeff.: (cvel*(hc)**3)*e2*( C45 ) * 3 / 2
-  rmdnhs1(k)     = half * cc * xhaa * a02 * sbg * 3.0d0
+! Compute Equation C45 for heavy element with coeff.: (cvel*(hc)**3)*e2*( C45 )
+  rmdnhs1(k)     = cc * xhaa * a02 * sbg
 
 !!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
