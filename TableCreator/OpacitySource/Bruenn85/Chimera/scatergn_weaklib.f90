@@ -44,6 +44,7 @@ SUBROUTINE scatergn_weaklib &
 USE kind_module, ONLY: double
 USE numerical_module, ONLY: one, zero, pi
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, kmev, cv, ca
+USE pair_module, ONLY: coef
 
 IMPLICIT NONE
 
@@ -77,10 +78,9 @@ REAL(double), DIMENSION(nez) :: wk2          ! egrid**2
 REAL(double)                :: enuin         ! incoming neutrino energy/tmev
 REAL(double)                :: enuout        ! outgoing neutrino energy/tmev
 
-REAL(double), PARAMETER     :: coc = ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**4 * hbar * cvel )
-REAL(double)                :: cxct          ! coc*t**6
+REAL(double)                :: cxct          ! coef*t**6
 REAL(double)                :: cxc           ! cxc/egrid**2
-REAL(double)                 :: fexp          ! exponential function
+REAL(double)                :: fexp          ! exponential function
 REAL(double)                :: hout0i        ! zero moment of outgoing scattering function type i
 REAL(double)                :: hout0ii       ! zero moment of outgoing scattering function type ii
 REAL(double)                :: hout1i        ! first moment of outgoing scattering function type i
@@ -113,7 +113,7 @@ scatp_1ii(:,:)       = zero
 !  cxct has dimensions of [ energy / length ].
 !--------------------------------------------------------------------
 
-  cxct             = coc * (tmev)**6
+  cxct             = coef * (tmev)**6
 
 !--------------------------------------------------------------------
 !  cxc has dimensions of 1 /[ energy length ]
