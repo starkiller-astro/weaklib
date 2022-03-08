@@ -22,7 +22,7 @@ SUBROUTINE scatergn_weaklib &
 !    The Legendre moments of the neutrino-electron scattering functions
 !    are given by
 !
-!      phiLout = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) 
+!      phiLout = ( 1/(hc)**3 )*( g2/pi*w2*w'2 ) 
 !                  * cnes1(n)*houtLi(w,w') + cnes2(n)*houtLii(w,w')
 !
 !    where
