@@ -43,6 +43,6 @@ REAL(KIND=double), DIMENSION(nleg)                         :: wte
 
 REAL(KIND=double)    :: g2 = ( Gw/mp**2 )**2 * hbar**2 * cvel**3 ! cm3/MeV2 s
 REAL(KIND=double)    :: coef = ( 1.d0/cvel ) * ( 1.d0/( 2.d0 * pi * hbar * cvel ) )**3 &
-                               * ( Gw/mp**2 )**2 * hbar**2 * cvel**3 / pi
+                               * g2 / pi
 
 END module pair_module
