@@ -1,6 +1,7 @@
 PROGRAM wlInterpolateIso
 
   USE wlKindModule, ONLY: dp
+  USE wlExtNumericalModule, ONLY: frpi
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable_1D3D_Custom
   USE wlOpacityFieldsModule, ONLY: &
@@ -28,9 +29,9 @@ PROGRAM wlInterpolateIso
   IMPLICIT NONE
 
   !--------- parameters for creating energy grid ----------------------------
-  INTEGER, PARAMETER :: Inte_nPointE = 40
-  REAL(dp)           :: Inte_Emin = 2.0d00
-  REAL(dp)           :: Inte_Emax = 2.0d02
+  INTEGER, PARAMETER :: Inte_nPointE = 80
+  REAL(dp)           :: Inte_Emin = 1.0d-1
+  REAL(dp)           :: Inte_Emax = 3.0d02
   TYPE(GridType)     :: Inte_E
 
   !-------- variables for reading opacity table -----------------------------
@@ -45,6 +46,7 @@ PROGRAM wlInterpolateIso
   INTEGER                             :: i, datasize
 
   !-------- variables for interpolation -------------------------------------
+  INTEGER                               :: iE
   REAL(dp), DIMENSION(:,:), ALLOCATABLE :: bufferIso10, bufferIso11, &
                                            bufferIso20, bufferIso21
 
@@ -168,7 +170,11 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e,2), TableES11, bufferIso11 )
 
-  InterpolantIso1 = bufferIso10 - bufferIso11 / 3.0d0 ! (A41) in Bruenn 85
+  DO iE = 1, Inte_nPointE
+    InterpolantIso1(iE,:) = frpi * Energy(iE)**2 &
+                            * ( bufferIso10(iE,:) - bufferIso11(iE,:) / 3.0d0 )
+                     ! (A41) in Bruenn 85
+  END DO
 
   CALL LogInterpolateSingleVariable_1D3D_Custom         &
          ( LOG10( Energy ), LOG10( Inte_rho ),          &
@@ -188,7 +194,11 @@ PROGRAM wlInterpolateIso
            OpacityTable % TS % States(iYe) % Values,           &
            Offset_Iso(iNu_e_bar,2), TableES21, bufferIso21 )
 
-  InterpolantIso2 = bufferIso20 - bufferIso21 / 3.0d0 ! (A41) in Bruenn 85
+  DO iE = 1, Inte_nPointE
+    InterpolantIso2(iE,:) = frpi * Energy(iE)**2 &
+                            * ( bufferIso20(iE,:) - bufferIso21(iE,:) / 3.0d0 )
+                     ! (A41) in Bruenn 85
+  END DO
 
   END ASSOCIATE ! Table
 

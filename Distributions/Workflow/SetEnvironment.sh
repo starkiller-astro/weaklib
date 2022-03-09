@@ -46,13 +46,18 @@ elif [[ $WEAKLIB_MACHINE == ranchuair* ]]; then
 
 elif [[ $WEAKLIB_MACHINE == sjdunham* ]]; then
 
-echo
-echo "INFO: Setting environment for" $WEAKLIB_MACHINE
+  echo
+  echo "INFO: Setting environment for" $WEAKLIB_MACHINE
 
 elif [[ $WEAKLIB_MACHINE == vass* ]]; then
 
   export WEAKLIB_DIR=/Users/vv4/repos/github/weaklib/
   export PE_ENV=GNU
+  echo
+  echo "INFO: Setting environment for" $WEAKLIB_MACHINE
+
+elif [[ $WEAKLIB_MACHINE == ubuntu ]]; then
+
   echo
   echo "INFO: Setting environment for" $WEAKLIB_MACHINE
 
@@ -102,12 +107,17 @@ elif [[ $WEAKLIB_MACHINE == ranchuair ]]; then
 
 elif [[ $WEAKLIB_MACHINE == sjdunham ]]; then
 
-echo
+  echo
 
 elif [[ $WEAKLIB_MACHINE == vass ]]; then
 
   echo $WEAKLIB_MACHINE
   echo $WEAKLIB_DIR
+
+elif [[ $WEAKLIB_MACHINE == ubuntu ]]; then
+
+  echo
+
 else
 
   echo "  WARNING: Unknown machine " $WEAKLIB_MACHINE

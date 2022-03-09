@@ -111,8 +111,8 @@ CONTAINS
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
 
-    Index1D_Lin1 &
-      = 1 + FLOOR( (n-1)*(x-xx(1))/(xx(n)-xx(1)) + 1.d-12 )
+    Index1D_Lin1 = 1 + FLOOR( (n-1)*(x-xx(1))/(xx(n)-xx(1)) )
+    Index1D_Lin1 = MAX( 1, MIN( n-1, Index1D_Lin1 ) )
 
     RETURN
   END FUNCTION Index1D_Lin1
@@ -148,8 +148,8 @@ CONTAINS
     REAL(dp), INTENT(in) :: x, xx(n)
     INTEGER,  INTENT(in) :: n
 
-    Index1D_Log1 &
-      = 1 + FLOOR( (n-1)*LOG10(x/xx(1))/LOG10(xx(n)/xx(1)) + 1.d-12 )
+    Index1D_Log1 = 1 + FLOOR( (n-1)*LOG10(x/xx(1))/LOG10(xx(n)/xx(1)) )
+    Index1D_Log1 = MAX( 1, MIN( n-1, Index1D_Log1 ) )
 
     RETURN
   END FUNCTION Index1D_Log1
@@ -168,8 +168,8 @@ CONTAINS
     lo = LBOUND(xx,1)
     hi = UBOUND(xx,1)
 
-    Index1D_Log2 &
-      = lo + FLOOR( (hi-lo)*LOG10(x/xx(lo))/LOG10(xx(hi)/xx(lo)) + 1.d-12 )
+    Index1D_Log2 = lo + FLOOR( (hi-lo)*LOG10(x/xx(lo))/LOG10(xx(hi)/xx(lo)) )
+    Index1D_Log2 = MAX( lo, MIN( hi-1, Index1D_Log2 ) )
 
     RETURN
   END FUNCTION Index1D_Log2
