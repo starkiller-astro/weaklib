@@ -6,10 +6,13 @@ SUBROUTINE scatical_weaklib &
 !             U. Tennesee, Knoxville
 !
 !    Created: 10/23/18
+!    Edited : 12/15/19   --- Dropped the 2*pi from coeff.
+!             03/08/22   --- Move legendre coeffs to creator driver
 !
 !    Purpose:
 !      To calculate the zero and first legendre coefs for the 
-!      n-type isoenergetic scattering functions.
+!      n-type isoenergetic scattering functions without 1/2 and 3/2.
+!      (1/2 and 3/2 are moved to creator driver)
 !
 !    Subprograms called:
 !      etaxx, scatiicr
@@ -68,31 +71,43 @@ REAL(dp), INTENT(out), DIMENSION(nez,2) :: cok
 !--------------------------------------------------------------------
 !        Local variables
 !--------------------------------------------------------------------
-REAL(dp), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6 ! (C40)
-REAL(dp), PARAMETER      :: cc = ( 2.d0 * pi )/( cvel * ( 2.d0 * pi * hbar * cvel )**3 ) * ( 4.d0 * pi ) * g2
-                             ! 0.5 * 4*pi/(c*c(hc)**3) * 4*pi*g2
+! Equation C40 Bruenn 85
+REAL(dp), PARAMETER      :: g2 = ( Gw/mp**2 )**2 * hbar**5 * cvel**6
 
-REAL(dp), PARAMETER      :: hvp =  one - cv     ! (C31)
-                             ! proton vector coupling constant
-REAL(dp), PARAMETER      :: hap =  0.5d0 * ga   ! (C32)
-                             ! proton axial vector coupling constant
-REAL(dp), PARAMETER      :: hvn = -0.5d0        ! (C33)
-                             ! neutron vector coupling constant
-REAL(dp), PARAMETER      :: han = -0.5d0 * ga   ! (C34)
-                             ! neutron axial vector coupling constant
-REAL(dp), PARAMETER      :: cv0 =  half * ( hvp + hvn ) 
-                             ! coupling constant
-REAL(dp), PARAMETER      :: cv1 =  hvp - hvn      
-                             ! coupling constant
+! Compute 1/(c*(hc)**3) * 4*pi*g2 in (C38) (C39), where
+! 1/(c*(hc)**3) from (A19), 4*pi from integral over phase space: int 4*pi*e**2 de
+REAL(dp), PARAMETER      :: cc = 1.0d0 /( cvel * ( 2.d0 * pi * hbar * cvel )**3 )&
+                                * ( 4.d0 * pi ) * g2
 
+! Equation C31 Bruenn 85, proton vector coupling constant
+REAL(dp), PARAMETER      :: hvp =  one - cv
+
+! Equation C32 Bruenn 85, proton axial vector coupling constant
+REAL(dp), PARAMETER      :: hap =  0.5d0 * ga
+
+! Equation C33 Bruenn 85, neutron vector coupling constant
+REAL(dp), PARAMETER      :: hvn = -0.5d0
+
+! Equation C34 Bruenn 85, neutron axial vector coupling constant
+REAL(dp), PARAMETER      :: han = -0.5d0 * ga
+
+! Coupling constant in Equation C43 Bruenn 85
+REAL(dp), PARAMETER      :: cv0 =  half * ( hvp + hvn )
+
+! Coupling constant in Equation C43 Bruenn 85
+REAL(dp), PARAMETER      :: cv1 =  hvp - hvn
+
+! Bracket in Equation C38 Bruenn 85, proton zero moment coupling constant
 REAL(dp), PARAMETER      :: ap0 =  hvp**2 + 3.d0 * hap**2 
-                             ! proton zero moment coupling constant
-REAL(dp), PARAMETER      :: ap1 =  hvp**2 - hap**2   
-                             ! proton first moment coupling constant
+
+! Bracket in Equation C39 Bruenn 85, proton first moment coupling constant
+REAL(dp), PARAMETER      :: ap1 =  hvp**2 - hap**2
+
+! Bracket in Equation C38 Bruenn 85, neutron zero moment coupling constant
 REAL(dp), PARAMETER      :: an0 =  hvn**2 + 3.d0 * han**2
-                             ! neutron zero moment coupling constant
-REAL(dp), PARAMETER      :: an1 =  hvn**2 - han**2    
-                             ! neutron first moment coupling constant
+
+! Bracket in Equation C39 Bruenn 85, neutron first moment coupling constant
+REAL(dp), PARAMETER      :: an1 =  hvn**2 - han**2
 
 REAL(dp)                 :: eeche        
                              ! helium opacity calculation
@@ -209,6 +224,7 @@ rmdnhs1            = zero
 !  Quatities needed to compute the scattering functions.
 !--------------------------------------------------------------------
 
+! Compute eta in Equation C37 Bruenn 85
 CALL etaxx( rho, t, xn, xp, etann, etapp )
 xnn              = etann
 xnp              = etapp
@@ -275,25 +291,35 @@ DO k = 1, nez
 !  Inverse mean free paths for coherent scattering.
 !--------------------------------------------------------------------
 
-  rmdnps0(k)     = cc * e2 * xnp * ap0 !4pi/(cvel*(hc)**3)*e2*(C38p)/2
-  rmdnns0(k)     = cc * e2 * xnn * an0 !4pi/(cvel*(hc)**3)*e2*(C38n)/2
+! Compute Equation C38 for proton with coeff. : (cvel*(hc)**3) * ( C38 )
+  rmdnps0(k)     = cc * xnp * ap0
+
+! Compute Equation C38 for neutron with coeff.: (cvel*(hc)**3) * ( C38 )
+  rmdnns0(k)     = cc * xnn * an0
+
   rmdnbps0(k)    = rmdnps0(k)
   rmdnbns0(k)    = rmdnns0(k)
-  rmdnhes0(k)    = cc * e2 * xheaa * a01 * saghe
-                                            ! 4pi/(cvel*(hc)**3)*e2*(C44he)/2
-  rmdnhs0(k)     = cc * e2 * xhaa * a02 * sag
-                                            ! 4pi/(cvel*(hc)**3)*e2*(C44a)/2
 
-  rmdnps1(k)     = cc * e2 * xnp * ap1
-                                            ! 4pi/(cvel*(hc)**3)*e2*(C39p)*3/2
-  rmdnns1(k)     = cc * e2 * xnn * an1
-                                            ! 4pi/(cvel*(hc)**3)*e2*(C39n)*3/2
+! Compute Equation C44 for He with coeff.:  (cvel*(hc)**3) * ( C44 )
+  rmdnhes0(k)    = cc * xheaa * a01 * saghe
+
+! Compute Equation C44 for heavy element with coeff.: (cvel*(hc)**3) * ( C44 )
+  rmdnhs0(k)     = cc * xhaa * a02 * sag
+
+! Compute Equation C39 for proton with coeff.:  (cvel*(hc)**3) * ( C39 )
+  rmdnps1(k)     = cc * xnp * ap1 / 3.0d0
+
+! Compute Equation C39 for neutron with coeff.: (cvel*(hc)**3) * ( C39 )
+  rmdnns1(k)     = cc * xnn * an1 / 3.0d0
+
   rmdnbps1(k)    = rmdnps1(k)
   rmdnbns1(k)    = rmdnns1(k)
-  rmdnhes1(k)    = cc * e2 * xheaa * a01 * sbghe * 3.0d0
-                                            ! 4pi/(cvel*(hc)**3)*e2*(C45he)/2
-  rmdnhs1(k)     = cc * e2 * xhaa * a02 * sbg * 3.0d0
-                                            ! 4pi/(cvel*(hc)**3)*e2*(C45a)/2
+
+! Compute Equation C45 for He with coeff.: (cvel*(hc)**3) * ( C45 )
+  rmdnhes1(k)    = cc * xheaa * a01 * sbghe
+
+! Compute Equation C45 for heavy element with coeff.: (cvel*(hc)**3)*e2*( C45 )
+  rmdnhs1(k)     = cc * xhaa * a02 * sbg
 
 !!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
@@ -331,11 +357,21 @@ END DO ! k = 1, nezl
 
 SELECT CASE (n)
   CASE (1) ! e-neutrino
+
+     ! Compute Equation C44 + Equation C38 Bruenn 85
      cok(:,1) = rmdnps0  + rmdnns0  + rmdnhes0 + rmdnhs0
+
+     ! Compute Equation C45 + Equation C39 Bruenn 85
      cok(:,2) = rmdnps1  + rmdnns1  + rmdnhes1 + rmdnhs1
+
   CASE (2) ! e-antineutrino
+
+     ! Compute Equation C44 + Equation C38 Bruenn 85
      cok(:,1) = rmdnbps0 + rmdnbns0 + rmdnhes0 + rmdnhs0
+
+     ! Compute Equation C45 + Equation C39 Bruenn 85
      cok(:,2) = rmdnbps1 + rmdnbns1 + rmdnhes1 + rmdnhs1
+
   CASE DEFAULT
      cok = zero
 END SELECT

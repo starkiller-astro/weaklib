@@ -12,16 +12,16 @@ SUBROUTINE scatergn_weaklib &
 !      h0i/h1i and h1i/h1ii (zeroth and first order), which have the 
 !      forms
 !
-!      h0i/h1i   = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLi(w,w')
+!      h0i/h1i   = ( 1/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLi(w,w')
 !   
-!      h1ii/h1ii = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLii(w,w') 
+!      h1ii/h1ii = ( 1/!(hc)**3 )*( g2/pi*w2*w'2 ) * houtLii(w,w') 
 !
 !--------------------------------------------------------------------
 !
 !    The Legendre moments of the neutrino-electron scattering functions
 !    are given by
 !
-!      phiLout = ( 2*pi/!(hc)**3 )*( g2/pi*w2*w'2 ) 
+!      phiLout = ( 1/(hc)**3 )*( g2/pi*w2*w'2 ) 
 !                  * cnes1(n)*houtLi(w,w') + cnes2(n)*houtLii(w,w')
 !
 !    where
@@ -43,6 +43,7 @@ SUBROUTINE scatergn_weaklib &
 USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: one, zero, pi
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, kmev, cv, ca
+USE pair_module, ONLY: coef
 
 IMPLICIT NONE
 
@@ -76,8 +77,7 @@ REAL(dp), DIMENSION(nez) :: wk2   ! egrid**2
 REAL(dp)                :: enuin         ! incoming neutrino energy/tmev
 REAL(dp)                :: enuout        ! outgoing neutrino energy/tmev
 
-REAL(dp), PARAMETER     :: coc = 2.d0 * ( Gw/mp**2 )**2 * 1.d0/( 8.d0 * pi**3 * hbar * cvel )
-REAL(dp)                :: cxct          ! coc*t**6
+REAL(dp)                :: cxct          ! coef*t**6
 REAL(dp)                :: cxc           ! cxc/egrid**2
 REAL(dp)                 :: fexp          ! exponential function
 REAL(dp)                :: hout0i        ! zero moment of outgoing scattering function type i
@@ -112,8 +112,7 @@ scatp_1ii(:,:)       = zero
 !  cxct has dimensions of [ energy / length ].
 !--------------------------------------------------------------------
 
-  cxct             = coc * (tmev)**6
-!!!???????????
+  cxct             = coef * (tmev)**6
 
 !--------------------------------------------------------------------
 !  cxc has dimensions of 1 /[ energy length ]
@@ -125,7 +124,6 @@ scatp_1ii(:,:)       = zero
       cxc            = cxct/wk2(k)
       enuin          = egrid(k)/tmev
 
-!     DO kp = 1,nez !!! fix me
       DO kp = 1,k
 
         enuout       = egrid(kp)/tmev
