@@ -7,17 +7,17 @@ VERSION_FLAGS := -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT
 
 
 FORTRAN_mac_gnu      = mpif90 -fopenmp -cpp
-FORTRAN_sn1987b      = mpif90
-FORTRAN_ranchu       = mpif90
-FORTRAN_ranchuair    = mpif90
+FORTRAN_sn1987b      = mpif90 -cpp
+FORTRAN_ranchu       = mpif90 -cpp
+FORTRAN_ranchuair    = mpif90 -cpp
 FORTRAN_vass         = mpif90 -cpp
-FORTRAN_sjdunham     = mpif90
+FORTRAN_sjdunham     = mpif90 -cpp
 FORTRAN_titan_gnu    = ftn
 FORTRAN_titan_cray   = ftn
 FORTRAN_titan_pgi    = ftn
 FORTRAN_darter_gnu   = ftn
 FORTRAN_darter_cray  = ftn
-FORTRAN_beacon_intel = mpiifort
+FORTRAN_beacon_intel = mpifort
 FORTRAN_summitdev_gcc= mpifort -cpp
 FORTRAN_summitdev_pgi= mpifort -Mpreprocess
 FORTRAN_summitdev_xl = mpifort -qpreprocess

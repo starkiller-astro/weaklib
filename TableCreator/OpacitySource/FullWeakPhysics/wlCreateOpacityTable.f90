@@ -38,12 +38,13 @@ PROGRAM wlCreateOpacityTable
 !
 ! OpacityType D for nucleon-nucleon Bremsstrahlung( e_p, e, rho, T)
 !
-! Stored is the zeroth order annihilation kernel from Hannestad and Raffelt 1998
+! The full spin-density autocorrelation function S_sigma(eps+eps') 
+! in units [1/MeV] from Hannestad and Raffelt 1998
 ! for a generic rho. The composition can later be taken into account
 ! by interpolating and adding the contribution from
 ! xp*rho, xn*rho and sqrt(xp+xn)*rho
 !
-!       nu nubar NN <--> NN   i=e, muon, tau
+!       nu nubar NN <--> NN   i=e, mu, tau
 !---------------------------------------------------------------------
 
 
@@ -87,6 +88,7 @@ IMPLICIT NONE
    CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
    !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-25-50-100.h5"
    !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-25-50-100.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
 
 !---------------------------------------------------------------------
 ! Set neutrino interaction type
@@ -107,50 +109,50 @@ IMPLICIT NONE
                                                                 !Bruenn 1985
                                                                 !Mezzacappa & Bruenn (1993)
 
-   INTEGER                 :: EmAb_nucleons_recoil          = 1 !EmAb on free nucleons taking into account recoil,
+   INTEGER                 :: EmAb_nucleons_recoil          = 0 !EmAb on free nucleons taking into account recoil,
                                                                 !nucleon final-state blocking, and special relativity
                                                                 !Reddy et al 1998
                                                                 !Only used for rho > 1e9
 
-   INTEGER                 :: EmAb_nucleons_weak_magnetism  = 1 !Weak magnetism corrections for EmAb on free nucleons
+   INTEGER                 :: EmAb_nucleons_weak_magnetism  = 0 !Weak magnetism corrections for EmAb on free nucleons
                                                                 !Horowitz 1997
 
    INTEGER                 :: EmAb_nuclei_FFN               = 0 !EmAb on nuclei using FFN formalism
                                                                 !Fuller, Fowler, Neuman 1982, Ap. J. 252, 715
                                                                 !Bruenn 1985
 
-   INTEGER                 :: EmAb_nuclei_Hix               = 1 !EmAb on nuclei using NSE-folded tabular data
+   INTEGER                 :: EmAb_nuclei_Hix               = 0 !EmAb on nuclei using NSE-folded tabular data
                                                                 !Langanke et al. (2003), Hix et al. (2003)
 
-   INTEGER                 :: nOpac_Iso  = 2  ! 2 for electron type
+   INTEGER                 :: nOpac_Iso  = 0  ! 2 for electron type
                                               !   ( flavor identical )
    INTEGER                 :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
 
-   INTEGER                 :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
+   INTEGER                 :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER                 :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER                 :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
+   INTEGER                 :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
    INTEGER                 :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
-   INTEGER                 :: nOpac_Brem = 1  !1 just the zeroth order annihilation kernel
-   INTEGER                 :: nMom_Brem  = 1  !1 only need to calculate zeroth order kernel
+   INTEGER                 :: nOpac_Brem = 1  !Only S_sigma(eps+eps') is needed for all
+   INTEGER                 :: nMom_Brem  = 1  !species and moments
 
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-   REAL(dp), PARAMETER     :: Emin = 1.0d-1
-   REAL(dp), PARAMETER     :: Emax = 3.0d02
+   REAL(dp), PARAMETER     :: Emin     = 1.0d-01
+   REAL(dp), PARAMETER     :: Emax     = 3.0d+02
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
 !---------------------------------------------------------------------
    INTEGER                 :: nPointsEta = 120
-   REAL(dp), PARAMETER     :: Etamin = 1.0d-3
-   REAL(dp), PARAMETER     :: Etamax = 2.5d03
+   REAL(dp), PARAMETER     :: Etamin     = 1.0d-3
+   REAL(dp), PARAMETER     :: Etamax     = 2.5d03
 
    ! --- other inner variables
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, &
@@ -163,9 +165,9 @@ IMPLICIT NONE
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
    REAL(dp)                                :: j0i, j0ii, j1i, j1ii
 
-   REAL(dp), DIMENSION(nPointsE, nPointsE) :: s_a !the Bremsstrahlung annihilation kernel
-   REAL(dp), PARAMETER                     :: brem_rho_min = 1.0d+07 !switch Bremsstrahlung off below rho_min
-   REAL(dp), PARAMETER                     :: brem_rho_max = 1.0d+15 !switch Bremsstrahlung off above rho_max
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: S_sigma !the Bremsstrahlung annihilation kernel
+   !REAL(dp), PARAMETER                     :: brem_rho_min = 1.0d+07 !switch Bremsstrahlung off below rho_min
+   !REAL(dp), PARAMETER                     :: brem_rho_max = 1.0d+15 !switch Bremsstrahlung off above rho_max
 
    CALL idate(today)
    CALL itime(now)
@@ -173,7 +175,6 @@ IMPLICIT NONE
 
    10000 format ( ' Date ', i2.2, '/', i2.2, '/', i4.4, '; Time ',&
      &         i2.2, ':', i2.2, ':', i2.2 )
-
 
 #if defined(GIT_HASH)
         write(*,*) 'Git version: ', GIT_HASH
@@ -326,9 +327,12 @@ IMPLICIT NONE
    OpacityTable % Scat_Brem % nPoints(4) = OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho)
    OpacityTable % Scat_Brem % nPoints(5) = OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)
 
-   OpacityTable % Scat_Brem % Names      = (/'Kernels'/)
+   OpacityTable % Scat_Brem % Names      = (/'S_sigma'/)
 
-   OpacityTable % Scat_Brem % Units      = (/'Per Centimeter Per MeV^3'/)
+   OpacityTable % Scat_Brem % Units      = (/'Per MeV'/)
+
+   !OpacityTable % Scat_Brem % rho_min    = brem_rho_min
+   !OpacityTable % Scat_Brem % rho_max    = brem_rho_max
 
    END IF
 
@@ -352,6 +356,20 @@ PRINT*, "Making Energy Grid ... "
    CALL MakeLogGrid &
           ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
             EnergyGrid % nPoints,  EnergyGrid % Values )
+
+!hardcoded energy bin centres for comparison with Steve's Brem test code!
+!   EnergyGrid % Values = (/1.311d+00, 2.606d+00, 3.361d+00, 4.333d+00, &
+!                           5.586d+00, 7.203d+00, 9.287d+00, 1.197d+01, &
+!                           1.544d+01, 1.990d+01, 2.566d+01, 3.309d+01, &
+!                           4.266d+01, 5.501d+01, 7.092d+01, 9.144d+01, &
+!                           1.179d+02, 1.520d+02, 1.960d+02, 2.527d+02 /)
+
+!   EnergyGrid % Values = &
+!(/1.3111464721421711d0, 2.6064119644693742d0, 3.3605220197289332d0, 4.3328178350279076d0, &
+!  5.5864268352719257d0, 7.2027410276862689d0, 9.2867014715659018d0, 11.973611697335732d0, &
+!  15.437922443995694d0, 19.904558074140404d0, 25.663520047085076d0, 33.088715597398675d0, &
+!  42.662234092469781d0, 55.005647239561583d0, 70.920365344325347d0, 91.439669797305555d0, &
+!  117.89580005751183d0, 152.00645083268208d0, 195.98629538522204d0, 252.69077574282156d0/)
 
    END ASSOCIATE ! EnergyGrid
 
@@ -890,22 +908,22 @@ PRINT*, 'Filling OpacityTable ...'
       T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
       rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
-      IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
+!      IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
+!  
+!          OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
+!          = 0.d0
+!          cycle
+!
+!      ELSE
 
-          OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
-          = 0.d0
-          cycle
+       CALL bremcal_weaklib &
+            (nPointsE, OpacityTable % EnergyGrid % Values, &
+             rho, T, S_sigma)
 
-      ELSE
+            OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
+            = TRANSPOSE(S_sigma(:,:))
 
-        CALL bremcal_weaklib &
-             (nPointsE, OpacityTable % EnergyGrid % Values, &
-              rho, T, s_a)
-
-             OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
-             = TRANSPOSE(s_a(:,:))
-
-      END IF
+!      END IF
 
     END DO  !j_rho
   END DO  !k_t
@@ -1020,5 +1038,16 @@ PRINT*, 'Filling OpacityTable ...'
 
   CALL itime(now)
   WRITE ( *, 10000 )  today(2), today(1), today(3), now
+
+!warn the user if they have uncommited changes to the code when building tables.
+#if defined(GIT_HASH)
+        IF(index(GIT_HASH,"dirty") .gt. 0) THEN
+          write(*,*) 'WARNING: There are uncommited changes in the repo; &
+                      consider commiting your latest changes if you are &
+                      building production opacity tables in order to store &
+                      a clean git hash allowing you to later see the exact &
+                      version of the code the tables were built with..'
+        ENDIF
+#endif
 
 END PROGRAM wlCreateOpacityTable

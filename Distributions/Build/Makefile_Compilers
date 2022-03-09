@@ -1,3 +1,10 @@
+GIT_HASH := $(shell git --no-pager describe --tags --always --dirty)
+GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" --name-only))
+GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
+GIT_URL :=$(shell git config --get remote.origin.url)
+
+VERSION_FLAGS := -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\"" -DGIT_URL="\"$(GIT_URL)\""
+
 OPENMP_summit_gcc    = -fopenmp
 OPENMP_summit_pgi    = -mp
 OPENMP_summit_xl     = -qsmp=omp:noauto
@@ -29,17 +36,17 @@ ifeq ($(USE_OACC),TRUE)
     OPENACC              = $(OPENACC_$(MACHINE))
 endif
 
-FORTRAN_sn1987b      = mpif90
-FORTRAN_ranchu       = mpif90
-FORTRAN_ranchuair    = mpif90
-FORTRAN_vass         = mpif90
-FORTRAN_sjdunham     = mpif90
+FORTRAN_sn1987b      = mpif90 -cpp
+FORTRAN_ranchu       = mpif90 -cpp
+FORTRAN_ranchuair    = mpif90 -cpp
+FORTRAN_vass         = mpif90 -cpp
+FORTRAN_sjdunham     = mpif90 -cpp
 FORTRAN_titan_gnu    = ftn -cpp
 FORTRAN_titan_cray   = ftn
 FORTRAN_titan_pgi    = ftn -Mpreprocess
 FORTRAN_darter_gnu   = ftn
 FORTRAN_darter_cray  = ftn
-FORTRAN_beacon_intel = mpiifort
+FORTRAN_beacon_intel = mpifort
 FORTRAN_paullaiu_gnu = mpif90
 FORTRAN_summitdev_gcc= mpifort -cpp
 FORTRAN_summitdev_pgi= mpifort -Mpreprocess
@@ -51,7 +58,7 @@ FORTRAN_poplar_cce   = ftn
 FORTRAN_spock_cce    = ftn
 FORTRAN_spock_gcc    = ftn
 FORTRAN_corigpu_pgi  = mpifort -Mpreprocess
-FORTRAN              = $(FORTRAN_$(MACHINE))
+FORTRAN              = $(FORTRAN_$(MACHINE)) $(VERSION_FLAGS)
 
 SUFFIX_f90_sn1987b      =
 SUFFIX_f90_ranchu       =

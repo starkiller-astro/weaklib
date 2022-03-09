@@ -132,7 +132,7 @@ CONTAINS
     hi = UBOUND(xx,1)
 
     Index1D_Lin2 &
-      = lo + FLOOR( (hi-lo)*(x-xx(lo))/(xx(hi)-xx(lo)) + 1.d-12 )
+      = lo + FLOOR( (hi-lo)*(x-xx(lo))/(xx(hi)-xx(lo)) + 1.0d-12 )
 
     RETURN
   END FUNCTION Index1D_Lin2

@@ -1,6 +1,7 @@
 PROGRAM wlInterpolateBrem
 
   USE wlKindModule, ONLY: dp
+  USE wlExtPhysicalConstantsModule, ONLY: kmev
   USE wlInterpolationUtilitiesModule, ONLY: &
     LinearInterp_Array_Point, &
     GetIndexAndDelta_Lin, &
@@ -31,9 +32,15 @@ PROGRAM wlInterpolateBrem
 
   !-------- Table filename --------------------------------------------------
 
-  CHARACTER(256) :: HighResOpTableBaseBrem = "wl-Op-SFHo-15-25-50-E40-HR98"
+  !CHARACTER(256) :: HighResOpTableBaseBrem = "wl-Op-SFHo-15-25-50-E40-HR98"
+  !CHARACTER(256) :: HighResOpTableBaseBrem = "wl-Op-LS220-15-25-50-Lower-T-E40-HR98"
+  !CHARACTER(256) :: HighResOpTableBaseBrem = "wl-Op-LS220-15-25-50-Lower-T-E20-HR98"
+  CHARACTER(256) :: HighResOpTableBaseBrem = "wl-Op-LS220-25-50-100-E40-HR98"
+  !CHARACTER(256) :: HighResOpTableBaseBrem = "wl-Op-LS220-25-50-100-E20-HR98"
 
-  CHARACTER(256) :: HighResEOSTableName    = "wl-EOS-SFHo-15-25-50.h5"
+  !CHARACTER(256) :: HighResEOSTableName    = "wl-EOS-SFHo-15-25-50.h5"
+  !CHARACTER(256) :: HighResEOSTableName    = "wl-EOS-LS220-15-25-50-Lower-T.h5"
+  CHARACTER(256) :: HighResEOSTableName    = "wl-EOS-LS220-25-50-100.h5"
 
   !-------- variables for reading opacity table -----------------------------
   TYPE(OpacityTableType) :: OpacityTable
@@ -51,7 +58,7 @@ PROGRAM wlInterpolateBrem
   !-------- local variables -------------------------------------------------
   CHARACTER(128)                          :: FileName
 
-  INTEGER                                 :: ii, jj
+  INTEGER                                 :: ii, jj, a, b, c
   INTEGER                                 :: k, kp
   INTEGER                                 :: idxRho, idxT, idxYe, idxEta 
   REAL(dp)                                :: dRho, dT, dYe, dEta
@@ -78,11 +85,13 @@ PROGRAM wlInterpolateBrem
   INTEGER    :: idxRho_xp, idxRho_xn, idxRho_xpxn
   REAL(dp)   :: dRho_xp, dRho_xn, dRho_xpxn
 
-  INTEGER, PARAMETER :: n_rows = 213
+  INTEGER, PARAMETER :: n_rows = 3 !213
   INTEGER, PARAMETER :: n_cols = 4
 
   REAL(dp), dimension(n_rows,n_cols) :: TS_profile
   INTEGER :: n, n_r
+
+  REAL(dp), dimension(n_rows) :: chem_e, chem_p, chem_n
 
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Scat_Brem_Interp
   REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: Scat_Brem_Interp_Decomp
@@ -97,14 +106,31 @@ PROGRAM wlInterpolateBrem
 
   n_errors = 0
 
-  WRITE(stdout,*) 'Reading in radial rho, T, Ye profile'
+!  WRITE(stdout,*) 'Reading in radial rho, T, Ye profile'
 
-  OPEN (UNIT=99, FILE='profile.d', STATUS='old', ACTION='read')
+!  OPEN (UNIT=99, FILE='profile.d', STATUS='old', ACTION='read')
 
-  DO n=1, n_rows
-      READ(99,*) TS_profile(n,1), TS_profile(n,2), TS_profile(n,3), TS_profile(n,4)
-  END DO 
+!  DO n=1, n_rows
+!      READ(99,*) TS_profile(n,1), TS_profile(n,2), TS_profile(n,3), TS_profile(n,4)
+!  END DO 
 
+  write(*,*) 'Setting up sample rho, T, Ye points for interpolation &
+              and comparison with Chimera Brem_test'
+
+  TS_profile(1,1) = 1
+  TS_profile(1,2) = 1.050d+10 !1.000d+10
+  TS_profile(1,3) = 3.000d+00/kmev !3.057544d+00/kmev !3.000d+00/kmev
+  TS_profile(1,4) = 2.530d-01 !2.500d-01
+
+  TS_profile(2,1) = 2
+  TS_profile(2,2) = 1.070d+12 !1.000d+12
+  TS_profile(2,3) = 1.000d+01/kmev
+  TS_profile(2,4) = 1.060d-01 !1.000d-01
+
+  TS_profile(3,1) = 3
+  TS_profile(3,2) = 1.010d+14 !1.000d+14 !3.000d+14
+  TS_profile(3,3) = 1.200d+01/kmev
+  TS_profile(3,4) = 2.780d-01 !2.700d-01
 
   FileName = TRIM(HighResOpTableBaseBrem)//'-Brem.h5'
 
@@ -187,6 +213,15 @@ PROGRAM wlInterpolateBrem
       CALL GetIndexAndDelta_Lin( LOG10(T),   LOG10(OpacityTable % TS % States (iT) % Values), idxT, dT )
       CALL GetIndexAndDelta_Lin( Ye,         OpacityTable % TS % States (iYe) % Values, idxYe, dYe )
 
+!if(n_r == 1) then
+!dT = 0.0d0
+!dRho = 0.0d0
+!dYe = 0.0d0
+!idxRho = 76
+!idxT = 51
+!idxYe = 20
+!endif
+
       CALL LinearInterp_Array_Point(idxRho, idxT, idxYe, dRho, dT, dYe,    &
                                             DVOffs(Indices % iProtonMassFraction), &
                                             DVar(Indices % iProtonMassFraction) % Values, &
@@ -196,6 +231,47 @@ PROGRAM wlInterpolateBrem
                                             DVOffs(Indices % iNeutronMassFraction), &
                                             DVar(Indices % iNeutronMassFraction) % Values, &
                                             xn)
+
+      CALL LinearInterp_Array_Point(idxRho, idxT, idxYe, dRho, dT, dYe,     &
+                                            DVOffs(Indices % iElectronChemicalPotential), &
+                                            DVar(Indices % iElectronChemicalPotential) % Values, &
+                                            chem_e(n_r))
+
+      CALL LinearInterp_Array_Point(idxRho, idxT, idxYe, dRho, dT, dYe,     &
+                                            DVOffs(Indices % iProtonChemicalPotential), &
+                                            DVar(Indices % iProtonChemicalPotential) % Values, &
+                                            chem_p(n_r))
+
+      CALL LinearInterp_Array_Point(idxRho, idxT, idxYe, dRho, dT, dYe,     &
+                                            DVOffs(Indices % iNeutronChemicalPotential), &
+                                            DVar(Indices % iNeutronChemicalPotential) % Values, &
+                                            chem_n(n_r))
+if(n_r == 1) then
+write(*,*) 'idxD = ', idxRho
+write(*,*) 'idxT = ', idxT
+write(*,*) 'idxY = ', idxYe
+write(*,*) 'dD = ', dRho
+write(*,*) 'dT = ', dT
+write(*,*) 'dY = ', dYe
+write(*,*) 'T = ', T * kmev
+write(*,*) 'log10(T) = ', log10(T)
+write(*,*) 'table log10(T(idxT)) = ', log10(OpacityTable % TS % States (iT) % Values(idxT)) 
+write(*,*) 'inter chem_n = ', chem_n(1)
+
+write(*,*) 'chem_n offset = ', DVOffs(Indices % iNeutronChemicalPotential)
+
+do a =-1, 1
+  do b =-1, 1
+    do c =-1, 1
+
+write(*,*) 10.d0**(DVar(Indices % iNeutronChemicalPotential) % Values(idxRho+a,idxT+b,idxYe+c)) &
+ - DVOffs(Indices % iNeutronChemicalPotential)
+
+    enddo
+  enddo
+enddo
+
+endif
 
       IF(rho*xp > minval(OpacityTable % TS % States (iRho) % Values)) THEN
         CALL GetIndexAndDelta_Lin( LOG10(rho*xp), LOG10(OpacityTable % TS % States (iRho) % Values), idxRho_xp, dRho_xp )
@@ -284,6 +360,9 @@ PROGRAM wlInterpolateBrem
   CALL WriteHDF( "rho",    TS_profile(:,2), group_id, datasize1d )
   CALL WriteHDF( "T",      TS_profile(:,3), group_id, datasize1d )
   CALL WriteHDF( "Ye",     TS_profile(:,4), group_id, datasize1d )
+  CALL WriteHDF( "chem_e", chem_e(:),       group_id, datasize1d )
+  CALL WriteHDF( "chem_p", chem_p(:),       group_id, datasize1d )
+  CALL WriteHDF( "chem_n", chem_n(:),       group_id, datasize1d )
 
   datasize3d = [nPointsE,nPointsE,n_rows]
 
