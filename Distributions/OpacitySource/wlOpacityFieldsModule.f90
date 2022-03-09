@@ -99,8 +99,8 @@ MODULE wlOpacityFieldsModule
     INTEGER                         :: nOpacities
     INTEGER                         :: nMoments
     INTEGER                         :: nPoints(5)
-    REAL(dp)                        :: rho_min
-    REAL(dp)                        :: rho_max
+    !REAL(dp)                        :: rho_min
+    !REAL(dp)                        :: rho_max
     CHARACTER(LEN=32),  ALLOCATABLE :: Names(:)
     CHARACTER(LEN=32),  ALLOCATABLE :: Units(:)
     REAL(dp),           ALLOCATABLE :: Offsets(:,:)
