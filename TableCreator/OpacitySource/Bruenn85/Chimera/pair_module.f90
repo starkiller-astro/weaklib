@@ -41,8 +41,11 @@ REAL(KIND=double), DIMENSION(nleg)                         :: wte
 ! coef     : combination of physical constants
 !-----------------------------------------------------------------------
 
-REAL(KIND=double)    :: g2 = ( Gw/mp**2 )**2 * hbar**2 * cvel**3 ! cm3/MeV2 s
-REAL(KIND=double)    :: coef = ( 1.d0/cvel ) * ( 1.d0/( 2.d0 * pi * hbar * cvel ) )**3 &
-                               * ( Gw/mp**2 )**2 * hbar**2 * cvel**3 / pi
+REAL(KIND=double), PARAMETER :: g2   = ( Gw/mp**2 )**2 * hbar**2 * cvel**3
+                                ! [cm3/MeV2 s], g2 = (C51) in Brueen 85
+REAL(KIND=double)            :: coef = ( 1.d0/cvel ) &
+                                * ( 1.d0/( 2.d0 * pi * hbar * cvel ) )**3 &
+                                * g2 / pi
+                                ! coeff. in (C62), (C50) in Brueen 85
 
 END module pair_module

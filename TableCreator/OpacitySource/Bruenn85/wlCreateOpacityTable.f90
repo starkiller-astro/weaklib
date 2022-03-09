@@ -371,7 +371,8 @@ PRINT*, 'Filling OpacityTable ...'
            DO t_m = 1, nMom_Iso
 
              OpacityTable % Scat_Iso % Kernel(i_rb) % Values &
-             ( :, t_m, j_rho, k_t, l_ye )  = cok(:,t_m) 
+             ( :, t_m, j_rho, k_t, l_ye )  &
+             = cok(:,t_m) * ( (t_m - 1) * 2.d0 + 1.d0 ) / 2.d0
 
            END DO !t_m         
 
@@ -417,18 +418,18 @@ PRINT*, 'Filling OpacityTable ...'
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 1, k_t, i_eta )       &
-          = TRANSPOSE(H0i(:,:)) ! H0i was saved as H0i(e,ep)
+          = 0.5_DP * TRANSPOSE(H0i(:,:))  ! H0i was saved as H0i(e,ep)
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 2, k_t, i_eta)       &
-          = TRANSPOSE(H0ii(:,:)) ! H0ii was saved as H0ii(e,ep)
+          = 0.5_DP * TRANSPOSE(H0ii(:,:)) ! H0ii was saved as H0ii(e,ep)
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 3, k_t, i_eta )       &
-          = TRANSPOSE(H1i(:,:)) ! H1i was saved as H1i(e,ep)
+          = 1.5_DP * TRANSPOSE(H1i(:,:))  ! H1i was saved as H1i(e,ep)
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 4, k_t, i_eta )       &
-          = TRANSPOSE(H1ii(:,:)) ! H1ii was saved as H1ii(e,ep)
+          = 1.5_DP * TRANSPOSE(H1ii(:,:)) ! H1ii was saved as H1ii(e,ep)
 
         END DO  !k_t
 
@@ -473,19 +474,19 @@ PRINT*, 'Filling OpacityTable ...'
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 1, k_t, i_eta )       &
-              = j0i
+              = 0.5_DP * j0i
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 2, k_t, i_eta )       &
-              = j0ii
+              = 0.5_DP * j0ii
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 3, k_t, i_eta )       &
-              = j1i
+              = 1.5_DP * j1i
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 4, k_t, i_eta )       &
-              = j1ii
+              = 1.5_DP * j1ii
 
             END DO ! i_ep
           END DO ! i_e
