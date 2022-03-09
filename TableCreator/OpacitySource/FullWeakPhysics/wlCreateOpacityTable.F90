@@ -65,7 +65,7 @@ PROGRAM wlCreateOpacityTable
   USE HR98_Bremsstrahlung
   USE prb_cntl_module, ONLY: &
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
-      edmpa, edmpe, iaenca
+      edmpa, edmpe, iaenca, in, ip, ietann
 
   USE abem_module_weaklib
 
@@ -753,6 +753,10 @@ PRINT*, 'Filling OpacityTable ...'
 !----------------  Scat_Iso -----------------------
          DO i_rb = 1, nOpac_Iso
 
+           in = 1
+           ip = 1
+           ietann = 1
+
            CALL scatical_weaklib &
            ( i_rb, OpacityTable % EnergyGrid % Values, &
              nPointsE, rho, T, xn, xp, xhe, xheavy, A, Z, cok )
@@ -760,7 +764,8 @@ PRINT*, 'Filling OpacityTable ...'
            DO t_m = 1, nMom_Iso
 
              OpacityTable % Scat_Iso % Kernel(i_rb) % Values &
-             ( :, t_m, j_rho, k_t, l_ye )  = cok(:,t_m)
+             ( :, t_m, j_rho, k_t, l_ye )  &
+             = cok(:,t_m) * ( (t_m - 1) * 2.d0 + 1.d0 ) / 2.d0
 
            END DO !t_m
 
@@ -769,8 +774,6 @@ PRINT*, 'Filling OpacityTable ...'
        END DO  !j_rho
      END DO  !k_t
    END DO  !l_ye
-
-!stop
 
 !------- EmAb % Offsets
    DO i_r = 1, nOpac_EmAb
@@ -810,18 +813,18 @@ PRINT*, 'Filling OpacityTable ...'
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 1, k_t, i_eta )       &
-          = TRANSPOSE(H0i(:,:)) ! H0i was saved as H0i(e,ep)
+          = 0.5_DP * TRANSPOSE(H0i(:,:))  ! H0i was saved as H0i(e,ep)
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 2, k_t, i_eta)       &
-          = TRANSPOSE(H0ii(:,:)) ! H0ii was saved as H0ii(e,ep)
+          = 0.5_DP * TRANSPOSE(H0ii(:,:)) ! H0ii was saved as H0ii(e,ep)
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 3, k_t, i_eta )       &
-          = TRANSPOSE(H1i(:,:)) ! H1i was saved as H1i(e,ep)
+          = 1.5_DP * TRANSPOSE(H1i(:,:))  ! H1i was saved as H1i(e,ep)
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 4, k_t, i_eta )       &
-          = TRANSPOSE(H1ii(:,:)) ! H1ii was saved as H1ii(e,ep)
+          = 1.5_DP * TRANSPOSE(H1ii(:,:)) ! H1ii was saved as H1ii(e,ep)
 
         END DO  !k_t
 
@@ -866,19 +869,19 @@ PRINT*, 'Filling OpacityTable ...'
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 1, k_t, i_eta )       &
-              = j0i
+              = 0.5_DP * j0i
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 2, k_t, i_eta )       &
-              = j0ii
+              = 0.5_DP * j0ii
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 3, k_t, i_eta )       &
-              = j1i
+              = 1.5_DP * j1i
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
                           ( i_ep, i_e, 4, k_t, i_eta )       &
-              = j1ii
+              = 1.5_DP * j1ii
 
             END DO ! i_ep
           END DO ! i_e
@@ -908,22 +911,12 @@ PRINT*, 'Filling OpacityTable ...'
       T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
       rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
-!      IF (rho < brem_rho_min .or. rho > brem_rho_max) THEN
-!  
-!          OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
-!          = 0.d0
-!          cycle
-!
-!      ELSE
-
        CALL bremcal_weaklib &
             (nPointsE, OpacityTable % EnergyGrid % Values, &
              rho, T, S_sigma)
 
             OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
             = TRANSPOSE(S_sigma(:,:))
-
-!      END IF
 
     END DO  !j_rho
   END DO  !k_t
