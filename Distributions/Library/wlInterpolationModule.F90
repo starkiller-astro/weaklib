@@ -100,10 +100,13 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+    !$OMP MAP( to: X, Xs, Y, Ys, OS, Table ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR &
-    !$ACC PRESENT( X, Xs, Y, Ys, OS, Table, Interpolant )
+    !$ACC COPYIN( X, Xs, Y, Ys, OS, Table ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO
 #endif
@@ -158,11 +161,14 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) &
-    !$OMP PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY )
+    !$OMP PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY ) &
+    !$OMP MAP( to: LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) &
     !$ACC PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY ) &
-    !$ACC PRESENT( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
+    !$ACC COPYIN( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO COLLAPSE(2) &
     !$OMP PRIVATE( iE, iD, dD, iT, dE, dT, iY, dY )
@@ -248,12 +254,15 @@ CONTAINS
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) &
     !$OMP PRIVATE( iE1, dE1, iE2, dE2, iT, dT, iX, dX, &
-    !$OMP          i0, j0, i, j )
+    !$OMP          i0, j0, i, j ) &
+    !$OMP MAP( to: LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) ASYNC( async_flag ) &
     !$ACC PRIVATE( iE1, dE1, iE2, dE2, iT, dT, iX, dX, &
     !$ACC          i0, j0, i, j ), &
-    !$ACC PRESENT( LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+    !$ACC COPYIN( LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO COLLAPSE(2) &
     !$OMP PRIVATE( iE1, dE1, iE2, dE2, iT, dT, iX, dX, &
@@ -359,11 +368,14 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE &
-    !$OMP PRIVATE( iT, dT, iX, dX )
+    !$OMP PRIVATE( iT, dT, iX, dX ) &
+    !$OMP MAP( to: LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC PRIVATE( iT, dT, iX, dX ) &
-    !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, Interpolant )
+    !$ACC COPYIN( LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO &
     !$OMP PRIVATE( iT, dT, iX, dX, &
@@ -469,11 +481,14 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE &
-    !$OMP PRIVATE( iT, dT, iD, dD )
+    !$OMP PRIVATE( iT, dT, iD, dD ) &
+    !$OMP MAP( to: LogT, LogTs, LogD, LogDs, OS, Table, Alpha ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC PRIVATE( iT, dT, iD, dD ) &
-    !$ACC PRESENT( LogT, LogTs, LogD, LogDs, OS, Table, Interpolant )
+    !$ACC COPYIN( LogT, LogTs, LogD, LogDs, OS, Table, Alpha ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO &
     !$OMP PRIVATE( iT, dT, iD, dD, Interp, SumInterp, &
@@ -542,10 +557,13 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+    !$OMP MAP( to: D, Ds, T, Ts, Y, Ys, OS, Table ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR &
-    !$ACC PRESENT( D, Ds, T, Ts, Y, Ys, OS, Table, Interpolant )
+    !$ACC COPYIN( D, Ds, T, Ts, Y, Ys, OS, Table ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO
 #endif
@@ -609,10 +627,13 @@ CONTAINS
     END IF
 
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+    !$OMP MAP( to: LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table ) &
+    !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR &
-    !$ACC PRESENT( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table, Interpolant )
+    !$ACC COPYIN( LogE, LogEs, LogD, LogDs, LogT, LogTs, Y, Ys, OS, Table ) &
+    !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO
 #endif
@@ -756,13 +777,15 @@ CONTAINS
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(2) &
     !$OMP PRIVATE( iE1, dE1, iE2, dE2, iT, dT, aT, iX, dX, aX, dI1, dI2, &
-    !$OMP          i0, j0, i, j )
+    !$OMP          i0, j0, i, j ) &
+    !$OMP MAP( to: LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$OMP MAP( from: Interpolant, DerivativeT, DerivativeX )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) ASYNC( async_flag ) &
     !$ACC PRIVATE( iE1, dE1, iE2, dE2, iT, dT, aT, iX, dX, aX, dI1, dI2, &
     !$ACC          i0, j0, i, j ), &
-    !$ACC PRESENT( LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, &
-    !$ACC          Table, Interpolant, DerivativeT, DerivativeX )
+    !$ACC COPYIN( LogE, LogEs, LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$ACC COPYOUT( Interpolant, DerivativeT, DerivativeX )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO COLLAPSE(2) &
     !$OMP PRIVATE( iE1, dE1, iE2, dE2, iT, dT, aT, iX, dX, aX, dI1, dI2, &
@@ -871,12 +894,14 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET TEAMS DISTRIBUTE &
-    !$OMP PRIVATE( iT, dT, aT, iX, dX, aX )
+    !$OMP PRIVATE( iT, dT, aT, iX, dX, aX ) &
+    !$OMP MAP( to: LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$OMP MAP( from: DerivativeT, DerivativeX, Interpolant )
 #elif defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG ASYNC( async_flag ) &
     !$ACC PRIVATE( iT, dT, aT, iX, dX, aX ) &
-    !$ACC PRESENT( LogT, LogTs, LogX, LogXs, OS, Table, &
-    !$ACC          DerivativeT, DerivativeX, Interpolant )
+    !$ACC COPYIN( LogT, LogTs, LogX, LogXs, OS, Table ) &
+    !$ACC COPYOUT( DerivativeT, DerivativeX, Interpolant )
 #elif defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO &
     !$OMP PRIVATE( iT, dT, aT, iX, dX, aX, &
