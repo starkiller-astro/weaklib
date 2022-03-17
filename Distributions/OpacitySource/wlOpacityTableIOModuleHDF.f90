@@ -281,8 +281,6 @@ CONTAINS
           tmpstring(1) = "Nucleon-nucleon Bremsstrahlung, Hannestad and Raffelt (1998)"
           tmpstring(2) = "The full spin-density autocorrelation function S_sigma(eps+eps') in units [1/MeV]"
           tmpstring(3) = "https://ui.adsabs.harvard.edu/link_gateway/1998ApJ...507..339H/doi:10.1086/306303"
-          !write(tmpstring(4),'(A,ES13.3)') "rho below which S_sigma=0: ", OpacityTable % Scat_Brem % rho_min
-          !write(tmpstring(5),'(A,ES13.3)') "rho above which S_sigma=0: ", OpacityTable % Scat_Brem % rho_max
 
           CALL WriteGroupAttributeHDF_string("Opacity description", tmpstring, group_id) 
 
@@ -1111,7 +1109,7 @@ CONTAINS
       datasize5d(5)   = &
         OpacityTable % TS % nPoints(OpacityTable % TS % Indices % iT)
 
-      OpacityTable % Scat_Brem % Names(1) = "Kernels";
+      OpacityTable % Scat_Brem % Names(1) = "S_sigma";
 
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_Brem % Names(1) ), &
