@@ -916,7 +916,7 @@ CONTAINS
       datasize5d(5)   = &
         OpacityTable % TS % nPoints(OpacityTable % TS % Indices % iT)
 
-      OpacityTable % Scat_Brem % Names(1) = "Kernels";
+      OpacityTable % Scat_Brem % Names(1) = "S_sigma";
 
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_Brem % Names(1) ), &
