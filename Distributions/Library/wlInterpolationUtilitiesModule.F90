@@ -182,7 +182,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
     
-    REAL(dp), INTENT(in)  :: Y, Ys(:)
+    REAL(dp), INTENT(in)  :: Y, Ys(1:)
     INTEGER,  INTENT(out) :: iY
     REAL(dp), INTENT(out) :: dY
 
@@ -199,7 +199,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
     
-    REAL(dp), INTENT(in)  :: Y, Ys(:)
+    REAL(dp), INTENT(in)  :: Y, Ys(1:)
     INTEGER,  INTENT(out) :: iY
     REAL(dp), INTENT(out) :: dY
 
@@ -552,7 +552,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iY1, iY2
-    REAL(dp), INTENT(in)  :: dY1, dY2, OS, Table(:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, OS, Table(1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p00, p10, p01, p11
@@ -580,7 +580,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iX1, iY1, iY2
-    REAL(dp), INTENT(in)  :: dY1, dY2, OS, Table(:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, OS, Table(1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p00, p10, p01, p11
@@ -608,7 +608,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iX1, iX2, iY1, iY2
-    REAL(dp), INTENT(in)  :: dY1, dY2, OS, Table(:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, OS, Table(1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p00, p10, p01, p11
@@ -636,7 +636,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iY1, iY2, iY3
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, OS, Table(:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, OS, Table(1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
@@ -669,7 +669,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iX1, iY1, iY2, iY3
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, OS, Table(:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, OS, Table(1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
@@ -702,7 +702,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iX1, iX2, iY1, iY2, iY3
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, OS, Table(:,:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, OS, Table(1:,1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
@@ -735,7 +735,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iY1, iY2, iY3, iY4
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, OS, Table(:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, OS, Table(1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
@@ -777,7 +777,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iX1, iY1, iY2, iY3, iY4
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, OS, Table(:,:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, OS, Table(1:,1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &
@@ -819,7 +819,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iY1, iY2, iY3, iY4, iY5
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, dY5, OS, Table(:,:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, dY5, OS, Table(1:,1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant
 
     REAL(dp) :: p00000, p00001, p00010, p00011, p00100, p00101, p00110, p00111, &
@@ -882,7 +882,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in) :: iX1, iX2, iY1, iY2
-    REAL(dp), INTENT(in) :: dY1, dY2, aY1, aY2, OS, Table(:,:,:,:)
+    REAL(dp), INTENT(in) :: dY1, dY2, aY1, aY2, OS, Table(1:,1:,1:,1:)
     REAL(dp) :: Interpolant, dIdY1, dIdY2
 
     REAL(dp) :: p00, p10, p01, p11
@@ -919,7 +919,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iY1, iY2, iY3
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, aY1, aY2, aY3, OS, Table(:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, aY1, aY2, aY3, OS, Table(1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant, dIdY1, dIdY2, dIdY3
 
     REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
@@ -974,7 +974,7 @@ CONTAINS
 #endif
 
     INTEGER,  INTENT(in)  :: iY1, iY2, iY3, iY4
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, aY1, aY2, aY3, aY4, OS, Table(:,:,:,:)
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, dY4, aY1, aY2, aY3, aY4, OS, Table(1:,1:,1:,1:)
     REAL(dp), INTENT(out) :: Interpolant, dIdY1, dIdY2, dIdY3, dIdY4
 
     REAL(dp) :: p0000, p0001, p0010, p0011, p0100, p0101, p0110, p0111, &

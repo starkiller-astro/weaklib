@@ -278,17 +278,17 @@ PROGRAM wlOpacityPerformanceTest
   !$ACC UPDATE HOST( NES_AT )
 #endif
 
-  tBegin = get_wtime()
-  CALL LogInterpolateSingleVariable_1D3D_Custom &
-         ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
-           opEC_CPU_1, GPU_Option = .FALSE. )
-  tEnd = get_wtime()
-  tCPU = tEnd - tBegin
+  !tBegin = get_wtime()
+  !CALL LogInterpolateSingleVariable_1D3D_Custom &
+  !       ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
+  !         opEC_CPU_1 )
+  !tEnd = get_wtime()
+  tCPU = 0.0d0
 
   tBegin = get_wtime()
   CALL LogInterpolateSingleVariable_1D3D_Custom &
          ( LogE, LogD, LogT, Y, LogEs_T, LogDs_T, LogTs_T, Ys_T, OS_EmAb, EmAb_T, &
-           opEC_GPU_1, GPU_Option = .TRUE. )
+           opEC_GPU_1 )
   tEnd = get_wtime()
   tGPU = tEnd - tBegin
 
@@ -310,6 +310,7 @@ PROGRAM wlOpacityPerformanceTest
   END DO
   tEnd = get_wtime()
   tCPU = tEnd - tBegin
+  opEC_CPU_1 = opEC_CPU_2
 
   tBegin = get_wtime()
 #if defined(WEAKLIB_OMP_OL)
@@ -403,21 +404,19 @@ PROGRAM wlOpacityPerformanceTest
   iH1 = ( iM - 1 ) * 2 + 1
   iH2 = ( iM - 1 ) * 2 + 2
 
-  tBegin = get_wtime()
-  CALL LogInterpolateSingleVariable_2D2D_Custom &
-         ( LogE,    LogT,    LogEta, &
-           LogEs_T, LogTs_T, LogEtas_T, &
-           OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_CPU_1, &
-           GPU_Option = .FALSE. )
-  tEnd = get_wtime()
-  tCPU = tEnd - tBegin
+  !tBegin = get_wtime()
+  !CALL LogInterpolateSingleVariable_2D2D_Custom &
+  !       ( LogE,    LogT,    LogEta, &
+  !         LogEs_T, LogTs_T, LogEtas_T, &
+  !         OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_CPU_1 )
+  !tEnd = get_wtime()
+  tCPU = 0.0d0
 
   tBegin = get_wtime()
   CALL LogInterpolateSingleVariable_2D2D_Custom &
          ( LogE,    LogT,    LogEta, &
            LogEs_T, LogTs_T, LogEtas_T, &
-           OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_GPU_1, &
-           GPU_Option = .TRUE. )
+           OS_NES(1,iH1), NES_T(:,:,:,:,iH1), opH1_GPU_1 )
   tEnd = get_wtime()
   tGPU = tEnd - tBegin
 
@@ -439,6 +438,7 @@ PROGRAM wlOpacityPerformanceTest
   END DO
   tEnd = get_wtime()
   tCPU = tEnd - tBegin
+  opH1_CPU_1 = opH1_CPU_2
 
   tBegin = get_wtime()
 #if defined(WEAKLIB_OMP_OL)
@@ -466,21 +466,19 @@ PROGRAM wlOpacityPerformanceTest
     '', 'LogInterpolateSingleVariable_2D2D_Custom_Point (GPU): ', tGPU
   WRITE(*,*)
 
-  tBegin = get_wtime()
-  CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned &
-         ( LogT,    LogEta, &
-           LogTs_T, LogEtas_T, &
-           OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_CPU_3, &
-           GPU_Option = .FALSE. )
-  tEnd = get_wtime()
-  tCPU = tEnd - tBegin
+  !tBegin = get_wtime()
+  !CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned &
+  !       ( LogT,    LogEta, &
+  !         LogTs_T, LogEtas_T, &
+  !         OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_CPU_3 )
+  !tEnd = get_wtime()
+  tCPU = 0.0d0
 
   tBegin = get_wtime()
   CALL LogInterpolateSingleVariable_2D2D_Custom_Aligned &
          ( LogT,    LogEta, &
            LogTs_T, LogEtas_T, &
-           OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_GPU_3, &
-           GPU_Option = .TRUE. )
+           OS_NES(1,iH1), NES_AT(:,:,:,:,iH1), opH1_GPU_3 )
   tEnd = get_wtime()
   tGPU = tEnd - tBegin
 
@@ -502,6 +500,7 @@ PROGRAM wlOpacityPerformanceTest
   END DO
   tEnd = get_wtime()
   tCPU = tEnd - tBegin
+  opH1_CPU_3 = opH1_CPU_4
 
   tBegin = get_wtime()
 #if defined(WEAKLIB_OMP_OL)
