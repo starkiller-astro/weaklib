@@ -124,16 +124,16 @@ IMPLICIT NONE
    INTEGER                 :: EmAb_nuclei_Hix               = 0 !EmAb on nuclei using NSE-folded tabular data
                                                                 !Langanke et al. (2003), Hix et al. (2003)
 
-   INTEGER                 :: nOpac_Iso  = 0  ! 2 for electron type
+   INTEGER                 :: nOpac_Iso  = 2  ! 2 for electron type
                                               !   ( flavor identical )
    INTEGER                 :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
 
-   INTEGER                 :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
+   INTEGER                 :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER                 :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER                 :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
+   INTEGER                 :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
    INTEGER                 :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
@@ -166,8 +166,6 @@ IMPLICIT NONE
    REAL(dp)                                :: j0i, j0ii, j1i, j1ii
 
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: S_sigma !the Bremsstrahlung annihilation kernel
-   !REAL(dp), PARAMETER                     :: brem_rho_min = 1.0d+07 !switch Bremsstrahlung off below rho_min
-   !REAL(dp), PARAMETER                     :: brem_rho_max = 1.0d+15 !switch Bremsstrahlung off above rho_max
 
    CALL idate(today)
    CALL itime(now)
@@ -331,9 +329,6 @@ IMPLICIT NONE
 
    OpacityTable % Scat_Brem % Units      = (/'Per MeV'/)
 
-   !OpacityTable % Scat_Brem % rho_min    = brem_rho_min
-   !OpacityTable % Scat_Brem % rho_max    = brem_rho_max
-
    END IF
 
 !-----------------------------
@@ -356,20 +351,6 @@ PRINT*, "Making Energy Grid ... "
    CALL MakeLogGrid &
           ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
             EnergyGrid % nPoints,  EnergyGrid % Values )
-
-!hardcoded energy bin centres for comparison with Steve's Brem test code!
-!   EnergyGrid % Values = (/1.311d+00, 2.606d+00, 3.361d+00, 4.333d+00, &
-!                           5.586d+00, 7.203d+00, 9.287d+00, 1.197d+01, &
-!                           1.544d+01, 1.990d+01, 2.566d+01, 3.309d+01, &
-!                           4.266d+01, 5.501d+01, 7.092d+01, 9.144d+01, &
-!                           1.179d+02, 1.520d+02, 1.960d+02, 2.527d+02 /)
-
-!   EnergyGrid % Values = &
-!(/1.3111464721421711d0, 2.6064119644693742d0, 3.3605220197289332d0, 4.3328178350279076d0, &
-!  5.5864268352719257d0, 7.2027410276862689d0, 9.2867014715659018d0, 11.973611697335732d0, &
-!  15.437922443995694d0, 19.904558074140404d0, 25.663520047085076d0, 33.088715597398675d0, &
-!  42.662234092469781d0, 55.005647239561583d0, 70.920365344325347d0, 91.439669797305555d0, &
-!  117.89580005751183d0, 152.00645083268208d0, 195.98629538522204d0, 252.69077574282156d0/)
 
    END ASSOCIATE ! EnergyGrid
 
@@ -711,12 +692,6 @@ PRINT*, 'Filling OpacityTable ...'
                                i_r, inv_n_decay_full_kinematics,       &
                                ab_nucleons, em_nucleons,               &
                                ab_inv_n_decay, em_inv_n_decay, nPointsE)
-                 !CALL CC_EmAb( nu_E,     &
-                 !              0.1d0, mass_e, 0.3148d-03, -0.1656d+01+mass_n, -0.2020d+02+mass_p,      &
-                 !              0.9396d+03, 0.9383d+03, 0.1935d-08, -0.1317d-03,   &
-                 !              i_r, inv_n_decay_full_kinematics,       &
-                 !              ab_nucleons, em_nucleons,               &
-                 !              ab_inv_n_decay, em_inv_n_decay, nPointsE)
 
                ENDIF
 
