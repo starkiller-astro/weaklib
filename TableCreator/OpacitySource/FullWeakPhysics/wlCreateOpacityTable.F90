@@ -117,7 +117,7 @@ IMPLICIT NONE
    INTEGER                 :: EmAb_nucleons_weak_magnetism  = 0 !Weak magnetism corrections for EmAb on free nucleons
                                                                 !Horowitz 1997
 
-   INTEGER                 :: EmAb_nuclei_FFN               = 0 !EmAb on nuclei using FFN formalism
+   INTEGER                 :: EmAb_nuclei_FFN               = 1 !EmAb on nuclei using FFN formalism
                                                                 !Fuller, Fowler, Neuman 1982, Ap. J. 252, 715
                                                                 !Bruenn 1985
 
