@@ -740,7 +740,7 @@ CONTAINS
       CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
 
       CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
-
+    
       CALL CloseGroupHDF( group_id )
 
       CALL CloseFileHDF( file_id )
@@ -933,6 +933,23 @@ CONTAINS
          ( TRIM( OpacityTable % EmAb % Names(2) ), &
             OpacityTable % EmAb % Opacity(2) % Values, &
             group_id, datasize4d )
+
+      datasize1d(1) = 1  
+
+      Call ReadHDF ( "nucleons_full_kinematics", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nucleons_full_kinematics = buffer(1)
+      Call ReadHDF ( "inv_n_decay_full_kinematics", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % inv_n_decay_full_kinematics = buffer(1)
+      Call ReadHDF ( "nucleons_isoenergetic", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nucleons_isoenergetic = buffer(1)
+      Call ReadHDF ( "nucleons_recoil", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nucleons_recoil = buffer(1)
+      Call ReadHDF ( "nucleons_weak_magnetism", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nucleons_weak_magnetism = buffer(1)
+      Call ReadHDF ( "nuclei_FFN", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nuclei_FFN = buffer(1)
+      Call ReadHDF ( "nuclei_Hix", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nuclei_Hix = buffer(1)
 
       CALL CloseGroupHDF( group_id )
 
@@ -1147,6 +1164,23 @@ CONTAINS
     Call ReadHDF( "Names", EmAb % Names, group_id, datasize1d )
 
     Call ReadHDF( "Units", EmAb % Units, group_id, datasize1d )
+
+    datasize1d(1) = 1  
+
+    Call ReadHDF ( "nucleons_full_kinematics", buffer, group_id, datasize1d)
+    EmAb % nucleons_full_kinematics = buffer(1)
+    Call ReadHDF ( "inv_n_decay_full_kinematics", buffer, group_id, datasize1d)
+    EmAb % inv_n_decay_full_kinematics = buffer(1)
+    Call ReadHDF ( "nucleons_isoenergetic", buffer, group_id, datasize1d)
+    EmAb % nucleons_isoenergetic = buffer(1)
+    Call ReadHDF ( "nucleons_recoil", buffer, group_id, datasize1d)
+    EmAb % nucleons_recoil = buffer(1)
+    Call ReadHDF ( "nucleons_weak_magnetism", buffer, group_id, datasize1d)
+    EmAb % nucleons_weak_magnetism = buffer(1)
+    Call ReadHDF ( "nuclei_FFN", buffer, group_id, datasize1d)
+    EmAb % nuclei_FFN = buffer(1)
+    Call ReadHDF ( "nuclei_Hix", buffer, group_id, datasize1d)
+    EmAb % nuclei_Hix = buffer(1)
 
     datasize1d(1) = 4
     CALL ReadHDF( "nPoints", EmAb % nPoints, group_id, datasize1d )
