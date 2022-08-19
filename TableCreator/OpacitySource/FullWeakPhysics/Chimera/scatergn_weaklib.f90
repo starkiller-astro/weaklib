@@ -1,5 +1,5 @@
 SUBROUTINE scatergn_weaklib &
-           ( nez, egrid, tmev, eta, h0i, h0ii, h1i, h1ii )
+           ( nez, egrid, tmev, eta, h0i, h0ii, h1i, h1ii, NPS )
 !--------------------------------------------------------------------
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
@@ -55,6 +55,7 @@ INTEGER,      INTENT(in) :: nez    ! number of neutrino energy group
 REAL(dp), INTENT(in) :: tmev   ! temperature [MeV]
 REAL(dp), INTENT(in) :: eta    ! electron chemical potential/TMeV
 REAL(dp), DIMENSION(nez), INTENT(in) :: egrid   ! neutrino energy grid
+INTEGER,  INTENT(IN) :: NPS !add neutrino positron scattering
 
 !--------------------------------------------------------------------
 !        Output variables
@@ -93,6 +94,8 @@ REAL(dp), DIMENSION(nez,nez) :: scate_1i  ! first moment of electron scatering, 
 REAL(dp), DIMENSION(nez,nez) :: scate_1ii ! first moment of electron scatering, type ii
 REAL(dp), DIMENSION(nez,nez) :: scatp_1i  ! first moment of positron scatering, type i
 REAL(dp), DIMENSION(nez,nez) :: scatp_1ii ! first moment of positron scatering, type ii
+
+REAL(dp) :: eta_p !-eta
 
 EXTERNAL fexp
 !--------------------------------------------------------------------
@@ -145,10 +148,42 @@ scatp_1ii(:,:)       = zero
       END DO ! kp = 1,k
     END DO ! k = 1,nez
 
-    h0i  = scate_0i
-    h0ii = scate_0ii
-    h1i  = scate_1i
-    h1ii = scate_1ii
+    IF (NPS > 0) THEN
+
+      eta_p = -eta
+
+      DO k = 1,nez
+
+        cxc            = cxct/wk2(k)
+        enuin          = egrid(k)/tmev
+
+        DO kp = 1,k
+
+          enuout       = egrid(kp)/tmev
+
+          CALL sctlgndv_weaklib &
+               ( enuin, enuout, eta_p, hout0i, hout0ii, hout1i, hout1ii )
+
+          scatp_0i (k,kp) = hout0i * cxc/wk2(kp) 
+          scatp_0ii(k,kp) = hout0ii* cxc/wk2(kp)
+          scatp_0i (kp,k) = scatp_0i (k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
+          scatp_0ii(kp,k) = scatp_0ii(k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
+
+          scatp_1i (k,kp) = hout1i * cxc/wk2(kp)
+          scatp_1ii(k,kp) = hout1ii* cxc/wk2(kp)
+          scatp_1i (kp,k) = scatp_1i (k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
+          scatp_1ii(kp,k) = scatp_1ii(k,kp) * fexp( (egrid(kp) - egrid(k) ) / TMeV )
+
+
+        END DO ! kp = 1,k
+      END DO ! k = 1,nez
+
+    ENDIF
+
+    h0i  = scate_0i  + scatp_0ii
+    h0ii = scate_0ii + scatp_0i
+    h1i  = scate_1i  + scatp_1ii
+    h1ii = scate_1ii + scatp_1i
 
 RETURN
 

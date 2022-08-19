@@ -15,7 +15,8 @@ MODULE ec_table_module
   REAL(dp), PARAMETER :: deltaE=0.5,deltalrho_ec=.5,deltaT_ec=.1,deltaYe_ec=.02
 
   REAL(dp)            :: energy(0:npts)
-  REAL(dp)            :: jectab(0:npts,rhomn:rhomx,tmn:tmx,0:(nye-1))
+  REAL(dp)            :: spectab(0:npts,rhomn:rhomx,tmn:tmx,0:(nye-1))
+  REAL(dp)            :: ratetab(rhomn:rhomx,tmn:tmx,0:(nye-1))
 
   INTEGER             :: yefloor(rhomn:rhomx)
 
@@ -52,7 +53,7 @@ MODULE ec_table_module
     !  rhomn,rhomx         : minimum and maximum density grid points
     !
     !    Output arguments (module):
-    !  jectab              : nuclear electron capture emissivity table
+    !  spectab              : nuclear electron capture emissivity table
     !  energy              : table energy grid
     !
     !-----------------------------------------------------------------------
@@ -77,7 +78,7 @@ MODULE ec_table_module
     INTEGER                        :: i_extent      ! length of broadcast data
     INTEGER                        :: j,k
     integer :: itemp,irho,iye,it,iy,ir
-    character(80) :: tablefile
+    character(len(ec_table)) :: tablefile
     character (LEN=120) :: desc(2)
     integer :: izone,nline,npart
     real(dp) :: rho,ye,temp,rate,dum
@@ -111,7 +112,7 @@ MODULE ec_table_module
 
     !IF ( myid == 0 ) THEN
 
-    jectab=0.d0
+    spectab=0.d0
 
     !-----------------------------------------------------------------------
     !  Open file
@@ -155,7 +156,9 @@ MODULE ec_table_module
         ENDDO
         IF (ispart) READ(nrdata,*) (spec(k),k=nline*nperline,npts)
     !   IF (ispart) WRITE(6,'(7es13.6)') (spec(k),k=nline,nperline,npts)
-        jectab(:,ir,it,iy)=rate*spec
+        !spectab(:,ir,it,iy)=rate*spec
+        spectab(:,ir,it,iy) = spec
+        ratetab( ir,it,iy) = rate
       ENDDO
       IF ( it == tmx ) THEN
        yefloor(ir)=iye
@@ -170,11 +173,14 @@ MODULE ec_table_module
     !  Multiply spectrum by rate and take log of table
     !-----------------------------------------------------------------------
 
-    WHERE (jectab <= 0.d0)
-      jectab = -200.d0
+    WHERE (spectab <= 0.d0)
+      spectab = -200.d0
     ELSEWHERE
-      jectab = log10(const*jectab)
+      !spectab = log10(const*spectab)
+      spectab = log10(spectab)
     ENDWHERE
+
+    ratetab = log10(ratetab)
 
     !-----------------------------------------------------------------------
     !  Signal completion
@@ -182,14 +188,13 @@ MODULE ec_table_module
 
     WRITE(*,*) ' Finished reading ',trim(desc(1))
     WRITE(*,*) ' Table grid:',trim(desc(2))
-
     !ENDIF ! myid == 0
 
     RETURN
 
     END SUBROUTINE read_ec_table
 
-    SUBROUTINE interp_ec( jec, e_in, unubi, dunui, temp, rho, Ye, nez )
+    SUBROUTINE interp_ec( spec, rate, unui, unubi, dunui, temp, rho, Ye, nez )
     !-----------------------------------------------------------------------
     !
     !    Author:       W.R. Hix, Physics Division
@@ -205,7 +210,7 @@ MODULE ec_table_module
     !       rates.
     !
     !    Variables that must be passed through common:
-    !        spec, energy, jectab
+    !        spec, energy, spectab
     !
     !    Subprograms called:
     !        none
@@ -216,7 +221,8 @@ MODULE ec_table_module
     !  ye          : electron fraction
     !
     !    Output arguments:
-    !  jec         :  emission inverse mean free path (/cm)
+    !  spec        :  emission spectrum inverse mean free path (/cm)
+    !  rate        :  electron capture rate 
     !
     !    Input arguments (modules):
     !
@@ -226,11 +232,8 @@ MODULE ec_table_module
     !
     !-----------------------------------------------------------------------
 
-    !USE kind_module
-    !USE array_module, ONLY: nez, nezext
-    USE physcnst_module, ONLY: kmev
-    !USE nu_energy_grid_module, ONLY: unui, unubi, dunui
-    !USE ec_table_module
+    USE physcnst_module, ONLY: kmev, cvel, hbar
+    USE numerical_module, ONLY: pi
 
     IMPLICIT NONE
 
@@ -239,17 +242,19 @@ MODULE ec_table_module
     !-----------------------------------------------------------------------
 
     INTEGER, intent(in) :: nez
-    REAL(dp), dimension(nez), intent(out) :: jec
+    REAL(dp), dimension(nez), intent(out) :: spec
+    REAL(dp), intent(out)                 :: rate
 
     !-----------------------------------------------------------------------
     !  Local variables
     !-----------------------------------------------------------------------
 
-    REAL(dp), dimension(nez), intent(in)   :: e_in, dunui
+    REAL(dp), dimension(nez), intent(in)   :: unui, dunui
     REAL(dp), dimension(nez+1), intent(in) :: unubi
 
     REAL(dp) :: temp, rho, ye
     REAL(dp), DIMENSION(0:npts) :: jecfine
+    REAL(dp) :: rate_interp
     REAL(dp) :: deltaupper(nez),deltalower(nez)
     REAL(dp) :: c1,c2,c3,c3base,loctot,tmev
 
@@ -261,20 +266,18 @@ MODULE ec_table_module
 
     LOGICAL :: askew
 
+    REAL(dp) :: loc_integral(nez)
+
+    real(dp), parameter :: const= 2.0*(pi*cvel)**2*hbar**3
+
     !REAL(dp), DIMENSION(nez) :: unubi, dunui
 
     !-----------------------------------------------------------------------
     !-----------------------------------------------------------------------
 
     kmax = nez
-    jec  = 0.d0
-
-    !unubi(1) = e_in(1)
-    !dunui(1) = e_in(1)
-    !do k=2,nez
-    !  unubi(k) = e_in(k)
-    !  dunui(k) = e_in(k) - e_in(k-1)
-    !enddo
+    spec  = 0.d0
+    rate  = 0.d0
 
     !-----------------------------------------------------------------------
     !  Find temperature in table.  Temperature tabulated in MeV.
@@ -286,7 +289,9 @@ MODULE ec_table_module
     tdown = itemp
     tup   = itemp+1
 
-    IF (tup > tmx .or. tdown < tmn ) RETURN
+    IF (tup > tmx .or. tdown < tmn ) then
+      RETURN
+    endif
 
     !-----------------------------------------------------------------------
     !  Find density in table.
@@ -297,7 +302,9 @@ MODULE ec_table_module
     rhodown=irho
     rhoup = irho+1
 
-    IF (rhoup > rhomx .or. rhodown < rhomn) RETURN
+    IF (rhoup > rhomx .or. rhodown < rhomn) then
+      RETURN
+    endif
 
     !-----------------------------------------------------------------------
     !  Find ye in table.  Ye grid is density dependent
@@ -350,49 +357,135 @@ MODULE ec_table_module
     !-----------------------------------------------------------------------
 
     jecfine(:) = c3 & !note on indices: yeoffset=1 for rhodown, 2 for rhoup
-    &           *( (1.0-c1)*(1.0-c2) * jectab(:,rhodown,tdown,yeoffset(1)+1) &  !   add one in upper block for old yeup
-    &           +  c1*(1.0-c2)       * jectab(:,rhoup,tdown,yeoffset(2)+1) &
-    &           +  c2*(1.0-c1)       * jectab(:,rhodown,tup,yeoffset(1)+1) &
-    &           +  c1*c2             * jectab(:,rhoup,tup,yeoffset(2)+1) ) &
+    &           *( (1.0-c1)*(1.0-c2) * spectab(:,rhodown,tdown,yeoffset(1)+1) &  !   add one in upper block for old yeup
+    &           +  c1*(1.0-c2)       * spectab(:,rhoup,tdown,yeoffset(2)+1) &
+    &           +  c2*(1.0-c1)       * spectab(:,rhodown,tup,yeoffset(1)+1) &
+    &           +  c1*c2             * spectab(:,rhoup,tup,yeoffset(2)+1) ) &
     &           + (1.0-c3) &
-    &           *( (1.0-c1)*(1.0-c2) * jectab(:,rhodown,tdown,yeoffset(1)) &
-    &           +  c1*(1.0-c2)       * jectab(:,rhoup,tdown,yeoffset(2)) &
-    &           +  c2*(1.0-c1)       * jectab(:,rhodown,tup,yeoffset(1)) &
-    &           +  c1*c2             * jectab(:,rhoup,tup,yeoffset(2)) )
+    &           *( (1.0-c1)*(1.0-c2) * spectab(:,rhodown,tdown,yeoffset(1)) &
+    &           +  c1*(1.0-c2)       * spectab(:,rhoup,tdown,yeoffset(2)) &
+    &           +  c2*(1.0-c1)       * spectab(:,rhodown,tup,yeoffset(1)) &
+    &           +  c1*c2             * spectab(:,rhoup,tup,yeoffset(2)) )
 
-    jecfine=10.0**(jecfine)
+    jecfine=10.0d0**(jecfine)
+
+    rate_interp = c3 & !note on indices: yeoffset=1 for rhodown, 2 for rhoup
+    &           *( (1.0-c1)*(1.0-c2) * ratetab(rhodown,tdown,yeoffset(1)+1) &  !   add one in upper block for old yeup
+    &           +  c1*(1.0-c2)       * ratetab(rhoup,tdown,yeoffset(2)+1) &
+    &           +  c2*(1.0-c1)       * ratetab(rhodown,tup,yeoffset(1)+1) &
+    &           +  c1*c2             * ratetab(rhoup,tup,yeoffset(2)+1) ) &
+    &           + (1.0-c3) &
+    &           *( (1.0-c1)*(1.0-c2) * ratetab(rhodown,tdown,yeoffset(1)) &
+    &           +  c1*(1.0-c2)       * ratetab(rhoup,tdown,yeoffset(2)) &
+    &           +  c2*(1.0-c1)       * ratetab(rhodown,tup,yeoffset(1)) &
+    &           +  c1*c2             * ratetab(rhoup,tup,yeoffset(2)) )
+
+    rate_interp=10.0d0**(rate_interp)
+
+    !renormalize spectrum to 1 after interpolation
+
+    loctot = 0.0d0
+    do k=0,npts
+      loctot = loctot + jecfine(k) * deltaE
+    enddo
+
+    if(abs(loctot-1.0d0) > 0.75d0) then
+    !if(rate_interp > 1e5) then
+      write(*,*) 'rho,T,Ye ', rho, temp, ye
+      write(*,*) 'rate ', rate_interp
+      write(*,*) 'integral ', loctot
+    endif
+
+    !jecfine(:) = jecfine(:) * const * rate_interp / loctot
+    !jecfine(:) = jecfine(:) * const / loctot
+    jecfine(:) = jecfine(:) / loctot
 
     !-----------------------------------------------------------------------
     ! Match Table grid to MGFLD energy grid
     !-----------------------------------------------------------------------
+!! This is for the newer trunk Chimera version
+!    ktop=kmax ! top energy bin that has a EC contribution
+!    DO k=1,kmax
+!      kfmin(k)=int(unui(k)/deltaE)
+!      kfmax(k)=kfmin(k) +1
+!      IF (kfmax(k).gt.npts) kfmax(k)=npts
+!      IF (kfmin(k).gt.npts) kfmin(k)=npts
+!      IF (unubi(k+1) .gt. energy(npts)) ktop=min(k,ktop)
+!    ENDDO
 
-    ktop=kmax ! top energy bin that has a EC contribution
+    ktop=kmax
     DO k=1,kmax
-      kfmin(k)=int(e_in(k)/deltaE)
-      kfmax(k)=kfmin(k) +1
+      kfmin(k) = int(unubi(k)/deltaE)+1
+      kfmax(k) = int(unubi(k+1)/deltaE)
       IF (kfmax(k).gt.npts) kfmax(k)=npts
       IF (kfmin(k).gt.npts) kfmin(k)=npts
-      IF (unubi(k+1) .gt. energy(npts)) ktop=min(k,ktop)
+      IF (unubi(k+1) .gt. energy(npts)) ktop=min(k,ktop) 
     ENDDO
+
+    DO k=1,ktop
+      deltalower(k)=(energy(kfmin(k))-unubi(k))/deltaE ! assuming no "undershoot" problems on the bottom.
+      deltaupper(k)=(unubi(k+1)-energy(kfmax(k)))/deltaE
+
+      IF (deltalower(k) < 0.d0) deltalower(k)=0.0d0
+      IF (deltaupper(k) < 0.d0) deltaupper(k)=0.0d0
+      IF (deltalower(k) > 1.d0) deltalower(k)=1.0d0
+      IF (deltaupper(k) > 1.d0) deltaupper(k)=1.0d0
+    ENDDO
+
+    IF ( unubi(kmax+1) .gt. energy(npts) ) deltaupper(ktop) = 0.0d0
 
     !-----------------------------------------------------------------------
     ! Integrate onto MGFLD energy grid
     !-----------------------------------------------------------------------
+!! This is for the newer trunk Chimera version
+!    DO k=1,ktop
 
-    DO k=1,ktop
+!      deltalower(k) = (unui(k)-deltaE*dble(kfmin(k)))/deltaE
+!      deltaupper(k) = (deltaE*dble(kfmax(k))-unui(k))/deltaE
+!      loctot        = dunui(k)*(deltaupper(k)*jecfine(kfmin(k))+deltalower(k)*jecfine(kfmax(k)))
+!      jec(k)        = loctot/(dunui(k)*unui(k)**2)
 
-      deltalower(k) = (e_in(k)-deltaE*dble(kfmin(k)))/deltaE
-      deltaupper(k) = (deltaE*dble(kfmax(k))-e_in(k))/deltaE
-      loctot        = dunui(k)*(deltaupper(k)*jecfine(kfmin(k))+deltalower(k)*jecfine(kfmax(k)))
-      jec(k)        = loctot/(dunui(k)*e_in(k)**2)
+!    ENDDO
 
-    ENDDO
+    loc_integral = 0.0d0
+
+    FORALL( k=1:ktop, kfmax(k) .lt. kfmin(k) )
+        loc_integral(k) =   0.5d0 * dunui(k) &
+&                   * (   ( 1.d0 + deltaupper(k) - deltalower(k) ) * jecfine(kfmin(k)) &
+&                       + ( 1.d0 - deltaupper(k) + deltalower(k) ) * jecfine(kfmax(k)) )
+    END FORALL
+
+    FORALL( k=1:ktop, kfmax(k) .ge. kfmin(k) )
+      loc_integral(k) =   0.5d0 * deltaE &
+&                   * (   SUM( jecfine(kfmin(k):kfmax(k)-1) + jecfine(kfmin(k)+1:kfmax(k)) ) &
+&                       + deltalower(k) * (           deltalower(k)   * jecfine(kfmin(k)-1) &
+&                                           + ( 2.0 - deltalower(k) ) * jecfine(kfmin(k)) ) &
+&                       + deltaupper(k) * (           deltaupper(k)   * jecfine(MIN(kfmax(k)+1,npts)) &
+&                                           + ( 2.0 - deltaupper(k) ) * jecfine(kfmax(k)) ) )
+    END FORALL
+
+    !spec(:) = loc_integral(:) / ( dunui(:) * unui(:)**2 )
+    spec(:) = loc_integral(:) / dunui(:) !/ ( dunui(:) * unui(:)**2 )
+    rate    = rate_interp
+
+    loctot = 0.0d0
+    do k=1,nez
+      loctot = loctot + spec(k) * dunui(k)
+    enddo
+
+    if(abs(loctot-1.0d0) > 1d-9) then
+    !if(rate_interp > 1e5) then
+      write(*,*) 'rho,T,Ye ', rho, temp, ye
+      write(*,*) 'rate ', rate_interp
+      write(*,*) 'integral on wl grid', loctot
+    endif
 
     RETURN
 
     END SUBROUTINE interp_ec
 
-    SUBROUTINE abem_nuclei_EC_table_weaklib( n, e_in, unubi, dunui, rho, t, ye, xh, ah, cmpn, cmpp, cmpe, absrnc, emitnc, nse, nez )
+    SUBROUTINE abem_nuclei_EC_table_weaklib( n, unui, unubi, dunui, &
+               rho, t, ye, xh, ah, cmpn, cmpp, cmpe, EC_table_spec, EC_table_rate, nse, nez )
     !-----------------------------------------------------------------------
     !
     !    Author:       W.R. Hix, Physics Division
@@ -420,8 +513,8 @@ MODULE ec_table_module
     !  cmpe        : electron chemical potential (including rest mass) [MeV]
     !
     !    Output arguments:
-    !  absrnc      :  absorption inverse mean free path (/cm)
-    !  emitnc      :  emission inverse mean free path (/cm)
+    !  EC_table_spec : electron neutrino emission spectrum normalised to 1
+    !  EC_table_rate : electron capture rate at given rho,T,Ye  
     !
     !    Input arguments (module):
     !
@@ -449,7 +542,7 @@ MODULE ec_table_module
     INTEGER, INTENT(in)     :: n               ! neutrino flavor index
     INTEGER, INTENT(in)     :: nse             ! NSE flag
     INTEGER, INTENT(in)     :: nez             !number of neutrino energy bins
-    REAL(dp), dimension(nez), intent(in)   :: e_in !neutrino energies
+    REAL(dp), dimension(nez), intent(in)   :: unui !neutrino energies
     REAL(dp), dimension(nez+1), intent(in) :: unubi !neutrino energies, bin edges
     REAL(dp), dimension(nez), intent(in)   :: dunui !neutrino energies, dE for edges
 
@@ -466,8 +559,8 @@ MODULE ec_table_module
     !        Output variables.
     !-----------------------------------------------------------------------
 
-    REAL(dp), INTENT(out) :: absrnc(nez) ! inverse mean free path for absorption on free nucleons
-    REAL(dp), INTENT(out) :: emitnc(nez) ! inverse mean free path for emission from free nucleons
+    REAL(dp), INTENT(out) :: EC_table_spec(nez)
+    REAL(dp), INTENT(out) :: EC_table_rate
 
     !-----------------------------------------------------------------------
     !        Local variables
@@ -491,11 +584,14 @@ MODULE ec_table_module
     !  or
     !               n /= 1
     !-----------------------------------------------------------------------
-
+!write(*,*) rho, roaenct
+!write(*,*) ah
+!write(*,*) nse
     !IF ( iaenct == 0  .or.  rho  >  roaenct  .or.  n /= 1  .or.  ah < 40 .or. nse == 0 ) THEN
-    IF ( rho  >  roaenct  .or.  ah < 40 .or. nse == 0 ) THEN
-      emitnc           = zero
-      absrnc           = zero
+    !IF ( rho  >  roaenct  .or.  ah < 40 .or. nse == 0 ) THEN
+    IF ( rho  >  roaenct  .or.  ah < 40 ) THEN
+      EC_table_spec = zero
+      EC_table_rate = zero
       RETURN
     END IF
 
@@ -514,21 +610,20 @@ MODULE ec_table_module
     !  Calculate values for rate/per heavy nucleus by interpolation
     !-----------------------------------------------------------------------
 
-    CALL interp_ec( emitnc, e_in, unubi, dunui, t, rho, ye, nez )
+    CALL interp_ec( EC_table_spec, EC_table_rate, unui, unubi, dunui, t, rho, ye, nez )
 
     !-----------------------------------------------------------------------
     !  Multiply by heavy nucleus abundance
     !-----------------------------------------------------------------------
 
-    emitnc = emitnc * xnuc
-
+    !emitnc = emitnc * xnuc
+    !EC_table_spec = EC_table_spec * xnuc
     !-----------------------------------------------------------------------
     !  Compute the absorption rate using detailed balance
     !-----------------------------------------------------------------------
-
-    DO je = 1,nez
-      absrnc(je) = emitnc(je) * fexp((e_in(je) + dmnp + cmpn - cmpp - cmpe)/tmev)
-    END DO
+    !DO je = 1,nez
+    !  absrnc(je) = emitnc(je) * fexp((unui(je) + dmnp + cmpn - cmpp - cmpe)/tmev)
+    !END DO
 
     RETURN
     END SUBROUTINE abem_nuclei_EC_table_weaklib

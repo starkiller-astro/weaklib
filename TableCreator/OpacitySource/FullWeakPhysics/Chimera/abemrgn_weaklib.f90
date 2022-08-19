@@ -1,8 +1,8 @@
 SUBROUTINE abemrgn_weaklib &
        ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
          cmpe, absor, emit, ye, nez, & 
-         EmAb_nucleons_isoenergetic, EmAb_nuclei_FFN, &
-         EmAb_nucleons_recoil, EmAb_nucleons_weak_magnetism )
+         EmAb_np_isoenergetic, EmAb_nuclei_EC_FFN, &
+         EmAb_np_non_isoenergetic, EmAb_np_weak_magnetism )
 !--------------------------------------------------------------------
 !    Author:       R. Chu, Dept. Phys. & Astronomy
 !                  U. Tennesee, Knoxville
@@ -44,10 +44,10 @@ SUBROUTINE abemrgn_weaklib &
 !  ye            : electron fraction
 !  nez           : size of neutrino energy array e_in
 !
-!  EmAb_nucleons_isoenergetic : Include isoenergetic EmAb on free nucleons using Bruenn85 formalism
-!  EmAb_nuclei_FFN : Include EmAb on nuclei using FFN formalism
-!  EmAb_nucleons_recoil : Include corrections to nucleons EmAb due to Reddy98
-!  EmAb_nucleons_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
+!  EmAb_np_isoenergetic : Include isoenergetic EmAb on free nucleons using Bruenn85 formalism
+!  EmAb_nuclei_EC_FFN : Include EmAb on nuclei using FFN formalism
+!  EmAb_np_non_isoenergetic : Include corrections to nucleons EmAb due to Reddy98
+!  EmAb_np_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
 !
 !    Output arguments:
 !  absor         : absorption inverse mean free path (/cm)
@@ -86,12 +86,12 @@ REAL(dp), INTENT(in)    :: cmpn     ! neutron chemical porential
 REAL(dp), INTENT(in)    :: cmpp     ! proton chemical porential
 REAL(dp), INTENT(in)    :: cmpe     ! electron chemical porential
 
-INTEGER, INTENT(in)         :: EmAb_nucleons_isoenergetic   ! Flag to calculate isoenergetic EmAb on free nucleons 
+INTEGER, INTENT(in)         :: EmAb_np_isoenergetic   ! Flag to calculate isoenergetic EmAb on free nucleons 
                                                             ! using Bruenn85
-INTEGER, INTENT(in)         :: EmAb_nuclei_FFN              ! Flag to calculate EmAb on nuclei using FFN formalism
-INTEGER, INTENT(in)         :: EmAb_nucleons_recoil         ! Flag to recoil, nucleon final-state blocking, 
+INTEGER, INTENT(in)         :: EmAb_nuclei_EC_FFN              ! Flag to calculate EmAb on nuclei using FFN formalism
+INTEGER, INTENT(in)         :: EmAb_np_non_isoenergetic         ! Flag to recoil, nucleon final-state blocking, 
                                                             !and special relativity corrections
-INTEGER, INTENT(in)         :: EmAb_nucleons_weak_magnetism ! Flag to include weak_magnetism corrections
+INTEGER, INTENT(in)         :: EmAb_np_weak_magnetism ! Flag to include weak_magnetism corrections
 
 !--------------------------------------------------------------------
 !        Output variables.
@@ -112,12 +112,12 @@ REAL(dp), DIMENSION(nez)  :: ab_nucleons, ab_nuclei, em_nucleons, em_nuclei
 !   free paths (/cm)
 !--------------------------------------------------------------------
 
-  IF(EmAb_nucleons_isoenergetic .gt. 0) THEN
+  IF(EmAb_np_isoenergetic .gt. 0) THEN
 
     CALL abem_cal_weaklib &
          ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-           cmpe, ab_nucleons, em_nucleons, nez, EmAb_nucleons_recoil, &
-           EmAb_nucleons_weak_magnetism )
+           cmpe, ab_nucleons, em_nucleons, nez, EmAb_np_non_isoenergetic, &
+           EmAb_np_weak_magnetism )
 
   ENDIF
 
@@ -126,7 +126,7 @@ REAL(dp), DIMENSION(nez)  :: ab_nucleons, ab_nuclei, em_nucleons, em_nuclei
 !   paths (/cm).
 !--------------------------------------------------------------------
 
-  IF(EmAb_nuclei_FFN .gt. 0) THEN
+  IF(EmAb_nuclei_EC_FFN .gt. 0) THEN
 
     CALL abemnc_weaklib &
          ( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp,  &

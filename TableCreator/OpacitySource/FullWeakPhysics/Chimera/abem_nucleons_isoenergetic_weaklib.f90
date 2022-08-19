@@ -39,8 +39,6 @@ SUBROUTINE abem_nucleons_isoenergetic_weaklib &
 !  cmpe          : electron chemical potential
 !                  (including rest mass) [MeV]
 !
-!  EmAb_nucleons_recoil : Include corrections to nucleons EmAb due to Reddy98
-!  EmAb_nucleons_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
 !
 !    Output arguments:
 !  absornp       : inverse mean free path for absorption on free

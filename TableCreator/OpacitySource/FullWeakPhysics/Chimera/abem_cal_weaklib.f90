@@ -1,7 +1,7 @@
 SUBROUTINE abem_cal_weaklib &
            ( n, e_in, rho, t, ye, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
              cmpe, absornp, emitnp, nez, &
-             EmAb_nucleons_recoil, EmAb_nucleons_weak_magnetism )
+             EmAb_np_non_isoenergetic, EmAb_np_weak_magnetism )
 !-----------------------------------------------------------------------
 !
 !    Author:       R. Chu, Dept. Phys. & Astronomy
@@ -40,8 +40,8 @@ SUBROUTINE abem_cal_weaklib &
 !  cmpe          : electron chemical potential
 !                  (including rest mass) [MeV]
 !
-!  EmAb_nucleons_recoil : Include corrections to nucleons EmAb due to Reddy98
-!  EmAb_nucleons_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
+!  EmAb_np_non_isoenergetic : Include corrections to nucleons EmAb due to Reddy98
+!  EmAb_np_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
 !
 !    Output arguments:
 !  absornp       : inverse mean free path for absorption on free
@@ -80,9 +80,9 @@ REAL(dp), INTENT(in)    :: cmpn          ! neutron chemical porential
 REAL(dp), INTENT(in)    :: cmpp          ! proton chemical porential
 REAL(dp), INTENT(in)    :: cmpe          ! electron chemical porential
 
-INTEGER, INTENT(in)         :: EmAb_nucleons_recoil         ! Flag to recoil, nucleon final-state blocking,
+INTEGER, INTENT(in)         :: EmAb_np_non_isoenergetic         ! Flag to recoil, nucleon final-state blocking,
                                                             !and special relativity corrections
-INTEGER, INTENT(in)         :: EmAb_nucleons_weak_magnetism ! Flag to include weak_magnetism corrections
+INTEGER, INTENT(in)         :: EmAb_np_weak_magnetism ! Flag to include weak_magnetism corrections
 
 !-----------------------------------------------------------------------
 !        Output variables.
@@ -187,7 +187,7 @@ END IF ! ye < 0.03d0
 !
 !-----------------------------------------------------------------------
 
-IF ( EmAb_nucleons_recoil == 0  .or.  rho < 1.d+09 ) THEN
+IF ( EmAb_np_non_isoenergetic == 0  .or.  rho < 1.d+09 ) THEN
 
 !-----------------------------------------------------------------------
 !  IF rho < 1.d+10 use abemfrnp instead of abemfrnpetanp to avoid
@@ -289,7 +289,7 @@ END IF ! i_aeps == 0  .or.  rho < 1.d+09
 !  Weak magnetism corrections for neutrino and antineutrino absorptions
 !   on nucleons.
 !-----------------------------------------------------------------------
-IF(EmAb_nucleons_weak_magnetism .gt. 0) THEN
+IF(EmAb_np_weak_magnetism .gt. 0) THEN
 
   DO k = 1,nez
   CALL cc_weak_mag_weaklib( e_in(k), xi_n_wm, xib_p_wm )

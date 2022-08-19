@@ -1,4 +1,4 @@
-SUBROUTINE abem_nucleons_recoil_weaklib &
+SUBROUTINE abem_np_non_isoenergetic_weaklib &
            ( nu_type, e_in, rho, t, ye, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
              cmpe, absornp, emitnp, nez)
 !-----------------------------------------------------------------------
@@ -131,7 +131,7 @@ REAL(dp)                :: fexp
 
 EXTERNAL fexp
 
-!IF ( EmAb_nucleons_recoil == 0  .or.  rho < 1.d+09 ) THEN
+!IF ( EmAb_np_non_isoenergetic == 0  .or.  rho < 1.d+09 ) THEN
 
 !-----------------------------------------------------------------------
 !  Neutrino absorption on neutrons with recoil, thermal motions, and
@@ -196,4 +196,4 @@ END DO
 
 RETURN
 
-  END SUBROUTINE abem_nucleons_recoil_weaklib
+  END SUBROUTINE abem_np_non_isoenergetic_weaklib

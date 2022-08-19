@@ -1,6 +1,4 @@
-!SUBROUTINE abem_nuclei_FFN_weaklib( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  &
-!& absrnc, emitnc, nse )
-SUBROUTINE abem_nuclei_FFN_weaklib( e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  &
+SUBROUTINE abem_nuclei_EC_FFN_weaklib( e_in, rho, t, xh, ah, zh, cmpn, cmpp, cmpe,  &
 & absrnc, emitnc, nez )
 !-----------------------------------------------------------------------
 !
@@ -191,4 +189,4 @@ DO k = 1, nez
 END DO ! k = 1,nez
 
 RETURN
-END SUBROUTINE abem_nuclei_FFN_weaklib
+END SUBROUTINE abem_nuclei_EC_FFN_weaklib

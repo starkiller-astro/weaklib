@@ -49,7 +49,9 @@ PROGRAM wlCreateOpacityTable
 
 
   USE wlKindModule, ONLY: dp
-  USE wlGridModule, ONLY: MakeLogGrid
+  USE wlGridModule, ONLY: &
+      MakeLogGrid,        &
+      MakeLinearGrid
   USE wlIOModuleHDF, ONLY: &
       InitializeHDF,       &
       FinalizeHDF
@@ -85,9 +87,9 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eos table
 !---------------------------------------------------------------------
-   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
    !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-25-50-100.h5"
-   !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-25-50-100.h5"
+   CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-25-50-100.h5"
    !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
 
 !---------------------------------------------------------------------
@@ -97,55 +99,71 @@ IMPLICIT NONE
    CHARACTER(256)          :: WriteTableNameBrem
 
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER                 :: nOpac_EmAb = 2  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_EmAb = 2  ! 2 for electron type
 
-   INTEGER                 :: EmAb_nucleons_full_kinematics = 0 !Use Fischer et al 2020 full kinematics rates for
-                                                                !EmAb on free nucleons
+   INTEGER, PARAMETER      :: EmAb_np_FK &
+                              = 0 
+                              !Use Fischer et al 2020 full kinematics rates for
+                              !EmAb on free nucleons
 
-   INTEGER                 :: inv_n_decay_full_kinematics   = 0 !Use Fischer et al 2020 full kinematics rates for
-                                                                !inverse neutron decay 
+   INTEGER, PARAMETER      :: EmAb_np_FK_inv_n_decay &
+                              = 0 
+                              !Use Fischer et al 2020 full kinematics rates for
+                              !inverse neutron decay 
 
-   INTEGER                 :: EmAb_nucleons_isoenergetic    = 1 !EmAb on free nucleons using isoenergetic approximation
-                                                                !Bruenn 1985
-                                                                !Mezzacappa & Bruenn (1993)
+   INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
+                              = 1 
+                              !EmAb on free nucleons using isoenergetic approximation
+                              !Bruenn 1985
+                              !Mezzacappa & Bruenn (1993)
 
-   INTEGER                 :: EmAb_nucleons_recoil          = 0 !EmAb on free nucleons taking into account recoil,
-                                                                !nucleon final-state blocking, and special relativity
-                                                                !Reddy et al 1998
-                                                                !Only used for rho > 1e9
+   INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
+                              = 0 
+                              !EmAb on free nucleons taking into account recoil,
+                              !nucleon final-state blocking, and special relativity
+                              !Reddy et al 1998
+                              !Only used for rho > 1e9
 
-   INTEGER                 :: EmAb_nucleons_weak_magnetism  = 0 !Weak magnetism corrections for EmAb on free nucleons
-                                                                !Horowitz 1997
+   INTEGER, PARAMETER      :: EmAb_np_weak_magnetism &
+                              = 0 
+                              !Weak magnetism corrections for EmAb on free nucleons
+                              !Horowitz 2002
 
-   INTEGER                 :: EmAb_nuclei_FFN               = 1 !EmAb on nuclei using FFN formalism
-                                                                !Fuller, Fowler, Neuman 1982, Ap. J. 252, 715
-                                                                !Bruenn 1985
+   INTEGER, PARAMETER      :: EmAb_nuclei_EC_FFN &
+                              = 0 
+                              !EmAb on nuclei using the Fuller, Fowler, 
+                              !Neuman 1982, Ap. J. 252, 715 approximation for the 
+                              !heavy nucleus matrix element as given in Bruenn 1985
 
-   INTEGER                 :: EmAb_nuclei_Hix               = 0 !EmAb on nuclei using NSE-folded tabular data
-                                                                !Langanke et al. (2003), Hix et al. (2003)
+   INTEGER, PARAMETER      :: EmAb_nuclei_EC_table &
+                              = 1 
+                              !EmAb on nuclei using a NSE-folded LMSH table
+                              !Langanke et al. (2003), Hix et al. (2003)
 
-   INTEGER                 :: nOpac_Iso  = 2  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_Iso  = 0  ! 2 for electron type
                                               !   ( flavor identical )
-   INTEGER                 :: nMom_Iso   = 2  ! 2 for 0th & 1st order
+   INTEGER, PARAMETER      :: nMom_Iso   = 0  ! 2 for 0th & 1st order
                                               !   legendre coff.
 
-   INTEGER                 :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
-   INTEGER                 :: nMom_NES   = 4  ! 4 for H1l, H2l
+   INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER                 :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
-   INTEGER                 :: nMom_Pair  = 4  ! 4 for J1l, J2l
+   INTEGER, PARAMETER      :: NPS        = 0  !Include neutrino-positron scattering as well
+
+   INTEGER, PARAMETER      :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
-   INTEGER                 :: nOpac_Brem = 1  !Only S_sigma(eps+eps') is needed for all
-   INTEGER                 :: nMom_Brem  = 1  !species and moments
+   INTEGER, PARAMETER      :: nOpac_Brem = 0  !Only S_sigma(eps+eps') is needed for all
+   INTEGER, PARAMETER      :: nMom_Brem  = 1  !species and moments
 
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-   REAL(dp), PARAMETER     :: Emin     = 1.0d-01
-   REAL(dp), PARAMETER     :: Emax     = 3.0d+02
+   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
+   REAL(dp), PARAMETER     :: Emax     = 3.0d+02 !upper face of last energy cell
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
@@ -207,6 +225,11 @@ IMPLICIT NONE
    stringlengthBrem = len(TRIM(WriteTableNameBrem))
 
    CALL InitializeHDF( )
+
+   !This needs to be here so that we allocate the EC table 
+   !spectrum and rate arrays in EmAb
+   OpacityTable % EmAb % nuclei_EC_table = EmAb_nuclei_EC_table
+
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
               nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
@@ -219,12 +242,12 @@ IMPLICIT NONE
 
    IF( nOpac_EmAb .gt. 0 ) THEN
 
-   if(EmAb_nucleons_full_kinematics + EmAb_nucleons_isoenergetic .gt. 1) then
+   if(EmAb_np_FK + EmAb_np_isoenergetic .gt. 1) then
      write (*,*) "Must choose either full kinematics or isoenergetic approach for EmAb on free nucleons"
      return
    endif
-   if(EmAb_nuclei_FFN + EmAb_nuclei_Hix .gt. 1) then
-     write (*,*) "Must choose either FFN formalism or table for EmAb on nuclei"
+   if(EmAb_nuclei_EC_FFN + EmAb_nuclei_EC_table .gt. 1) then
+     write (*,*) "Must choose either Bruenn85-FFN formalism or EC table for EmAb on nuclei"
      return
    endif
 
@@ -235,20 +258,22 @@ IMPLICIT NONE
    OpacityTable % EmAb % nPoints(2:4) = OpacityTable % nPointsTS
 
    OpacityTable % EmAb % Names = &
-                                (/'Electron Neutrino           ',  &
-                                  'Electron Antineutrino       '/)
+                                          (/'Electron Neutrino           ',  &
+                                            'Electron Antineutrino       '/)
+   OpacityTable % EmAb % EC_table_Names = (/'Electron Neutrino           '/)
 
    OpacityTable % EmAb % Units = &
-                                (/'Per Centimeter              ',  &
-                                  'Per Centimeter              '/)
+                                          (/'Per Centimeter              ',  &
+                                            'Per Centimeter              '/)
+   OpacityTable % EmAb % EC_table_Units = &
+                                        (/'Per Centimeter              '/)
 
-   OpacityTable % EmAb % nucleons_full_kinematics    = EmAb_nucleons_full_kinematics
-   OpacityTable % EmAb % inv_n_decay_full_kinematics = inv_n_decay_full_kinematics
-   OpacityTable % EmAb % nucleons_isoenergetic       = EmAb_nucleons_isoenergetic
-   OpacityTable % EmAb % nucleons_recoil             = EmAb_nucleons_recoil
-   OpacityTable % EmAb % nucleons_weak_magnetism     = EmAb_nucleons_weak_magnetism
-   OpacityTable % EmAb % nuclei_FFN                  = EmAb_nuclei_FFN
-   OpacityTable % EmAb % nuclei_Hix                  = EmAb_nuclei_Hix
+   OpacityTable % EmAb % np_FK               = EmAb_np_FK
+   OpacityTable % EmAb % np_FK_inv_n_decay   = EmAb_np_FK_inv_n_decay
+   OpacityTable % EmAb % np_isoenergetic     = EmAb_np_isoenergetic
+   OpacityTable % EmAb % np_non_isoenergetic = EmAb_np_non_isoenergetic
+   OpacityTable % EmAb % np_weak_magnetism   = EmAb_np_weak_magnetism
+   OpacityTable % EmAb % nuclei_EC_FFN       = EmAb_nuclei_EC_FFN
 
    END IF
 ! -- Set OpacityTableTypeScat Iso
@@ -336,7 +361,10 @@ IMPLICIT NONE
 !-----------------------------
 PRINT*, "Making Energy Grid ... "
 
-   ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid )
+   ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid, &
+              E_c        => OpacityTable % EnergyGrid % Cell_centers, &
+              E_f        => OpacityTable % EnergyGrid % Cell_faces,   &
+              dE         => OpacityTable % EnergyGrid % dE)
 
    EnergyGrid % Name &
      = 'Comoving Frame Neutrino Energy'
@@ -344,14 +372,22 @@ PRINT*, "Making Energy Grid ... "
    EnergyGrid % Unit &
      = 'MeV                           '
 
-   EnergyGrid % MinValue = Emin
-   EnergyGrid % MaxValue = Emax
+   EnergyGrid % MinValueFaces = Emin
+   EnergyGrid % MaxValueFaces = Emax
    EnergyGrid % LogInterp = 1
 
-   CALL MakeLogGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
-            EnergyGrid % nPoints,  EnergyGrid % Values )
+   !CALL MakeLogGrid &
+   !       ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+   !         EnergyGrid % nPoints,  EnergyGrid % Values )
 
+   CALL MakeLogGrid(Emin, Emax, nPointsE, E_c, E_f, dE)
+
+   EnergyGrid % MinValueCenters = MINVAL ( E_c )
+   EnergyGrid % MaxValueCenters = MAXVAL ( E_c )
+
+   EnergyGrid % MinValueFaces = MINVAL ( E_f )
+   EnergyGrid % MaxValueFaces = MAXVAL ( E_f )
+   
    END ASSOCIATE ! EnergyGrid
 
 !-----------------------------
@@ -389,7 +425,9 @@ PRINT*, 'Filling OpacityTable ...'
        nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
        iYe     => OpacityTable % TS % Indices % iYe                            , &
        nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
-       nu_E    => OpacityTable % EnergyGrid % Values                           , &
+       E_cells => OpacityTable % EnergyGrid % Cell_centers                     , &
+       E_faces => OpacityTable % EnergyGrid % Cell_faces                       , &
+       dE      => OpacityTable % EnergyGrid % dE                               , &
        Indices => OpacityTable % EOSTable % DV % Indices                       , &
        DVOffs  => OpacityTable % EOSTable % DV % Offsets                       , &
        DVar    => OpacityTable % EOSTable % DV % Variables  )
@@ -408,10 +446,11 @@ PRINT*, 'Filling OpacityTable ...'
 
     REAL(dp), DIMENSION(nPointsE) :: absor, emit
 
-    REAL(dp), DIMENSION(nPointsE) :: em_nucleons,    ab_nucleons
-    REAL(dp), DIMENSION(nPointsE) :: em_inv_n_decay, ab_inv_n_decay
-    REAL(dp), DIMENSION(nPointsE) :: em_nuclei_FFN,  ab_nuclei_FFN
-    REAL(dp), DIMENSION(nPointsE) :: em_nuclei_Hix,  ab_nuclei_Hix
+    REAL(dp), DIMENSION(nPointsE) :: em_nucleons,        ab_nucleons
+    REAL(dp), DIMENSION(nPointsE) :: em_inv_n_decay,     ab_inv_n_decay
+    REAL(dp), DIMENSION(nPointsE) :: em_nuclei_EC_FFN,      ab_nuclei_EC_FFN
+    REAL(dp), DIMENSION(nPointsE) :: EC_table_spec
+    REAL(dp)                      :: EC_table_rate
 
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: EOS_Un, EOS_Up !neutron and proton mean field potentials from nuclear EOS
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: EOS_massn, EOS_massp !effective neutron and proton masses from nuclear EOS
@@ -422,11 +461,8 @@ PRINT*, 'Filling OpacityTable ...'
     !arrays for weak magnetism corrections
     REAL(dp), DIMENSION(nPointsE) :: xi_n_wm, xib_p_wm
 
-    REAL(dp), DIMENSION(nPointsE+1) :: nu_E_edge
-    REAL(dp), DIMENSION(nPointsE)   :: dnu_E_edge
-
-    IF(EmAb_nucleons_full_kinematics .gt. 0 .or. &
-       inv_n_decay_full_kinematics   .gt. 0) then
+    IF(EmAb_np_FK .gt. 0 .or. &
+       EmAb_np_FK_inv_n_decay   .gt. 0) then
 
       BLOCK
 
@@ -473,11 +509,13 @@ PRINT*, 'Filling OpacityTable ...'
    !if we are tabulating EmAb on nuclei with the Hix2003
    !formalism, read in EC capture table and construct the
    !face-centered neutrino energy grid
-   IF ( EmAb_nuclei_Hix .gt. 0) THEN
+   IF ( EmAb_nuclei_EC_table .gt. 0) THEN
+             
+     iaenct = EmAb_nuclei_EC_table
 
      prepare_EC_table: BLOCK
 
-       CHARACTER(len=255) :: ec_table
+       CHARACTER(len=1000) :: ec_table
        integer            :: k     
 
        CALL get_environment_variable('WEAKLIB_DIR', ec_table)
@@ -490,46 +528,13 @@ PRINT*, 'Filling OpacityTable ...'
 
        ENDIF
 
-       ec_table = TRIM(ec_table) // TRIM("/TableCreator/OpacitySource/FullWeakPhysics/Executables/")
+       ec_table = TRIM(ec_table) // TRIM("TableCreator/OpacitySource/FullWeakPhysics/Executables/")
 
        ec_table = TRIM(ec_table) // TRIM("ec_table.d")
 
        CALL read_ec_table(ec_table)
 
        WRITE(*,*) 'Read in EC table from file ', ec_table 
-
-       ASSOCIATE(Egrid => OpacityTable % EnergyGrid)
-
-       IF( EGrid % LogInterp == 1) THEN
-
-         create_unubi_dunui: BLOCK
-           REAL(dp) :: runul, runu, runuh
-
-           runul = DLOG(EGrid % MaxValue / EGrid % MinValue) &
-                   / DBLE(EGrid % nPoints - 1) 
-           runu  = DEXP(runul)
-           runuh = DSQRT(runu) 
-
-           nu_E_edge(1) = EGrid % MinValue / runuh
-
-           DO k=2,nPointsE+1
-   
-             nu_E_edge(k) = runu * nu_E_edge(k-1)
-
-           ENDDO
-
-           dnu_E_edge(1:nPointsE) = nu_E_edge(2:nPointsE+1) - nu_E_edge(1:nPointsE)
-
-         END BLOCK create_unubi_dunui
-
-       ELSE
-
-         WRITE(*,*) 'Needs to be implemented for non-log grid still!'
-         STOP 
-
-       ENDIF
-
-       END ASSOCIATE
 
      END BLOCK prepare_EC_table
 
@@ -596,8 +601,8 @@ PRINT*, 'Filling OpacityTable ...'
 
             bb  = (chem_e + chem_p - chem_n)/(T*kMev)
 
-            if (     EmAb_nucleons_full_kinematics .gt. 0 &
-                .or. inv_n_decay_full_kinematics   .gt. 0 ) then
+            if (     EmAb_np_FK .gt. 0 &
+                .or. EmAb_np_FK_inv_n_decay   .gt. 0 ) then
  
               Un_loc = EOS_Un(j_rho, k_t, l_ye)
               Up_loc = EOS_Up(j_rho, k_t, l_ye)
@@ -610,19 +615,19 @@ PRINT*, 'Filling OpacityTable ...'
          DO i_r = 1, nOpac_EmAb
 
              !iaefnp = 1
-             iaefnp = EmAb_nucleons_isoenergetic
+             iaefnp = EmAb_np_isoenergetic
              !i_aeps = 0
-             i_aeps = EmAb_nucleons_recoil
+             i_aeps = EmAb_np_non_isoenergetic
              rhoaefnp = HUGE(1.d0) ! (?)
              !iaence = 1
-             iaence = EmAb_nuclei_FFN !e-nu
+             iaence = EmAb_nuclei_EC_FFN !e-nu
              edmpe = 3.d0
              !iaenca = 1
-             iaenca = EmAb_nuclei_FFN !e-nubar
+             iaenca = EmAb_nuclei_EC_FFN !e-nubar
              edmpa = 3.d0
              !iaenct = 0
-             iaenct = EmAb_nuclei_Hix
-             roaenct = 1.0d+13 !TINY(1.d0)
+             iaenct = EmAb_nuclei_EC_table
+             roaenct = 1.0d+13
 
 ! Initialise the opacity arrays to zero
              ab_nucleons = 0.0d0
@@ -631,33 +636,33 @@ PRINT*, 'Filling OpacityTable ...'
              ab_inv_n_decay = 0.0d0
              em_inv_n_decay = 0.0d0
 
-             ab_nuclei_FFN = 0.0d0
-             em_nuclei_FFN = 0.0d0
+             ab_nuclei_EC_FFN = 0.0d0
+             em_nuclei_EC_FFN = 0.0d0
 
-             ab_nuclei_Hix = 0.0d0
-             em_nuclei_Hix = 0.0d0
+             EC_table_spec = 0.0d0
+             EC_table_rate = 0.0d0
 
-             IF(EmAb_nucleons_isoenergetic .gt. 0) THEN
+             IF(EmAb_np_isoenergetic .gt. 0) THEN
 
                CALL abem_nucleons_isoenergetic_weaklib & 
-                    ( i_r, nu_E, &
+                    ( i_r, E_cells, &
                       rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
                       ab_nucleons, em_nucleons, nPointsE)
 
                !recoil corrections to EmAb on nucleons
-               IF(EmAb_nucleons_recoil .gt. 0 .and. rho .ge. 1.d+09) THEN
+               IF(EmAb_np_non_isoenergetic .gt. 0 .and. rho .ge. 1.d+09) THEN
 
-                 CALL abem_nucleons_recoil_weaklib & 
-                      ( i_r, nu_E, &
+                 CALL abem_np_non_isoenergetic_weaklib & 
+                      ( i_r, E_cells, &
                         rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
                         ab_nucleons, em_nucleons, nPointsE)
 
-               ENDIF !EmAb_nucleons_recoil .gt. 0 .and. rho .gt. 1.d+09
+               ENDIF !EmAb_np_non_isoenergetic .gt. 0 .and. rho .gt. 1.d+09
 
                !weak magnetism corrections to EmAb on nucleons
-               IF(EmAb_nucleons_weak_magnetism .gt. 0) THEN
+               IF(EmAb_np_weak_magnetism .gt. 0) THEN
 
-                 CALL cc_weak_mag_weaklib( nu_E, xi_n_wm, xib_p_wm, nPointsE )
+                 CALL cc_weak_mag_weaklib( E_cells, xi_n_wm, xib_p_wm, nPointsE )
 
                  IF (i_r .eq. 1) THEN !electron neutrino weak mag correction
 
@@ -671,11 +676,11 @@ PRINT*, 'Filling OpacityTable ...'
 
                  ENDIF !i_r .eq. 1 or 2
 
-               ENDIF !EmAb_nucleons_weak_magnetism .gt. 0
+               ENDIF !EmAb_np_weak_magnetism .gt. 0
 
-             ENDIF !EmAb_nucleons_isoenergetic .gt. 0
+             ENDIF !EmAb_np_isoenergetic .gt. 0
 
-             IF(EmAb_nucleons_full_kinematics .gt. 0) THEN
+             IF(EmAb_np_FK .gt. 0) THEN
 
 !write(*,*) 'i=', i_r, 'j=', j_rho, 'k=', k_t, 'l=', l_ye
 !write(*,*) 'T =',TMeV,'Density =',rho,'Ye =',Ye
@@ -686,10 +691,10 @@ PRINT*, 'Filling OpacityTable ...'
 
 !stop
                IF(i_r .le. 2) THEN
-                 CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
+                 CALL CC_EmAb( OpacityTable % EnergyGrid % Cell_centers,     &
                                TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
                                massn_loc, massp_loc, Un_loc, Up_loc,   &
-                               i_r, inv_n_decay_full_kinematics,       &
+                               i_r, EmAb_np_FK_inv_n_decay,       &
                                ab_nucleons, em_nucleons,               &
                                ab_inv_n_decay, em_inv_n_decay, nPointsE)
 
@@ -697,20 +702,29 @@ PRINT*, 'Filling OpacityTable ...'
 
              ENDIF
 
-             IF(EmAb_nuclei_FFN .gt. 0 .and. i_r .eq. 1) THEN
+             IF(EmAb_nuclei_EC_FFN .gt. 0 .and. i_r .eq. 1) THEN
 
-               CALL abem_nuclei_FFN_weaklib( nu_E, rho, T, xheavy, A, Z, chem_n, chem_p, &
-                                             chem_e, ab_nuclei_FFN, em_nuclei_FFN, &
+               CALL abem_nuclei_EC_FFN_weaklib( E_cells, rho, T, xheavy, A, Z, chem_n, chem_p, &
+                                             chem_e, ab_nuclei_EC_FFN, em_nuclei_EC_FFN, &
                                              nPointsE )
 
              ENDIF
 
-             IF(EmAb_nuclei_Hix .gt. 0 .and. i_r .eq. 1) THEN
+             IF(EmAb_nuclei_EC_table .gt. 0 .and. i_r .eq. 1) THEN
   
-               CALL abem_nuclei_EC_table_weaklib ( i_r, nu_E, nu_E_edge, dnu_E_edge, &
+               CALL abem_nuclei_EC_table_weaklib ( i_r, E_cells, E_faces, dE, &
                                                    rho, T, Ye, xheavy, A, chem_n, &
-                                                   chem_p, chem_e, ab_nuclei_Hix, em_nuclei_Hix, &
+                                                   chem_p, chem_e, EC_table_spec, EC_table_rate, &
                                                    1, nPointsE)
+               DO i_e = 1, OpacityTable % nPointsE
+                  OpacityTable % EmAb % EC_table_spec(i_r) % &
+                               Values (i_e, j_rho, k_t, l_ye) &
+                  = EC_table_spec(i_e)
+               END DO  !i_e
+
+               OpacityTable % EmAb % EC_table_rate(i_r) % &
+                            Values (j_rho, k_t, l_ye) &
+               = EC_table_rate
 
              ENDIF
 
@@ -719,11 +733,10 @@ PRINT*, 'Filling OpacityTable ...'
                         Values (i_e, j_rho, k_t, l_ye) &
                 = ab_nucleons(i_e)    + em_nucleons(i_e) &
                 + ab_inv_n_decay(i_e) + em_inv_n_decay(i_e) &
-                + ab_nuclei_FFN(i_e)  + em_nuclei_FFN(i_e) &
-                + ab_nuclei_Hix(i_e)  + em_nuclei_Hix(i_e)
+                + ab_nuclei_EC_FFN(i_e)  + em_nuclei_EC_FFN(i_e) 
              END DO  !i_e
-
          END DO !i_r
+
 
 !----------------  Scat_Iso -----------------------
          DO i_rb = 1, nOpac_Iso
@@ -733,7 +746,7 @@ PRINT*, 'Filling OpacityTable ...'
            ietann = 1
 
            CALL scatical_weaklib &
-           ( i_rb, OpacityTable % EnergyGrid % Values, &
+           ( i_rb, OpacityTable % EnergyGrid % Cell_centers, &
              nPointsE, rho, T, xn, xp, xhe, xheavy, A, Z, cok )
 
            DO t_m = 1, nMom_Iso
@@ -754,6 +767,13 @@ PRINT*, 'Filling OpacityTable ...'
    DO i_r = 1, nOpac_EmAb
      minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
      OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar )
+
+     IF (i_r .eq. 1) THEN
+       minvar = MINVAL( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
+       OpacityTable % EmAb % EC_table_spec_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
+       minvar = MINVAL( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
+       OpacityTable % EmAb % EC_table_rate_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
+     ENDIF
    END DO
 
 !------- Scat_Iso % Offsets
@@ -783,8 +803,8 @@ PRINT*, 'Filling OpacityTable ...'
           TMeV = T * kMeV
 
           CALL scatergn_weaklib &
-               ( nPointsE, OpacityTable % EnergyGrid % Values, &
-                 TMeV, eta, H0i, H0ii, H1i, H1ii )
+               ( nPointsE, OpacityTable % EnergyGrid % Cell_centers, &
+                 TMeV, eta, H0i, H0ii, H1i, H1ii, NPS )
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
                ( :, :, 1, k_t, i_eta )       &
@@ -838,8 +858,8 @@ PRINT*, 'Filling OpacityTable ...'
             DO i_ep = 1, nPointsE
 
              CALL paircal_weaklib &
-                  ( OpacityTable % EnergyGrid % Values(i_e),  &
-                    OpacityTable % EnergyGrid % Values(i_ep), &
+                  ( OpacityTable % EnergyGrid % Cell_centers(i_e),  &
+                    OpacityTable % EnergyGrid % Cell_centers(i_ep), &
                     chem_e, T, j0i, j0ii, j1i, j1ii )
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
@@ -887,7 +907,7 @@ PRINT*, 'Filling OpacityTable ...'
       rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
        CALL bremcal_weaklib &
-            (nPointsE, OpacityTable % EnergyGrid % Values, &
+            (nPointsE, OpacityTable % EnergyGrid % Cell_centers, &
              rho, T, S_sigma)
 
             OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &
@@ -920,6 +940,14 @@ PRINT*, 'Filling OpacityTable ...'
      OpacityTable % EmAb % Opacity(i_r) % Values&
      = LOG10( OpacityTable % EmAb % Opacity(i_r) % &
               Values + OpacityTable % EmAb % Offsets(i_r) + epsilon )
+     IF (i_r .eq. 1 .and. EmAb_nuclei_EC_table .gt. 0) THEN
+       OpacityTable % EmAb % EC_table_spec(i_r) % Values&
+       = LOG10( OpacityTable % EmAb % EC_table_spec(i_r) % &
+                Values + OpacityTable % EmAb % EC_table_spec_Offsets(i_r) + epsilon )
+       OpacityTable % EmAb % EC_table_rate(i_r) % Values&
+       = LOG10( OpacityTable % EmAb % EC_table_rate(i_r) % &
+                Values + OpacityTable % EmAb % EC_table_rate_Offsets(i_r) + epsilon )
+     ENDIF
   END DO  !i_r
 
   DO i_rb = 1, nOpac_Iso

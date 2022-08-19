@@ -23,7 +23,8 @@ MODULE wlOpacityTableIOModuleHDF
   USE wlKindModule, ONLY:            &
     dp
   USE wlGridModule, ONLY:            &
-    GridType
+    GridType,                        &
+    EnergyGridType
   USE wlOpacityTableModule, ONLY:    &
     OpacityTableType,                &
     AllocateOpacityTable
@@ -55,6 +56,16 @@ MODULE wlOpacityTableIOModuleHDF
 
   PUBLIC WriteOpacityTableHDF
   PUBLIC ReadOpacityTableHDF
+
+  INTERFACE WriteGridHDF
+    MODULE PROCEDURE WriteGenericGridHDF
+    MODULE PROCEDURE WriteEnergyGridHDF
+  END INTERFACE WriteGridHDF
+
+  INTERFACE ReadGridHDF
+    MODULE PROCEDURE ReadGenericGridHDF
+    MODULE PROCEDURE ReadEnergyGridHDF
+  END INTERFACE ReadGridHDF
 
 CONTAINS
 
@@ -117,7 +128,6 @@ CONTAINS
     datasize1d(1) = 1
     CALL OpenGroupHDF( "EnergyGrid", .true., file_id, group_id )
     CALL WriteGridHDF( OpacityTable % EnergyGrid, group_id )
-    CALL CloseGroupHDF( group_id )
   
     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
     CALL WriteThermoStateHDF( OpacityTable % TS, group_id )
@@ -125,7 +135,7 @@ CONTAINS
 
     IF( WriteOpacity_EmAb )THEN
 
-    WRITE(*,*) "Writting out EmAb"
+    WRITE(*,*) "Writing out EmAb"
       IF( .NOT. ALLOCATED( OpacityTable % EmAb % Names ) )THEN
 
         ! --- Insert Appropriate Reaction ---
@@ -135,7 +145,13 @@ CONTAINS
       ELSE
 
         CALL OpenGroupHDF &
-               ( "EmAb_CorrectedAbsorption", .true., file_id, group_id )
+               ( "EmAb Parameters", .true., file_id, group_id )
+
+        CALL WriteOpacityTableHDF_EmAb_parameters( OpacityTable % EmAb, group_id )
+        CALL CloseGroupHDF( group_id )
+
+        CALL OpenGroupHDF &
+               ( "EmAb", .true., file_id, group_id )
 
         CALL WriteVersionAttribute(group_id)
 
@@ -144,11 +160,32 @@ CONTAINS
 
       END IF
 
+      IF(OpacityTable % EmAb % nuclei_EC_table .gt. 0) THEN
+
+        WRITE(*,*) "Writing EC table spectrum and rate."
+        IF( .NOT. ALLOCATED( OpacityTable % EmAb % EC_table_Names ) )THEN
+
+          ! --- Insert Appropriate Reaction ---
+          WRITE(*,'(A4,A)') &
+            '', 'OpacityTable % EmAb on nuclei using EC table not allocated.  Write Skipped.'
+
+        ELSE
+
+          CALL OpenGroupHDF &
+                 ( "EC_table", .true., file_id, group_id )
+
+          CALL WriteOpacityTableHDF_EC_table( OpacityTable % EmAb, group_id )
+          CALL CloseGroupHDF( group_id )
+
+        END IF
+
+      ENDIF
+
     END IF
 
     IF( WriteOpacity_Iso ) THEN
 
-    WRITE(*,*) "Writting out Iso"
+    WRITE(*,*) "Writing out Iso"
        IF( .NOT. ALLOCATED( OpacityTable % Scat_Iso % Names ) )THEN
 
         ! --- Insert Appropriate Reaction ---
@@ -190,7 +227,7 @@ CONTAINS
       CALL CloseGroupHDF( group_id )
 
       IF( WriteOpacity_NES ) THEN
-      WRITE(*,*) "Writting out NES"
+      WRITE(*,*) "Writing out NES"
 
         IF( .NOT. ALLOCATED( OpacityTable % Scat_NES % Names ) )THEN
   
@@ -299,7 +336,7 @@ CONTAINS
   END SUBROUTINE WriteOpacityTableHDF
 
 
-  SUBROUTINE WriteGridHDF( Grid, group_id )
+  SUBROUTINE WriteGenericGridHDF( Grid, group_id )
 
     TYPE(GridType), INTENT(in)                  :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -325,8 +362,206 @@ CONTAINS
     datasize1d(1) = Grid % nPoints
     CALL WriteHDF( "Values",    Grid % Values(:), group_id, datasize1d )
 
-  END SUBROUTINE WriteGridHDF
+  END SUBROUTINE WriteGenericGridHDF
 
+  SUBROUTINE WriteEnergyGridHDF( Grid, group_id )
+
+    TYPE(EnergyGridType), INTENT(in)            :: Grid
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+    CHARACTER(LEN=32)                           :: tempString(1)
+    INTEGER                                     :: tempInteger(1)
+    INTEGER(HSIZE_T)                            :: datasize1d(1)
+
+    datasize1d(1) = 1
+
+    tempString(1) = Grid % Name
+    CALL WriteHDF( "Name",      tempString,       group_id, datasize1d )
+    
+    tempString(1) = Grid % Unit
+    CALL WriteHDF( "Unit",      tempString,       group_id, datasize1d )
+
+    tempInteger(1) = Grid % nPoints  
+    CALL WriteHDF( "nPoints",   tempInteger,      group_id, datasize1d )
+
+    tempInteger(1) = Grid % nFaces  
+    CALL WriteHDF( "nFaces",   tempInteger,      group_id, datasize1d )
+   
+    tempInteger(1) = Grid % LogInterp 
+    CALL WriteHDF( "LogInterp", tempInteger,      group_id, datasize1d )
+   
+    datasize1d(1) = Grid % nPoints
+    CALL WriteHDF( "Cells", Grid % Cell_centers(:), group_id, datasize1d )
+
+    datasize1d(1) = Grid % nFaces
+    CALL WriteHDF( "Faces", Grid % Cell_faces(:),   group_id, datasize1d )
+
+    datasize1d(1) = Grid % nPoints
+    CALL WriteHDF( "dE",    Grid % dE(:), group_id, datasize1d )
+
+  END SUBROUTINE WriteEnergyGridHDF
+
+  SUBROUTINE WriteOpacityTableHDF_EmAb_parameters( EmAb, group_id )
+
+    TYPE(OpacityTypeEmAb), INTENT(in) :: EmAb
+    INTEGER(HID_T),        INTENT(in) :: group_id
+
+    INTEGER(HSIZE_T) :: datasize1d(1)
+    INTEGER(HSIZE_T) :: datasize4d(4)
+    INTEGER :: ii
+
+    INTEGER, DIMENSION(1)             :: tempInteger
+
+    datasize1d = 1
+
+    tempInteger(1) = EmAb % np_FK
+    CALL WriteHDF( "np_FK", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % np_FK_inv_n_decay
+    CALL WriteHDF( "np_FK_inv_n_decay", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % np_isoenergetic
+    CALL WriteHDF( "np_isoenergetic", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % np_non_isoenergetic
+    CALL WriteHDF( "np_non_isoenergetic", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % np_weak_magnetism
+    CALL WriteHDF( "np_weak_magnetism", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nuclei_EC_FFN
+    CALL WriteHDF( "nuclei_EC_FFN", tempInteger, group_id, datasize1d )
+    tempInteger(1) = EmAb % nuclei_EC_table
+    CALL WriteHDF( "nuclei_EC_table", tempInteger, group_id, datasize1d )
+
+    BLOCK
+      character(len=100), dimension(3) :: tempString
+
+      tempString(1) = "A list of all tabulated opcities with references."
+      tempString(2) = "The attributes as well as the parameters in the hdf5"
+      tempString(3) = "file indicate which options were used to build the table."
+
+      CALL WriteGroupAttributeHDF_string("EmAb table description", tempString, group_id) 
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(4) :: tempString
+
+      tempString(1) = "Isoenergetic approximation, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+      tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+      IF(EmAb % np_isoenergetic .gt. 0) THEN
+        tempString(4) = "Included."
+      ELSE
+        tempString(4) = "Not included."
+      ENDIF
+
+      CALL WriteGroupAttributeHDF_string("np_isoenergetic", tempString, group_id) 
+
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(5) :: tempString
+
+      tempString(1) = "Recoil, nucleon final-state blocking, and special relativity corrections to EmAb on nucleons"
+      tempString(2) = "Reddy et al 1998"
+      tempString(3) = "Only used for rho > 1e9"
+      tempString(4) = "https://ui.adsabs.harvard.edu/link_gateway/1998PhRvD..58a3009R/doi:10.1103/PhysRevD.58.013009"
+      IF(EmAb % np_non_isoenergetic .gt. 0) THEN
+        tempString(5) = "Included."
+      ELSE
+        tempString(5) = "Not included."
+      ENDIF
+
+      CALL WriteGroupAttributeHDF_string("np_non_isoenergetic", tempString, group_id) 
+
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(3) :: tempString
+
+      tempString(1) = "Weak magnetism corrections for EmAb on free nucleons, Horowitz (1997)"
+      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
+      IF(EmAb % np_weak_magnetism .gt. 0) THEN
+        tempString(3) = "Included."
+      ELSE
+        tempString(3) = "Not included."
+      ENDIF
+
+      CALL WriteGroupAttributeHDF_string("np_weak_magnetism", tempString, group_id) 
+
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(3) :: tempString
+
+      tempString(1) = "Full kinematics rates for EmAb on free nucleons, Fischer et al (2020)"
+      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
+      IF(EmAb % np_FK .gt. 0) THEN
+        tempString(3) = "Included."
+      ELSE
+        tempString(3) = "Not included."
+      ENDIF
+
+      CALL WriteGroupAttributeHDF_string("np_FK", tempString, group_id) 
+
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(3) :: tempString
+
+      tempString(1) = "Full kinematics rates for inverse neutron decay, Fischer et al (2020)"
+      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
+      IF(EmAb % np_FK_inv_n_decay .gt. 0) THEN
+        tempString(3) = "Included."
+      ELSE
+        tempString(3) = "Not included."
+      ENDIF
+
+      CALL WriteGroupAttributeHDF_string("np_FK_inv_n_decay", &
+            tempString, group_id) 
+
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(4) :: tempString
+
+      tempString(1) = "Electron capture on nuclei from Bruenn 1985 using the FFN formalism, Fuller et al (1982)."
+      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1982ApJ...252..715F/doi:10.1086/159597"
+      tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+      IF(EmAb % nuclei_EC_FFN .gt. 0) THEN
+        tempString(4) = "Included."
+      ELSE
+        tempString(4) = "Not included."
+      ENDIF
+
+      CALL WriteGroupAttributeHDF_string("nuclei_EC_FFN", tempString, group_id) 
+
+    END BLOCK
+
+    BLOCK
+
+      character(len=100), dimension(7) :: tempString
+
+      tempString(1) = "NSE-folded tabular data, Langanke et al. (2003), Hix et al. (2003)"
+      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..90x1102L/doi:10.1103/PhysRevLett.90.241102"
+      tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..91t1102H/doi:10.1103/PhysRevLett.91.201102"
+      tempString(4) = "The table stores the rate of electron capture on nuclei"
+      tempString(5) = "and the spectrum of emissivity of neutrinos, normalised to 1"
+      tempstring(6) = "The spectrum has not been multiplied by the heavy nucleus abundance!!"
+      IF(EmAb % nuclei_EC_table .gt. 0) THEN
+        tempString(7) = "Included."
+      ELSE
+        tempString(7) = "Not included."
+      ENDIF
+        
+
+      CALL WriteGroupAttributeHDF_string("nuclei_EC_table", tempString, group_id) 
+
+    END BLOCK
+  
+  END SUBROUTINE WriteOpacityTableHDF_EmAb_parameters
 
   SUBROUTINE WriteOpacityTableHDF_EmAb( EmAb, group_id )
 
@@ -342,21 +577,6 @@ CONTAINS
     datasize1d = 1
     tempInteger(1) = EmAb % nOpacities
     CALL WriteHDF( "nOpacities", tempInteger, group_id, datasize1d )
-
-    tempInteger(1) = EmAb % nucleons_full_kinematics
-    CALL WriteHDF( "nucleons_full_kinematics", tempInteger, group_id, datasize1d )
-    tempInteger(1) = EmAb % inv_n_decay_full_kinematics
-    CALL WriteHDF( "inv_n_decay_full_kinematics", tempInteger, group_id, datasize1d )
-    tempInteger(1) = EmAb % nucleons_isoenergetic
-    CALL WriteHDF( "nucleons_isoenergetic", tempInteger, group_id, datasize1d )
-    tempInteger(1) = EmAb % nucleons_recoil
-    CALL WriteHDF( "nucleons_recoil", tempInteger, group_id, datasize1d )
-    tempInteger(1) = EmAb % nucleons_weak_magnetism
-    CALL WriteHDF( "nucleons_weak_magnetism", tempInteger, group_id, datasize1d )
-    tempInteger(1) = EmAb % nuclei_FFN
-    CALL WriteHDF( "nuclei_FFN", tempInteger, group_id, datasize1d )
-    tempInteger(1) = EmAb % nuclei_Hix
-    CALL WriteHDF( "nuclei_Hix", tempInteger, group_id, datasize1d )
 
     datasize1d = EmAb % nOpacities
     CALL WriteHDF &
@@ -375,118 +595,46 @@ CONTAINS
 
     END DO
 
-      IF(EmAb % nucleons_isoenergetic .gt. 0) THEN
-
-        BLOCK
-
-          character(len=100), dimension(3) :: tempString
-
-          tempString(1) = "Isoenergetic approximation, Bruenn (1985), Mezzacappa and Bruenn (1993)"
-          tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
-          tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
-
-          CALL WriteGroupAttributeHDF_string("EmAb on nucleons", tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-
-      IF(EmAb % nucleons_recoil .gt. 0) THEN
-
-        BLOCK
-
-        character(len=100), dimension(4) :: tempString
-
-        tempString(1) = "Recoil, nucleon final-state blocking, and special relativity corrections to EmAb on nucleons"
-        tempString(2) = "Reddy et al 1998"
-        tempString(3) = "Only used for rho > 1e9"
-        tempString(4) = "https://ui.adsabs.harvard.edu/link_gateway/1998PhRvD..58a3009R/doi:10.1103/PhysRevD.58.013009"
-
-        CALL WriteGroupAttributeHDF_string("EmAb recoil corrections", tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-
-      IF(EmAb % nucleons_weak_magnetism .gt. 0) THEN
-
-        BLOCK
-
-        character(len=100), dimension(2) :: tempString
-
-        tempString(1) = "Weak magnetism corrections for EmAb on free nucleons, Horowitz (1997)"
-        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
-
-        CALL WriteGroupAttributeHDF_string("EmAb weak magnetism corrections", tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-
-      IF(EmAb % nucleons_full_kinematics .gt. 0) THEN
-
-        BLOCK
-
-        character(len=100), dimension(2) :: tempString
-
-        tempString(1) = "Full kinematics rates for EmAb on free nucleons, Fischer et al (2020)"
-        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
-
-        CALL WriteGroupAttributeHDF_string("EmAb full kinematics", tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-
-      IF(EmAb % inv_n_decay_full_kinematics .gt. 0) THEN
-
-        BLOCK
-
-        character(len=100), dimension(2) :: tempString
-
-        tempString(1) = "Full kinematics rates for inverse neutron decay, Fischer et al (2020)"
-        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020PhRvC.101b5804F/doi:10.1103/PhysRevC.101.025804"
-
-        CALL WriteGroupAttributeHDF_string("Inverse neutron decay full kinematics", &
-              tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-    
-      IF(EmAb % nuclei_FFN .gt. 0) THEN
-
-        BLOCK
-
-        character(len=100), dimension(3) :: tempString
-
-        tempString(1) = "Using FFN formalism, Fuller et al (1982), Bruenn 1985"
-        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1982ApJ...252..715F/doi:10.1086/159597"
-        tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
-
-        CALL WriteGroupAttributeHDF_string("EmAb on nuclei", tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-
-      IF(EmAb % nuclei_Hix .gt. 0) THEN
-
-        BLOCK
-
-        character(len=100), dimension(3) :: tempString
-
-        tempString(1) = "NSE-folded tabular data, Langanke et al. (2003), Hix et al. (2003)"
-        tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..90x1102L/doi:10.1103/PhysRevLett.90.241102"
-        tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..91t1102H/doi:10.1103/PhysRevLett.91.201102"
-
-        CALL WriteGroupAttributeHDF_string("EmAb on nuclei", tempString, group_id) 
-
-        END BLOCK
-
-      ENDIF
-  
   END SUBROUTINE WriteOpacityTableHDF_EmAb
+
+  SUBROUTINE WriteOpacityTableHDF_EC_table( EmAb, group_id )
+
+    TYPE(OpacityTypeEmAb), INTENT(in) :: EmAb
+    INTEGER(HID_T),        INTENT(in) :: group_id
+
+    INTEGER(HSIZE_T) :: datasize1d(1)
+    INTEGER(HSIZE_T) :: datasize3d(3)
+    INTEGER(HSIZE_T) :: datasize4d(4)
+    INTEGER :: ii
+
+    INTEGER, DIMENSION(1)             :: tempInteger
+
+    CHARACTER(LEN=100), DIMENSION(5) :: tempString
+
+    datasize1d = 1
+
+    datasize1d = EmAb % EC_table_nOpacities !1 !EmAb % nOpacities
+    CALL WriteHDF &
+           ( "Units", EmAb % EC_table_Units, group_id, datasize1d ) 
+
+    CALL WriteHDF &
+           ( "spec_Offsets", EmAb % EC_table_spec_Offsets, group_id, datasize1d )
+    CALL WriteHDF &
+           ( "rate_Offsets", EmAb % EC_table_rate_Offsets, group_id, datasize1d )
+
+    datasize4d = EmAb % nPoints
+
+    CALL WriteHDF &
+           ( "Spectrum", &
+             EmAb % EC_table_spec(1) % Values(:,:,:,:), group_id, datasize4d )
+
+    datasize3d = [EmAb % nPoints(2),EmAb % nPoints(3),EmAb % nPoints(4)]
+
+    CALL WriteHDF &
+           ( "Rate", &
+             EmAb % EC_table_rate(1) % Values(:,:,:), group_id, datasize3d )
+
+  END SUBROUTINE WriteOpacityTableHDF_EC_table
 
 
   SUBROUTINE WriteOpacityTableHDF_Scat( Scat , group_id )
@@ -658,6 +806,38 @@ CONTAINS
 
     ! --- Get Number of Energy Points ---
 
+    !Get parameters for EmAb in order to check if the spectrum
+    !and rate for electron capture on nuclei using the LMSH table
+    !is present in the hdf5 table
+    IF( ReadOpacity(iEmAb) )THEN
+
+      CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
+
+      CALL OpenGroupHDF &
+             ( "EmAb Parameters", .FALSE., file_id, group_id )
+
+      datasize1d(1) = 1
+      Call ReadHDF ( "np_FK", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % np_FK = buffer(1)
+      Call ReadHDF ( "np_FK_inv_n_decay", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % np_FK_inv_n_decay = buffer(1)
+      Call ReadHDF ( "np_isoenergetic", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % np_isoenergetic = buffer(1)
+      Call ReadHDF ( "np_non_isoenergetic", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % np_non_isoenergetic = buffer(1)
+      Call ReadHDF ( "np_weak_magnetism", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % np_weak_magnetism = buffer(1)
+      Call ReadHDF ( "nuclei_EC_FFN", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nuclei_EC_FFN = buffer(1)
+      Call ReadHDF ( "nuclei_EC_table", buffer, group_id, datasize1d)
+      OpacityTable % EmAb % nuclei_EC_table = buffer(1)
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    ENDIF
+
     nPointsE = 0
     DO iOp = iEmAb, iBrem
 
@@ -737,7 +917,7 @@ CONTAINS
 
       CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
 
-      CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
+      CALL OpenGroupHDF( "EmAb", .FALSE., file_id, group_id )
 
       CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     
@@ -861,7 +1041,7 @@ CONTAINS
 
         CALL OpenGroupHDF( "EnergyGrid", .FALSE., file_id, group_id )
 
-        CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
+        CALL ReadEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
 
         CALL CloseGroupHDF( group_id )
 
@@ -908,7 +1088,7 @@ CONTAINS
       CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
 
       CALL OpenGroupHDF &
-             ( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
+             ( "EmAb", .FALSE., file_id, group_id )
 
       datasize1d(1) = nOpac_EmAb
       CALL ReadHDF &
@@ -934,24 +1114,42 @@ CONTAINS
             OpacityTable % EmAb % Opacity(2) % Values, &
             group_id, datasize4d )
 
-      datasize1d(1) = 1  
-
-      Call ReadHDF ( "nucleons_full_kinematics", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nucleons_full_kinematics = buffer(1)
-      Call ReadHDF ( "inv_n_decay_full_kinematics", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % inv_n_decay_full_kinematics = buffer(1)
-      Call ReadHDF ( "nucleons_isoenergetic", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nucleons_isoenergetic = buffer(1)
-      Call ReadHDF ( "nucleons_recoil", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nucleons_recoil = buffer(1)
-      Call ReadHDF ( "nucleons_weak_magnetism", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nucleons_weak_magnetism = buffer(1)
-      Call ReadHDF ( "nuclei_FFN", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nuclei_FFN = buffer(1)
-      Call ReadHDF ( "nuclei_Hix", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nuclei_Hix = buffer(1)
-
       CALL CloseGroupHDF( group_id )
+
+      IF(OpacityTable % EmAb % nuclei_EC_table .gt. 0) THEN
+
+        CALL OpenGroupHDF &
+               ( "EC_table", .FALSE., file_id, group_id )
+
+        datasize1d(1) = 1 !nOpac_EmAb
+        CALL ReadHDF &
+               ( "spec_Offsets", OpacityTable % EmAb % EC_table_spec_Offsets, group_id, datasize1d )
+        CALL ReadHDF &
+               ( "rate_Offsets", OpacityTable % EmAb % EC_table_rate_Offsets, group_id, datasize1d )
+
+        CALL ReadHDF &
+               ( "Units",   OpacityTable % EmAb % EC_table_Units,   group_id, datasize1d )
+
+        datasize4d(1)   = OpacityTable % EnergyGrid % nPoints
+        datasize4d(2:4) = OpacityTable % TS % nPoints
+
+        OpacityTable % EmAb % EC_table_Names = "Electron Neutrino"
+
+        CALL ReadHDF &
+               ( "Spectrum", &
+                 OpacityTable % EmAb % EC_table_spec(1) % Values, &
+                 group_id, datasize4d )
+
+        datasize3d = OpacityTable % TS % nPoints
+
+        CALL ReadHDF &
+               ( "Rate", &
+                 OpacityTable % EmAb % EC_table_rate(1) % Values, &
+                 group_id, datasize3d )
+
+        CALL CloseGroupHDF( group_id )
+
+      ENDIF
 
       CALL CloseFileHDF( file_id )
 
@@ -1160,27 +1358,30 @@ CONTAINS
 
     datasize1d = buffer(1)
     CALL ReadHDF( "Offsets", EmAb % Offsets, group_id, datasize1d )
+    Call ReadHDF( "Names",   EmAb % Names,   group_id, datasize1d )
+    Call ReadHDF( "Units",   EmAb % Units,   group_id, datasize1d )
 
-    Call ReadHDF( "Names", EmAb % Names, group_id, datasize1d )
-
-    Call ReadHDF( "Units", EmAb % Units, group_id, datasize1d )
+    datasize1d(1) = 1  
+    CALL ReadHDF( "Offsets", EmAb % EC_table_spec_Offsets, group_id, datasize1d )
+    Call ReadHDF( "Names",   EmAb % EC_table_Names,   group_id, datasize1d )
+    Call ReadHDF( "Units",   EmAb % EC_table_Units,   group_id, datasize1d )
 
     datasize1d(1) = 1  
 
-    Call ReadHDF ( "nucleons_full_kinematics", buffer, group_id, datasize1d)
-    EmAb % nucleons_full_kinematics = buffer(1)
-    Call ReadHDF ( "inv_n_decay_full_kinematics", buffer, group_id, datasize1d)
-    EmAb % inv_n_decay_full_kinematics = buffer(1)
-    Call ReadHDF ( "nucleons_isoenergetic", buffer, group_id, datasize1d)
-    EmAb % nucleons_isoenergetic = buffer(1)
-    Call ReadHDF ( "nucleons_recoil", buffer, group_id, datasize1d)
-    EmAb % nucleons_recoil = buffer(1)
-    Call ReadHDF ( "nucleons_weak_magnetism", buffer, group_id, datasize1d)
-    EmAb % nucleons_weak_magnetism = buffer(1)
-    Call ReadHDF ( "nuclei_FFN", buffer, group_id, datasize1d)
-    EmAb % nuclei_FFN = buffer(1)
-    Call ReadHDF ( "nuclei_Hix", buffer, group_id, datasize1d)
-    EmAb % nuclei_Hix = buffer(1)
+    Call ReadHDF ( "np_FK", buffer, group_id, datasize1d)
+    EmAb % np_FK = buffer(1)
+    Call ReadHDF ( "np_FK_inv_n_decay", buffer, group_id, datasize1d)
+    EmAb % np_FK_inv_n_decay = buffer(1)
+    Call ReadHDF ( "np_isoenergetic", buffer, group_id, datasize1d)
+    EmAb % np_isoenergetic = buffer(1)
+    Call ReadHDF ( "np_non_isoenergetic", buffer, group_id, datasize1d)
+    EmAb % np_non_isoenergetic = buffer(1)
+    Call ReadHDF ( "np_weak_magnetism", buffer, group_id, datasize1d)
+    EmAb % np_weak_magnetism = buffer(1)
+    Call ReadHDF ( "nuclei_EC_FFN", buffer, group_id, datasize1d)
+    EmAb % nuclei_EC_FFN = buffer(1)
+    Call ReadHDF ( "nuclei_EC_table", buffer, group_id, datasize1d)
+    EmAb % nuclei_EC_table = buffer(1)
 
     datasize1d(1) = 4
     CALL ReadHDF( "nPoints", EmAb % nPoints, group_id, datasize1d )
@@ -1197,6 +1398,11 @@ CONTAINS
                subgroup_id, datasize4d )
 
     END DO ! nOpacities
+
+    CALL ReadHDF &
+           ( EmAb % EC_table_Names(1), &
+             EmAb % EC_table_spec(1) % Values, &
+             subgroup_id, datasize4d )
 
     CALL CloseGroupHDF( subgroup_id )
 
@@ -1252,7 +1458,7 @@ CONTAINS
 
   END SUBROUTINE ReadOpacityTypeScatHDF
 
-  SUBROUTINE ReadGridHDF( Grid, group_id )
+  SUBROUTINE ReadGenericGridHDF( Grid, group_id )
 
     TYPE(GridType), INTENT(inout)               :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -1282,6 +1488,53 @@ CONTAINS
     
     Grid % maxValue = MAXVAL( Grid % Values )
 
-  END SUBROUTINE ReadGridHDF
+  END SUBROUTINE ReadGenericGridHDF
+
+  SUBROUTINE ReadEnergyGridHDF( Grid, group_id )
+
+    TYPE(EnergyGridType), INTENT(inout)         :: Grid
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER, DIMENSION(1)                       :: buffer
+    CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
+
+    datasize1d(1) = 1
+    Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
+    Grid % Name = buffer_string(1)
+
+    Call ReadHDF( "Unit", buffer_string, group_id, datasize1d )
+    Grid % Unit = buffer_string(1)
+
+    CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
+    Grid % nPoints = buffer(1)
+
+    CALL ReadHDF( "nFaces", buffer, group_id, datasize1d )
+    Grid % nFaces = buffer(1)
+
+    CALL ReadHDF( "LogInterp", buffer, group_id, datasize1d )
+    Grid % LogInterp = buffer(1)
+ 
+    datasize1d = Grid % nPoints
+    CALL ReadHDF( "Cells", Grid % Cell_centers, &
+                              group_id, datasize1d )
+
+    datasize1d = Grid % nFaces
+    CALL ReadHDF( "Faces", Grid % Cell_faces, &
+                              group_id, datasize1d )
+
+    datasize1d = Grid % nPoints
+    CALL ReadHDF( "dE", Grid % dE, &
+                              group_id, datasize1d )
+
+    Grid % minValueCenters = MINVAL( Grid % Cell_centers )
+    
+    Grid % maxValueCenters = MAXVAL( Grid % Cell_centers )
+
+    Grid % minValueFaces = MINVAL( Grid % Cell_faces )
+    
+    Grid % maxValueFaces = MAXVAL( Grid % Cell_faces )
+
+  END SUBROUTINE ReadEnergyGridHDF
 
 END MODULE wlOpacityTableIOModuleHDF
