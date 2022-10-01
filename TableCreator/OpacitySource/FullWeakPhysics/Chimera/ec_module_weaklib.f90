@@ -12,7 +12,7 @@ MODULE ec_table_module
   !INTEGER, PARAMETER  :: npts=200, ntemp=35, nrho=11, nye=7 ! Original Table
   INTEGER, PARAMETER  :: tmx=40, tmn=(tmx+1-ntemp), rhomx=26, rhomn=(rhomx+1-nrho)
 
-  REAL(dp), PARAMETER :: deltaE=0.5,deltalrho_ec=.5,deltaT_ec=.1,deltaYe_ec=.02
+  REAL(dp), PARAMETER :: deltaE=0.5d0,deltalrho_ec=0.5d0,deltaT_ec=0.1d0,deltaYe_ec=0.02d0
 
   REAL(dp)            :: energy(0:npts)
   REAL(dp)            :: spectab(0:npts,rhomn:rhomx,tmn:tmx,0:(nye-1))
@@ -381,6 +381,7 @@ MODULE ec_table_module
     &           +  c1*c2             * ratetab(rhoup,tup,yeoffset(2)) )
 
     rate_interp=10.0d0**(rate_interp)
+!write(*,*) 'rate_interp', rate_interp
 
     !renormalize spectrum to 1 after interpolation
 
@@ -389,16 +390,22 @@ MODULE ec_table_module
       loctot = loctot + jecfine(k) * deltaE
     enddo
 
-    if(abs(loctot-1.0d0) > 0.75d0) then
-    !if(rate_interp > 1e5) then
-      write(*,*) 'rho,T,Ye ', rho, temp, ye
-      write(*,*) 'rate ', rate_interp
-      write(*,*) 'integral ', loctot
-    endif
+    !if(abs(loctot-1.0d0) > 0.75d0) then
+      !write(*,*) 'rho,T,Ye ', rho, temp, ye
+      !write(*,*) 'rate ', rate_interp
+      !write(*,*) 'integral ', loctot
+    !endif
 
     !jecfine(:) = jecfine(:) * const * rate_interp / loctot
     !jecfine(:) = jecfine(:) * const / loctot
     jecfine(:) = jecfine(:) / loctot
+
+    do k=0,npts
+    spec(k+1) = jecfine(k)
+    enddo
+    rate = rate_interp
+
+    RETURN
 
     !-----------------------------------------------------------------------
     ! Match Table grid to MGFLD energy grid
@@ -473,12 +480,12 @@ MODULE ec_table_module
       loctot = loctot + spec(k) * dunui(k)
     enddo
 
-    if(abs(loctot-1.0d0) > 1d-9) then
-    !if(rate_interp > 1e5) then
-      write(*,*) 'rho,T,Ye ', rho, temp, ye
-      write(*,*) 'rate ', rate_interp
-      write(*,*) 'integral on wl grid', loctot
-    endif
+    !if(abs(loctot-1.0d0) > 1d-9) then
+      !write(*,*) 'rho,T,Ye ', rho, temp, ye
+      !write(*,*) 'rate ', rate_interp
+      !write(*,*) 'integral on wl grid', loctot
+      !write(*,*) 'spec(1)', spec(1), dunui(1), loc_integral(1)
+    !endif
 
     RETURN
 
@@ -584,23 +591,24 @@ MODULE ec_table_module
     !  or
     !               n /= 1
     !-----------------------------------------------------------------------
-!write(*,*) rho, roaenct
-!write(*,*) ah
-!write(*,*) nse
     !IF ( iaenct == 0  .or.  rho  >  roaenct  .or.  n /= 1  .or.  ah < 40 .or. nse == 0 ) THEN
     !IF ( rho  >  roaenct  .or.  ah < 40 .or. nse == 0 ) THEN
-    IF ( rho  >  roaenct  .or.  ah < 40 ) THEN
-      EC_table_spec = zero
-      EC_table_rate = zero
-      RETURN
-    END IF
+    !IF ( rho  >  roaenct  .or.  ah < 40.0d0 ) THEN
+    !  EC_table_spec = zero
+    !  EC_table_rate = zero
+    !  RETURN
+    !END IF
 
     !-----------------------------------------------------------------------
     !  Initialize
     !-----------------------------------------------------------------------
 
-    tmev              = kmev * t
-    xnuc              = ( xh/( rmu * ah ) ) * rho
+    !tmev              = kmev * t
+    !if(ah == 0.0d0 ) then
+    !  xnuc = 0.0d0
+    !else
+    !  xnuc              = ( xh/( rmu * ah ) ) * rho
+    !endif
 
     !-----------------------------------------------------------------------
     !

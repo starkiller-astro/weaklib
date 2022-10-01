@@ -608,6 +608,7 @@ CONTAINS
     INTEGER :: ii
 
     INTEGER, DIMENSION(1)             :: tempInteger
+    REAL(dp)                          :: tmp_real(1)
 
     CHARACTER(LEN=100), DIMENSION(5) :: tempString
 
@@ -622,13 +623,74 @@ CONTAINS
     CALL WriteHDF &
            ( "rate_Offsets", EmAb % EC_table_rate_Offsets, group_id, datasize1d )
 
-    datasize4d = EmAb % nPoints
+    datasize1d = 1
+
+    tempInteger(1) = EmAb % EC_Table_nE
+    CALL WriteHDF &
+           ( "nPointsE",   tempInteger, group_id, datasize1d )
+
+    tempInteger(1) = EmAb % EC_Table_nRho
+    CALL WriteHDF &
+           ( "nPointsRho", tempInteger, group_id, datasize1d )
+
+    tempInteger(1) = EmAb % EC_Table_nT
+    CALL WriteHDF &
+           ( "nPointsT",   tempInteger, group_id, datasize1d )
+
+    tempInteger(1) = EmAb % EC_Table_nYe
+    CALL WriteHDF &
+           ( "nPointsYe",  tempInteger, group_id, datasize1d )
+
+    datasize1d = EmAb % EC_Table_nE
+    CALL WriteHDF &
+           ( "nu_E", &
+             EmAb % EC_table_E(:), group_id, datasize1d )
+
+    datasize1d = EmAb % EC_Table_nRho
+    CALL WriteHDF &
+           ( "rho", &
+             EmAb % EC_table_rho(:), group_id, datasize1d )
+
+    datasize1d = EmAb % EC_Table_nT
+    CALL WriteHDF &
+           ( "T", &
+             EmAb % EC_table_T(:), group_id, datasize1d )
+
+    datasize1d = EmAb % EC_Table_nYe
+    CALL WriteHDF &
+           ( "Ye", &
+             EmAb % EC_table_Ye(:), group_id, datasize1d )
+
+    datasize1d = 1
+
+    tmp_real(1) = EmAb % EC_table_rho_min
+    CALL WriteHDF &
+           ( "minRho",  tmp_real, group_id, datasize1d )
+    tmp_real(1) = EmAb % EC_table_rho_max
+    CALL WriteHDF &
+           ( "maxRho",  tmp_real, group_id, datasize1d )
+
+    tmp_real(1) = EmAb % EC_table_T_min
+    CALL WriteHDF &
+           ( "minT",  tmp_real, group_id, datasize1d )
+    tmp_real(1) = EmAb % EC_table_T_max
+    CALL WriteHDF &
+           ( "maxT",  tmp_real, group_id, datasize1d )
+
+    tmp_real(1) = EmAb % EC_table_Ye_min
+    CALL WriteHDF &
+           ( "minYe",  tmp_real, group_id, datasize1d )
+    tmp_real(1) = EmAb % EC_table_Ye_max
+    CALL WriteHDF &
+           ( "maxYe",  tmp_real, group_id, datasize1d )
+
+    datasize4d = [EmAb % EC_Table_nE, EmAb % EC_Table_nRho, EmAb % EC_Table_nT, EmAb % EC_Table_nYe]
 
     CALL WriteHDF &
            ( "Spectrum", &
              EmAb % EC_table_spec(1) % Values(:,:,:,:), group_id, datasize4d )
 
-    datasize3d = [EmAb % nPoints(2),EmAb % nPoints(3),EmAb % nPoints(4)]
+    datasize3d = [EmAb % EC_Table_nRho, EmAb % EC_Table_nT, EmAb % EC_Table_nYe]
 
     CALL WriteHDF &
            ( "Rate", &
@@ -717,6 +779,7 @@ CONTAINS
     INTEGER            :: nOpac_Brem
     INTEGER            :: nMom_Brem
     INTEGER            :: buffer(1)
+    REAL(dp)           :: tmp_real(1)
     INTEGER(HID_T)     :: file_id
     INTEGER(HID_T)     :: group_id
     INTEGER(HSIZE_T)   :: datasize1d(1)
@@ -1130,8 +1193,66 @@ CONTAINS
         CALL ReadHDF &
                ( "Units",   OpacityTable % EmAb % EC_table_Units,   group_id, datasize1d )
 
-        datasize4d(1)   = OpacityTable % EnergyGrid % nPoints
-        datasize4d(2:4) = OpacityTable % TS % nPoints
+        CALL ReadHDF( "nPointsE", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nE = buffer(1)
+
+        CALL ReadHDF( "nPointsRho", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nRho = buffer(1)
+
+        CALL ReadHDF( "nPointsT", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nT = buffer(1)
+
+        CALL ReadHDF( "nPointsYe", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nYe = buffer(1)
+
+        datasize1d = OpacityTable % EmAb % EC_table_nE
+        CALL ReadHDF &
+               ( "nu_E", &
+                 OpacityTable % EmAb % EC_table_E, &
+                 group_id, datasize1d )
+
+        datasize1d = OpacityTable % EmAb % EC_table_nRho
+        CALL ReadHDF &
+               ( "rho", &
+                 OpacityTable % EmAb % EC_table_rho, &
+                 group_id, datasize1d )
+
+        datasize1d = OpacityTable % EmAb % EC_table_nT
+        CALL ReadHDF &
+               ( "T", &
+                 OpacityTable % EmAb % EC_table_T, &
+                 group_id, datasize1d )
+
+        datasize1d = OpacityTable % EmAb % EC_table_nYe
+        CALL ReadHDF &
+               ( "Ye", &
+                 OpacityTable % EmAb % EC_table_Ye, &
+                 group_id, datasize1d )
+
+        datasize1d = 1
+        CALL ReadHDF( "minRho", tmp_real, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_rho_min = tmp_real(1)
+
+        CALL ReadHDF( "maxRho", tmp_real, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_rho_max = tmp_real(1)
+
+        CALL ReadHDF( "maxT", tmp_real, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_T_max = tmp_real(1)
+
+        CALL ReadHDF( "minT", tmp_real, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_T_min = tmp_real(1)
+
+        CALL ReadHDF( "maxYe", tmp_real, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_Ye_max = tmp_real(1)
+
+        CALL ReadHDF( "minYe", tmp_real, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_Ye_min = tmp_real(1)
+
+        !datasize4d(1)   = OpacityTable % EnergyGrid % nPoints
+        !datasize4d(2:4) = OpacityTable % TS % nPoints
+
+        datasize4d = [OpacityTable % EmAb % EC_table_nE, OpacityTable % EmAb % EC_table_nRho, &
+                      OpacityTable % EmAb % EC_table_nT, OpacityTable % EmAb % EC_table_nYe]
 
         OpacityTable % EmAb % EC_table_Names = "Electron Neutrino"
 
@@ -1140,7 +1261,10 @@ CONTAINS
                  OpacityTable % EmAb % EC_table_spec(1) % Values, &
                  group_id, datasize4d )
 
-        datasize3d = OpacityTable % TS % nPoints
+        !datasize3d = OpacityTable % TS % nPoints
+        datasize3d = [OpacityTable % EmAb % EC_table_nRho, &
+                      OpacityTable % EmAb % EC_table_nT,   &
+                      OpacityTable % EmAb % EC_table_nYe]
 
         CALL ReadHDF &
                ( "Rate", &

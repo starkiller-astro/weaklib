@@ -63,6 +63,24 @@ MODULE wlOpacityFieldsModule
     REAL(dp),           ALLOCATABLE :: EC_table_rate_Offsets(:)
     TYPE(ValueType_4D), ALLOCATABLE :: EC_table_spec(:)
     TYPE(ValueType_3D), ALLOCATABLE :: EC_table_rate(:)
+    REAL(dp),           ALLOCATABLE :: EC_table_rho(:)
+    REAL(dp),           ALLOCATABLE :: EC_table_T(:)
+    REAL(dp),           ALLOCATABLE :: EC_table_Ye(:)
+    REAL(dp),           ALLOCATABLE :: EC_table_E(:)
+
+    REAL(dp)                        :: EC_table_rho_min
+    REAL(dp)                        :: EC_table_rho_max
+    REAL(dp)                        :: EC_table_T_min
+    REAL(dp)                        :: EC_table_T_max
+    REAL(dp)                        :: EC_table_Ye_min
+    REAL(dp)                        :: EC_table_Ye_max
+    REAL(dp)                        :: EC_table_E_min
+    REAL(dp)                        :: EC_table_E_max
+
+    INTEGER                         :: EC_table_nRho
+    INTEGER                         :: EC_table_nT
+    INTEGER                         :: EC_table_nYe
+    INTEGER                         :: EC_table_nE
 
     INTEGER                         :: np_FK    
                                     !Fischer et al 2020 full kinematics rates for
@@ -186,13 +204,6 @@ CONTAINS
       ALLOCATE( Opacity % EC_table_spec         (Opacity % EC_table_nOpacities) )
       ALLOCATE( Opacity % EC_table_rate         (Opacity % EC_table_nOpacities) )
 
-      DO i = 1, Opacity % EC_table_nOpacities
-        ALLOCATE( Opacity % EC_table_spec(i) % Values &
-                ( nPoints(1), nPoints(2), nPoints(3), nPoints(4)) )
-        ALLOCATE( Opacity % EC_table_rate(i) % Values &
-                ( nPoints(2), nPoints(3), nPoints(4)) )
-      ENDDO
-
     ENDIF
   END SUBROUTINE AllocateOpacityTypeEmAb
 
@@ -214,13 +225,6 @@ CONTAINS
 
     IF(Opacity % nuclei_EC_table .gt. 0) THEN
 
-      DO i = 1, Opacity % EC_table_nOpacities
-        DEALLOCATE( Opacity % EC_table_spec(i) % Values )
-        DEALLOCATE( Opacity % EC_table_rate(i) % Values )
-      ENDDO
-
-      DEALLOCATE( Opacity % EC_table_spec )
-      DEALLOCATE( Opacity % EC_table_rate )
       DEALLOCATE( Opacity % EC_table_spec_Offsets )
       DEALLOCATE( Opacity % EC_table_rate_Offsets )
       DEALLOCATE( Opacity % EC_table_Units )

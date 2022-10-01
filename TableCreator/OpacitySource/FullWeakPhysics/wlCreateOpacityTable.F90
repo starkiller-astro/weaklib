@@ -49,6 +49,10 @@ PROGRAM wlCreateOpacityTable
 
 
   USE wlKindModule, ONLY: dp
+  USE wlInterpolationUtilitiesModule, ONLY: &
+      Index1D_Lin, &
+      GetIndexAndDelta_Lin, &
+      GetIndexAndDelta_Log
   USE wlGridModule, ONLY: &
       MakeLogGrid,        &
       MakeLinearGrid
@@ -139,6 +143,15 @@ IMPLICIT NONE
                               = 1 
                               !EmAb on nuclei using a NSE-folded LMSH table
                               !Langanke et al. (2003), Hix et al. (2003)
+   !tabulated EC table range
+   REAL(dp), PARAMETER     :: EC_rho_min =   1.0d8
+   REAL(dp), PARAMETER     :: EC_rho_max =   1.0d13
+   REAL(dp), PARAMETER     :: EC_T_min   =   0.4d0 / kMeV
+   REAL(dp), PARAMETER     :: EC_T_max   =   4.0d0 / kMeV
+   REAL(dp), PARAMETER     :: EC_Ye_min  =   0.24d0
+   REAL(dp), PARAMETER     :: EC_Ye_max  =   0.58d0
+   REAL(dp), PARAMETER     :: EC_E_min   =   0.0d0
+   REAL(dp), PARAMETER     :: EC_E_max   = 100.0d0
 
    INTEGER, PARAMETER      :: nOpac_Iso  = 0  ! 2 for electron type
                                               !   ( flavor identical )
@@ -274,6 +287,15 @@ IMPLICIT NONE
    OpacityTable % EmAb % np_non_isoenergetic = EmAb_np_non_isoenergetic
    OpacityTable % EmAb % np_weak_magnetism   = EmAb_np_weak_magnetism
    OpacityTable % EmAb % nuclei_EC_FFN       = EmAb_nuclei_EC_FFN
+
+   OpacityTable % EmAb % EC_table_rho_min    = EC_rho_min
+   OpacityTable % EmAb % EC_table_rho_max    = EC_rho_max
+   OpacityTable % EmAb % EC_table_T_min      = EC_T_min
+   OpacityTable % EmAb % EC_table_T_max      = EC_T_max
+   OpacityTable % EmAb % EC_table_Ye_min     = EC_Ye_min
+   OpacityTable % EmAb % EC_table_Ye_max     = EC_Ye_max
+   OpacityTable % EmAb % EC_table_E_min      = EC_T_min
+   OpacityTable % EmAb % EC_table_E_max      = EC_T_max
 
    END IF
 ! -- Set OpacityTableTypeScat Iso
@@ -449,8 +471,8 @@ PRINT*, 'Filling OpacityTable ...'
     REAL(dp), DIMENSION(nPointsE) :: em_nucleons,        ab_nucleons
     REAL(dp), DIMENSION(nPointsE) :: em_inv_n_decay,     ab_inv_n_decay
     REAL(dp), DIMENSION(nPointsE) :: em_nuclei_EC_FFN,      ab_nuclei_EC_FFN
-    REAL(dp), DIMENSION(nPointsE) :: EC_table_spec
-    REAL(dp)                      :: EC_table_rate
+!    REAL(dp), DIMENSION(nPointsE) :: EC_table_spec
+!    REAL(dp)                      :: EC_table_rate
 
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: EOS_Un, EOS_Up !neutron and proton mean field potentials from nuclear EOS
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: EOS_massn, EOS_massp !effective neutron and proton masses from nuclear EOS
@@ -513,10 +535,69 @@ PRINT*, 'Filling OpacityTable ...'
              
      iaenct = EmAb_nuclei_EC_table
 
-     prepare_EC_table: BLOCK
+     build_EC_table: BLOCK
 
-       CHARACTER(len=1000) :: ec_table
-       integer            :: k     
+       CHARACTER(len=1000)     :: ec_table
+       INTEGER                 :: k     
+       INTEGER                 :: iD_min, iT_min, iYe_min
+       INTEGER                 :: iD_max, iT_max, iYe_max
+       INTEGER                 :: jD, jT, jYe
+       INTEGER                 :: iD_EOS, iT_EOS, iYe_EOS
+       INTEGER                 :: nPointsD, nPointsT, nPointsYe
+       INTEGER, PARAMETER      :: nE = npts + 1
+       REAL(dp), DIMENSION(nE) :: EC_table_spec
+       REAL(dp)                :: EC_table_rate
+       
+       REAL(dp)                :: dD, dT, dYe
+
+       REAL(dp) :: loctot
+
+       CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_rho_min), &
+                                  LOG10(OpacityTable % TS % States (iRho) % Values), iD_min, dD )
+       CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_T_min), &
+                                  LOG10(OpacityTable % TS % States (iT) % Values),   iT_min, dT )
+       CALL GetIndexAndDelta_Lin( OpacityTable % EmAb % EC_table_Ye_min, &
+                                  OpacityTable % TS % States (iYe) % Values,  iYe_min, dYe )
+
+       CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_rho_max), &
+                                  LOG10(OpacityTable % TS % States (iRho) % Values), iD_max, dD )
+       CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_T_max), &
+                                  LOG10(OpacityTable % TS % States (iT) % Values),   iT_max, dT )
+       CALL GetIndexAndDelta_Lin( OpacityTable % EmAb % EC_table_Ye_max, &
+                                  OpacityTable % TS % States (iYe) % Values,  iYe_max, dYe )
+
+       iD_min  = iD_min  - 1
+       iT_min  = iT_min  - 1
+       iYe_min = iYe_min - 1
+
+       iD_max  = iD_max  + 1
+       iT_max  = iT_max  + 1
+       iYe_max = iYe_max + 1
+
+       nPointsD  = iD_max  - iD_min  + 1
+       nPointsT  = iT_max  - iT_min  + 1
+       nPointsYe = iYe_max - iYe_min + 1
+
+write(*,*) nPointsD, nPointsT, nPointsYe
+write(*,*) nRho, nT, nYe
+write(*,*) 1.0d0*nRho * nT * nYe / (nPointsD * nPointsT * nPointsYe)
+
+       OpacityTable % EmAb % EC_table_nRho = nPointsD
+       OpacityTable % EmAb % EC_table_nT   = nPointsT
+       OpacityTable % EmAb % EC_table_nYe  = nPointsYe
+       OpacityTable % EmAb % EC_table_nE   = nE
+
+       ALLOCATE(OpacityTable % EmAb % EC_table_rho(nPointsD) )
+       ALLOCATE(OpacityTable % EmAb % EC_table_T  (nPointsT) )
+       ALLOCATE(OpacityTable % EmAb % EC_table_Ye (nPointsYe))
+       ALLOCATE(OpacityTable % EmAb % EC_table_E  (nE)       )
+
+      DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
+        ALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values &
+                ( nE, nPointsD, nPointsT, nPointsYe) )
+        ALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values &
+                ( nPointsD, nPointsT, nPointsYe) )
+      ENDDO
 
        CALL get_environment_variable('WEAKLIB_DIR', ec_table)
 
@@ -536,7 +617,155 @@ PRINT*, 'Filling OpacityTable ...'
 
        WRITE(*,*) 'Read in EC table from file ', ec_table 
 
-     END BLOCK prepare_EC_table
+       WRITE(*,*) 'Building EC table in weaklib'
+
+       !Setup EC table matching energy grid
+       OpacityTable % EmAb % EC_table_E(1) = 0.0d0
+       DO i_e = 2, nE
+         OpacityTable % EmAb % EC_table_E(i_e) = OpacityTable % EmAb % EC_table_E(i_e-1) + deltaE
+       ENDDO
+
+       DO l_ye = 1, nPointsYe
+
+         iYe_EOS = l_ye + iYe_min - 1
+
+         OpacityTable % EmAb % EC_table_Ye(l_ye) = OpacityTable % TS % States (iYe) % Values (iYe_EOS)
+         ye = OpacityTable % EmAb % EC_table_Ye(l_ye)
+
+         DO k_t = 1, nPointsT
+
+           iT_EOS = k_t + iT_min - 1
+
+           OpacityTable % EmAb % EC_table_T(k_t) = OpacityTable % TS % States (iT) % Values (iT_EOS)
+           T = OpacityTable % EmAb % EC_table_T(k_t)
+           TMeV = T * kMeV
+
+           DO j_rho = 1, nPointsD
+
+             iD_EOS = j_rho + iD_min - 1
+
+             OpacityTable % EmAb % EC_table_rho(j_rho) = OpacityTable % TS % States (iRho) % Values (iD_EOS)
+             rho = OpacityTable % EmAb % EC_table_rho(j_rho)
+
+             chem_e = 10**DVar(Indices % iElectronChemicalPotential) % &
+                      Values(iD_EOS, iT_EOS, iYe_EOS) &
+                    - DVOffs(Indices % iElectronChemicalPotential)   &
+                    - epsilon
+
+             chem_p = 10**DVar(Indices % iProtonChemicalPotential) % &
+                      Values(iD_EOS, iT_EOS, iYe_EOS) &
+                    - DVOffs(Indices % iProtonChemicalPotential)   &
+                    - epsilon
+
+             chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
+                      Values(iD_EOS, iT_EOS, iYe_EOS) &
+                    - DVOffs(Indices % iNeutronChemicalPotential)   &
+                    - epsilon
+
+                xp  = 10**DVar(Indices % iProtonMassFraction) % &
+                      Values(iD_EOS, iT_EOS, iYe_EOS) &
+                    - DVOffs(Indices % iProtonMassFraction)   &
+                    - epsilon
+
+                xn  = 10**DVar(Indices % iNeutronMassFraction) % &
+                      Values(iD_EOS, iT_EOS, iYe_EOS) &
+                    - DVOffs(Indices % iNeutronMassFraction)   &
+                    - epsilon
+
+                xhe  = 10**DVar(Indices % iAlphaMassFraction) % &
+                       Values(iD_EOS, iT_EOS, iYe_EOS) &
+                     - DVOffs(Indices % iAlphaMassFraction)   &
+                     - epsilon
+
+             xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
+                       Values(iD_EOS, iT_EOS, iYe_EOS) &
+                     - DVOffs(Indices % iHeavyMassFraction)   &
+                     - epsilon
+
+                 Z   = 10**DVar(Indices % iHeavyChargeNumber) % &
+                       Values(iD_EOS, iT_EOS, iYe_EOS) &
+                     - DVOffs(Indices % iHeavyChargeNumber)   &
+                     - epsilon
+
+                 A   = 10**DVar(Indices % iHeavyMassNumber) % &
+                       Values(iD_EOS, iT_EOS, iYe_EOS) &
+                     - DVOffs(Indices % iHeavyMassNumber)   &
+                     - epsilon
+
+                 bb  = (chem_e + chem_p - chem_n)/(T*kMev)
+
+             !rhoaefnp = HUGE(1.d0) ! (?)
+             !iaenct = EmAb_nuclei_EC_table
+             !roaenct = 1.0d+13
+
+             EC_table_spec = 0.0d0
+             EC_table_rate = 0.0d0
+
+             CALL abem_nuclei_EC_table_weaklib ( 1, E_cells, E_faces, dE, &
+                                                 rho, T, Ye, xheavy, A, chem_n, &
+                                                 chem_p, chem_e, EC_table_spec, EC_table_rate, &
+                                                 1, nE)
+             DO i_e = 1, nE
+               OpacityTable % EmAb % EC_table_spec(1) % &
+                            Values (i_e, j_rho, k_t, l_ye) = EC_table_spec(i_e)
+             END DO  !i_e
+
+             OpacityTable % EmAb % EC_table_rate(1) % &
+                          Values (j_rho, k_t, l_ye) = EC_table_rate
+
+           END DO  !j_rho
+         END DO  !k_t
+       END DO  !l_ye
+
+write(*,*) OpacityTable % EmAb % EC_table_rho(1), OpacityTable % TS % States (iRho) % Values(iD_min)
+write(*,*) OpacityTable % EmAb % EC_table_rho(nPointsD), OpacityTable % TS % States (iRho) % Values(iD_max)
+write(*,*) OpacityTable % EmAb % EC_table_T(1), OpacityTable % TS % States (iT) % Values(iT_min)
+write(*,*) OpacityTable % EmAb % EC_table_T(nPointsT), OpacityTable % TS % States (iT) % Values(iT_max)
+write(*,*) OpacityTable % EmAb % EC_table_Ye(1), OpacityTable % TS % States (iYe) % Values(iYe_min)
+write(*,*) OpacityTable % EmAb % EC_table_Ye(nPointsYe), OpacityTable % TS % States (iYe) % Values(iYe_max)
+
+write(*,*) OpacityTable % EmAb % EC_table_E(1), OpacityTable % EmAb % EC_table_E(nE)
+
+       CALL GetIndexAndDelta_Lin( LOG10(1.0d12), &
+                                  LOG10(OpacityTable % EmAb % EC_table_rho), jD, dD )
+       CALL GetIndexAndDelta_Lin( LOG10(2.0d0/kMeV), &
+                                  LOG10(OpacityTable % EmAb % EC_table_T),   jT, dT )
+       CALL GetIndexAndDelta_Lin( 0.33d0, &
+                                  OpacityTable % EmAb % EC_table_Ye,  jYe, dYe )
+
+       
+write(*,*) jD, jT, jYe
+write(*,*) OpacityTable % EmAb % EC_table_rho(jD)
+write(*,*) OpacityTable % EmAb % EC_table_T(jT)*kMeV
+write(*,*) OpacityTable % EmAb % EC_table_Ye(jYe)
+
+write(*,*) 'chem_n', 10**DVar(Indices % iNeutronChemicalPotential) % &
+                      Values(iD_min+jD-1, iT_min+jT-1, iYe_min+jYe-1) &
+                    - DVOffs(Indices % iNeutronChemicalPotential)   &
+                    - epsilon
+write(*,*) 'chem_p', 10**DVar(Indices % iProtonChemicalPotential) % &
+                      Values(iD_min+jD-1, iT_min+jT-1, iYe_min+jYe-1) &
+                    - DVOffs(Indices % iProtonChemicalPotential)   &
+                    - epsilon
+write(*,*) 'chem_e', 10**DVar(Indices % iElectronChemicalPotential) % &
+                      Values(iD_min+jD-1, iT_min+jT-1, iYe_min+jYe-1) &
+                    - DVOffs(Indices % iElectronChemicalPotential)   &
+                    - epsilon
+
+loctot = 0.0d0
+do i_e = 1, nE
+write(*,*) i_e, OpacityTable % EmAb % EC_table_spec(1) % &
+                            Values (i_e, jD, jT, jYe)
+loctot = loctot + OpacityTable % EmAb % EC_table_spec(1) % &
+                            Values (i_e, jD, jT, jYe) * 0.5d0
+enddo
+
+write(*,*) 'loctot', loctot
+write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
+                          Values (jD, jT, jYe)
+       !stop
+
+     END BLOCK build_EC_table
 
    ENDIF
 
@@ -627,7 +856,7 @@ PRINT*, 'Filling OpacityTable ...'
              edmpa = 3.d0
              !iaenct = 0
              iaenct = EmAb_nuclei_EC_table
-             roaenct = 1.0d+13
+             !roaenct = 1.0d+13
 
 ! Initialise the opacity arrays to zero
              ab_nucleons = 0.0d0
@@ -639,8 +868,8 @@ PRINT*, 'Filling OpacityTable ...'
              ab_nuclei_EC_FFN = 0.0d0
              em_nuclei_EC_FFN = 0.0d0
 
-             EC_table_spec = 0.0d0
-             EC_table_rate = 0.0d0
+             !EC_table_spec = 0.0d0
+             !EC_table_rate = 0.0d0
 
              IF(EmAb_np_isoenergetic .gt. 0) THEN
 
@@ -710,23 +939,23 @@ PRINT*, 'Filling OpacityTable ...'
 
              ENDIF
 
-             IF(EmAb_nuclei_EC_table .gt. 0 .and. i_r .eq. 1) THEN
-  
-               CALL abem_nuclei_EC_table_weaklib ( i_r, E_cells, E_faces, dE, &
-                                                   rho, T, Ye, xheavy, A, chem_n, &
-                                                   chem_p, chem_e, EC_table_spec, EC_table_rate, &
-                                                   1, nPointsE)
-               DO i_e = 1, OpacityTable % nPointsE
-                  OpacityTable % EmAb % EC_table_spec(i_r) % &
-                               Values (i_e, j_rho, k_t, l_ye) &
-                  = EC_table_spec(i_e)
-               END DO  !i_e
-
-               OpacityTable % EmAb % EC_table_rate(i_r) % &
-                            Values (j_rho, k_t, l_ye) &
-               = EC_table_rate
-
-             ENDIF
+!             IF(EmAb_nuclei_EC_table .gt. 0 .and. i_r .eq. 1) THEN
+!  
+!               CALL abem_nuclei_EC_table_weaklib ( i_r, E_cells, E_faces, dE, &
+!                                                   rho, T, Ye, xheavy, A, chem_n, &
+!                                                   chem_p, chem_e, EC_table_spec, EC_table_rate, &
+!                                                   1, nPointsE)
+!               DO i_e = 1, OpacityTable % nPointsE
+!                  OpacityTable % EmAb % EC_table_spec(i_r) % &
+!                               Values (i_e, j_rho, k_t, l_ye) &
+!                  = EC_table_spec(i_e)
+!               END DO  !i_e
+!
+!               OpacityTable % EmAb % EC_table_rate(i_r) % &
+!                            Values (j_rho, k_t, l_ye) &
+!               = EC_table_rate
+!
+!             ENDIF
 
              DO i_e = 1, OpacityTable % nPointsE
                 OpacityTable % EmAb % Opacity(i_r) % &
@@ -736,7 +965,6 @@ PRINT*, 'Filling OpacityTable ...'
                 + ab_nuclei_EC_FFN(i_e)  + em_nuclei_EC_FFN(i_e) 
              END DO  !i_e
          END DO !i_r
-
 
 !----------------  Scat_Iso -----------------------
          DO i_rb = 1, nOpac_Iso
@@ -768,7 +996,7 @@ PRINT*, 'Filling OpacityTable ...'
      minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
      OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar )
 
-     IF (i_r .eq. 1) THEN
+     IF (i_r == 1 .and. EmAb_nuclei_EC_table == 1) THEN
        minvar = MINVAL( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
        OpacityTable % EmAb % EC_table_spec_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
        minvar = MINVAL( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
@@ -940,13 +1168,13 @@ PRINT*, 'Filling OpacityTable ...'
      OpacityTable % EmAb % Opacity(i_r) % Values&
      = LOG10( OpacityTable % EmAb % Opacity(i_r) % &
               Values + OpacityTable % EmAb % Offsets(i_r) + epsilon )
-     IF (i_r .eq. 1 .and. EmAb_nuclei_EC_table .gt. 0) THEN
+     IF (i_r == 1 .and. EmAb_nuclei_EC_table == 1) THEN
        OpacityTable % EmAb % EC_table_spec(i_r) % Values&
        = LOG10( OpacityTable % EmAb % EC_table_spec(i_r) % &
-                Values + OpacityTable % EmAb % EC_table_spec_Offsets(i_r) + epsilon )
+                Values + OpacityTable % EmAb % EC_table_spec_Offsets(i_r) + 1.0d-299 )
        OpacityTable % EmAb % EC_table_rate(i_r) % Values&
        = LOG10( OpacityTable % EmAb % EC_table_rate(i_r) % &
-                Values + OpacityTable % EmAb % EC_table_rate_Offsets(i_r) + epsilon )
+                Values + OpacityTable % EmAb % EC_table_rate_Offsets(i_r) + 1.0d-299 )
      ENDIF
   END DO  !i_r
 
@@ -1029,7 +1257,17 @@ PRINT*, 'Filling OpacityTable ...'
 
   WRITE (*,*) "HDF write successful"
 
+  IF ( EmAb_nuclei_EC_table .gt. 0) THEN
+    DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
+      DEALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
+      DEALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
+    ENDDO
+    DEALLOCATE(OpacityTable % EmAb % EC_table_spec)
+    DEALLOCATE(OpacityTable % EmAb % EC_table_rate)
+  ENDIF
+
   CALL DeAllocateOpacityTable( OpacityTable )
+    
   !=============================================================
 
   CALL itime(now)
