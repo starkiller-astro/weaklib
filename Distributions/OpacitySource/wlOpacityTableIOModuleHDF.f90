@@ -684,7 +684,7 @@ CONTAINS
     CALL WriteHDF &
            ( "maxYe",  tmp_real, group_id, datasize1d )
 
-    datasize4d = [EmAb % EC_Table_nE, EmAb % EC_Table_nRho, EmAb % EC_Table_nT, EmAb % EC_Table_nYe]
+    datasize4d = [EmAb % EC_Table_nRho, EmAb % EC_Table_nT, EmAb % EC_Table_nYe, EmAb % EC_Table_nE]
 
     CALL WriteHDF &
            ( "Spectrum", &
@@ -897,6 +897,28 @@ CONTAINS
 
       CALL CloseGroupHDF( group_id )
 
+      IF(OpacityTable % EmAb % nuclei_EC_table .gt. 0) THEN
+
+        CALL OpenGroupHDF &
+               ( "EC_table", .FALSE., file_id, group_id )
+
+
+        CALL ReadHDF( "nPointsE", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nE = buffer(1)
+
+        CALL ReadHDF( "nPointsRho", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nRho = buffer(1)
+
+        CALL ReadHDF( "nPointsT", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nT = buffer(1)
+
+        CALL ReadHDF( "nPointsYe", buffer, group_id, datasize1d )
+        OpacityTable % EmAb % EC_table_nYe = buffer(1)
+
+        CALL CloseGroupHDF( group_id )
+
+      ENDIF
+
       CALL CloseFileHDF( file_id )
 
     ENDIF
@@ -1092,6 +1114,25 @@ CONTAINS
              OpacityThermoState_Option = TS, &
              Verbose_Option = Verbose )
 
+    IF(OpacityTable % EmAb % nuclei_EC_table .gt. 0) THEN
+
+      ALLOCATE(OpacityTable % EmAb % EC_table_rho(OpacityTable % EmAb % EC_table_nRho) )
+      ALLOCATE(OpacityTable % EmAb % EC_table_T  (OpacityTable % EmAb % EC_table_nT  ) )
+      ALLOCATE(OpacityTable % EmAb % EC_table_Ye (OpacityTable % EmAb % EC_table_nYe ) )
+      ALLOCATE(OpacityTable % EmAb % EC_table_E  (OpacityTable % EmAb % EC_table_nE  ) )
+
+      ALLOCATE( OpacityTable % EmAb % EC_table_spec(1) % Values &
+              ( OpacityTable % EmAb % EC_table_nRho,   &
+                OpacityTable % EmAb % EC_table_nT, &
+                OpacityTable % EmAb % EC_table_nYe,   &
+                OpacityTable % EmAb % EC_table_nE) )
+      ALLOCATE( OpacityTable % EmAb % EC_table_rate(1) % Values &
+              ( OpacityTable % EmAb % EC_table_nRho, &
+                OpacityTable % EmAb % EC_table_nT,   &
+                OpacityTable % EmAb % EC_table_nYe) )
+
+    ENDIF
+
     CALL DeAllocateThermoState( TS )
 
     ! --- Read Energy Grid ---
@@ -1193,18 +1234,6 @@ CONTAINS
         CALL ReadHDF &
                ( "Units",   OpacityTable % EmAb % EC_table_Units,   group_id, datasize1d )
 
-        CALL ReadHDF( "nPointsE", buffer, group_id, datasize1d )
-        OpacityTable % EmAb % EC_table_nE = buffer(1)
-
-        CALL ReadHDF( "nPointsRho", buffer, group_id, datasize1d )
-        OpacityTable % EmAb % EC_table_nRho = buffer(1)
-
-        CALL ReadHDF( "nPointsT", buffer, group_id, datasize1d )
-        OpacityTable % EmAb % EC_table_nT = buffer(1)
-
-        CALL ReadHDF( "nPointsYe", buffer, group_id, datasize1d )
-        OpacityTable % EmAb % EC_table_nYe = buffer(1)
-
         datasize1d = OpacityTable % EmAb % EC_table_nE
         CALL ReadHDF &
                ( "nu_E", &
@@ -1251,8 +1280,8 @@ CONTAINS
         !datasize4d(1)   = OpacityTable % EnergyGrid % nPoints
         !datasize4d(2:4) = OpacityTable % TS % nPoints
 
-        datasize4d = [OpacityTable % EmAb % EC_table_nE, OpacityTable % EmAb % EC_table_nRho, &
-                      OpacityTable % EmAb % EC_table_nT, OpacityTable % EmAb % EC_table_nYe]
+        datasize4d = [OpacityTable % EmAb % EC_table_nRho, OpacityTable % EmAb % EC_table_nT, &
+                      OpacityTable % EmAb % EC_table_nYe,  OpacityTable % EmAb % EC_table_nE]
 
         OpacityTable % EmAb % EC_table_Names = "Electron Neutrino"
 
@@ -1523,10 +1552,10 @@ CONTAINS
 
     END DO ! nOpacities
 
-    CALL ReadHDF &
-           ( EmAb % EC_table_Names(1), &
-             EmAb % EC_table_spec(1) % Values, &
-             subgroup_id, datasize4d )
+    !CALL ReadHDF &
+    !       ( EmAb % EC_table_Names(1), &
+    !         EmAb % EC_table_spec(1) % Values, &
+    !         subgroup_id, datasize4d )
 
     CALL CloseGroupHDF( subgroup_id )
 

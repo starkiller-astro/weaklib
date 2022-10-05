@@ -594,7 +594,7 @@ write(*,*) 1.0d0*nRho * nT * nYe / (nPointsD * nPointsT * nPointsYe)
 
       DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
         ALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values &
-                ( nE, nPointsD, nPointsT, nPointsYe) )
+                ( nPointsD, nPointsT, nPointsYe, nE) )
         ALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values &
                 ( nPointsD, nPointsT, nPointsYe) )
       ENDDO
@@ -707,7 +707,7 @@ write(*,*) 1.0d0*nRho * nT * nYe / (nPointsD * nPointsT * nPointsYe)
                                                  1, nE)
              DO i_e = 1, nE
                OpacityTable % EmAb % EC_table_spec(1) % &
-                            Values (i_e, j_rho, k_t, l_ye) = EC_table_spec(i_e)
+                            Values (j_rho, k_t, l_ye, i_e) = EC_table_spec(i_e)
              END DO  !i_e
 
              OpacityTable % EmAb % EC_table_rate(1) % &
@@ -755,9 +755,9 @@ write(*,*) 'chem_e', 10**DVar(Indices % iElectronChemicalPotential) % &
 loctot = 0.0d0
 do i_e = 1, nE
 write(*,*) i_e, OpacityTable % EmAb % EC_table_spec(1) % &
-                            Values (i_e, jD, jT, jYe)
+                            Values (jD, jT, jYe, i_e)
 loctot = loctot + OpacityTable % EmAb % EC_table_spec(1) % &
-                            Values (i_e, jD, jT, jYe) * 0.5d0
+                            Values (jD, jT, jYe, i_e) * 0.5d0
 enddo
 
 write(*,*) 'loctot', loctot
