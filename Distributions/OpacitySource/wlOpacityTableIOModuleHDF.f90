@@ -1137,7 +1137,16 @@ CONTAINS
 
       CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
 
-      CALL OpenGroupHDF( "EmAb", .FALSE., file_id, group_id )
+      !The EmAb group name changed, so we need to check for legacy 
+      !tables and use the respective group name here!
+      IF (OpacityTable % EmAb % nuclei_EC_table == -1) THEN
+
+        CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
+      ELSE
+
+        CALL OpenGroupHDF( "EmAb", .FALSE., file_id, group_id )
+
+      ENDIF
 
       CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
     
@@ -1326,8 +1335,16 @@ CONTAINS
 
       CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
 
-      CALL OpenGroupHDF &
-             ( "EmAb", .FALSE., file_id, group_id )
+      !The EmAb group name changed, so we need to check for legacy 
+      !tables and use the respective group name here!
+      IF (OpacityTable % EmAb % nuclei_EC_table == -1) THEN
+
+        CALL OpenGroupHDF( "EmAb_CorrectedAbsorption", .FALSE., file_id, group_id )
+      ELSE
+
+        CALL OpenGroupHDF( "EmAb", .FALSE., file_id, group_id )
+
+      ENDIF
 
       datasize1d(1) = nOpac_EmAb
       CALL ReadHDF &
@@ -1650,23 +1667,6 @@ CONTAINS
     Call ReadHDF( "Names",   EmAb % EC_table_Names,   group_id, datasize1d )
     Call ReadHDF( "Units",   EmAb % EC_table_Units,   group_id, datasize1d )
 
-    datasize1d(1) = 1  
-
-    Call ReadHDF ( "np_FK", buffer, group_id, datasize1d)
-    EmAb % np_FK = buffer(1)
-    Call ReadHDF ( "np_FK_inv_n_decay", buffer, group_id, datasize1d)
-    EmAb % np_FK_inv_n_decay = buffer(1)
-    Call ReadHDF ( "np_isoenergetic", buffer, group_id, datasize1d)
-    EmAb % np_isoenergetic = buffer(1)
-    Call ReadHDF ( "np_non_isoenergetic", buffer, group_id, datasize1d)
-    EmAb % np_non_isoenergetic = buffer(1)
-    Call ReadHDF ( "np_weak_magnetism", buffer, group_id, datasize1d)
-    EmAb % np_weak_magnetism = buffer(1)
-    Call ReadHDF ( "nuclei_EC_FFN", buffer, group_id, datasize1d)
-    EmAb % nuclei_EC_FFN = buffer(1)
-    Call ReadHDF ( "nuclei_EC_table", buffer, group_id, datasize1d)
-    EmAb % nuclei_EC_table = buffer(1)
-
     datasize1d(1) = 4
     CALL ReadHDF( "nPoints", EmAb % nPoints, group_id, datasize1d )
 
@@ -1706,20 +1706,94 @@ CONTAINS
 
       TYPE IS ( OpacityTypeScatIso )
 
-        datasize1d(1) = 1
-        CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
-        Scat % weak_magnetism_corrections = buffer(1)
+        BLOCK
 
-        CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
-        Scat % ion_ion_corrections = buffer(1)
+          CHARACTER(len=150) :: FileName
+          INTEGER(SIZE_T)    :: flength
+          INTEGER(HID_T)     :: dataset_id
 
-        CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
-        Scat % many_body_corrections = buffer(1)
+          CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+          
+          CALL h5eset_auto_f( 0, hdferr )
+ 
+          CALL h5dopen_f( group_id, "weak_magnetism_corr", dataset_id, hdferr )
+
+          IF( hdferr .ne. 0 ) THEN
+            WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+
+            CALL h5eclear_f( hdferr )
+            CALL h5eset_auto_f( 1, hdferr )
+            
+          ELSE
+            datasize1d(1) = 1
+            CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
+            Scat % weak_magnetism_corrections = buffer(1)
+
+          ENDIF
+
+          CALL h5eset_auto_f( 0, hdferr )
+ 
+          CALL h5dopen_f( group_id, "ion_ion_corr", dataset_id, hdferr )
+
+          IF( hdferr .ne. 0 ) THEN
+            WRITE(*,*) 'Dataset ion_ion_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+
+            CALL h5eclear_f( hdferr )
+            CALL h5eset_auto_f( 1, hdferr )
+          ELSE
+            datasize1d(1) = 1
+            CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
+            Scat % ion_ion_corrections = buffer(1)
+          ENDIF
+
+          CALL h5eset_auto_f( 0, hdferr )
+ 
+          CALL h5dopen_f( group_id, "many_body_corr", dataset_id, hdferr )
+
+          IF( hdferr .ne. 0 ) THEN
+            WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+
+            CALL h5eclear_f( hdferr )
+            CALL h5eset_auto_f( 1, hdferr )
+          ELSE
+            datasize1d(1) = 1
+            CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
+            Scat % many_body_corrections = buffer(1)
+          ENDIF
+
+        END BLOCK
 
       TYPE IS ( OpacityTypeScatNES )
-        datasize1d(1) = 1
-        CALL ReadHDF( "NPS", buffer, group_id, datasize1d )
-        Scat % NPS = buffer(1)
+
+        BLOCK
+          CHARACTER(len=150) :: FileName
+          INTEGER(SIZE_T)    :: flength
+          INTEGER(HID_T)     :: dataset_id
+
+          CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+          
+          CALL h5eset_auto_f( 0, hdferr )
+ 
+          CALL h5dopen_f( group_id, "NPS", dataset_id, hdferr )
+
+          IF( hdferr .ne. 0 ) THEN
+            WRITE(*,*) 'Dataset NPS not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+
+            CALL h5eclear_f( hdferr )
+            CALL h5eset_auto_f( 1, hdferr )
+            
+          ELSE
+            datasize1d(1) = 1
+            CALL ReadHDF( "NPS", buffer, group_id, datasize1d )
+            Scat % NPS = buffer(1)
+
+          ENDIF
+
+        END BLOCK
 
     END SELECT
 
@@ -1809,31 +1883,58 @@ CONTAINS
     CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
     Grid % nPoints = buffer(1)
 
-    CALL ReadHDF( "nFaces", buffer, group_id, datasize1d )
-    Grid % nFaces = buffer(1)
-
     CALL ReadHDF( "LogInterp", buffer, group_id, datasize1d )
     Grid % LogInterp = buffer(1)
+
+    BLOCK
+
+      CHARACTER(len=150) :: FileName
+      INTEGER(SIZE_T)    :: flength
+      INTEGER(HID_T)     :: dataset_id
+
+      CALL h5eset_auto_f( 0, hdferr )
  
-    datasize1d = Grid % nPoints
-    CALL ReadHDF( "Cells", Grid % Cell_centers, &
+      CALL h5dopen_f( group_id, "Cells", dataset_id, hdferr )
+
+      IF( hdferr .ne. 0 ) THEN
+        WRITE(*,*) 'Dataset Cells not found in Group EnergyGrid.'
+        WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+
+        CALL h5eclear_f( hdferr )
+        CALL h5eset_auto_f( 1, hdferr )
+
+        datasize1d = Grid % nPoints
+        CALL ReadHDF( "Values", Grid % Cell_centers, &
+                                group_id, datasize1d )
+
+      ELSE
+
+        CALL ReadHDF( "nFaces", buffer, group_id, datasize1d )
+        Grid % nFaces = buffer(1)
+ 
+        datasize1d = Grid % nPoints
+        CALL ReadHDF( "Cells", Grid % Cell_centers, &
+                                group_id, datasize1d )
+
+        datasize1d = Grid % nFaces
+        CALL ReadHDF( "Faces", Grid % Cell_faces, &
                               group_id, datasize1d )
 
-    datasize1d = Grid % nFaces
-    CALL ReadHDF( "Faces", Grid % Cell_faces, &
-                              group_id, datasize1d )
+        datasize1d = Grid % nPoints
+        CALL ReadHDF( "dE", Grid % dE, &
+                                group_id, datasize1d )
 
-    datasize1d = Grid % nPoints
-    CALL ReadHDF( "dE", Grid % dE, &
-                              group_id, datasize1d )
-
-    Grid % minValueCenters = MINVAL( Grid % Cell_centers )
+        Grid % minValueCenters = MINVAL( Grid % Cell_centers )
     
-    Grid % maxValueCenters = MAXVAL( Grid % Cell_centers )
+        Grid % maxValueCenters = MAXVAL( Grid % Cell_centers )
 
-    Grid % minValueFaces = MINVAL( Grid % Cell_faces )
+        Grid % minValueFaces = MINVAL( Grid % Cell_faces )
     
-    Grid % maxValueFaces = MAXVAL( Grid % Cell_faces )
+        Grid % maxValueFaces = MAXVAL( Grid % Cell_faces )
+
+      ENDIF
+
+    END BLOCK
 
   END SUBROUTINE ReadEnergyGridHDF
 
