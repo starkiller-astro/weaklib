@@ -1,5 +1,6 @@
 SUBROUTINE scatical_weaklib &
-           ( n, egrid, nez, rho, t, xn, xp, xhe, xh, ah, zh, cok )
+           ( n, egrid, nez, rho, t, ye, xn, xp, xhe, xh, ah, zh, &
+             wm, ion_ion, many_body, cok )
 !--------------------------------------------------------------------
 !
 !    Author:  R. Chu, Dept. Phys. & Astronomy
@@ -30,6 +31,9 @@ SUBROUTINE scatical_weaklib &
 !   xh        : mass fraction of heavy nuclei
 !   ah        : mean heavy nucleus mass number
 !   zh        : mean heavy nucleus charge number
+!   wm        : include weak magnetism corrections
+!   ion_ion   : include ion-ion correlation corrections
+!   many_body : include many-body effects corrections
 !
 !    Output arguments:
 !
@@ -39,7 +43,7 @@ SUBROUTINE scatical_weaklib &
 
 USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, half, twothd, one, epsilon, pi
-USE physcnst_module, ONLY: Gw, mp, hbar, cvel, cv, ga, rmu
+USE physcnst_module, ONLY: Gw, mp, hbar, cvel, cv, ga, rmu, kfm, kmev
 
 IMPLICIT NONE
 
@@ -51,6 +55,7 @@ INTEGER,      INTENT(in)     :: n       ! neutrino flavor index
 INTEGER,      INTENT(in)     :: nez     ! number of energy groups
 REAL(dp), INTENT(in)     :: rho     ! density [g cm^{-3}]
 REAL(dp), INTENT(in)     :: t       ! temperature [K]
+REAL(dp), INTENT(in)     :: ye      ! electron fraction
 REAL(dp), INTENT(in)     :: xn      ! neutron mass fraction
 REAL(dp), INTENT(in)     :: xp      ! proton mass fraction
 REAL(dp), INTENT(in)     :: xhe     ! helium mass fraction
@@ -59,6 +64,9 @@ REAL(dp), INTENT(in)     :: ah      ! heavy nucleus mass number
 REAL(dp), INTENT(in)     :: zh      ! heavy nucleus charge number
 REAL(dp), DIMENSION(nez), INTENT(in) :: egrid 
                                         ! neutrino energy grid[MeV] 
+INTEGER, INTENT(IN)      :: wm
+INTEGER, INTENT(IN)      :: ion_ion
+INTEGER, INTENT(IN)      :: many_body
 
 !--------------------------------------------------------------------
 !        Output variables.
@@ -162,12 +170,14 @@ REAL(dp)                 :: xnhe          ! helium number
 REAL(dp)                 :: xheaa         ! heavy nucleus number * a_he^2
 REAL(dp)                 :: xhaa          ! heavy nucleus number * ah^2
 
-REAL(dp)                 :: ciicr         ! ion-ion correlation correction
+REAL(dp), DIMENSION(nez) :: ciicr         ! ion-ion correlation correction
 
 REAL(dp), DIMENSION(nez) :: xi_p_wm       ! weak magnetism correction for neutrino-proton scattering
 REAL(dp), DIMENSION(nez) :: xi_n_wm       ! weak magnetism correction for neutrino-neutron scattering
 REAL(dp), DIMENSION(nez) :: xib_p_wm      ! weak magnetism correction for antineutrino-proton scattering
 REAL(dp), DIMENSION(nez) :: xib_n_wm      ! weak magnetism correction for antineutrino-neutron scattering
+
+REAL(dp)                 :: S_tot         !many-body modification of the axial vector response
 
 REAL(dp), DIMENSION(nez) :: rmdnns   ! mfp^-1 for neutrino-neutron scattering
 REAL(dp), DIMENSION(nez) :: rmdnns0  ! mfp^-1 for neutrino-neutron scattering
@@ -214,12 +224,42 @@ rmdnbns1           = zero
 rmdnhes1           = zero
 rmdnhs1            = zero
 
-!!-------------------------------------------------------------------
-!!  Calculate the weak magnetism corrections
-!!-------------------------------------------------------------------
-!
-!CALL nc_weak_mag( unuloc, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
-!
+!Make all corrections non-operational initially
+!(these are all multiplicative corrections)
+xi_p_wm  = 1.0d0
+xi_n_wm  = 1.0d0
+xib_p_wm = 1.0d0
+xib_n_wm = 1.0d0
+
+S_tot = 1.0d0
+
+ciicr = 1.0d0
+
+IF(wm == 1) THEN
+  CALL nc_weak_mag_weaklib(egrid, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez)
+ENDIF
+
+IF(ion_ion == 1) THEN
+  DO k = 1, nez
+    CALL ion_ion_corrections_weaklib( rho, t, egrid(k), xh, ah, zh, ciicr(k) )
+  ENDDO
+ENDIF
+
+IF(many_body == 1) THEN
+  many_body_corrections:BLOCK
+
+    REAL(dp)            :: brydns
+    REAL(dp)            :: tmev
+    REAL(dp)            :: Yp
+
+    brydns  = rho * kfm
+    tmev    = kmev * t
+    Yp      = ( xp + 2.d0 * xhe + zh * xh )/( xn + xp + 4.d0 * xhe + ah * xh + 1.0d-200)
+
+    CALL nc_manybody_corrections_weaklib( brydns, tmev, Yp, S_tot )
+
+  END BLOCK many_body_corrections
+ENDIF
 !--------------------------------------------------------------------
 !  Quatities needed to compute the scattering functions.
 !--------------------------------------------------------------------
@@ -324,30 +364,27 @@ DO k = 1, nez
 !!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
 !!-------------------------------------------------------------------
-!
-!  CALL scatiicr( rho, t, egrid(k), xh, ah, zh, ciicr )
-!
-!  rmdnhs(k)      = rmdnhs(k)  * ciicr
-!  rmdnhs0(k)     = rmdnhs0(k) * ciicr
-!  rmdnhs1(k)     = rmdnhs1(k) * ciicr
+  rmdnhs(k)      = rmdnhs(k)  * ciicr(k)
+  rmdnhs0(k)     = rmdnhs0(k) * ciicr(k)
+  rmdnhs1(k)     = rmdnhs1(k) * ciicr(k)
 !
 !!-------------------------------------------------------------------
 !!  Weak magnetism corrections for neutrino and antineutrino neutron and
 !!   proton scattering.
 !!-------------------------------------------------------------------
 !
-!  rmdnps0 (k)    = rmdnps0 (k) * xi_p_wm (k)
-!  rmdnns0 (k)    = rmdnns0 (k) * xi_n_wm (k)
-!  rmdnbps0(k)    = rmdnbps0(k) * xib_p_wm(k)
-!  rmdnbns0(k)    = rmdnbns0(k) * xib_n_wm(k)
-!  rmdnps1 (k)    = rmdnps1 (k) * xi_p_wm (k)
-!  rmdnns1 (k)    = rmdnns1 (k) * xi_n_wm (k)
-!  rmdnbps1(k)    = rmdnbps1(k) * xib_p_wm(k)
-!  rmdnbns1(k)    = rmdnbns1(k) * xib_n_wm(k)
-!  rmdnps  (k)    = rmdnps  (k) * xi_p_wm (k)
-!  rmdnns  (k)    = rmdnns  (k) * xi_n_wm (k)
-!  rmdnbps (k)    = rmdnbps (k) * xib_p_wm(k)
-!  rmdnbns (k)    = rmdnbns (k) * xib_n_wm(k)
+  rmdnps0 (k)    = rmdnps0 (k) * xi_p_wm (k) * S_tot
+  rmdnns0 (k)    = rmdnns0 (k) * xi_n_wm (k) * S_tot
+  rmdnbps0(k)    = rmdnbps0(k) * xib_p_wm(k) * S_tot
+  rmdnbns0(k)    = rmdnbns0(k) * xib_n_wm(k) * S_tot
+  rmdnps1 (k)    = rmdnps1 (k) * xi_p_wm (k) * S_tot
+  rmdnns1 (k)    = rmdnns1 (k) * xi_n_wm (k) * S_tot
+  rmdnbps1(k)    = rmdnbps1(k) * xib_p_wm(k) * S_tot
+  rmdnbns1(k)    = rmdnbns1(k) * xib_n_wm(k) * S_tot
+  rmdnps  (k)    = rmdnps  (k) * xi_p_wm (k) * S_tot
+  rmdnns  (k)    = rmdnns  (k) * xi_n_wm (k) * S_tot
+  rmdnbps (k)    = rmdnbps (k) * xib_p_wm(k) * S_tot
+  rmdnbns (k)    = rmdnbns (k) * xib_n_wm(k) * S_tot
 
 END DO ! k = 1, nezl
 

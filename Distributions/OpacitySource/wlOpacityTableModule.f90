@@ -42,10 +42,12 @@ MODULE wlOpacityTableModule
     DeallocateGrid,       &
     DescribeGrid
   USE wlOpacityFieldsModule, ONLY: &
-    OpacityTypeEmAb, &
-    OpacityTypeScat, &
-    AllocateOpacity, &
-    DeallocateOpacity, &
+    OpacityTypeEmAb,    &
+    OpacityTypeScat,    &
+    OpacityTypeScatIso, &
+    OpacityTypeScatNES, &
+    AllocateOpacity,    &
+    DeallocateOpacity,  &
     DescribeOpacity
   USE wlIOModuleHDF, ONLY: &
     InitializeHDF, &
@@ -78,17 +80,15 @@ MODULE wlOpacityTableModule
     INTEGER        :: nPointsE
     INTEGER        :: nPointsEta
     INTEGER        :: nPointsTS(3)
-    !TYPE(GridType) :: EnergyGrid
-    !TYPE(GridType) :: EnergyGridFaces
     TYPE(EnergyGridType) :: EnergyGrid
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
-    TYPE(OpacityTypeScat)          :: &
+    TYPE(OpacityTypeScatIso)       :: &
       Scat_Iso   ! -- Isoenergenic Scattering
-    TYPE(OpacityTypeScat)          :: &
+    TYPE(OpacityTypeScatNES)       :: &
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
       Scat_Pair  ! -- Pair Production
@@ -182,14 +182,14 @@ CONTAINS
 
     nPointsTemp(1:5) = [ nPointsE, nMom_Iso, nPoints ]
     CALL AllocateOpacity &
-           ( OpTab % Scat_Iso, nPointsTemp(1:5), &
+           ( OpTab % Scat_Iso % OpacityTypeScat, nPointsTemp(1:5), &
              nMoments = nMom_Iso, nOpacities = nOpac_Iso )
   
     nPointsTemp(1:5) = &
            [ nPointsE, nPointsE, nMom_NES, nPoints(iT), nPointsEta]
 
     CALL AllocateOpacity &
-           ( OpTab % Scat_NES, nPointsTemp(1:5), &
+           ( OpTab % Scat_NES % OpacityTypeScat, nPointsTemp(1:5), &
              nMoments = nMom_NES, nOpacities = nOpac_NES )
 
     nPointsTemp(1:5) = &
@@ -229,8 +229,8 @@ CONTAINS
     END IF
 
     CALL DeAllocateOpacity( OpTab % EmAb ) 
-    CALL DeAllocateOpacity( OpTab % Scat_Iso )
-    CALL DeAllocateOpacity( OpTab % Scat_NES )
+    CALL DeAllocateOpacity( OpTab % Scat_Iso % OpacityTypeScat )
+    CALL DeAllocateOpacity( OpTab % Scat_NES % OpacityTypeScat )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
     CALL DeAllocateOpacity( OpTab % Scat_Brem )
 
@@ -294,11 +294,11 @@ CONTAINS
     end if
 
     if(OpTab % Scat_Iso % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_Iso )
+      CALL DescribeOpacity( OpTab % Scat_Iso % OpacityTypeScat )
     end if
 
     if(OpTab % Scat_NES % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_NES )
+      CALL DescribeOpacity( OpTab % Scat_NES % OpacityTypeScat )
     end if
 
     if(OpTab % Scat_Pair % nOpacities .gt. 0) then

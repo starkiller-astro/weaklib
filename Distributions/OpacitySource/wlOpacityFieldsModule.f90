@@ -147,6 +147,16 @@ MODULE wlOpacityFieldsModule
     TYPE(ValueType_5D), ALLOCATABLE :: Kernel(:)
   END TYPE OpacityTypeScat
 
+  TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatIso
+    INTEGER :: weak_magnetism_corrections !Horowitz 2002
+    INTEGER :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
+    INTEGER :: many_body_corrections
+  END TYPE OpacityTypeScatIso
+
+  TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
+    INTEGER :: NPS !include neutrino-positron scattering as well 
+  END TYPE OpacityTypeScatNES
+
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
   PUBLIC :: DescribeOpacity

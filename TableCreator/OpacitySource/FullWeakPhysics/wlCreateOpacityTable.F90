@@ -153,16 +153,29 @@ IMPLICIT NONE
    REAL(dp), PARAMETER     :: EC_E_min   =   0.0d0
    REAL(dp), PARAMETER     :: EC_E_max   = 100.0d0
 
-   INTEGER, PARAMETER      :: nOpac_Iso  = 0  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_Iso  = 2  ! 2 for electron type
                                               !   ( flavor identical )
-   INTEGER, PARAMETER      :: nMom_Iso   = 0  ! 2 for 0th & 1st order
+   INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
+   INTEGER, PARAMETER      :: Iso_weak_magnetism &
+                              = 1
+                              !Weak magnetism corrections for isoenergetic scattering
+                              !Horowitz 2002
+
+   INTEGER, PARAMETER      :: Iso_ion_ion_corrections &
+                              = 1
+                              !Ion-ion correlation corrections to isoenergetic scattering
+                              !Horowitz 1997, Bruenn and Mezzacappa 1997
+
+   INTEGER, PARAMETER      :: Iso_many_body_corrections &
+                              = 1
+                              !Modification to neutral current scattering due to many-body effects
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: NPS        = 0  !Include neutrino-positron scattering as well
+   INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
 
    INTEGER, PARAMETER      :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
@@ -317,6 +330,15 @@ IMPLICIT NONE
                                 (/'Per Centimeter              ',  &
                                   'Per Centimeter              '/)
 
+   OpacityTable % Scat_Iso % weak_magnetism_corrections = &
+                  Iso_weak_magnetism
+
+   OpacityTable % Scat_Iso % ion_ion_corrections = &
+                  Iso_ion_ion_corrections
+
+   OpacityTable % Scat_Iso % many_body_corrections = &
+                  Iso_many_body_corrections
+
    END IF
 
 ! -- Set OpacityTableTypeScat NES
@@ -337,6 +359,8 @@ IMPLICIT NONE
 
    OpacityTable % Scat_NES % Units = &
                                 (/'Per Centimeter Per MeV^3'/)
+
+   OpacityTable % Scat_NES % NPS = NPS
 
    END IF
 ! -- Set OpacityTableTypeScat Pair
@@ -471,8 +495,6 @@ PRINT*, 'Filling OpacityTable ...'
     REAL(dp), DIMENSION(nPointsE) :: em_nucleons,        ab_nucleons
     REAL(dp), DIMENSION(nPointsE) :: em_inv_n_decay,     ab_inv_n_decay
     REAL(dp), DIMENSION(nPointsE) :: em_nuclei_EC_FFN,      ab_nuclei_EC_FFN
-!    REAL(dp), DIMENSION(nPointsE) :: EC_table_spec
-!    REAL(dp)                      :: EC_table_rate
 
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: EOS_Un, EOS_Up !neutron and proton mean field potentials from nuclear EOS
     REAL(dp), DIMENSION(:,:,:), ALLOCATABLE :: EOS_massn, EOS_massp !effective neutron and proton masses from nuclear EOS
@@ -550,8 +572,6 @@ PRINT*, 'Filling OpacityTable ...'
        
        REAL(dp)                :: dD, dT, dYe
 
-       REAL(dp) :: loctot
-
        CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_rho_min), &
                                   LOG10(OpacityTable % TS % States (iRho) % Values), iD_min, dD )
        CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_T_min), &
@@ -577,10 +597,6 @@ PRINT*, 'Filling OpacityTable ...'
        nPointsD  = iD_max  - iD_min  + 1
        nPointsT  = iT_max  - iT_min  + 1
        nPointsYe = iYe_max - iYe_min + 1
-
-write(*,*) nPointsD, nPointsT, nPointsYe
-write(*,*) nRho, nT, nYe
-write(*,*) 1.0d0*nRho * nT * nYe / (nPointsD * nPointsT * nPointsYe)
 
        OpacityTable % EmAb % EC_table_nRho = nPointsD
        OpacityTable % EmAb % EC_table_nT   = nPointsT
@@ -694,9 +710,6 @@ write(*,*) 1.0d0*nRho * nT * nYe / (nPointsD * nPointsT * nPointsYe)
 
                  bb  = (chem_e + chem_p - chem_n)/(T*kMev)
 
-             !rhoaefnp = HUGE(1.d0) ! (?)
-             !iaenct = EmAb_nuclei_EC_table
-             !roaenct = 1.0d+13
 
              EC_table_spec = 0.0d0
              EC_table_rate = 0.0d0
@@ -716,54 +729,6 @@ write(*,*) 1.0d0*nRho * nT * nYe / (nPointsD * nPointsT * nPointsYe)
            END DO  !j_rho
          END DO  !k_t
        END DO  !l_ye
-
-write(*,*) OpacityTable % EmAb % EC_table_rho(1), OpacityTable % TS % States (iRho) % Values(iD_min)
-write(*,*) OpacityTable % EmAb % EC_table_rho(nPointsD), OpacityTable % TS % States (iRho) % Values(iD_max)
-write(*,*) OpacityTable % EmAb % EC_table_T(1), OpacityTable % TS % States (iT) % Values(iT_min)
-write(*,*) OpacityTable % EmAb % EC_table_T(nPointsT), OpacityTable % TS % States (iT) % Values(iT_max)
-write(*,*) OpacityTable % EmAb % EC_table_Ye(1), OpacityTable % TS % States (iYe) % Values(iYe_min)
-write(*,*) OpacityTable % EmAb % EC_table_Ye(nPointsYe), OpacityTable % TS % States (iYe) % Values(iYe_max)
-
-write(*,*) OpacityTable % EmAb % EC_table_E(1), OpacityTable % EmAb % EC_table_E(nE)
-
-       CALL GetIndexAndDelta_Lin( LOG10(1.0d12), &
-                                  LOG10(OpacityTable % EmAb % EC_table_rho), jD, dD )
-       CALL GetIndexAndDelta_Lin( LOG10(2.0d0/kMeV), &
-                                  LOG10(OpacityTable % EmAb % EC_table_T),   jT, dT )
-       CALL GetIndexAndDelta_Lin( 0.33d0, &
-                                  OpacityTable % EmAb % EC_table_Ye,  jYe, dYe )
-
-       
-write(*,*) jD, jT, jYe
-write(*,*) OpacityTable % EmAb % EC_table_rho(jD)
-write(*,*) OpacityTable % EmAb % EC_table_T(jT)*kMeV
-write(*,*) OpacityTable % EmAb % EC_table_Ye(jYe)
-
-write(*,*) 'chem_n', 10**DVar(Indices % iNeutronChemicalPotential) % &
-                      Values(iD_min+jD-1, iT_min+jT-1, iYe_min+jYe-1) &
-                    - DVOffs(Indices % iNeutronChemicalPotential)   &
-                    - epsilon
-write(*,*) 'chem_p', 10**DVar(Indices % iProtonChemicalPotential) % &
-                      Values(iD_min+jD-1, iT_min+jT-1, iYe_min+jYe-1) &
-                    - DVOffs(Indices % iProtonChemicalPotential)   &
-                    - epsilon
-write(*,*) 'chem_e', 10**DVar(Indices % iElectronChemicalPotential) % &
-                      Values(iD_min+jD-1, iT_min+jT-1, iYe_min+jYe-1) &
-                    - DVOffs(Indices % iElectronChemicalPotential)   &
-                    - epsilon
-
-loctot = 0.0d0
-do i_e = 1, nE
-write(*,*) i_e, OpacityTable % EmAb % EC_table_spec(1) % &
-                            Values (jD, jT, jYe, i_e)
-loctot = loctot + OpacityTable % EmAb % EC_table_spec(1) % &
-                            Values (jD, jT, jYe, i_e) * 0.5d0
-enddo
-
-write(*,*) 'loctot', loctot
-write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
-                          Values (jD, jT, jYe)
-       !stop
 
      END BLOCK build_EC_table
 
@@ -843,20 +808,14 @@ write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
 
          DO i_r = 1, nOpac_EmAb
 
-             !iaefnp = 1
              iaefnp = EmAb_np_isoenergetic
-             !i_aeps = 0
              i_aeps = EmAb_np_non_isoenergetic
              rhoaefnp = HUGE(1.d0) ! (?)
-             !iaence = 1
              iaence = EmAb_nuclei_EC_FFN !e-nu
              edmpe = 3.d0
-             !iaenca = 1
              iaenca = EmAb_nuclei_EC_FFN !e-nubar
              edmpa = 3.d0
-             !iaenct = 0
              iaenct = EmAb_nuclei_EC_table
-             !roaenct = 1.0d+13
 
 ! Initialise the opacity arrays to zero
              ab_nucleons = 0.0d0
@@ -867,9 +826,6 @@ write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
 
              ab_nuclei_EC_FFN = 0.0d0
              em_nuclei_EC_FFN = 0.0d0
-
-             !EC_table_spec = 0.0d0
-             !EC_table_rate = 0.0d0
 
              IF(EmAb_np_isoenergetic .gt. 0) THEN
 
@@ -911,14 +867,6 @@ write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
 
              IF(EmAb_np_FK .gt. 0) THEN
 
-!write(*,*) 'i=', i_r, 'j=', j_rho, 'k=', k_t, 'l=', l_ye
-!write(*,*) 'T =',TMeV,'Density =',rho,'Ye =',Ye
-!write(*,*) 'n =',xn,'p =',xp,'heavy =',xheavy,'A =',A,'Z =',Z
-!write(*,*) 'chemn =',chem_n,'chemp =',chem_p,'Un =',Un_loc,'Up =',Up_loc
-!write(*,*) 'mn =',massn_loc,'mp =',massp_loc
-!write(*,*) 'cheme =',chem_e
-
-!stop
                IF(i_r .le. 2) THEN
                  CALL CC_EmAb( OpacityTable % EnergyGrid % Cell_centers,     &
                                TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
@@ -939,24 +887,6 @@ write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
 
              ENDIF
 
-!             IF(EmAb_nuclei_EC_table .gt. 0 .and. i_r .eq. 1) THEN
-!  
-!               CALL abem_nuclei_EC_table_weaklib ( i_r, E_cells, E_faces, dE, &
-!                                                   rho, T, Ye, xheavy, A, chem_n, &
-!                                                   chem_p, chem_e, EC_table_spec, EC_table_rate, &
-!                                                   1, nPointsE)
-!               DO i_e = 1, OpacityTable % nPointsE
-!                  OpacityTable % EmAb % EC_table_spec(i_r) % &
-!                               Values (i_e, j_rho, k_t, l_ye) &
-!                  = EC_table_spec(i_e)
-!               END DO  !i_e
-!
-!               OpacityTable % EmAb % EC_table_rate(i_r) % &
-!                            Values (j_rho, k_t, l_ye) &
-!               = EC_table_rate
-!
-!             ENDIF
-
              DO i_e = 1, OpacityTable % nPointsE
                 OpacityTable % EmAb % Opacity(i_r) % &
                         Values (i_e, j_rho, k_t, l_ye) &
@@ -974,8 +904,10 @@ write(*,*) 'Rate', OpacityTable % EmAb % EC_table_rate(1) % &
            ietann = 1
 
            CALL scatical_weaklib &
-           ( i_rb, OpacityTable % EnergyGrid % Cell_centers, &
-             nPointsE, rho, T, xn, xp, xhe, xheavy, A, Z, cok )
+           ( i_rb, OpacityTable % EnergyGrid % Cell_centers,  &
+             nPointsE, rho, T, ye, xn, xp, xhe, xheavy, A, Z, &
+             Iso_weak_magnetism, Iso_ion_ion_corrections,     &
+             Iso_many_body_corrections, cok )
 
            DO t_m = 1, nMom_Iso
 

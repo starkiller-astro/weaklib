@@ -30,7 +30,9 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateOpacityTable
   USE wlOpacityFieldsModule, ONLY:   &
     OpacityTypeEmAb,                 &
-    OpacityTypeScat
+    OpacityTypeScat,                 &
+    OpacityTypeScatIso,              &
+    OpacityTypeScatNES
   USE wlIOModuleHDF, ONLY:           &
     ReadHDF,                         &
     WriteHDF,                        &
@@ -200,16 +202,71 @@ CONTAINS
 
           BLOCK
 
-            CHARACTER(LEN=100), DIMENSION(3) :: tmpstring
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
 
-            tmpstring(1) = &
+            tempString(1) = &
             "Opacity from isoenergetic scattering, Bruenn and Mezzacappa (1997), Horowitz (1997)"
-            tmpstring(2) = &
+            tempString(2) = &
             "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..56.7529B/doi:10.1103/PhysRevD.56.7529"
-            tmpstring(3) = &
+            tempString(3) = &
             "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
 
-            CALL WriteGroupAttributeHDF_string("Opacity description", tmpstring, group_id) 
+            CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
+
+          END BLOCK
+    
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+
+            tempString(1) = "Weak magnetism corrections for isoenergetic scattering, Horowitz (2002)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2002PhRvD..65d3001H/doi:10.1103/PhysRevD.65.043001"
+            IF(OpacityTable % Scat_Iso % weak_magnetism_corrections .gt. 0) THEN
+              tempString(3) = "Included."
+            ELSE
+              tempString(3) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("weak_magnetism_corrections", tempString, group_id) 
+
+          END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(6) :: tempString
+
+            tempString(1) = "Ion-ion correlations corrections for isoenergetic scattering"
+            tempString(2) = "Itoh (1997), Horowitz (1997), Bruenn and Mezzacappa (1997)"
+            tempString(3) = &
+            "https://ui.adsabs.harvard.edu/link_gateway/1975PThPh..54.1580I/doi:10.1143/PTP.54.1580"
+            tempString(4) = &
+            "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..56.7529B/doi:10.1103/PhysRevD.56.7529"
+            tempString(5) = &
+            "https://ui.adsabs.harvard.edu/link_gateway/1997PhRvD..55.4577H/doi:10.1103/PhysRevD.55.4577"
+            IF(OpacityTable % Scat_Iso % ion_ion_corrections .gt. 0) THEN
+              tempString(6) = "Included."
+            ELSE
+              tempString(6) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("ion_ion_corrections", tempString, group_id) 
+
+          END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+
+            tempString(1) = "Many-body effects corrections for isoenergetic scattering, Horowitz et al (2017)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2017PhRvC..95b5801H/doi:10.1103/PhysRevC.95.025801"
+            IF(OpacityTable % Scat_Iso % many_body_corrections .gt. 0) THEN
+              tempString(3) = "Included."
+            ELSE
+              tempString(3) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("many_body_corrections", tempString, group_id) 
+
           END BLOCK
         
           CALL WriteVersionAttribute(group_id)
@@ -243,13 +300,30 @@ CONTAINS
 
           BLOCK
 
-            CHARACTER(LEN=100), DIMENSION(3) :: tmpstring
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
 
-            tmpstring(1) = "Opacity from NES, Bruenn (1985), Mezzacappa and Bruenn (1993)"
-            tmpstring(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
-            tmpstring(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+            tempString(1) = "Opacity from NES, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
 
-            CALL WriteGroupAttributeHDF_string("Opacity description", tmpstring, group_id) 
+            CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
+
+          END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(4) :: tempString
+
+            tempString(1) = "Opacity from NPS, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+            IF(OpacityTable % Scat_NES % NPS .gt. 0) THEN
+              tempString(4) = "Included."
+            ELSE
+              tempString(4) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("Neutrino positron scattering", tempString, group_id) 
 
           END BLOCK
 
@@ -277,13 +351,13 @@ CONTAINS
 
           BLOCK
 
-            CHARACTER(LEN=100), DIMENSION(3) :: tmpstring
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
 
-            tmpstring(1) = "Opacity from pair production, Bruenn (1985), Mezzacappa and Bruenn (1993)"
-            tmpstring(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
-            tmpstring(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
+            tempString(1) = "Opacity from pair production, Bruenn (1985), Mezzacappa and Bruenn (1993)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/1985ApJS...58..771B/doi:10.1086/191056"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1993ApJ...410..740M/doi:10.1086/172791"
 
-            CALL WriteGroupAttributeHDF_string("Opacity description", tmpstring, group_id) 
+            CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
 
           END BLOCK
  
@@ -313,13 +387,13 @@ CONTAINS
 
         BLOCK
 
-          CHARACTER(LEN=100), DIMENSION(3) :: tmpstring
+          CHARACTER(LEN=100), DIMENSION(3) :: tempString
 
-          tmpstring(1) = "Nucleon-nucleon Bremsstrahlung, Hannestad and Raffelt (1998)"
-          tmpstring(2) = "The full spin-density autocorrelation function S_sigma(eps+eps') in units [1/MeV]"
-          tmpstring(3) = "https://ui.adsabs.harvard.edu/link_gateway/1998ApJ...507..339H/doi:10.1086/306303"
+          tempString(1) = "Nucleon-nucleon Bremsstrahlung, Hannestad and Raffelt (1998)"
+          tempString(2) = "The full spin-density autocorrelation function S_sigma(eps+eps') in units [1/MeV]"
+          tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/1998ApJ...507..339H/doi:10.1086/306303"
 
-          CALL WriteGroupAttributeHDF_string("Opacity description", tmpstring, group_id) 
+          CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
 
         END BLOCK
 
@@ -701,7 +775,7 @@ CONTAINS
 
   SUBROUTINE WriteOpacityTableHDF_Scat( Scat , group_id )
 
-    TYPE(OpacityTypeScat), INTENT(in)    :: Scat
+    CLASS(OpacityTypeScat), INTENT(in)    :: Scat
     INTEGER(HID_T),        INTENT(in)    :: group_id
 
     INTEGER(HSIZE_T)                     :: datasize1d(1)
@@ -715,6 +789,28 @@ CONTAINS
     INTEGER, DIMENSION(1)                       :: tempInteger
     REAL(dp), DIMENSION(1)                      :: tempReal
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1dtemp
+
+    SELECT TYPE ( Scat )
+
+      TYPE IS ( OpacityTypeScatIso )
+
+        datasize1d = 1
+        tempInteger(1) = Scat % weak_magnetism_corrections
+        CALL WriteHDF( "weak_magnetism_corr", tempInteger, group_id, datasize1d )
+
+        tempInteger(1) = Scat % ion_ion_corrections
+        CALL WriteHDF( "ion_ion_corr", tempInteger, group_id, datasize1d )
+
+        tempInteger(1) = Scat % many_body_corrections
+        CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
+
+      TYPE IS ( OpacityTypeScatNES )
+
+        datasize1d = 1
+        tempInteger(1) = Scat % NPS
+        CALL WriteHDF( "NPS", tempInteger, group_id, datasize1d )
+
+    END SELECT
 
     datasize1d = 1
     tempInteger(1) = Scat % nOpacities
@@ -876,26 +972,65 @@ CONTAINS
 
       CALL OpenFileHDF( FileName(iEmAb), .FALSE., file_id )
 
-      CALL OpenGroupHDF &
-             ( "EmAb Parameters", .FALSE., file_id, group_id )
+      !We need to check check before if this group exists to be 
+      !compatible with legacy tables, as they do not contain
+      !the group "EmAb Parameters".
 
-      datasize1d(1) = 1
-      Call ReadHDF ( "np_FK", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % np_FK = buffer(1)
-      Call ReadHDF ( "np_FK_inv_n_decay", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % np_FK_inv_n_decay = buffer(1)
-      Call ReadHDF ( "np_isoenergetic", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % np_isoenergetic = buffer(1)
-      Call ReadHDF ( "np_non_isoenergetic", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % np_non_isoenergetic = buffer(1)
-      Call ReadHDF ( "np_weak_magnetism", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % np_weak_magnetism = buffer(1)
-      Call ReadHDF ( "nuclei_EC_FFN", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nuclei_EC_FFN = buffer(1)
-      Call ReadHDF ( "nuclei_EC_table", buffer, group_id, datasize1d)
-      OpacityTable % EmAb % nuclei_EC_table = buffer(1)
+      BLOCK
+        CHARACTER(len=150) :: FileName
+        INTEGER(SIZE_T)    :: flength
 
-      CALL CloseGroupHDF( group_id )
+        CALL h5fget_name_f( file_id, FileName, flength, hdferr )
+
+        CALL h5eset_auto_f( 0, hdferr )
+  
+        CALL h5gopen_f( file_id, "EmAb Parameters", group_id, hdferr )
+
+        IF ( hdferr .ne. 0 ) THEN
+
+          WRITE(*,*) 'Group EmAb Parameters not found in ', TRIM( FileName )
+          WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          WRITE(*,*) 'Electron capture on nulcei using a LMSH table is not included,'
+          WRITE(*,*) 'as well as corrections to Bruenn85 opacities for EmAb.'
+
+          OpacityTable % EmAb % np_FK               = -1
+          OpacityTable % EmAb % np_FK_inv_n_decay   = -1
+          OpacityTable % EmAb % np_isoenergetic     = -1
+          OpacityTable % EmAb % np_non_isoenergetic = -1
+          OpacityTable % EmAb % np_weak_magnetism   = -1
+          OpacityTable % EmAb % nuclei_EC_FFN       = -1
+          OpacityTable % EmAb % nuclei_EC_table     = -1
+
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+
+        ELSE
+
+
+          CALL OpenGroupHDF &
+                 ( "EmAb Parameters", .FALSE., file_id, group_id )
+
+          datasize1d(1) = 1
+          Call ReadHDF ( "np_FK", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % np_FK = buffer(1)
+          Call ReadHDF ( "np_FK_inv_n_decay", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % np_FK_inv_n_decay = buffer(1)
+          Call ReadHDF ( "np_isoenergetic", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % np_isoenergetic = buffer(1)
+          Call ReadHDF ( "np_non_isoenergetic", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % np_non_isoenergetic = buffer(1)
+          Call ReadHDF ( "np_weak_magnetism", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % np_weak_magnetism = buffer(1)
+          Call ReadHDF ( "nuclei_EC_FFN", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % nuclei_EC_FFN = buffer(1)
+          Call ReadHDF ( "nuclei_EC_table", buffer, group_id, datasize1d)
+          OpacityTable % EmAb % nuclei_EC_table = buffer(1)
+
+          CALL CloseGroupHDF( group_id )
+
+        ENDIF
+
+      END BLOCK
 
       IF(OpacityTable % EmAb % nuclei_EC_table .gt. 0) THEN
 
@@ -1277,9 +1412,6 @@ CONTAINS
         CALL ReadHDF( "minYe", tmp_real, group_id, datasize1d )
         OpacityTable % EmAb % EC_table_Ye_min = tmp_real(1)
 
-        !datasize4d(1)   = OpacityTable % EnergyGrid % nPoints
-        !datasize4d(2:4) = OpacityTable % TS % nPoints
-
         datasize4d = [OpacityTable % EmAb % EC_table_nRho, OpacityTable % EmAb % EC_table_nT, &
                       OpacityTable % EmAb % EC_table_nYe,  OpacityTable % EmAb % EC_table_nE]
 
@@ -1290,7 +1422,6 @@ CONTAINS
                  OpacityTable % EmAb % EC_table_spec(1) % Values, &
                  group_id, datasize4d )
 
-        !datasize3d = OpacityTable % TS % nPoints
         datasize3d = [OpacityTable % EmAb % EC_table_nRho, &
                       OpacityTable % EmAb % EC_table_nT,   &
                       OpacityTable % EmAb % EC_table_nYe]
@@ -1552,11 +1683,6 @@ CONTAINS
 
     END DO ! nOpacities
 
-    !CALL ReadHDF &
-    !       ( EmAb % EC_table_Names(1), &
-    !         EmAb % EC_table_spec(1) % Values, &
-    !         subgroup_id, datasize4d )
-
     CALL CloseGroupHDF( subgroup_id )
 
   END SUBROUTINE ReadOpacityTypeEmAbHDF
@@ -1564,7 +1690,7 @@ CONTAINS
 
   SUBROUTINE ReadOpacityTypeScatHDF( Scat, group_id )
 
-    TYPE(OpacityTypeScat),INTENT(inout)              :: Scat
+    CLASS(OpacityTypeScat),INTENT(inout)              :: Scat
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
@@ -1575,6 +1701,27 @@ CONTAINS
     INTEGER, DIMENSION(1)                            :: buffer
     REAL(dp), DIMENSION(1)                           :: bufferReal
     INTEGER(HID_T)                                   :: subgroup_id
+
+    SELECT TYPE ( Scat )
+
+      TYPE IS ( OpacityTypeScatIso )
+
+        datasize1d(1) = 1
+        CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
+        Scat % weak_magnetism_corrections = buffer(1)
+
+        CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
+        Scat % ion_ion_corrections = buffer(1)
+
+        CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
+        Scat % many_body_corrections = buffer(1)
+
+      TYPE IS ( OpacityTypeScatNES )
+        datasize1d(1) = 1
+        CALL ReadHDF( "NPS", buffer, group_id, datasize1d )
+        Scat % NPS = buffer(1)
+
+    END SELECT
 
     datasize1d(1) = 1
     CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )

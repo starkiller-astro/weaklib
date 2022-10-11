@@ -26,6 +26,9 @@ ChimeraTP = \
 
 ChimeraIS = \
   etaxx.o \
+  nc_weak_mag_weaklib.o \
+  ion_ion_corrections_weaklib.o \
+  nc_many_body_corrections_weaklib.o \
   scatical_weaklib.o
 
 ChimeraNES = \
@@ -39,19 +42,19 @@ ChimeraNES = \
   scatergn_weaklib.o
 
 ChimeraAB = \
- abem_module_weaklib.o \
- abemfrnpetanp.o \
- abemfrnp.o \
- abem_cal_weaklib.o \
- abemnc_weaklib.o \
- abemrgn_weaklib.o \
- cc_weak_mag_weaklib.o \
- polylog_module_weaklib.o \
- load_polylog_weaklib.o \
- cc_difcs_weaklib.o \
- nu_N_absr_momts_weaklib.o \
- abem_nucleons_isoenergetic_weaklib.o \
- abem_nucleons_Reddy_et_al_1998_weaklib.o \
- abem_nuclei_Bruenn85_FFN_weaklib.o \
- ec_module_weaklib.o
+  abem_module_weaklib.o \
+  abemfrnpetanp.o \
+  abemfrnp.o \
+  abem_cal_weaklib.o \
+  abemnc_weaklib.o \
+  abemrgn_weaklib.o \
+  cc_weak_mag_weaklib.o \
+  polylog_module_weaklib.o \
+  load_polylog_weaklib.o \
+  cc_difcs_weaklib.o \
+  nu_N_absr_momts_weaklib.o \
+  abem_nucleons_isoenergetic_weaklib.o \
+  abem_nucleons_Reddy_et_al_1998_weaklib.o \
+  abem_nuclei_Bruenn85_FFN_weaklib.o \
+  ec_module_weaklib.o
 

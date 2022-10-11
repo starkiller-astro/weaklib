@@ -83,8 +83,17 @@ CONTAINS
       CALL h5fcreate_f( TRIM( FileName ), H5F_ACC_TRUNC_F, file_id, hdferr)
 
     ELSE
+      
+      CALL h5eset_auto_f( 0, hdferr )
       CALL h5open_f(hdferr)
       CALL h5fopen_f( TRIM( FileName ), H5F_ACC_RDONLY_F, file_id, hdferr)
+      IF( hdferr .ne. 0 ) THEN
+        WRITE(*,*) 'Unable to open ',TRIM( FileName )
+        WRITE(*,*) 'Aborting.'
+        STOP
+      ENDIF 
+      CALL h5eclear_f( hdferr )
+      CALL h5eset_auto_f( 1, hdferr )
     
     END IF
 
@@ -105,17 +114,60 @@ CONTAINS
     INTEGER(HID_T), INTENT(in)                  :: file_id
     INTEGER(HID_T), INTENT(out)                 :: group_id
 
+    CHARACTER(len=150)                          :: FileName
+    INTEGER(SIZE_T)                             :: flength
+
+    CALL h5fget_name_f( file_id, FileName, flength, hdferr )
+
     IF ( NewGroup ) THEN
 
       CALL h5gcreate_f( file_id, TRIM( GroupName ), group_id, hdferr )
 
     ELSE
 
+      CALL h5eset_auto_f( 0, hdferr )
+
       CALL h5gopen_f( file_id, TRIM( GroupName ), group_id, hdferr )
+
+      IF ( hdferr .ne. 0 ) THEN
+        WRITE(*,*) 'Group ', TRIM( GroupName ), ' not found in ', TRIM( FileName ) 
+        WRITE(*,*) 'Aborting.'
+        STOP
+      ENDIF
+
+      CALL h5eclear_f( hdferr )
+      CALL h5eset_auto_f( 1, hdferr )
     
     END IF
 
   END SUBROUTINE OpenGroupHDF
+
+  SUBROUTINE OpenDsetHDF ( group_id, name, dataset_id, hdferr )
+
+    INTEGER(HID_T), INTENT(in)                   :: group_id
+    CHARACTER(len=*), INTENT(in)                 :: name
+    INTEGER(HID_T), INTENT(inout)                :: dataset_id
+    INTEGER, INTENT(inout)                       :: hdferr
+
+    CHARACTER(len=150)                          :: FileName
+    INTEGER(SIZE_T)                             :: flength
+
+    CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+
+    CALL h5eset_auto_f( 0, hdferr )
+
+    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+
+    IF( hdferr .ne. 0 ) THEN
+      WRITE(*,*) 'Dataset ', TRIM( name ), ' not found in ', TRIM( FileName )
+      WRITE(*,*) 'Aborting.'
+      STOP 
+    ENDIF
+
+    CALL h5eclear_f( hdferr )
+    CALL h5eset_auto_f( 1, hdferr )
+
+  END SUBROUTINE OpenDsetHDF
 
   SUBROUTINE CloseGroupHDF( group_id )  
 
@@ -172,7 +224,7 @@ CONTAINS
     
     INTEGER(HID_T)                               :: dataset_id
   
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, &
                    values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
@@ -220,7 +272,7 @@ CONTAINS
 
     INTEGER(HID_T)                               :: dataset_id
 
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, &
                    values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
@@ -268,7 +320,7 @@ CONTAINS
     
     INTEGER(HID_T)                               :: dataset_id
   
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
 
@@ -315,7 +367,7 @@ CONTAINS
     
     INTEGER(HID_T)                               :: dataset_id
   
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
                    values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
@@ -362,7 +414,7 @@ CONTAINS
    
     INTEGER(HID_T)                               :: dataset_id
  
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
 
@@ -408,7 +460,7 @@ CONTAINS
 
     INTEGER(HID_T)                               :: dataset_id
 
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_DOUBLE, values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
 
@@ -423,7 +475,7 @@ CONTAINS
     INTEGER(HID_T)                              :: dataset_id
     INTEGER                                     :: error
 
-    CALL h5dopen_f(group_id, name, dataset_id, error)
+    CALL OpenDsetHDF(group_id, name, dataset_id, error)
     CALL h5dread_f(dataset_id, H5T_NATIVE_INTEGER, &
                     value, datasize, error)
     CALL h5dclose_f(dataset_id, error)
@@ -471,7 +523,7 @@ CONTAINS
     
     INTEGER(HID_T)                               :: dataset_id
   
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
                    values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
@@ -494,7 +546,7 @@ CONTAINS
 
     IF( link_exists )THEN
 
-      CALL h5dopen_f &
+      CALL OpenDsetHDF &
              ( group_id, name, dataset_id, hdferr )
       CALL h5dread_f &
              ( dataset_id, H5T_NATIVE_INTEGER, values, datasize, hdferr )
@@ -558,7 +610,7 @@ CONTAINS
   
     sizechar = LEN( values(1) )
     CALL h5tset_size_f( H5T_NATIVE_CHARACTER, sizechar, hdferr )
-    CALL h5dopen_f( group_id, name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
     CALL h5dread_f( dataset_id, H5T_NATIVE_CHARACTER, &
                    values, datasize, hdferr )
     CALL h5dclose_f( dataset_id, hdferr )
@@ -589,7 +641,7 @@ CONTAINS
 
     attr_len = len(attr_data(1))
 
-    CALL h5dopen_f( group_id, dset_name, dataset_id, hdferr )
+    CALL OpenDsetHDF( group_id, dset_name, dataset_id, hdferr )
 
     CALL h5screate_simple_f( arank, adims, aspace_id, hdferr )
 
