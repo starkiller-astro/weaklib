@@ -171,17 +171,17 @@ IMPLICIT NONE
                               = 1
                               !Modification to neutral current scattering due to many-body effects
 
-   INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
    INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
 
-   INTEGER, PARAMETER      :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: nOpac_Brem = 0  !Only S_sigma(eps+eps') is needed for all
+   INTEGER, PARAMETER      :: nOpac_Brem = 1  !Only S_sigma(eps+eps') is needed for all
    INTEGER, PARAMETER      :: nMom_Brem  = 1  !species and moments
 
 !---------------------------------------------------------------------

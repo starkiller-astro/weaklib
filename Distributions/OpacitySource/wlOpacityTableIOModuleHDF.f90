@@ -568,18 +568,22 @@ CONTAINS
 
     BLOCK
 
-      character(len=100), dimension(7) :: tempString
+      character(len=100), dimension(11) :: tempString
 
-      tempString(1) = "NSE-folded tabular data, Langanke et al. (2003), Hix et al. (2003)"
-      tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..90x1102L/doi:10.1103/PhysRevLett.90.241102"
-      tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..91t1102H/doi:10.1103/PhysRevLett.91.201102"
-      tempString(4) = "The table stores the rate of electron capture on nuclei"
-      tempString(5) = "and the spectrum of emissivity of neutrinos, normalised to 1"
-      tempstring(6) = "The spectrum has not been multiplied by the heavy nucleus abundance!!"
+      tempString(1)  = "NSE-folded tabular data, Langanke et al. (2003), Hix et al. (2003)"
+      tempString(2)  = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..90x1102L/doi:10.1103/PhysRevLett.90.241102"
+      tempString(3)  = "https://ui.adsabs.harvard.edu/link_gateway/2003PhRvL..91t1102H/doi:10.1103/PhysRevLett.91.201102"
+      tempString(4)  = "The table stores the rate of electron capture on nuclei"
+      tempString(5)  = "and the spectrum of emissivity of electron-neutrinos."
+      tempString(6)  = "The rate and spectrum are tabulated independently so that users can interpolated the spectrum"
+      tempString(7)  = "and afterwards normalise it to 1."
+      tempString(8)  = "Tabulated is jec * e_nu^2 on an equidistant grid from 0..100 MeV with a resolution of dE=0.5 MeV."
+      tempString(9)  = "The tabulated spectrum is normalised so that it integrates to 1."
+      tempstring(10) = "The spectrum has not been multiplied by the heavy nucleus abundance."
       IF(EmAb % nuclei_EC_table .gt. 0) THEN
-        tempString(7) = "Included."
+        tempString(11) = "Included."
       ELSE
-        tempString(7) = "Not included."
+        tempString(11) = "Not included."
       ENDIF
         
 
