@@ -194,7 +194,8 @@ MODULE ec_table_module
 
     END SUBROUTINE read_ec_table
 
-    SUBROUTINE interp_ec( spec, rate, unui, unubi, dunui, temp, rho, Ye, nez )
+    !SUBROUTINE interp_ec( spec, rate, unui, unubi, dunui, temp, rho, Ye, nez )
+    SUBROUTINE interp_ec( spec, rate, unui, temp, rho, Ye, nez )
     !-----------------------------------------------------------------------
     !
     !    Author:       W.R. Hix, Physics Division
@@ -249,8 +250,8 @@ MODULE ec_table_module
     !  Local variables
     !-----------------------------------------------------------------------
 
-    REAL(dp), dimension(nez), intent(in)   :: unui, dunui
-    REAL(dp), dimension(nez+1), intent(in) :: unubi
+    REAL(dp), dimension(nez), intent(in)   :: unui !, dunui
+    !REAL(dp), dimension(nez+1), intent(in) :: unubi
 
     REAL(dp) :: temp, rho, ye
     REAL(dp), DIMENSION(0:npts) :: jecfine
@@ -405,94 +406,11 @@ MODULE ec_table_module
     enddo
     rate = rate_interp
 
-    RETURN
-
-    !-----------------------------------------------------------------------
-    ! Match Table grid to MGFLD energy grid
-    !-----------------------------------------------------------------------
-!! This is for the newer trunk Chimera version
-!    ktop=kmax ! top energy bin that has a EC contribution
-!    DO k=1,kmax
-!      kfmin(k)=int(unui(k)/deltaE)
-!      kfmax(k)=kfmin(k) +1
-!      IF (kfmax(k).gt.npts) kfmax(k)=npts
-!      IF (kfmin(k).gt.npts) kfmin(k)=npts
-!      IF (unubi(k+1) .gt. energy(npts)) ktop=min(k,ktop)
-!    ENDDO
-
-    ktop=kmax
-    DO k=1,kmax
-      kfmin(k) = int(unubi(k)/deltaE)+1
-      kfmax(k) = int(unubi(k+1)/deltaE)
-      IF (kfmax(k).gt.npts) kfmax(k)=npts
-      IF (kfmin(k).gt.npts) kfmin(k)=npts
-      IF (unubi(k+1) .gt. energy(npts)) ktop=min(k,ktop) 
-    ENDDO
-
-    DO k=1,ktop
-      deltalower(k)=(energy(kfmin(k))-unubi(k))/deltaE ! assuming no "undershoot" problems on the bottom.
-      deltaupper(k)=(unubi(k+1)-energy(kfmax(k)))/deltaE
-
-      IF (deltalower(k) < 0.d0) deltalower(k)=0.0d0
-      IF (deltaupper(k) < 0.d0) deltaupper(k)=0.0d0
-      IF (deltalower(k) > 1.d0) deltalower(k)=1.0d0
-      IF (deltaupper(k) > 1.d0) deltaupper(k)=1.0d0
-    ENDDO
-
-    IF ( unubi(kmax+1) .gt. energy(npts) ) deltaupper(ktop) = 0.0d0
-
-    !-----------------------------------------------------------------------
-    ! Integrate onto MGFLD energy grid
-    !-----------------------------------------------------------------------
-!! This is for the newer trunk Chimera version
-!    DO k=1,ktop
-
-!      deltalower(k) = (unui(k)-deltaE*dble(kfmin(k)))/deltaE
-!      deltaupper(k) = (deltaE*dble(kfmax(k))-unui(k))/deltaE
-!      loctot        = dunui(k)*(deltaupper(k)*jecfine(kfmin(k))+deltalower(k)*jecfine(kfmax(k)))
-!      jec(k)        = loctot/(dunui(k)*unui(k)**2)
-
-!    ENDDO
-
-    loc_integral = 0.0d0
-
-    FORALL( k=1:ktop, kfmax(k) .lt. kfmin(k) )
-        loc_integral(k) =   0.5d0 * dunui(k) &
-&                   * (   ( 1.d0 + deltaupper(k) - deltalower(k) ) * jecfine(kfmin(k)) &
-&                       + ( 1.d0 - deltaupper(k) + deltalower(k) ) * jecfine(kfmax(k)) )
-    END FORALL
-
-    FORALL( k=1:ktop, kfmax(k) .ge. kfmin(k) )
-      loc_integral(k) =   0.5d0 * deltaE &
-&                   * (   SUM( jecfine(kfmin(k):kfmax(k)-1) + jecfine(kfmin(k)+1:kfmax(k)) ) &
-&                       + deltalower(k) * (           deltalower(k)   * jecfine(kfmin(k)-1) &
-&                                           + ( 2.0 - deltalower(k) ) * jecfine(kfmin(k)) ) &
-&                       + deltaupper(k) * (           deltaupper(k)   * jecfine(MIN(kfmax(k)+1,npts)) &
-&                                           + ( 2.0 - deltaupper(k) ) * jecfine(kfmax(k)) ) )
-    END FORALL
-
-    !spec(:) = loc_integral(:) / ( dunui(:) * unui(:)**2 )
-    spec(:) = loc_integral(:) / dunui(:) !/ ( dunui(:) * unui(:)**2 )
-    rate    = rate_interp
-
-    loctot = 0.0d0
-    do k=1,nez
-      loctot = loctot + spec(k) * dunui(k)
-    enddo
-
-    !if(abs(loctot-1.0d0) > 1d-9) then
-      !write(*,*) 'rho,T,Ye ', rho, temp, ye
-      !write(*,*) 'rate ', rate_interp
-      !write(*,*) 'integral on wl grid', loctot
-      !write(*,*) 'spec(1)', spec(1), dunui(1), loc_integral(1)
-    !endif
-
-    RETURN
-
     END SUBROUTINE interp_ec
 
-    SUBROUTINE abem_nuclei_EC_table_weaklib( n, unui, unubi, dunui, &
-               rho, t, ye, xh, ah, cmpn, cmpp, cmpe, EC_table_spec, EC_table_rate, nse, nez )
+    SUBROUTINE abem_nuclei_EC_table_weaklib( n, unui, &
+               rho, t, ye, xh, ah, cmpn, cmpp, cmpe,  &
+               EC_table_spec, EC_table_rate, nse, nez )
     !-----------------------------------------------------------------------
     !
     !    Author:       W.R. Hix, Physics Division
@@ -550,8 +468,8 @@ MODULE ec_table_module
     INTEGER, INTENT(in)     :: nse             ! NSE flag
     INTEGER, INTENT(in)     :: nez             !number of neutrino energy bins
     REAL(dp), dimension(nez), intent(in)   :: unui !neutrino energies
-    REAL(dp), dimension(nez+1), intent(in) :: unubi !neutrino energies, bin edges
-    REAL(dp), dimension(nez), intent(in)   :: dunui !neutrino energies, dE for edges
+    !REAL(dp), dimension(nez+1), intent(in) :: unubi !neutrino energies, bin edges
+    !REAL(dp), dimension(nez), intent(in)   :: dunui !neutrino energies, dE for edges
 
     REAL(dp), INTENT(in)    :: rho             ! density (g/cm^3)
     REAL(dp), INTENT(in)    :: t               ! temperature [K]
@@ -618,7 +536,7 @@ MODULE ec_table_module
     !  Calculate values for rate/per heavy nucleus by interpolation
     !-----------------------------------------------------------------------
 
-    CALL interp_ec( EC_table_spec, EC_table_rate, unui, unubi, dunui, t, rho, ye, nez )
+    CALL interp_ec( EC_table_spec, EC_table_rate, unui, t, rho, ye, nez )
 
     !-----------------------------------------------------------------------
     !  Multiply by heavy nucleus abundance
@@ -633,7 +551,6 @@ MODULE ec_table_module
     !  absrnc(je) = emitnc(je) * fexp((unui(je) + dmnp + cmpn - cmpp - cmpe)/tmev)
     !END DO
 
-    RETURN
     END SUBROUTINE abem_nuclei_EC_table_weaklib
 
 END MODULE ec_table_module

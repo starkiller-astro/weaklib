@@ -407,10 +407,7 @@ IMPLICIT NONE
 !-----------------------------
 PRINT*, "Making Energy Grid ... "
 
-   ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid, &
-              E_c        => OpacityTable % EnergyGrid % Cell_centers, &
-              E_f        => OpacityTable % EnergyGrid % Cell_faces,   &
-              dE         => OpacityTable % EnergyGrid % dE)
+   ASSOCIATE( EnergyGrid => OpacityTable % EnergyGrid )
 
    EnergyGrid % Name &
      = 'Comoving Frame Neutrino Energy'
@@ -418,22 +415,14 @@ PRINT*, "Making Energy Grid ... "
    EnergyGrid % Unit &
      = 'MeV                           '
 
-   EnergyGrid % MinValueFaces = Emin
-   EnergyGrid % MaxValueFaces = Emax
+   EnergyGrid % MinValue = Emin
+   EnergyGrid % MaxValue = Emax
    EnergyGrid % LogInterp = 1
 
-   !CALL MakeLogGrid &
-   !       ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
-   !         EnergyGrid % nPoints,  EnergyGrid % Values )
+   CALL MakeLogGrid &
+          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+            EnergyGrid % nPoints,  EnergyGrid % Values )
 
-   CALL MakeLogGrid(Emin, Emax, nPointsE, E_c, E_f, dE)
-
-   EnergyGrid % MinValueCenters = MINVAL ( E_c )
-   EnergyGrid % MaxValueCenters = MAXVAL ( E_c )
-
-   EnergyGrid % MinValueFaces = MINVAL ( E_f )
-   EnergyGrid % MaxValueFaces = MAXVAL ( E_f )
-   
    END ASSOCIATE ! EnergyGrid
 
 !-----------------------------
@@ -471,9 +460,7 @@ PRINT*, 'Filling OpacityTable ...'
        nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
        iYe     => OpacityTable % TS % Indices % iYe                            , &
        nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
-       E_cells => OpacityTable % EnergyGrid % Cell_centers                     , &
-       E_faces => OpacityTable % EnergyGrid % Cell_faces                       , &
-       dE      => OpacityTable % EnergyGrid % dE                               , &
+       E_cells => OpacityTable % EnergyGrid % Values                           , &
        Indices => OpacityTable % EOSTable % DV % Indices                       , &
        DVOffs  => OpacityTable % EOSTable % DV % Offsets                       , &
        DVar    => OpacityTable % EOSTable % DV % Variables  )
@@ -714,8 +701,7 @@ PRINT*, 'Filling OpacityTable ...'
              EC_table_spec = 0.0d0
              EC_table_rate = 0.0d0
 
-             CALL abem_nuclei_EC_table_weaklib ( 1, E_cells, E_faces, dE, &
-                                                 rho, T, Ye, xheavy, A, chem_n, &
+             CALL abem_nuclei_EC_table_weaklib ( 1, E_cells, rho, T, Ye, xheavy, A, chem_n, &
                                                  chem_p, chem_e, EC_table_spec, EC_table_rate, &
                                                  1, nE)
              DO i_e = 1, nE
@@ -868,7 +854,7 @@ PRINT*, 'Filling OpacityTable ...'
              IF(EmAb_np_FK .gt. 0) THEN
 
                IF(i_r .le. 2) THEN
-                 CALL CC_EmAb( OpacityTable % EnergyGrid % Cell_centers,     &
+                 CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
                                TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
                                massn_loc, massp_loc, Un_loc, Up_loc,   &
                                i_r, EmAb_np_FK_inv_n_decay,       &
@@ -904,7 +890,7 @@ PRINT*, 'Filling OpacityTable ...'
            ietann = 1
 
            CALL scatical_weaklib &
-           ( i_rb, OpacityTable % EnergyGrid % Cell_centers,  &
+           ( i_rb, OpacityTable % EnergyGrid % Values,  &
              nPointsE, rho, T, ye, xn, xp, xhe, xheavy, A, Z, &
              Iso_weak_magnetism, Iso_ion_ion_corrections,     &
              Iso_many_body_corrections, cok )
@@ -963,7 +949,7 @@ PRINT*, 'Filling OpacityTable ...'
           TMeV = T * kMeV
 
           CALL scatergn_weaklib &
-               ( nPointsE, OpacityTable % EnergyGrid % Cell_centers, &
+               ( nPointsE, OpacityTable % EnergyGrid % Values, &
                  TMeV, eta, H0i, H0ii, H1i, H1ii, NPS )
 
           OpacityTable % Scat_NES % Kernel(1) % Values &
@@ -1018,8 +1004,8 @@ PRINT*, 'Filling OpacityTable ...'
             DO i_ep = 1, nPointsE
 
              CALL paircal_weaklib &
-                  ( OpacityTable % EnergyGrid % Cell_centers(i_e),  &
-                    OpacityTable % EnergyGrid % Cell_centers(i_ep), &
+                  ( OpacityTable % EnergyGrid % Values(i_e),  &
+                    OpacityTable % EnergyGrid % Values(i_ep), &
                     chem_e, T, j0i, j0ii, j1i, j1ii )
 
              OpacityTable % Scat_Pair % Kernel(1) % Values  &
@@ -1067,7 +1053,7 @@ PRINT*, 'Filling OpacityTable ...'
       rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
        CALL bremcal_weaklib &
-            (nPointsE, OpacityTable % EnergyGrid % Cell_centers, &
+            (nPointsE, OpacityTable % EnergyGrid % Values, &
              rho, T, S_sigma)
 
             OpacityTable % Scat_Brem % Kernel(1) % Values (:, :, 1, j_rho, k_t) &

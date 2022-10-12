@@ -23,8 +23,7 @@ MODULE wlOpacityTableIOModuleHDF
   USE wlKindModule, ONLY:            &
     dp
   USE wlGridModule, ONLY:            &
-    GridType,                        &
-    EnergyGridType
+    GridType
   USE wlOpacityTableModule, ONLY:    &
     OpacityTableType,                &
     AllocateOpacityTable
@@ -58,16 +57,6 @@ MODULE wlOpacityTableIOModuleHDF
 
   PUBLIC WriteOpacityTableHDF
   PUBLIC ReadOpacityTableHDF
-
-  INTERFACE WriteGridHDF
-    MODULE PROCEDURE WriteGenericGridHDF
-    MODULE PROCEDURE WriteEnergyGridHDF
-  END INTERFACE WriteGridHDF
-
-  INTERFACE ReadGridHDF
-    MODULE PROCEDURE ReadGenericGridHDF
-    MODULE PROCEDURE ReadEnergyGridHDF
-  END INTERFACE ReadGridHDF
 
 CONTAINS
 
@@ -410,7 +399,7 @@ CONTAINS
   END SUBROUTINE WriteOpacityTableHDF
 
 
-  SUBROUTINE WriteGenericGridHDF( Grid, group_id )
+  SUBROUTINE WriteGridHDF( Grid, group_id )
 
     TYPE(GridType), INTENT(in)                  :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -436,44 +425,7 @@ CONTAINS
     datasize1d(1) = Grid % nPoints
     CALL WriteHDF( "Values",    Grid % Values(:), group_id, datasize1d )
 
-  END SUBROUTINE WriteGenericGridHDF
-
-  SUBROUTINE WriteEnergyGridHDF( Grid, group_id )
-
-    TYPE(EnergyGridType), INTENT(in)            :: Grid
-    INTEGER(HID_T), INTENT(in)                  :: group_id
-
-    CHARACTER(LEN=32)                           :: tempString(1)
-    INTEGER                                     :: tempInteger(1)
-    INTEGER(HSIZE_T)                            :: datasize1d(1)
-
-    datasize1d(1) = 1
-
-    tempString(1) = Grid % Name
-    CALL WriteHDF( "Name",      tempString,       group_id, datasize1d )
-    
-    tempString(1) = Grid % Unit
-    CALL WriteHDF( "Unit",      tempString,       group_id, datasize1d )
-
-    tempInteger(1) = Grid % nPoints  
-    CALL WriteHDF( "nPoints",   tempInteger,      group_id, datasize1d )
-
-    tempInteger(1) = Grid % nFaces  
-    CALL WriteHDF( "nFaces",   tempInteger,      group_id, datasize1d )
-   
-    tempInteger(1) = Grid % LogInterp 
-    CALL WriteHDF( "LogInterp", tempInteger,      group_id, datasize1d )
-   
-    datasize1d(1) = Grid % nPoints
-    CALL WriteHDF( "Cells", Grid % Cell_centers(:), group_id, datasize1d )
-
-    datasize1d(1) = Grid % nFaces
-    CALL WriteHDF( "Faces", Grid % Cell_faces(:),   group_id, datasize1d )
-
-    datasize1d(1) = Grid % nPoints
-    CALL WriteHDF( "dE",    Grid % dE(:), group_id, datasize1d )
-
-  END SUBROUTINE WriteEnergyGridHDF
+  END SUBROUTINE WriteGridHDF
 
   SUBROUTINE WriteOpacityTableHDF_EmAb_parameters( EmAb, group_id )
 
@@ -1289,7 +1241,7 @@ CONTAINS
 
         CALL OpenGroupHDF( "EnergyGrid", .FALSE., file_id, group_id )
 
-        CALL ReadEnergyGridHDF( OpacityTable % EnergyGrid, group_id )
+        CALL ReadGridHDF( OpacityTable % EnergyGrid, group_id )
 
         CALL CloseGroupHDF( group_id )
 
@@ -1832,7 +1784,7 @@ CONTAINS
 
   END SUBROUTINE ReadOpacityTypeScatHDF
 
-  SUBROUTINE ReadGenericGridHDF( Grid, group_id )
+  SUBROUTINE ReadGridHDF( Grid, group_id )
 
     TYPE(GridType), INTENT(inout)               :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -1862,80 +1814,6 @@ CONTAINS
     
     Grid % maxValue = MAXVAL( Grid % Values )
 
-  END SUBROUTINE ReadGenericGridHDF
-
-  SUBROUTINE ReadEnergyGridHDF( Grid, group_id )
-
-    TYPE(EnergyGridType), INTENT(inout)         :: Grid
-    INTEGER(HID_T), INTENT(in)                  :: group_id
-
-    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
-    INTEGER, DIMENSION(1)                       :: buffer
-    CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
-
-    datasize1d(1) = 1
-    Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
-    Grid % Name = buffer_string(1)
-
-    Call ReadHDF( "Unit", buffer_string, group_id, datasize1d )
-    Grid % Unit = buffer_string(1)
-
-    CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
-    Grid % nPoints = buffer(1)
-
-    CALL ReadHDF( "LogInterp", buffer, group_id, datasize1d )
-    Grid % LogInterp = buffer(1)
-
-    BLOCK
-
-      CHARACTER(len=150) :: FileName
-      INTEGER(SIZE_T)    :: flength
-      INTEGER(HID_T)     :: dataset_id
-
-      CALL h5eset_auto_f( 0, hdferr )
- 
-      CALL h5dopen_f( group_id, "Cells", dataset_id, hdferr )
-
-      IF( hdferr .ne. 0 ) THEN
-        WRITE(*,*) 'Dataset Cells not found in Group EnergyGrid.'
-        WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-
-        CALL h5eclear_f( hdferr )
-        CALL h5eset_auto_f( 1, hdferr )
-
-        datasize1d = Grid % nPoints
-        CALL ReadHDF( "Values", Grid % Cell_centers, &
-                                group_id, datasize1d )
-
-      ELSE
-
-        CALL ReadHDF( "nFaces", buffer, group_id, datasize1d )
-        Grid % nFaces = buffer(1)
- 
-        datasize1d = Grid % nPoints
-        CALL ReadHDF( "Cells", Grid % Cell_centers, &
-                                group_id, datasize1d )
-
-        datasize1d = Grid % nFaces
-        CALL ReadHDF( "Faces", Grid % Cell_faces, &
-                              group_id, datasize1d )
-
-        datasize1d = Grid % nPoints
-        CALL ReadHDF( "dE", Grid % dE, &
-                                group_id, datasize1d )
-
-        Grid % minValueCenters = MINVAL( Grid % Cell_centers )
-    
-        Grid % maxValueCenters = MAXVAL( Grid % Cell_centers )
-
-        Grid % minValueFaces = MINVAL( Grid % Cell_faces )
-    
-        Grid % maxValueFaces = MAXVAL( Grid % Cell_faces )
-
-      ENDIF
-
-    END BLOCK
-
-  END SUBROUTINE ReadEnergyGridHDF
+  END SUBROUTINE ReadGridHDF
 
 END MODULE wlOpacityTableIOModuleHDF

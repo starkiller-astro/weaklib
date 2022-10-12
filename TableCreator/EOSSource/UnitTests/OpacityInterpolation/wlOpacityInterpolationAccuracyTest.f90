@@ -14,10 +14,10 @@ PROGRAM wlOpacityInterpolationAccuracyTest
 
   INTEGER  :: TestUnit1, TestUnit2
 !--------- parameters for creating energy grid 
-  INTEGER, PARAMETER     :: Inte_nPointE = 240
-  REAL(dp)               :: Inte_Emin = 2.0d00
-  REAL(dp)               :: Inte_Emax = 2.0d02
-  TYPE(EnergyGridType)   :: Inte_E
+  INTEGER, PARAMETER :: Inte_nPointE = 240
+  REAL(dp)           :: Inte_Emin = 2.0d00
+  REAL(dp)           :: Inte_Emax = 2.0d02
+  TYPE(GridType)     :: Inte_E
 
 !-------- variables for reading opacity table
   TYPE(OpacityTableType) :: OpacityTable

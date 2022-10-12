@@ -37,7 +37,6 @@ MODULE wlOpacityTableModule
     dp
   USE wlGridModule, ONLY: &
     GridType,             &
-    EnergyGridType,       &
     AllocateGrid,         &
     DeallocateGrid,       &
     DescribeGrid
@@ -80,7 +79,7 @@ MODULE wlOpacityTableModule
     INTEGER        :: nPointsE
     INTEGER        :: nPointsEta
     INTEGER        :: nPointsTS(3)
-    TYPE(EnergyGridType) :: EnergyGrid
+    TYPE(GridType) :: EnergyGrid
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
