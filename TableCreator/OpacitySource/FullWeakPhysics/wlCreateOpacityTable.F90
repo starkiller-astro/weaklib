@@ -84,6 +84,9 @@ PROGRAM wlCreateOpacityTable
                                             stderr=>error_unit
   USE omp_lib
 
+  USE wlExtEOSWrapperModule, ONLY: &
+      wlGetFullEOS
+
 IMPLICIT NONE
 
    INTEGER*4 today(3), now(3)
@@ -558,6 +561,8 @@ PRINT*, 'Filling OpacityTable ...'
        REAL(dp)                :: EC_table_rate
        
        REAL(dp)                :: dD, dT, dYe
+
+       real(dp) 
 
        CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_rho_min), &
                                   LOG10(OpacityTable % TS % States (iRho) % Values), iD_min, dD )

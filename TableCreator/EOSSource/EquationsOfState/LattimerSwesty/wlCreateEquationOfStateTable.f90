@@ -49,13 +49,14 @@ PROGRAM wlCreateEquationOfStateTable
 !  nPoints = (/161,93,25/) ! High Res in T only
 !  nPoints = (/161,47,25/) ! Standard C Res
 !  nPoints = (/161,47,49/) ! Hi Res in Ye
-  nPoints = (/161,108,49/) ! Standard D Res
+!  nPoints = (/161,108,49/) ! Standard D Res
+  nPoints = (/201,109,49/)
 !  nPoints = (/1,93,3/) ! one line
 !  nPoints = (/321,47,25/) ! High Res in Rho
 !  nPoints = (/321,93,49/) ! High Res
   nVariables = 15
   LScompress = '220'
-  LSFilePath = '../../../LS/Data'
+  LSFilePath = '../../../../Old/LS/Data/'
 
   CALL wlExtInitializeEOS( LSFilePath, LScompress )
 
@@ -179,6 +180,7 @@ PRINT*, "Begin Associate"
   EOSTable % DV % Repaired(:,:,:) = 0
 
   ALLOCATE( Ye_save( EOSTable % nPoints(3) ) ) 
+
 
  ! DO k = 1, EOSTable % nPoints(3) 
  ! Ye_save(k) = Ye(k)
