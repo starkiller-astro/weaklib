@@ -13,6 +13,8 @@ PROGRAM wlCreateEquationOfStateTable
   implicit none
 
   INTEGER                        :: i, j, k, l, kmax, count
+  INTEGER                        :: count_LS_call_fails
+  INTEGER                        :: count_unphysical
   INTEGER, DIMENSION(3)          :: nPoints
   INTEGER                        :: nVariables
   TYPE(EquationOfStateTableType) :: EOSTable
@@ -27,6 +29,8 @@ PROGRAM wlCreateEquationOfStateTable
 
   REAL(8)                                       :: Ye_tmp
   REAL(8), DIMENSION(:), ALLOCATABLE            :: Ye_save
+ 
+  REAL(dp) :: total_fraction
 
   94 FORMAT ("rho=", es12.5,1x, "T=", es12.5,1x, "Ye=" , es12.5 )
   95 FORMAT ("Press=", es12.5,1x, "Entropy=", es12.5,1x, "Energy=" , es12.5 )
@@ -50,7 +54,7 @@ PROGRAM wlCreateEquationOfStateTable
 !  nPoints = (/161,47,25/) ! Standard C Res
 !  nPoints = (/161,47,49/) ! Hi Res in Ye
 !  nPoints = (/161,108,49/) ! Standard D Res
-  nPoints = (/201,109,49/)
+  nPoints = (/201,109,45/)
 !  nPoints = (/1,93,3/) ! one line
 !  nPoints = (/321,47,25/) ! High Res in Rho
 !  nPoints = (/321,93,49/) ! High Res
@@ -78,7 +82,8 @@ PRINT*, "Allocate Independent Variable Units "
                                  '                                '/) 
 
  EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.3, 0.06d0/)
- EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+ !EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+ EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.5d0/)
 
 
 !------------------------------------------------------------------------------
@@ -176,6 +181,8 @@ PRINT*, "Begin Associate"
   EOSFlag = "L" 
 
   count = 0
+  count_LS_call_fails = 0
+  count_unphysical    = 0
 
   EOSTable % DV % Repaired(:,:,:) = 0
 
@@ -197,13 +204,24 @@ PRINT*, "Begin Associate"
                        xn_alpha(i,j,k), xn_heavy(i,j,k), a_heavy(i,j,k),            &
                        z_heavy(i,j,k), be_heavy(i,j,k), thermalenergy(i,j,k), gamma1(i,j,k), i, j, k )   
 
-          IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. press(i,j,k) < 0.   &
-            .or. xn_prot(i,j,k) < 0. .or. xn_alpha(i,j,k) < 0. .or. xn_heavy(i,j,k) < 0. &
-            .or. a_heavy(i,j,k) < 0. .or. z_heavy(i,j,k) < 0. &
-            .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
+          total_fraction = xn_prot(i,j,k) + xn_neut(i,j,k) + xn_alpha(i,j,k) + xn_heavy(i,j,k)
+
+          IF ( energ(i,j,k) < 0.0d0 .or. entrop(i,j,k) < 0.0d0 .or. press(i,j,k) < 0.0d0   &
+            .or. xn_prot(i,j,k) < 0.0d0 .or. xn_prot(i,j,k) > 1.0d0 &
+            .or. xn_neut(i,j,k) < 0.0d0 .or. xn_neut(i,j,k) > 1.0d0 &
+            .or. xn_alpha(i,j,k) < 0.0d0 .or. xn_alpha(i,j,k) > 1.0d0 &
+            .or. xn_heavy(i,j,k) < 0.0d0 .or. xn_heavy(i,j,k) > 1.0d0 &
+            .or. a_heavy(i,j,k) < 0.0d0 .or. z_heavy(i,j,k) < 0.0d0 &
+            .or. ABS(total_fraction-1.0d0) > 1d-10 ) THEN
+            write(*,*) 'Total fraction', total_fraction, Density(i), Temperature(j), Ye_tmp
+            count_unphysical = count_unphysical + 1
             EOSTable % DV % Repaired(i,j,k) = -1
-            count = count + 1
+            !count = count + 1
           END IF
+          IF ( fail ) THEN 
+            EOSTable % DV % Repaired(i,j,k) = -1
+            count_LS_call_fails = count_LS_call_fails + 1
+          ENDIF
                
       END DO
     END DO
@@ -233,7 +251,9 @@ PRINT*, "Begin Associate"
 !      gamma1(i,j,k) = gamma1(i,j,kmax)
 
 !write(*,*) "Ye grid post",Ye
-WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3) 
+!WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3) 
+WRITE (*,*) count_LS_call_fails, " fails from LS call out of " , nPoints(1)*nPoints(2)*nPoints(3) 
+WRITE (*,*) count_unphysical, " unphysical output out of " , nPoints(1)*nPoints(2)*nPoints(3) 
 
   END ASSOCIATE
 
