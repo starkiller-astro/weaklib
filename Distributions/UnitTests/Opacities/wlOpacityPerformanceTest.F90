@@ -22,11 +22,15 @@ PROGRAM wlOpacityPerformanceTest
 
   IMPLICIT NONE
 
+  INCLUDE 'mpif.h'
+
   INTEGER :: &
     n_rndm, &
     iP, jP, &
     iM, iEta, iT, iE2, iE1, &
-    iH1, iH2
+    nMoments, nPointsEta, nPointsT, &
+    iH1, iH2, &
+    ierr
   INTEGER, PARAMETER :: &
     iD_T = 1, iT_T = 2, iY_T = 3, &
     nPointsX = 2**15, &
@@ -66,9 +70,11 @@ PROGRAM wlOpacityPerformanceTest
   TYPE(OpacityTableType) :: &
     OpTab
 
+  CALL MPI_INIT( ierr )
+
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !$ACC INIT
+  !!$ACC INIT
 #endif
 
   CALL InitializeHDF( )
@@ -248,15 +254,19 @@ PROGRAM wlOpacityPerformanceTest
   !$ACC         opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #endif
 
+  nMoments   = OpTab % Scat_NES % nMoments
+  nPointsEta = OpTab % Scat_NES % nPoints(5)
+  nPointsT   = OpTab % Scat_NES % nPoints(4)
+
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(5)
 #elif defined (WEAKLIB_OACC)
   !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(5) &
   !$ACC PRESENT( LogE, LogEs_T, OS_NES, NES_T, NES_AT )
 #endif
-  DO iM = 1, OpTab % Scat_NES % nMoments
-    DO iEta = 1, OpTab % Scat_NES % nPoints(5)
-      DO iT = 1, OpTab % Scat_NES % nPoints(4)
+  DO iM = 1, nMoments
+    DO iEta = 1, nPointsEta
+      DO iT = 1, nPointsT
         DO iE2 = 1, nPointsE
           DO iE1 = 1, nPointsE
 
@@ -568,8 +578,10 @@ PROGRAM wlOpacityPerformanceTest
 
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !$ACC SHUTDOWN
+  !!$ACC SHUTDOWN
 #endif
+
+  CALL MPI_FINALIZE( ierr )
 
 CONTAINS
 

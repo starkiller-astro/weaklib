@@ -71,7 +71,7 @@ wlInterpolateBrem: \
 	$(LIBRARIES)
 
 clean:
-	rm -f *.o *.mod *.ld
+	rm -f *.o *.mod *.ld *.acc.s
 
 clobber: clean
 	rm -f *_$(MACHINE)
