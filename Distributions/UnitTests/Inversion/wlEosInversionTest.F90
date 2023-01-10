@@ -27,10 +27,13 @@ PROGRAM wlEosInversionTest
 
   IMPLICIT NONE
 
+  INCLUDE 'mpif.h'
+
   INTEGER :: &
     n_rndm, &
     iP, &
-    iMaxError
+    iMaxError, &
+    ierr
   INTEGER, PARAMETER :: &
     nPoints = 2**16, &
     iD = 1, iT = 2, iY = 3
@@ -63,9 +66,11 @@ PROGRAM wlEosInversionTest
   INTEGER :: &
     iD_T, iT_T, iY_T, iP_T, iS_T, iE_T
 
+  CALL MPI_INIT( ierr )
+
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !$ACC INIT
+  !!$ACC INIT
 #endif
 
   CALL InitializeHDF( )
@@ -1022,7 +1027,9 @@ PROGRAM wlEosInversionTest
 
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !$ACC SHUTDOWN
+  !!$ACC SHUTDOWN
 #endif
+
+  CALL MPI_FINALIZE( ierr )
 
 END PROGRAM wlEosInversionTest
