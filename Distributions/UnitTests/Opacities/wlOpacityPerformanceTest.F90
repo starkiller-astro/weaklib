@@ -400,7 +400,7 @@ PROGRAM wlOpacityPerformanceTest
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE FROM( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
+  !$ACC UPDATE HOST( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )##
 #endif
 
   WRITE(*,*) 'EmAb (GPU)'
@@ -539,11 +539,13 @@ PROGRAM wlOpacityPerformanceTest
   WRITE(*,*)
 
   WRITE(*,*) 'NES (CPU)'
-  WRITE(*,*) MINVAL( opEC_CPU_1 ), MAXVAL( opEC_CPU_1 )
-  WRITE(*,*) MINVAL( opEC_CPU_2 ), MAXVAL( opEC_CPU_2 )
-  WRITE(*,*) MINVAL( opEC_CPU_3 ), MAXVAL( opEC_CPU_3 )
-  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_2 ) )
-  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_3 ) )
+  WRITE(*,*) MINVAL( opH1_CPU_1 ), MAXVAL( opH1_CPU_1 )
+  WRITE(*,*) MINVAL( opH1_CPU_2 ), MAXVAL( opH1_CPU_2 )
+  WRITE(*,*) MINVAL( opH1_CPU_3 ), MAXVAL( opH1_CPU_3 )
+  WRITE(*,*) MINVAL( opH1_CPU_4 ), MAXVAL( opH1_CPU_4 )
+  WRITE(*,*) MAXVAL( ABS( opH1_CPU_1 - opH1_CPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_CPU_1 - opH1_CPU_3 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_CPU_1 - opH1_CPU_4 ) )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE FROM( opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
@@ -552,11 +554,13 @@ PROGRAM wlOpacityPerformanceTest
 #endif
 
   WRITE(*,*) 'NES (GPU)'
-  WRITE(*,*) MINVAL( opEC_GPU_1 ), MAXVAL( opEC_GPU_1 )
-  WRITE(*,*) MINVAL( opEC_GPU_2 ), MAXVAL( opEC_GPU_2 )
-  WRITE(*,*) MINVAL( opEC_GPU_3 ), MAXVAL( opEC_GPU_3 )
-  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_2 ) )
-  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_3 ) )
+  WRITE(*,*) MINVAL( opH1_GPU_1 ), MAXVAL( opH1_GPU_1 )
+  WRITE(*,*) MINVAL( opH1_GPU_2 ), MAXVAL( opH1_GPU_2 )
+  WRITE(*,*) MINVAL( opH1_GPU_3 ), MAXVAL( opH1_GPU_3 )
+  WRITE(*,*) MINVAL( opH1_GPU_4 ), MAXVAL( opH1_GPU_4 )
+  WRITE(*,*) MAXVAL( ABS( opH1_GPU_1 - opH1_GPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_GPU_1 - opH1_GPU_3 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_GPU_1 - opH1_GPU_4 ) )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET EXIT DATA &
