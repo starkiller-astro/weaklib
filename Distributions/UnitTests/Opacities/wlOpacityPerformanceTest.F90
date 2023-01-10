@@ -238,19 +238,28 @@ PROGRAM wlOpacityPerformanceTest
   LogT = LOG10( T )
   LogEta = LOG10( Eta )
 
+  opEC_GPU_1 = 0.0d0
+  opEC_GPU_2 = 0.0d0
+  opEC_GPU_3 = 0.0d0
+
+  opH1_GPU_1 = 0.0d0
+  opH1_GPU_2 = 0.0d0
+  opH1_GPU_3 = 0.0d0
+  opH1_GPU_4 = 0.0d0
+
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET ENTER DATA &
   !$OMP MAP( to: LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
   !$OMP          LogE, LogD, LogT, Y, LogEta, &
-  !$OMP          OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT ) &
-  !$OMP MAP( alloc: opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
-  !$OMP             opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
+  !$OMP          OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT, &
+  !$OMP          opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$OMP          opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #elif defined (WEAKLIB_OACC)
   !$ACC ENTER DATA &
   !$ACC COPYIN( LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
   !$ACC         LogE, LogD, LogT, Y, LogEta, &
-  !$ACC         OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT ) &
-  !$ACC CREATE( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$ACC         OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT, &
+  !$ACC         opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
   !$ACC         opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #endif
 
