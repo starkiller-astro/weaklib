@@ -400,7 +400,7 @@ PROGRAM wlOpacityPerformanceTest
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE FROM( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )##
+  !$ACC UPDATE HOST( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3 )
 #endif
 
   WRITE(*,*) 'EmAb (GPU)'
