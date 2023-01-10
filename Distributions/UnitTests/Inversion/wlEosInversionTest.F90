@@ -257,6 +257,9 @@ PROGRAM wlEosInversionTest
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, E, Y, Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E, Error_E )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
@@ -343,6 +346,9 @@ PROGRAM wlEosInversionTest
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, E, Y, Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E, Error_E )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
@@ -409,10 +415,15 @@ PROGRAM wlEosInversionTest
   CALL CPU_TIME( tBegin )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
 #elif defined (WEAKLIB_OACC)
   !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, E, Y, Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E, Error_E )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
@@ -523,6 +534,9 @@ PROGRAM wlEosInversionTest
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, Error_S )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
@@ -605,6 +619,9 @@ PROGRAM wlEosInversionTest
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, Error_S )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
@@ -671,10 +688,15 @@ PROGRAM wlEosInversionTest
   CALL CPU_TIME( tBegin )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
 #elif defined (WEAKLIB_OACC)
   !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, S, Y, Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S, Error_S )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
@@ -761,6 +783,9 @@ PROGRAM wlEosInversionTest
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, Error_P )
+#elif defined(WEAKLIB_OMP_OL)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
@@ -843,6 +868,9 @@ PROGRAM wlEosInversionTest
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, Error_P )
+#elif defined(WEAKLIB_OMP_OL)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
@@ -909,10 +937,15 @@ PROGRAM wlEosInversionTest
   CALL CPU_TIME( tBegin )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP PRIVATE( T_Guess )
 #elif defined (WEAKLIB_OACC)
   !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC PRIVATE( T_Guess ) &
   !$ACC PRESENT( D, P, Y, Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P, Error_P )
+#elif defined (WEAKLIB_OMP)
+  !$OMP PARALLEL DO &
+  !$OMP PRIVATE( T_Guess )
 #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
