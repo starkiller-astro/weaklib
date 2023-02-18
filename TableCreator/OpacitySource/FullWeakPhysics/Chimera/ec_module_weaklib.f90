@@ -342,12 +342,9 @@ MODULE ec_table_module
     !-----------------------------------------------------------------------
     !  Compute interpolation forefactors.
     !-----------------------------------------------------------------------
-    c1=(log10(rho)-dble(rhodown)*deltalrho_ec)
-    !  /deltalrho_ec
+    c1=(log10(rho)-dble(rhodown)*deltalrho_ec)/deltalrho_ec
 
-    c2=(log10(tmev/(dble(itemp)*deltaT_ec)))
-    ! c2=(log10(tmev/(dble(itemp)*deltaT_ec)))
-    ! /(log10(dble(tup)/dble(tdown)))  !a deltaT_ec factor is ommitted from numerator and denominator
+    c2=(log10(tmev/(dble(itemp)*deltaT_ec)))/(log10(dble(tup)/dble(tdown)))
 
     c3base=(ye-dble(iye)*deltaYe_ec)/deltaYe_ec
     c3=c3base + &
@@ -391,10 +388,10 @@ MODULE ec_table_module
       loctot = loctot + jecfine(k) * deltaE
     enddo
 
-    !if(abs(loctot-1.0d0) > 0.75d0) then
-      !write(*,*) 'rho,T,Ye ', rho, temp, ye
-      !write(*,*) 'rate ', rate_interp
-      !write(*,*) 'integral ', loctot
+    !if(abs(loctot-1.0d0) > 0.05d0) then
+    !  write(*,*) 'rho,T,Ye ', rho, temp, ye
+    !  write(*,*) 'rate ', rate_interp
+    !  write(*,*) 'integral ', loctot
     !endif
 
     !jecfine(:) = jecfine(:) * const * rate_interp / loctot

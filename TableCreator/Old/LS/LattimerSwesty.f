@@ -148,12 +148,20 @@ C                              Calculate the neutron density
         NNOUT = 2.0*BRYDNS*(1.0-2.0*YE)/(2.0-BRYDNS*YE*V_ALFA)+
      1            NPOUT*(2.0-(1.0-YE)*BRYDNS*V_ALFA)/
      2            (2.0-BRYDNS*YE*V_ALFA)
+
+        NNOUT = MAX(0.0d0,NNOUT)
 C
 C                              Calculate density of outside nucleons
         NOUT = NPOUT+NNOUT
 C
 c20        VNOUT = EIFLAG*(2.0*AA*NOUT+4.0*BB*NPOUT+CC*(1.0+DD)*NOUT**DD)
-        VNOUT = EIFLAG*PVN(NPOUT,NNOUT)
+        !WRITE(*,*) 'before', VNOUT, EIFLAG, PVN(NPOUT,NNOUT)
+        WRITE(*,*) 'before eiflag', EIFLAG
+        WRITE(*,*) 'before npout', NPOUT
+        WRITE(*,*) 'before nnout', NNOUT
+        WRITE(*,*) 'before pnv(npout,nnout)', PVN(NPOUT,NNOUT)
+        VNOUT = 1.0d0 !EIFLAG*PVN(NPOUT,NNOUT)
+        WRITE(*,*) 'after', VNOUT, EIFLAG, PVN(NPOUT,NNOUT)
 C
 c20        VPOUT = EIFLAG*(2.0*AA*NOUT+4.0*BB*NNOUT+
 c20     1    CC*(1.0+DD)*NOUT**DD+DELTAM)
@@ -625,7 +633,7 @@ C
 C
 C~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C
-      DET_GT = DG1DO1*DG2DO2-DG1DO2*DG2DO1
+      DET_GT = DG1DO1*DG2DO2-DG1DO2*DG2DO1 + 1.0d-200
 C
 C
       DEP_DN = (DG1DO2*DG2DL1-DG2DO2*DG1DL1)/DET_GT
@@ -2725,6 +2733,16 @@ C                         normally and then return
         CALL EOS_M4C(INPVAR,YE,BRYDNS,1,EOSFLG,FORFLG,SF,
      1 XPREV,P_PREV)
        T_OLD = INPVAR(1)
+       IF(GAM_S <= 0.0d0) THEN
+        CALL EOS_M4C(INPVAR,YE,BRYDNS,1,3,1,SF,
+     1 XPREV,P_PREV)
+       T_OLD = INPVAR(1)
+       ENDIF
+       IF(STOT <= 0.0d0) THEN
+        CALL EOS_M4C(INPVAR,YE,BRYDNS,1,3,1,SF,
+     1 XPREV,P_PREV)
+       T_OLD = INPVAR(1)
+       ENDIF
         RETURN
       ENDIF
 C

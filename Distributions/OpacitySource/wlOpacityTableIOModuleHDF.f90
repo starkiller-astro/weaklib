@@ -488,7 +488,7 @@ CONTAINS
 
       tempString(1) = "Recoil, nucleon final-state blocking, and special relativity corrections to EmAb on nucleons"
       tempString(2) = "Reddy et al 1998"
-      tempString(3) = "Only used for rho > 1e9"
+      tempString(3) = "Only used for rho > 1e9, otherwise the isoenergetic approximation is used"
       tempString(4) = "https://ui.adsabs.harvard.edu/link_gateway/1998PhRvD..58a3009R/doi:10.1103/PhysRevD.58.013009"
       IF(EmAb % np_non_isoenergetic .gt. 0) THEN
         tempString(5) = "Included."

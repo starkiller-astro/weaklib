@@ -138,10 +138,10 @@ EXTERNAL fexp
 !   nucleon blocking
 !-----------------------------------------------------------------------
 
-  CALL gquad(nleg_a,x_a,wt_a,nleg_a)
-  CALL gquad(nleg_e,x_e,wt_e,nleg_e)
+  !CALL gquad(nleg_a,x_a,wt_a,nleg_a)
+  !CALL gquad(nleg_e,x_e,wt_e,nleg_e)
 
-  CALL load_polylog_weaklib
+  !CALL load_polylog_weaklib
 
   DO k = 1,nez
 

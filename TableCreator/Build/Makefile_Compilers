@@ -142,7 +142,7 @@ FLAGS_OPTIMIZE        = $(OPTIMIZE) $(OPENMP) $(OPENACC)
 OPTIMIZE_sn1987b      = -O2 -framework Accelerate
 OPTIMIZE_ranchu       = -O2
 OPTIMIZE_ranchuair    = -O2
-OPTIMIZE_vass         = -O2 -framework Accelerate
+OPTIMIZE_vass         = -O3 -framework Accelerate -march=native
 OPTIMIZE_sjdunham     = -O2
 OPTIMIZE_titan_gnu    = -O3 -march=bdver1
 OPTIMIZE_titan_cray   =
@@ -168,7 +168,7 @@ OPTIMIZE              = $(OPTIMIZE_$(MACHINE))
 INCLUDE_HDF5_sn1987b      = -I/usr/local/Cellar/hdf5/1.10.5/include
 INCLUDE_HDF5_ranchu       = -I/usr/local/hdf5/include
 INCLUDE_HDF5_ranchuair    = -I/usr/local/Cellar/hdf5/1.12.0/include
-INCLUDE_HDF5_vass         = -I/usr/local/Cellar/hdf5/1.12.1/include
+INCLUDE_HDF5_vass         = -I/usr/local/Cellar/hdf5/1.12.2_2/include
 INCLUDE_HDF5_sjdunham     =
 INCLUDE_HDF5_titan_gnu    = # Use Module Load
 INCLUDE_HDF5_titan_cray   = # Use Module Load
@@ -213,7 +213,7 @@ INCLUDE                   = $(INCLUDE_HDF5)
 LIBRARIES_HDF5_sn1987b      = -L/usr/local/Cellar/hdf5/1.10.5/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_ranchu       = -L/usr/local/hdf5/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_ranchuair    = -L/usr/local/Cellar/hdf5/1.12.0/lib -lhdf5_fortran -lhdf5
-LIBRARIES_HDF5_vass         = -L/usr/local/Cellar/hdf5/1.12.1/lib -lhdf5_fortran -lhdf5
+LIBRARIES_HDF5_vass         = -L/usr/local/Cellar/hdf5/1.12.2_2/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_sjdunham     =
 LIBRARIES_HDF5_titan_gnu    = # Use Module Load
 LIBRARIES_HDF5_titan_cray   = # Use Module Load

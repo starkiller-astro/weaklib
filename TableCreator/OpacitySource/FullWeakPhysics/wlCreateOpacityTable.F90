@@ -85,7 +85,7 @@ PROGRAM wlCreateOpacityTable
   USE omp_lib
 
   USE wlExtEOSWrapperModule, ONLY: &
-      wlGetFullEOS
+      wlGetFullEOS, wlGetElectronEOS
 
 IMPLICIT NONE
 
@@ -94,9 +94,9 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set Eos table
 !---------------------------------------------------------------------
-   !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
+   CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-15-25-50.h5"
    !CHARACTER(256) :: EOSTableName = "wl-EOS-SFHo-25-50-100.h5"
-   CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-25-50-100.h5"
+   !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-25-50-100.h5"
    !CHARACTER(256) :: EOSTableName = "wl-EOS-LS220-15-25-50-Lower-T.h5"
 
 !---------------------------------------------------------------------
@@ -119,20 +119,22 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 1 
+                              = 0
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 0 
+                              = 1
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
-                              !Only used for rho > 1e9
+                              !Only used for rho > 1e9, for low densities 
+                              !the isoenergetic approximation of Bruenn 1985 
+                              !and Mezzacappa & Bruenn (1993) is used
 
    INTEGER, PARAMETER      :: EmAb_np_weak_magnetism &
-                              = 0 
+                              = 1
                               !Weak magnetism corrections for EmAb on free nucleons
                               !Horowitz 2002
 
@@ -214,6 +216,8 @@ IMPLICIT NONE
 
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: S_sigma !the Bremsstrahlung annihilation kernel
 
+   REAL(dp) :: total_fraction, press, ent, eps, GAMMA1, el_press_e, el_entrop_e, el_energ_e, el_chem_e
+
    CALL idate(today)
    CALL itime(now)
    WRITE ( *, 10000 )  today(2), today(1), today(3), now
@@ -242,15 +246,14 @@ IMPLICIT NONE
 
 ! -- Set Write-Out FileName
    stringlength = LEN(TRIM(EOSTableName))
-   WRITE(WriteTableName,'(A,A,A,A,I2,A)') &
-         EOSTableName(1:3),'Op-',EOSTableName(8:stringlength-3),'-E',nPointsE, &
-         '-B85'
+   WRITE(WriteTableName,'(A,A,A,A,I2)') &
+         EOSTableName(1:3),'Op-',EOSTableName(8:stringlength-3),'-E',nPointsE
    stringlength = len(TRIM(WriteTableName))
 
    stringlengthBrem = LEN(TRIM(EOSTableName))
-   WRITE(WriteTableNameBrem,'(A,A,A,A,I2,A)') &
-         EOSTableName(1:3),'Op-',EOSTableName(8:stringlengthBrem-3),'-E',nPointsE, &
-         '-HR98'
+   WRITE(WriteTableNameBrem,'(A,A,A,A,I2)') &
+         EOSTableName(1:3),'Op-',EOSTableName(8:stringlengthBrem-3),'-E',nPointsE
+
    stringlengthBrem = len(TRIM(WriteTableNameBrem))
 
    CALL InitializeHDF( )
@@ -272,7 +275,16 @@ IMPLICIT NONE
    IF( nOpac_EmAb .gt. 0 ) THEN
 
    if(EmAb_np_FK + EmAb_np_isoenergetic .gt. 1) then
-     write (*,*) "Must choose either full kinematics or isoenergetic approach for EmAb on free nucleons"
+     write (*,*) "Must choose either full kinematics or Bruenn85 for EmAb on free nucleons"
+     return
+   endif
+   if(EmAb_np_FK + EmAb_np_non_isoenergetic .gt. 1) then
+     write (*,*) "Must choose either full kinematics or Reddy et al 98 for EmAb on free nucleons"
+     return
+   endif
+   if(EmAb_np_isoenergetic + EmAb_np_non_isoenergetic .gt. 1) then
+     write (*,*) "Must choose either Bruenn85 or Reddy et al 98 for EmAb on free nucleons"
+     write (*,*) "When choosing Reddy et al 98, Bruenn85 is still used for rho < 1e9!" 
      return
    endif
    if(EmAb_nuclei_EC_FFN + EmAb_nuclei_EC_table .gt. 1) then
@@ -496,7 +508,7 @@ PRINT*, 'Filling OpacityTable ...'
     REAL(dp), DIMENSION(nPointsE) :: xi_n_wm, xib_p_wm
 
     IF(EmAb_np_FK .gt. 0 .or. &
-       EmAb_np_FK_inv_n_decay   .gt. 0) then
+       EmAb_np_FK_inv_n_decay   .gt. 0) THEN
 
       BLOCK
 
@@ -561,8 +573,6 @@ PRINT*, 'Filling OpacityTable ...'
        REAL(dp)                :: EC_table_rate
        
        REAL(dp)                :: dD, dT, dYe
-
-       real(dp) 
 
        CALL GetIndexAndDelta_Lin( LOG10(OpacityTable % EmAb % EC_table_rho_min), &
                                   LOG10(OpacityTable % TS % States (iRho) % Values), iD_min, dD )
@@ -725,6 +735,17 @@ PRINT*, 'Filling OpacityTable ...'
 
    ENDIF
 
+   WRITE(*,*) 'Now building EmAb on nucleons'
+
+   IF(EmAb_np_non_isoenergetic .gt. 0) THEN
+
+     CALL gquad(nleg_a,x_a,wt_a,nleg_a)
+     CALL gquad(nleg_e,x_e,wt_e,nleg_e)
+
+     CALL load_polylog_weaklib
+
+   END IF
+
    DO l_ye = 1, nYe
 
      ye = OpacityTable % TS % States (iYe) % Values (l_ye)
@@ -784,7 +805,50 @@ PRINT*, 'Filling OpacityTable ...'
                   - DVOffs(Indices % iHeavyMassNumber)   &
                   - epsilon
 
+        press   = 10**DVar(Indices % iPressure) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iPressure)   &
+                  - epsilon
+
+          ent   = 10**DVar(Indices % iEntropyPerBaryon) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iEntropyPerBaryon)   &
+                  - epsilon
+
+          eps   = 10**DVar(Indices % iInternalEnergyDensity) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iInternalEnergyDensity)   &
+                  - epsilon
+
+       GAMMA1   = 10**DVar(Indices % iGamma1) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iGamma1)   &
+                  - epsilon
+
             bb  = (chem_e + chem_p - chem_n)/(T*kMev)
+
+            IF(press < 0.0d0) WRITE(*,'(A22,es12.3,A2,es12.3,A2,f5.2,A2,es12.3)') &
+                              'pressure is negative! ', rho, ' ',TMeV, ' ',ye, ' ',press
+
+            IF(ent < 0.0d0) WRITE(*,'(A21,es12.3,A2,es12.3,A2,f5.2,A2,es12.3)') &
+                              'entropy is negative! ', rho, ' ',TMeV, ' ',ye, ' ',ent
+
+            IF(GAMMA1 < 0.0d0) WRITE(*,'(A29,es12.3,A2,es12.3,A2,f5.2,A2,es12.3)') &
+                               'adiabatic index is negative! ', rho, ' ', TMeV, ' ', ye, ' ', GAMMA1
+
+            IF(xn     < 0.0d0 .or. xn     > 1.0d0) write(*,'(A21,es12.3,A2,es12.3,A2,f5.2,A2,es15.3)') &
+                                                   'xn either < 0 or > 1 ', rho, ' ',TMeV, ' ',Ye, ' ',xn
+            IF(xp     < 0.0d0 .or. xp     > 1.0d0) write(*,'(A21,es12.3,A2,es12.3,A2,f5.2,A2,es15.3)') &
+                                                   'xp either < 0 or > 1 ', rho, ' ',TMeV, ' ',Ye, ' ',xp
+            IF(xhe    < 0.0d0 .or. xhe    > 1.0d0) write(*,'(A22,es12.3,A2,es12.3,A2,f5.2,A2,es15.3)') &
+                                                   'xhe either < 0 or > 1 ', rho, ' ',TMeV, ' ',Ye, ' ',xhe
+            IF(xheavy < 0.0d0 .or. xheavy > 1.0d0) write(*,'(A25,es12.3,A2,es12.3,A2,f5.2,A2,es15.3)') &
+                                                   'xheavy either < 0 or > 1 ', rho, ' ',TMeV, ' ',Ye, ' ',xheavy
+
+            total_fraction = xn+xp+xhe+xheavy
+            IF(ABS(1.0d0-total_fraction) >= 1.0d-10) WRITE(*,'(A34,es12.3,A2,es12.3,A2,f5.2,A2,es15.3)') &
+                                                     'mass fractions do not add up to 1 ', &
+                                                     rho, ' ',TMeV, ' ',Ye, ' ',total_fraction
 
             if (     EmAb_np_FK .gt. 0 &
                 .or. EmAb_np_FK_inv_n_decay   .gt. 0 ) then
@@ -818,24 +882,35 @@ PRINT*, 'Filling OpacityTable ...'
              ab_nuclei_EC_FFN = 0.0d0
              em_nuclei_EC_FFN = 0.0d0
 
-             IF(EmAb_np_isoenergetic .gt. 0) THEN
+             IF(EmAb_np_FK .gt. 0) THEN
 
-               CALL abem_nucleons_isoenergetic_weaklib & 
-                    ( i_r, E_cells, &
-                      rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
-                      ab_nucleons, em_nucleons, nPointsE)
+               WRITE(*,*) "EmAb on nucleons using full kinematics approach"
 
-               !recoil corrections to EmAb on nucleons
-               IF(EmAb_np_non_isoenergetic .gt. 0 .and. rho .ge. 1.d+09) THEN
+               IF(i_r .le. 2) THEN
+                 CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
+                               TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
+                               massn_loc, massp_loc, Un_loc, Up_loc,   &
+                               i_r, EmAb_np_FK_inv_n_decay,       &
+                               ab_nucleons, em_nucleons,               &
+                               ab_inv_n_decay, em_inv_n_decay, nPointsE)
 
+               ENDIF
+             
+             ELSE IF(EmAb_np_non_isoenergetic .gt. 0) THEN
+
+               IF(rho >= 1.0d9) THEN
                  CALL abem_np_non_isoenergetic_weaklib & 
                       ( i_r, E_cells, &
                         rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
                         ab_nucleons, em_nucleons, nPointsE)
 
-               ENDIF !EmAb_np_non_isoenergetic .gt. 0 .and. rho .gt. 1.d+09
+               ELSE
+                 CALL abem_nucleons_isoenergetic_weaklib & 
+                      ( i_r, E_cells, &
+                        rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
+                        ab_nucleons, em_nucleons, nPointsE)
+               END IF
 
-               !weak magnetism corrections to EmAb on nucleons
                IF(EmAb_np_weak_magnetism .gt. 0) THEN
 
                  CALL cc_weak_mag_weaklib( E_cells, xi_n_wm, xib_p_wm, nPointsE )
@@ -850,22 +925,31 @@ PRINT*, 'Filling OpacityTable ...'
                    ab_nucleons = ab_nucleons * xib_p_wm
                    em_nucleons = em_nucleons * xib_p_wm
 
-                 ENDIF !i_r .eq. 1 or 2
+                 ENDIF
+               ENDIF
 
-               ENDIF !EmAb_np_weak_magnetism .gt. 0
+             ELSE IF(EmAb_np_isoenergetic .gt. 0) THEN
 
-             ENDIF !EmAb_np_isoenergetic .gt. 0
+               CALL abem_nucleons_isoenergetic_weaklib & 
+                    ( i_r, E_cells, &
+                      rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
+                      ab_nucleons, em_nucleons, nPointsE)
 
-             IF(EmAb_np_FK .gt. 0) THEN
+               IF(EmAb_np_weak_magnetism .gt. 0) THEN
 
-               IF(i_r .le. 2) THEN
-                 CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
-                               TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
-                               massn_loc, massp_loc, Un_loc, Up_loc,   &
-                               i_r, EmAb_np_FK_inv_n_decay,       &
-                               ab_nucleons, em_nucleons,               &
-                               ab_inv_n_decay, em_inv_n_decay, nPointsE)
+                 CALL cc_weak_mag_weaklib( E_cells, xi_n_wm, xib_p_wm, nPointsE )
 
+                 IF (i_r .eq. 1) THEN !electron neutrino weak mag correction
+
+                   ab_nucleons = ab_nucleons * xi_n_wm
+                   em_nucleons = em_nucleons * xi_n_wm
+
+                 ELSE IF (i_r .eq. 2) THEN !electron anti-neutrino weak mag correction
+
+                   ab_nucleons = ab_nucleons * xib_p_wm
+                   em_nucleons = em_nucleons * xib_p_wm
+
+                 ENDIF
                ENDIF
 
              ENDIF
