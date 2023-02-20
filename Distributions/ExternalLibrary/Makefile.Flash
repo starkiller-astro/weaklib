@@ -3,6 +3,8 @@ GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" 
 GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
 GIT_URL :=$(shell git config --get remote.origin.url)
 
+VERSION_FLAGS := -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\"" -DGIT_URL="\"$(GIT_URL)\""
+
 # name of the library -- make sure it is in the object directory
 LIBNAME = libweaklib.a
 LIBDIR = ../../../object
