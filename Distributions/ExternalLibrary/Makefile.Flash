@@ -1,3 +1,8 @@
+GIT_HASH := $(shell git --no-pager describe --tags --always --dirty)
+GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" --name-only))
+GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
+GIT_URL :=$(shell git config --get remote.origin.url)
+
 # name of the library -- make sure it is in the object directory
 LIBNAME = libweaklib.a
 LIBDIR = ../../../object
@@ -36,6 +41,8 @@ endif
 ifeq ($(USE_OMP_OL),TRUE)
   FFLAGS += $(FFLAGS_OMP_OL)
 endif
+
+FFLAGS += $(VERSION_FLAGS)
 
 # command for generating a library
 MKLIB = ar -r
