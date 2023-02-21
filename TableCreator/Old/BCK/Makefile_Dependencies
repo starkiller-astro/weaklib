@@ -1,0 +1,12 @@
+BCK_EoS.o: \
+  EOS_BCK_MODULE.o \
+  wlExtPhysicalConstantsModule.o \
+  wlExtNumericalModule.o 
+
+EOS_BCK_MODULE.o: \
+  wlKindModule.o
+
+net.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlExtPhysicalConstantsModule.o

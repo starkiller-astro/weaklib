@@ -1,0 +1,19 @@
+HR98_Bremsstrahlung.o: \
+  wlKindModule.o \
+  wlExtPhysicalConstantsModule.o
+
+wlCreateOpacityTable.o: \
+  wlKindModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlGridModule.o \
+  wlIOModuleHDF.o \
+  wlOpacityTableModule.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlExtPhysicalConstantsModule.o \
+  wlExtNumericalModule.o \
+  HR98_Bremsstrahlung.o \
+  PRB_CNTL_MODULE.o \
+  abem_module_weaklib.o \
+  CC_module_weaklib.o \
+  ec_table_module.o \
+  wlExtEOSWrapperModule.o

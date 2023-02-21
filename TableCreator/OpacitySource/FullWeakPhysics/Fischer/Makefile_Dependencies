@@ -1,0 +1,9 @@
+CC_module_weaklib.o: \
+  wlKindModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationUtilitiesModule.o \
+  EL_EOS_MODULE.o \
+  EOS_M4C_MODULE.o \
+  wlExtPhysicalConstantsModule.o \
+  e_p_eos.o

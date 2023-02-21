@@ -1,0 +1,18 @@
+wlExtPhysicalConstantsModule.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o
+
+fexp.o: \
+  wlKindModule.o
+
+wlExtTableFinishingModule.o: \
+  wlKindModule.o
+
+wlExtNumericalModule.o: \
+  wlKindModule.o
+
+GaussianQuadrature.o: \
+  wlKindModule.o
+
+wlExtTableFinishingModule.o: \
+  wlInterpolationModule.o

@@ -1,0 +1,5 @@
+wlExtEOSWrapperModule.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlExtPhysicalConstantsModule.o \
+  e_p_eos.o
