@@ -88,14 +88,14 @@ CONTAINS
 
     IF( Verbose )THEN
       WRITE(*,*)
-      WRITE(*,'(A4,A)') '', 'InitializeEOSInversion' 
+      WRITE(*,'(A4,A)') '', 'InitializeEOSInversion'
       WRITE(*,*)
-      WRITE(*,'(A6,A24,2ES10.3E2)') '', 'Min/Max D   [g cm^-3] = ', MinD, MaxD
-      WRITE(*,'(A6,A24,2ES10.3E2)') '', 'Min/Max T         [K] = ', MinT, MaxT
-      WRITE(*,'(A6,A24,2ES10.3E2)') '', 'Min/Max Y             = ', MinY, MaxY
-      WRITE(*,'(A6,A24,2ES10.3E2)') '', 'Min/Max E  [erg g^-1] = ', MinE, MaxE
-      WRITE(*,'(A6,A24,2ES10.3E2)') '', 'Min/Max P [dyn cm^-2] = ', MinP, MaxP
-      WRITE(*,'(A6,A24,2ES10.3E2)') '', 'Min/Max S       [k_B] = ', MinS, MaxS
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max D   [g cm^-3] = ', MinD, MaxD
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max T         [K] = ', MinT, MaxT
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max Y             = ', MinY, MaxY
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max E  [erg g^-1] = ', MinE, MaxE
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max P [dyn cm^-2] = ', MinP, MaxP
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max S       [k_B] = ', MinS, MaxS
       WRITE(*,*)
     END IF
 
