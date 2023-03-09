@@ -1,5 +1,8 @@
 abem_module_weaklib.o: \
-  wlKindModule.o
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  polylog_module_weaklib.o
 
 abemfrnp.o: \
   wlKindModule.o \
@@ -46,12 +49,6 @@ abem_nucleons_Reddy_et_al_1998_weaklib.o: \
   numerical_module.o \
   physcnst_module.o \
   abem_module_weaklib.o
-
-cc_difcs_weaklib.o: \
-  wlKindModule.o \
-  numerical_module.o \
-  physcnst_module.o \
-  polylog_module_weaklib.o
 
 cc_weak_mag_weaklib.o: \
   wlKindModule.o \
@@ -103,11 +100,6 @@ nc_weak_mag_weaklib.o: \
 
 numerical_module.o: \
   wlKindModule.o
-
-nu_N_absr_momts_weaklib.o: \
-  numerical_module.o \
-  physcnst_module.o \
-  abem_module_weaklib.o
 
 paircal_weaklib.o: \
   nes_module.o \

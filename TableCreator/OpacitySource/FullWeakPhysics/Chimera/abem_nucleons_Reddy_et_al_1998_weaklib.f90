@@ -153,7 +153,7 @@ EXTERNAL fexp
     cmp_trgt_i     = cmpn + dmnp + mn
     cmp_trgt_f     = cmpp + dmnp + mp
     cmp_lep        = cmpe
-    CALL nu_N_absr_momts( nu_type, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
+    CALL nu_N_absr_momts( e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
 &    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nu, ab_r1_nu, e_out_e )
     absornp(k)     = ab_r0_nu
     etam           = - ( e_in(k) + dmnp + cmpn - cmpp - cmpe )/tmev
@@ -175,7 +175,7 @@ EXTERNAL fexp
     cmp_trgt_i     = cmpp + dmnp + mp
     cmp_trgt_f     = cmpn + dmnp + mn
     cmp_lep        = - cmpe
-    CALL nu_N_absr_momts( nu_type, e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
+    CALL nu_N_absr_momts( e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
 &    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nub, ab_r1_nub, e_out_p )
     absornp(k)     = ab_r0_nub
     etap           = - ( e_in(k) + cmpp + cmpe - dmnp - cmpn )/tmev

@@ -51,8 +51,6 @@ ChimeraAB = \
   cc_weak_mag_weaklib.o \
   polylog_module_weaklib.o \
   load_polylog_weaklib.o \
-  cc_difcs_weaklib.o \
-  nu_N_absr_momts_weaklib.o \
   abem_nucleons_isoenergetic_weaklib.o \
   abem_nucleons_Reddy_et_al_1998_weaklib.o \
   abem_nuclei_Bruenn85_FFN_weaklib.o \

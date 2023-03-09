@@ -73,7 +73,9 @@ PROGRAM wlCreateOpacityTable
       i_aeps, iaefnp, rhoaefnp, iaence, iaenct, roaenct, &
       edmpa, edmpe, iaenca, in, ip, ietann
 
-  USE abem_module_weaklib
+  USE abem_module_weaklib, ONLY: &
+      nleg_a, x_a, wt_a, &
+      nleg_e, x_e, wt_e
 
   USE CC_module_weaklib
 
