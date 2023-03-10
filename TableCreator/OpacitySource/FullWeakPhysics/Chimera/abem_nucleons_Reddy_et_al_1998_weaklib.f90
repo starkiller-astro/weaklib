@@ -131,20 +131,21 @@ REAL(dp)                :: fexp
 
 EXTERNAL fexp
 
-!IF ( EmAb_np_non_isoenergetic == 0  .or.  rho < 1.d+09 ) THEN
+#if defined(WEAKLIB_OMP)
+    !$OMP PARALLEL DEFAULT(none)                      &
+    !$OMP PRIVATE( k, tmev, m_trgt_i, m_trgt_f,       &
+    !$OMP          m_lep, cmp_trgt_i, etap,           &
+    !$OMP          cmp_trgt_f, cmp_lep, ab_r0_nu,     &
+    !$OMP          ab_r1_nu, e_out_e, etam,           &
+    !$OMP          ab_r0_nub, ab_r1_nub, e_out_p )    &
+    !$OMP SHARED(  nez, nu_type, t, e_in, cmpn, cmpp, &
+    !$OMP          cmpe, emitnp, absornp )
+#endif
 
 !-----------------------------------------------------------------------
 !  Neutrino absorption on neutrons with recoil, thermal motions, and
 !   nucleon blocking
 !-----------------------------------------------------------------------
-
-  !CALL gquad(nleg_a,x_a,wt_a,nleg_a)
-  !CALL gquad(nleg_e,x_e,wt_e,nleg_e)
-
-  !CALL load_polylog_weaklib
-
-  DO k = 1,nez
-
   IF ( nu_type == 1 ) THEN
     tmev           = kmev * t
     m_trgt_i       = mn
@@ -153,20 +154,25 @@ EXTERNAL fexp
     cmp_trgt_i     = cmpn + dmnp + mn
     cmp_trgt_f     = cmpp + dmnp + mp
     cmp_lep        = cmpe
-    CALL nu_N_absr_momts( e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
-&    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nu, ab_r1_nu, e_out_e )
-    absornp(k)     = ab_r0_nu
-    etam           = - ( e_in(k) + dmnp + cmpn - cmpp - cmpe )/tmev
-    emitnp(k)      = fexp(etam) * absornp(k)
-!    WRITE (6,3001) n,m_trgt_i,m_trgt_f,m_lep,cmp_trgt_i,cmp_trgt_f,cmp_lep,e_in,e_out_e
-! 3001 FORMAT (' n=',i4,' m_trgt_i=',es11.3,' m_trgt_f=',es11.3,' m_lep=',es11.3, &
-!& ' cmp_trgt_i=',es11.3,' cmp_trgt_f=',es11.3,' cmp_lep=',es11.3,' e_in=',es11.3,' e_out_e=',es11.3)
+
+#if defined(WEAKLIB_OMP)
+    !$OMP DO SCHEDULE(static)
+#endif
+    DO k=1,nez
+      CALL nu_N_absr_momts( e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
+           cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nu, ab_r1_nu, e_out_e )
+      absornp(k)     = ab_r0_nu
+      etam           = - ( e_in(k) + dmnp + cmpn - cmpp - cmpe )/tmev
+      emitnp(k)      = fexp(etam) * absornp(k)
+    END DO
+#if defined(WEAKLIB_OMP)
+    !$OMP END DO
+#endif
 
 !-----------------------------------------------------------------------
 !  Antieutrino absorption on protons with recoil, thermal motions, and
 !   nucleon blocking
 !-----------------------------------------------------------------------
-
   ELSE IF ( nu_type == 2 ) THEN
     tmev           = kmev * t
     m_trgt_i       = mp
@@ -175,13 +181,19 @@ EXTERNAL fexp
     cmp_trgt_i     = cmpp + dmnp + mp
     cmp_trgt_f     = cmpn + dmnp + mn
     cmp_lep        = - cmpe
-    CALL nu_N_absr_momts( e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
-&    cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nub, ab_r1_nub, e_out_p )
-    absornp(k)     = ab_r0_nub
-    etap           = - ( e_in(k) + cmpp + cmpe - dmnp - cmpn )/tmev
-    emitnp(k)      = fexp(etap) * absornp(k)
-!    WRITE (6,3001) n,m_trgt_i,m_trgt_f,m_lep,cmp_trgt_i,cmp_trgt_f,cmp_lep,e_in,e_out_p
-
+#if defined(WEAKLIB_OMP)
+    !$OMP DO SCHEDULE(static)
+#endif
+    DO k=1,nez
+      CALL nu_N_absr_momts( e_in(k), tmev, m_trgt_i, m_trgt_f, m_lep, &
+           cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0_nub, ab_r1_nub, e_out_p )
+      absornp(k)     = ab_r0_nub
+      etap           = - ( e_in(k) + cmpp + cmpe - dmnp - cmpn )/tmev
+      emitnp(k)      = fexp(etap) * absornp(k)
+    END DO
+#if defined(WEAKLIB_OMP)
+    !$OMP END DO
+#endif
 !-----------------------------------------------------------------------
 !  Absorption and emission on free nucleons is zero for mu and tau
 !   neutrinos and antineutrinos
@@ -191,8 +203,10 @@ EXTERNAL fexp
     absornp(k)        = zero
     emitnp(k)         = zero
   END IF ! n == 1
-
-END DO
+#if defined(WEAKLIB_OMP)
+    !$OMP END PARALLEL
+write(*,*) 'lol openmp'
+#endif
 
 RETURN
 
