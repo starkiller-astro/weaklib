@@ -205,7 +205,6 @@ EXTERNAL fexp
   END IF ! n == 1
 #if defined(WEAKLIB_OMP)
     !$OMP END PARALLEL
-write(*,*) 'lol openmp'
 #endif
 
 RETURN

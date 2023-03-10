@@ -629,7 +629,7 @@ PRINT*, 'Filling OpacityTable ...'
 
        ENDIF
 
-       ec_table = TRIM(ec_table) // TRIM("TableCreator/OpacitySource/FullWeakPhysics/Executables/")
+       ec_table = TRIM(ec_table) // TRIM("/TableCreator/OpacitySource/FullWeakPhysics/Executables/")
 
        ec_table = TRIM(ec_table) // TRIM("ec_table.d")
 
@@ -748,27 +748,15 @@ PRINT*, 'Filling OpacityTable ...'
 
    END IF
 
-write(*,*) 'nye', nYe
-write(*,*) 'nT', nT
-write(*,*) 'nRho', nRho
-write(*,*) 'total time', nYe*nT*nRho / 60.0
-write(*,*) log10(minval(OpacityTable % TS % States (iRho) % &
-               Values))
-write(*,*) log10(maxval(OpacityTable % TS % States (iRho) % &
-               Values))
-
-write(*,*) 'before ye loop'
    DO l_ye = 1, nYe
 
      ye = OpacityTable % TS % States (iYe) % Values (l_ye)
 
-write(*,*) 'before T loop'
      DO k_t = 1, nT
 
        T = OpacityTable % TS % States (iT) % Values (k_t)
        TMeV = T * kMeV
 
-write(*,*) 'before rho loop'
        DO j_rho = 1, nRho
 
          rho = OpacityTable % TS % States (iRho) % &
@@ -1009,11 +997,8 @@ write(*,*) 'before rho loop'
          END DO !i_rb
 
        END DO  !j_rho
-write(*,*) 'after rho loop'
      END DO  !k_t
-write(*,*) 'after t loop'
    END DO  !l_ye
-write(*,*) 'after ye loop'
 
 !------- EmAb % Offsets
    DO i_r = 1, nOpac_EmAb
