@@ -6,7 +6,6 @@ CHIMERA = \
   $(ChimeraAB)
 
 ChimeraShare = \
-  wlKindModule.o \
   gquad.o \
   numerical_module.o \
   physcnst_module.o \

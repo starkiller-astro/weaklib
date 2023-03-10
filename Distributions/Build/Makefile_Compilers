@@ -27,6 +27,7 @@ OPENMP_OL_birch_cce  = -fopenmp
 OPENMP_OL_birch_gcc  = -fopenmp
 OPENMP_OL_spock_cce  = -fopenmp
 OPENMP_OL_spock_gcc  = -fopenmp
+OPENMP_vass          = -fopenmp 
 ifeq ($(USE_OMP),TRUE)
     OPENMP               = $(OPENMP_$(MACHINE))
 else ifeq ($(USE_OMP_OL),TRUE)
@@ -166,7 +167,7 @@ FLAGS_OPTIMIZE        = $(OPTIMIZE) $(OPENMP) $(OPENACC)
 OPTIMIZE_sn1987b      = -O2 -framework Accelerate
 OPTIMIZE_ranchu       = -O2
 OPTIMIZE_ranchuair    = -O2
-OPTIMIZE_vass         = -O2 -framework Accelerate
+OPTIMIZE_vass         = -O3 -framework Accelerate -march=native
 OPTIMIZE_sjdunham     = -O2
 OPTIMIZE_titan_gnu    = -O3 -march=bdver1
 OPTIMIZE_titan_cray   =
