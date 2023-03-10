@@ -22,11 +22,15 @@ PROGRAM wlOpacityPerformanceTest
 
   IMPLICIT NONE
 
+  INCLUDE 'mpif.h'
+
   INTEGER :: &
     n_rndm, &
     iP, jP, &
     iM, iEta, iT, iE2, iE1, &
-    iH1, iH2
+    nMoments, nPointsEta, nPointsT, &
+    iH1, iH2, &
+    ierr
   INTEGER, PARAMETER :: &
     iD_T = 1, iT_T = 2, iY_T = 3, &
     nPointsX = 2**15, &
@@ -66,9 +70,11 @@ PROGRAM wlOpacityPerformanceTest
   TYPE(OpacityTableType) :: &
     OpTab
 
+  CALL MPI_INIT( ierr )
+
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !$ACC INIT
+  !!$ACC INIT
 #endif
 
   CALL InitializeHDF( )
@@ -232,21 +238,34 @@ PROGRAM wlOpacityPerformanceTest
   LogT = LOG10( T )
   LogEta = LOG10( Eta )
 
+  opEC_GPU_1 = 0.0d0
+  opEC_GPU_2 = 0.0d0
+  opEC_GPU_3 = 0.0d0
+
+  opH1_GPU_1 = 0.0d0
+  opH1_GPU_2 = 0.0d0
+  opH1_GPU_3 = 0.0d0
+  opH1_GPU_4 = 0.0d0
+
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET ENTER DATA &
   !$OMP MAP( to: LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
   !$OMP          LogE, LogD, LogT, Y, LogEta, &
-  !$OMP          OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT ) &
-  !$OMP MAP( alloc: opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
-  !$OMP             opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
+  !$OMP          OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT, &
+  !$OMP          opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$OMP          opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #elif defined (WEAKLIB_OACC)
   !$ACC ENTER DATA &
   !$ACC COPYIN( LogEs_T, LogDs_T, LogTs_T, Ys_T, LogEtas_T, &
   !$ACC         LogE, LogD, LogT, Y, LogEta, &
-  !$ACC         OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT ) &
-  !$ACC CREATE( opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
+  !$ACC         OS_EmAb, EmAb_T, OS_NES, NES_T, NES_AT, &
+  !$ACC         opEC_GPU_1, opEC_GPU_2, opEC_GPU_3, &
   !$ACC         opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
 #endif
+
+  nMoments   = OpTab % Scat_NES % nMoments
+  nPointsEta = OpTab % Scat_NES % nPoints(5)
+  nPointsT   = OpTab % Scat_NES % nPoints(4)
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD COLLAPSE(5)
@@ -254,9 +273,9 @@ PROGRAM wlOpacityPerformanceTest
   !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(5) &
   !$ACC PRESENT( LogE, LogEs_T, OS_NES, NES_T, NES_AT )
 #endif
-  DO iM = 1, OpTab % Scat_NES % nMoments
-    DO iEta = 1, OpTab % Scat_NES % nPoints(5)
-      DO iT = 1, OpTab % Scat_NES % nPoints(4)
+  DO iM = 1, nMoments
+    DO iEta = 1, nPointsEta
+      DO iT = 1, nPointsT
         DO iE2 = 1, nPointsE
           DO iE1 = 1, nPointsE
 
@@ -529,11 +548,13 @@ PROGRAM wlOpacityPerformanceTest
   WRITE(*,*)
 
   WRITE(*,*) 'NES (CPU)'
-  WRITE(*,*) MINVAL( opEC_CPU_1 ), MAXVAL( opEC_CPU_1 )
-  WRITE(*,*) MINVAL( opEC_CPU_2 ), MAXVAL( opEC_CPU_2 )
-  WRITE(*,*) MINVAL( opEC_CPU_3 ), MAXVAL( opEC_CPU_3 )
-  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_2 ) )
-  WRITE(*,*) MAXVAL( ABS( opEC_CPU_1 - opEC_CPU_3 ) )
+  WRITE(*,*) MINVAL( opH1_CPU_1 ), MAXVAL( opH1_CPU_1 )
+  WRITE(*,*) MINVAL( opH1_CPU_2 ), MAXVAL( opH1_CPU_2 )
+  WRITE(*,*) MINVAL( opH1_CPU_3 ), MAXVAL( opH1_CPU_3 )
+  WRITE(*,*) MINVAL( opH1_CPU_4 ), MAXVAL( opH1_CPU_4 )
+  WRITE(*,*) MAXVAL( ABS( opH1_CPU_1 - opH1_CPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_CPU_1 - opH1_CPU_3 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_CPU_1 - opH1_CPU_4 ) )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE FROM( opH1_GPU_1, opH1_GPU_2, opH1_GPU_3, opH1_GPU_4 )
@@ -542,11 +563,13 @@ PROGRAM wlOpacityPerformanceTest
 #endif
 
   WRITE(*,*) 'NES (GPU)'
-  WRITE(*,*) MINVAL( opEC_GPU_1 ), MAXVAL( opEC_GPU_1 )
-  WRITE(*,*) MINVAL( opEC_GPU_2 ), MAXVAL( opEC_GPU_2 )
-  WRITE(*,*) MINVAL( opEC_GPU_3 ), MAXVAL( opEC_GPU_3 )
-  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_2 ) )
-  WRITE(*,*) MAXVAL( ABS( opEC_GPU_1 - opEC_GPU_3 ) )
+  WRITE(*,*) MINVAL( opH1_GPU_1 ), MAXVAL( opH1_GPU_1 )
+  WRITE(*,*) MINVAL( opH1_GPU_2 ), MAXVAL( opH1_GPU_2 )
+  WRITE(*,*) MINVAL( opH1_GPU_3 ), MAXVAL( opH1_GPU_3 )
+  WRITE(*,*) MINVAL( opH1_GPU_4 ), MAXVAL( opH1_GPU_4 )
+  WRITE(*,*) MAXVAL( ABS( opH1_GPU_1 - opH1_GPU_2 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_GPU_1 - opH1_GPU_3 ) )
+  WRITE(*,*) MAXVAL( ABS( opH1_GPU_1 - opH1_GPU_4 ) )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET EXIT DATA &
@@ -568,8 +591,10 @@ PROGRAM wlOpacityPerformanceTest
 
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !$ACC SHUTDOWN
+  !!$ACC SHUTDOWN
 #endif
+
+  CALL MPI_FINALIZE( ierr )
 
 CONTAINS
 
