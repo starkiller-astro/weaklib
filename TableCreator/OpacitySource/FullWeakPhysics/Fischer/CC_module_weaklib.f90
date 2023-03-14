@@ -414,6 +414,10 @@ write (*,*) 'massp interp min/max', minval(massp), maxval(massp)
   integer :: k
   real(dp) :: op3, chemhat
 
+  real(dp) :: fexp                 ! exponential
+
+  external fexp
+
   chemhat = chemn-chemp
 
   me   = m
@@ -436,7 +440,7 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
       absor(k) = absor(k) / 1.0d2
       write(*,*) e_nu(k), absor(k)
       !detailed balance
-      emit(k) = absor(k) / (exp((e_nu(k)-cheme+chemhat+Q)/Tem))
+      emit(k) = absor(k) / (fexp((e_nu(k)-cheme+chemhat+Q)/Tem))
     end do
 
   endif
@@ -457,7 +461,7 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
         ab_inv_n_decay(k) = ab_inv_n_decay(k) / 1.0d2
         !detailed balance
         em_inv_n_decay(k) = ab_inv_n_decay(k) / &
-                            (exp((e_nu(k)+cheme-chemhat-Q)/Tem))
+                            (fexp((e_nu(k)+cheme-chemhat-Q)/Tem))
       enddo
 
     else
@@ -468,7 +472,7 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
         absor(k) = absor(k) / 1.0d2
         !detailed balance
         emit(k)  = absor(k) / &
-                            (exp((e_nu(k)+cheme-chemhat-Q)/Tem))
+                            (fexp((e_nu(k)+cheme-chemhat-Q)/Tem))
       enddo
 
     endif
@@ -500,6 +504,10 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
     real(dp), dimension(N1) :: Ena,wEn
     real(dp), dimension(N2) :: Eea,wEe
 
+    real(dp) :: fexp                 ! exponential
+
+    external fexp
+
     Enu = xEnu
     res = 0.0d0
     call Range_pn()
@@ -521,12 +529,12 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
       do j=1,N2
         xEe = Eea(j)
 !write(*,*) j, En, xEe
-        xf3 = 1.0d0/( exp((xEe-mue)/Tem) + 1.0d0 )
+        xf3 = 1.0d0/( fexp((xEe-mue)/Tem) + 1.0d0 )
         Ep = Enu+En-xEe
         call Calc_ampsq(En,xEe,xamp)
         if (xamp.lt.0.0d0) xamp = 0.0d0
-        xf2 = 1.0d0/( exp((En-mun)/Tem) + 1.0d0 )
-        xf4 = 1.0d0/( exp((Ep-mup)/Tem) + 1.0d0 )
+        xf2 = 1.0d0/( fexp((En-mun)/Tem) + 1.0d0 )
+        xf4 = 1.0d0/( fexp((Ep-mup)/Tem) + 1.0d0 )
         res = res + xf2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*wEn(i)*wEe(j)/Enu**2
       end do
     end do
@@ -552,6 +560,10 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
     real(dp) :: xEnu, res, xamp
     real(dp) :: E1,E2,E3,E4,E2f,E4f,mu2,mu4,mu3,U2,U4,Ep
     real(dp) :: xf2,xf3,xf4
+
+    real(dp) :: fexp                 ! exponential
+
+    external fexp
 
     U2 = Un
     U4 = Up
@@ -580,9 +592,9 @@ write(*,*) 'hello there', Tem, species, inv_n_decay
         xEe = Eea(j)
         Ep = Enu+xEe+En
         call Calc_Ampsq_D(En,xEe,xamp)
-        xf2 = 1.0d0/( exp((En-mun)/Tem) + 1.0d0 )
-        xf3 = 1.0d0/( exp((xEe-mue)/Tem) + 1.0d0 )
-        xf4 = 1.0d0/( exp((Ep-mup)/Tem) + 1.0d0 )
+        xf2 = 1.0d0/( fexp((En-mun)/Tem) + 1.0d0 )
+        xf3 = 1.0d0/( fexp((xEe-mue)/Tem) + 1.0d0 )
+        xf4 = 1.0d0/( fexp((Ep-mup)/Tem) + 1.0d0 )
         if(opt0.eq.3) then          ! inverse decay
           res = res + xf2*xf3*(1.0-xf4)*xamp*wEn(i)*wEe(j)/Enu**2
         else if(opt0.eq.4) then     ! decay, *blocking of neutrinos is not added*

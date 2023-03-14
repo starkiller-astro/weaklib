@@ -282,6 +282,9 @@ END SUBROUTINE nu_N_absr_momts
       real(dp) zi1, zi2, zi3, I2U, I2D, impl, impt, impa, impva
       real(dp) r1, r2, r3, A, B, C
 
+      real(dp)                :: fexp
+
+      external fexp
 !------------------------------
 !--      KINEMATICAL FACTORS
 !------------------------------
@@ -295,7 +298,7 @@ END SUBROUTINE nu_N_absr_momts
          fwqt = 0.d0
          return
       else
-         fd = 1.d0/(1.d0+dexp(efac))
+         fd = 1.d0/(1.d0+fexp(efac))
       end if
 !------------------------------
 !     -      RESPONSE FUNCTIONS
@@ -327,8 +330,8 @@ END SUBROUTINE nu_N_absr_momts
 
             call polylog(arg1,uli1,uli2,uli3)
 
-            zi1 = -1.d0/(1.d0+dexp(-arg1))
-            zi2 = dlog(1.d0+dexp(arg1))
+            zi1 = -1.d0/(1.d0+fexp(-arg1))
+            zi2 = dlog(1.d0+fexp(arg1))
             zi3 = -uli2
 
             pd = 1.d0/(1.d0-0.5d0*z)
@@ -341,7 +344,7 @@ END SUBROUTINE nu_N_absr_momts
             zi1 = (uli1 - bli1)/z
             zi2 = (uli2 - bli2)/z
             zi3 = (uli3 - bli3)/z
-            pd = z/(1.d0-dexp(-z))
+            pd = z/(1.d0-fexp(-z))
 
          endif
 
@@ -422,13 +425,17 @@ SUBROUTINE POLYLOG(x,pl1,pl2,pl3)
   real(dp) :: pi2,arg,a,b
   parameter (pi2=9.8696044d0)
 
-  pl1 = x+dlog(1.d0+dexp(-x))
+  real(dp)                :: fexp
+
+  external fexp
+
+  pl1 = x+dlog(1.d0+fexp(-x))
 
   if (x.ge.4.6) then
-    pl2 = -(0.5d0*x*x + pi2/6.d0)/(1.d0+dexp(-1.5*x))
-    pl3 = -x*(x*x + pi2)/6.d0/(1.d0+dexp(-1.69*x))
+    pl2 = -(0.5d0*x*x + pi2/6.d0)/(1.d0+fexp(-1.5*x))
+    pl3 = -x*(x*x + pi2)/6.d0/(1.d0+fexp(-1.69*x))
   else
-    arg=dexp(x)
+    arg=fexp(x)
     j = int(10.d0*arg)
     a = 10.d0*arg - dble(j)
     b = 1.d0 - a

@@ -263,7 +263,7 @@ DO kb = 1,nez
 !   (Equation 45 Hannestad & Raffelt)
 !-----------------------------------------------------------------------
 
-    s_ND_num       = 2.d0 * pi1_2 * ( x + 2.d0 - exp(- y/12.d0 ) )**1.5d0 &
+    s_ND_num       = 2.d0 * pi1_2 * ( x + 2.d0 - fexp(- y/12.d0 ) )**1.5d0 &
 &                  * ( x**2 + 2.d0 * x * y + fi_third * y**2 + 1.d0 )
     s_ND_denom     = pi1_2 + ( pi1_8 + x + y )**4
     s_ND           = s_ND_num/s_ND_denom

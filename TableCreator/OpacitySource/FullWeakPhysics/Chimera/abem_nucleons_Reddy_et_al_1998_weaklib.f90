@@ -141,7 +141,6 @@ EXTERNAL fexp
     !$OMP SHARED(  nez, nu_type, t, e_in, cmpn, cmpp, &
     !$OMP          cmpe, emitnp, absornp )
 #endif
-
 !-----------------------------------------------------------------------
 !  Neutrino absorption on neutrons with recoil, thermal motions, and
 !   nucleon blocking
