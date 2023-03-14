@@ -49,6 +49,8 @@ MODULE wlOpacityTableIOModuleHDF
     AllocateThermoState,             &
     DeAllocateThermoState
   USE HDF5
+  USE wlParallelModule, ONLY:        &
+    myid, ierr
 
   IMPLICIT NONE
   PRIVATE
@@ -797,6 +799,8 @@ CONTAINS
     ( OpacityTable, FileName_EmAb_Option, FileName_Iso_Option, &
       FileName_NES_Option, FileName_Pair_Option, FileName_Brem_Option, &
       EquationOfStateTableName_Option, Verbose_Option )
+
+    USE MPI
  
     TYPE(OpacityTableType), INTENT(inout)          :: OpacityTable
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_EmAb_Option
@@ -944,10 +948,16 @@ CONTAINS
 
         IF ( hdferr .ne. 0 ) THEN
 
-          WRITE(*,*) 'Group EmAb Parameters not found in ', TRIM( FileName )
-          WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-          WRITE(*,*) 'Electron capture on nulcei using a LMSH table is not included,'
-          WRITE(*,*) 'as well as corrections to Bruenn85 opacities for EmAb.'
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+
+            WRITE(*,*) 'Group EmAb Parameters not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            WRITE(*,*) 'Electron capture on nulcei using a LMSH table is not included,'
+            WRITE(*,*) 'as well as corrections to Bruenn85 opacities for EmAb.'
+
+          ENDIF
 
           OpacityTable % EmAb % np_FK               = -1
           OpacityTable % EmAb % np_FK_inv_n_decay   = -1
@@ -1646,6 +1656,8 @@ CONTAINS
 
   SUBROUTINE ReadOpacityTypeScatHDF( Scat, group_id )
 
+    USE MPI
+
     CLASS(OpacityTypeScat),INTENT(inout)              :: Scat
     INTEGER(HID_T), INTENT(in)                       :: group_id
 
@@ -1675,8 +1687,13 @@ CONTAINS
           CALL h5dopen_f( group_id, "weak_magnetism_corr", dataset_id, hdferr )
 
           IF( hdferr .ne. 0 ) THEN
-            WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          
+            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+            IF(myid == 0) THEN
+              WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
+              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            ENDIF
 
             CALL h5eclear_f( hdferr )
             CALL h5eset_auto_f( 1, hdferr )
@@ -1693,8 +1710,12 @@ CONTAINS
           CALL h5dopen_f( group_id, "ion_ion_corr", dataset_id, hdferr )
 
           IF( hdferr .ne. 0 ) THEN
-            WRITE(*,*) 'Dataset ion_ion_corr not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+            IF(myid == 0) THEN
+              WRITE(*,*) 'Dataset ion_ion_corr not found in ', TRIM( FileName )
+              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            ENDIF
 
             CALL h5eclear_f( hdferr )
             CALL h5eset_auto_f( 1, hdferr )
@@ -1709,8 +1730,12 @@ CONTAINS
           CALL h5dopen_f( group_id, "many_body_corr", dataset_id, hdferr )
 
           IF( hdferr .ne. 0 ) THEN
-            WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+            IF(myid == 0) THEN
+              WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
+              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            ENDIF
 
             CALL h5eclear_f( hdferr )
             CALL h5eset_auto_f( 1, hdferr )
@@ -1736,8 +1761,12 @@ CONTAINS
           CALL h5dopen_f( group_id, "NPS", dataset_id, hdferr )
 
           IF( hdferr .ne. 0 ) THEN
-            WRITE(*,*) 'Dataset NPS not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+            IF(myid == 0) THEN
+              WRITE(*,*) 'Dataset NPS not found in ', TRIM( FileName )
+              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            ENDIF
 
             CALL h5eclear_f( hdferr )
             CALL h5eset_auto_f( 1, hdferr )

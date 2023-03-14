@@ -18,4 +18,5 @@ wlOpacityTableIOModuleHDF.o: \
   wlOpacityFieldsModule.o \
   wlEOSIOModuleHDF.o \
   wlIOModuleHDF.o \
+  wlParallelModule.o \
   wlOpacityTableIOModuleHDF.f90
