@@ -121,13 +121,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 0
+                              = 1
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 1
+                              = 0
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
@@ -136,12 +136,12 @@ IMPLICIT NONE
                               !and Mezzacappa & Bruenn (1993) is used
 
    INTEGER, PARAMETER      :: EmAb_np_weak_magnetism &
-                              = 1
+                              = 0
                               !Weak magnetism corrections for EmAb on free nucleons
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: EmAb_nuclei_EC_FFN &
-                              = 0 
+                              = 0
                               !EmAb on nuclei using the Fuller, Fowler, 
                               !Neuman 1982, Ap. J. 252, 715 approximation for the 
                               !heavy nucleus matrix element as given in Bruenn 1985
@@ -165,24 +165,24 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Iso_weak_magnetism &
-                              = 1
+                              = 0
                               !Weak magnetism corrections for isoenergetic scattering
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: Iso_ion_ion_corrections &
-                              = 1
+                              = 0
                               !Ion-ion correlation corrections to isoenergetic scattering
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
    INTEGER, PARAMETER      :: Iso_many_body_corrections &
-                              = 1
+                              = 0
                               !Modification to neutral current scattering due to many-body effects
 
    INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
+   INTEGER, PARAMETER      :: NPS        = 0  !Include neutrino-positron scattering as well
 
    INTEGER, PARAMETER      :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
@@ -739,7 +739,7 @@ PRINT*, 'Filling OpacityTable ...'
 
    WRITE(*,*) 'Now building EmAb on nucleons'
 
-   IF(EmAb_np_non_isoenergetic .gt. 0) THEN
+   IF(EmAb_np_non_isoenergetic == 1) THEN
 
      CALL gquad(nleg_a,x_a,wt_a,nleg_a)
      CALL gquad(nleg_e,x_e,wt_e,nleg_e)
@@ -747,6 +747,16 @@ PRINT*, 'Filling OpacityTable ...'
      CALL load_polylog_weaklib
 
    END IF
+
+   !these are multiplicative corrections
+   xi_n_wm  = 1.0d0
+   xib_p_wm = 1.0d0
+
+   IF(EmAb_np_weak_magnetism == 1) THEN
+                 
+     CALL cc_weak_mag_weaklib( E_cells, xi_n_wm, xib_p_wm, nPointsE )
+
+   ENDIF
 
    DO l_ye = 1, nYe
 
@@ -852,8 +862,8 @@ PRINT*, 'Filling OpacityTable ...'
                                                      'mass fractions do not add up to 1 ', &
                                                      rho, ' ',TMeV, ' ',Ye, ' ',total_fraction
 
-            if (     EmAb_np_FK .gt. 0 &
-                .or. EmAb_np_FK_inv_n_decay   .gt. 0 ) then
+            if (     EmAb_np_FK == 1 &
+                .or. EmAb_np_FK_inv_n_decay == 1 ) then
  
               Un_loc = EOS_Un(j_rho, k_t, l_ye)
               Up_loc = EOS_Up(j_rho, k_t, l_ye)
@@ -884,11 +894,11 @@ PRINT*, 'Filling OpacityTable ...'
              ab_nuclei_EC_FFN = 0.0d0
              em_nuclei_EC_FFN = 0.0d0
 
-             IF(EmAb_np_FK .gt. 0) THEN
+             IF(EmAb_np_FK == 1) THEN
 
                WRITE(*,*) "EmAb on nucleons using full kinematics approach"
 
-               IF(i_r .le. 2) THEN
+               IF(i_r <= 2) THEN
                  CALL CC_EmAb( OpacityTable % EnergyGrid % Values,     &
                                TMeV, mass_e, chem_e, chem_n+mass_n, chem_p+mass_p,      &
                                massn_loc, massp_loc, Un_loc, Up_loc,   &
@@ -898,7 +908,7 @@ PRINT*, 'Filling OpacityTable ...'
 
                ENDIF
              
-             ELSE IF(EmAb_np_non_isoenergetic .gt. 0) THEN
+             ELSE IF(EmAb_np_non_isoenergetic == 1) THEN
 
                IF(rho >= 1.0d9) THEN
                  CALL abem_np_non_isoenergetic_weaklib & 
@@ -912,51 +922,41 @@ PRINT*, 'Filling OpacityTable ...'
                         rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
                         ab_nucleons, em_nucleons, nPointsE)
                END IF
+             
+               IF (i_r == 1) THEN !electron neutrino weak mag correction
 
-               IF(EmAb_np_weak_magnetism .gt. 0) THEN
+                 ab_nucleons = ab_nucleons * xi_n_wm
+                 em_nucleons = em_nucleons * xi_n_wm
 
-                 CALL cc_weak_mag_weaklib( E_cells, xi_n_wm, xib_p_wm, nPointsE )
+               ELSE IF (i_r == 2) THEN !electron anti-neutrino weak mag correction
 
-                 IF (i_r .eq. 1) THEN !electron neutrino weak mag correction
+                 ab_nucleons = ab_nucleons * xib_p_wm
+                 em_nucleons = em_nucleons * xib_p_wm
 
-                   ab_nucleons = ab_nucleons * xi_n_wm
-                   em_nucleons = em_nucleons * xi_n_wm
-
-                 ELSE IF (i_r .eq. 2) THEN !electron anti-neutrino weak mag correction
-
-                   ab_nucleons = ab_nucleons * xib_p_wm
-                   em_nucleons = em_nucleons * xib_p_wm
-
-                 ENDIF
                ENDIF
 
-             ELSE IF(EmAb_np_isoenergetic .gt. 0) THEN
+             ELSE IF(EmAb_np_isoenergetic == 1) THEN
 
                CALL abem_nucleons_isoenergetic_weaklib & 
                     ( i_r, E_cells, &
                       rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
                       ab_nucleons, em_nucleons, nPointsE)
 
-               IF(EmAb_np_weak_magnetism .gt. 0) THEN
+               IF (i_r == 1) THEN !electron neutrino weak mag correction
 
-                 CALL cc_weak_mag_weaklib( E_cells, xi_n_wm, xib_p_wm, nPointsE )
+                 ab_nucleons = ab_nucleons * xi_n_wm
+                 em_nucleons = em_nucleons * xi_n_wm
 
-                 IF (i_r .eq. 1) THEN !electron neutrino weak mag correction
+               ELSE IF (i_r == 2) THEN !electron anti-neutrino weak mag correction
 
-                   ab_nucleons = ab_nucleons * xi_n_wm
-                   em_nucleons = em_nucleons * xi_n_wm
+                 ab_nucleons = ab_nucleons * xib_p_wm
+                 em_nucleons = em_nucleons * xib_p_wm
 
-                 ELSE IF (i_r .eq. 2) THEN !electron anti-neutrino weak mag correction
-
-                   ab_nucleons = ab_nucleons * xib_p_wm
-                   em_nucleons = em_nucleons * xib_p_wm
-
-                 ENDIF
                ENDIF
 
              ENDIF
 
-             IF(EmAb_nuclei_EC_FFN .gt. 0 .and. i_r .eq. 1) THEN
+             IF(EmAb_nuclei_EC_FFN == 1 .and. i_r == 1) THEN
 
                CALL abem_nuclei_EC_FFN_weaklib( E_cells, rho, T, xheavy, A, Z, chem_n, chem_p, &
                                              chem_e, ab_nuclei_EC_FFN, em_nuclei_EC_FFN, &
