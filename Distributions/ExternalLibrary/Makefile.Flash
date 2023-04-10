@@ -36,6 +36,9 @@ endif
 ifeq ($(USE_OMP_OL),TRUE)
   FFLAGS += $(FFLAGS_OMP_OL)
 endif
+ifeq ($(USE_OMP),TRUE)
+  FFLAGS += $(OPENMP)
+endif
 
 # command for generating a library
 MKLIB = ar -r
