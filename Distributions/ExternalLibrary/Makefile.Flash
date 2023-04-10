@@ -43,6 +43,9 @@ endif
 ifeq ($(USE_OMP_OL),TRUE)
   FFLAGS += $(FFLAGS_OMP_OL)
 endif
+ifeq ($(USE_OMP),TRUE)
+  FFLAGS += $(OPENMP)
+endif
 
 FFLAGS += $(VERSION_FLAGS)
 
