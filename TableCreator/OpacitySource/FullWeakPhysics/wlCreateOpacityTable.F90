@@ -141,7 +141,7 @@ IMPLICIT NONE
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: EmAb_nuclei_EC_FFN &
-                              = 0
+                              = 1
                               !EmAb on nuclei using the Fuller, Fowler, 
                               !Neuman 1982, Ap. J. 252, 715 approximation for the 
                               !heavy nucleus matrix element as given in Bruenn 1985
