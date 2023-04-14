@@ -121,13 +121,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 1
+                              = 0
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 0
+                              = 1
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
@@ -136,18 +136,18 @@ IMPLICIT NONE
                               !and Mezzacappa & Bruenn (1993) is used
 
    INTEGER, PARAMETER      :: EmAb_np_weak_magnetism &
-                              = 0
+                              = 1
                               !Weak magnetism corrections for EmAb on free nucleons
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: EmAb_nuclei_EC_FFN &
-                              = 1
+                              = 0
                               !EmAb on nuclei using the Fuller, Fowler, 
                               !Neuman 1982, Ap. J. 252, 715 approximation for the 
                               !heavy nucleus matrix element as given in Bruenn 1985
 
    INTEGER, PARAMETER      :: EmAb_nuclei_EC_table &
-                              = 0 
+                              = 1 
                               !EmAb on nuclei using a NSE-folded LMSH table
                               !Langanke et al. (2003), Hix et al. (2003)
    !tabulated EC table range
@@ -165,24 +165,24 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Iso_weak_magnetism &
-                              = 0
+                              = 1
                               !Weak magnetism corrections for isoenergetic scattering
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: Iso_ion_ion_corrections &
-                              = 0
+                              = 1
                               !Ion-ion correlation corrections to isoenergetic scattering
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
    INTEGER, PARAMETER      :: Iso_many_body_corrections &
-                              = 0
+                              = 1
                               !Modification to neutral current scattering due to many-body effects
 
    INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: NPS        = 0  !Include neutrino-positron scattering as well
+   INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
 
    INTEGER, PARAMETER      :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
