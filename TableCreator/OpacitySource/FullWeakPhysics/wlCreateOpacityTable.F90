@@ -147,7 +147,7 @@ IMPLICIT NONE
                               !heavy nucleus matrix element as given in Bruenn 1985
 
    INTEGER, PARAMETER      :: EmAb_nuclei_EC_table &
-                              = 1 
+                              = 0 
                               !EmAb on nuclei using a NSE-folded LMSH table
                               !Langanke et al. (2003), Hix et al. (2003)
    !tabulated EC table range
