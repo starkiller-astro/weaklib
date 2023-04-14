@@ -23,6 +23,7 @@
 *.ptx
 *.dSYM
 *.acc.s
+*.i
 pgipar*
 
 # Sam's files to ignore

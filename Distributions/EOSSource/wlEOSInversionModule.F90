@@ -24,11 +24,19 @@ MODULE wlEOSInversionModule
   PUBLIC :: ComputeTemperatureWith_DPY
   PUBLIC :: ComputeTemperatureWith_DPY_Many
   PUBLIC :: ComputeTemperatureWith_DPY_Single_Guess
+  PUBLIC :: ComputeTemperatureWith_DPY_Single_Guess_Error
+  PUBLIC :: ComputeTemperatureWith_DPY_Single_Guess_NoError
   PUBLIC :: ComputeTemperatureWith_DPY_Single_NoGuess
+  PUBLIC :: ComputeTemperatureWith_DPY_Single_NoGuess_Error
+  PUBLIC :: ComputeTemperatureWith_DPY_Single_NoGuess_NoError
   PUBLIC :: ComputeTemperatureWith_DSY
   PUBLIC :: ComputeTemperatureWith_DSY_Many
   PUBLIC :: ComputeTemperatureWith_DSY_Single_Guess
+  PUBLIC :: ComputeTemperatureWith_DSY_Single_Guess_Error
+  PUBLIC :: ComputeTemperatureWith_DSY_Single_Guess_NoError
   PUBLIC :: ComputeTemperatureWith_DSY_Single_NoGuess
+  PUBLIC :: ComputeTemperatureWith_DSY_Single_NoGuess_Error
+  PUBLIC :: ComputeTemperatureWith_DSY_Single_NoGuess_NoError
   PUBLIC :: DescribeEOSInversionError
 
   LOGICAL  :: InversionInitialized
@@ -76,15 +84,54 @@ MODULE wlEOSInversionModule
 
   INTERFACE ComputeTemperatureWith_DPY
     MODULE PROCEDURE ComputeTemperatureWith_DPY_Many
-    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess
-    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess_NoError
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess_NoError
   END INTERFACE ComputeTemperatureWith_DPY
+
+  INTERFACE ComputeTemperatureWith_DPY_Single
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess_NoError
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess_NoError
+  END INTERFACE ComputeTemperatureWith_DPY_Single
+
+  INTERFACE ComputeTemperatureWith_DPY_Single_Guess
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_Guess_NoError
+  END INTERFACE ComputeTemperatureWith_DPY_Single_Guess
+
+  INTERFACE ComputeTemperatureWith_DPY_Single_NoGuess
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DPY_Single_NoGuess_NoError
+  END INTERFACE ComputeTemperatureWith_DPY_Single_NoGuess
 
   INTERFACE ComputeTemperatureWith_DSY
     MODULE PROCEDURE ComputeTemperatureWith_DSY_Many
-    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess
-    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess_NoError
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess_NoError
   END INTERFACE ComputeTemperatureWith_DSY
+
+  INTERFACE ComputeTemperatureWith_DSY_Single
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess_NoError
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess_NoError
+  END INTERFACE ComputeTemperatureWith_DSY_Single
+
+  INTERFACE ComputeTemperatureWith_DSY_Single_Guess
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_Guess_NoError
+  END INTERFACE ComputeTemperatureWith_DSY_Single_Guess
+
+  INTERFACE ComputeTemperatureWith_DSY_Single_NoGuess
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess_Error
+    MODULE PROCEDURE ComputeTemperatureWith_DSY_Single_NoGuess_NoError
+  END INTERFACE ComputeTemperatureWith_DSY_Single_NoGuess
+
 
 CONTAINS
 
@@ -697,10 +744,10 @@ CONTAINS
     DO i = 1, SIZE( D )
       IF ( UseInitialGuess ) THEN
         T_Guess = T(i)
-        CALL ComputeTemperatureWith_DPY_Single_Guess &
+        CALL ComputeTemperatureWith_DPY_Single_Guess_Error &
                ( D(i), P(i), Y(i), Ds, Ts, Ys, Ps, OS, T(i), T_Guess, Error(i) )
       ELSE
-        CALL ComputeTemperatureWith_DPY_Single_NoGuess &
+        CALL ComputeTemperatureWith_DPY_Single_NoGuess_Error &
                ( D(i), P(i), Y(i), Ds, Ts, Ys, Ps, OS, T(i), Error(i) )
       END IF
     END DO
@@ -710,8 +757,8 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DPY_Many
 
 
-  SUBROUTINE ComputeTemperatureWith_DPY_Single_Guess &
-    ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, T_Guess, Error_Option )
+  SUBROUTINE ComputeTemperatureWith_DPY_Single_Guess_Error &
+    ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -724,7 +771,32 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option
+    INTEGER,  INTENT(out) :: Error
+
+    T = 0.0_dp
+    Error = CheckInputError( D, P, Y, MinP, MaxP )
+    IF ( Error == 0 ) THEN
+      CALL ComputeTemperatureWith_DXY_Guess &
+             ( D, P, Y, Ds, Ts, Ys, Ps, Os, T, T_Guess, Error )
+    END IF
+
+  END SUBROUTINE ComputeTemperatureWith_DPY_Single_Guess_Error
+
+
+  SUBROUTINE ComputeTemperatureWith_DPY_Single_Guess_NoError &
+    ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, T_Guess )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in)  :: D     , P     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Ps(1:,1:,1:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(out) :: T
+    REAL(dp), INTENT(in)  :: T_Guess
 
     INTEGER  :: Error
 
@@ -734,13 +806,12 @@ CONTAINS
       CALL ComputeTemperatureWith_DXY_Guess &
              ( D, P, Y, Ds, Ts, Ys, Ps, Os, T, T_Guess, Error )
     END IF
-    IF( PRESENT( Error_Option ) ) Error_Option = Error
 
-  END SUBROUTINE ComputeTemperatureWith_DPY_Single_Guess
+  END SUBROUTINE ComputeTemperatureWith_DPY_Single_Guess_NoError
 
 
-  SUBROUTINE ComputeTemperatureWith_DPY_Single_NoGuess &
-    ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, Error_Option )
+  SUBROUTINE ComputeTemperatureWith_DPY_Single_NoGuess_Error &
+    ( D, P, Y, Ds, Ts, Ys, Ps, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -752,7 +823,31 @@ CONTAINS
     REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option
+    INTEGER,  INTENT(out)   :: Error
+
+    T = 0.0_dp
+    Error = CheckInputError( D, P, Y, MinP, MaxP )
+    IF ( Error == 0 ) THEN
+      CALL ComputeTemperatureWith_DXY_NoGuess &
+             ( D, P, Y, Ds, Ts, Ys, Ps, Os, T, Error )
+    END IF
+
+  END SUBROUTINE ComputeTemperatureWith_DPY_Single_NoGuess_Error
+
+
+  SUBROUTINE ComputeTemperatureWith_DPY_Single_NoGuess_NoError &
+    ( D, P, Y, Ds, Ts, Ys, Ps, OS, T )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in)    :: D     , P     , Y
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
+    REAL(dp), INTENT(in)    :: OS
+    REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
 
@@ -762,9 +857,8 @@ CONTAINS
       CALL ComputeTemperatureWith_DXY_NoGuess &
              ( D, P, Y, Ds, Ts, Ys, Ps, Os, T, Error )
     END IF
-    IF( PRESENT( Error_Option ) ) Error_Option = Error
 
-  END SUBROUTINE ComputeTemperatureWith_DPY_Single_NoGuess
+  END SUBROUTINE ComputeTemperatureWith_DPY_Single_NoGuess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DSY_Many &
@@ -794,10 +888,10 @@ CONTAINS
     DO i = 1, SIZE( D )
       IF ( UseInitialGuess ) THEN
         T_Guess = T(i)
-        CALL ComputeTemperatureWith_DSY_Single_Guess &
+        CALL ComputeTemperatureWith_DSY_Single_Guess_Error &
                ( D(i), S(i), Y(i), Ds, Ts, Ys, Ss, OS, T(i), T_Guess, Error(i) )
       ELSE
-        CALL ComputeTemperatureWith_DSY_Single_NoGuess &
+        CALL ComputeTemperatureWith_DSY_Single_NoGuess_Error &
                ( D(i), S(i), Y(i), Ds, Ts, Ys, Ss, OS, T(i), Error(i) )
       END IF
     END DO
@@ -807,8 +901,8 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DSY_Many
 
 
-  SUBROUTINE ComputeTemperatureWith_DSY_Single_Guess &
-    ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, T_Guess, Error_Option )
+  SUBROUTINE ComputeTemperatureWith_DSY_Single_Guess_Error &
+    ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -821,7 +915,32 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option
+    INTEGER,  INTENT(out) :: Error
+
+    T = 0.0_dp
+    Error = CheckInputError( D, S, Y, MinS, MaxS )
+    IF ( Error == 0 ) THEN
+      CALL ComputeTemperatureWith_DXY_Guess &
+             ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, T_Guess, Error )
+    END IF
+
+  END SUBROUTINE ComputeTemperatureWith_DSY_Single_Guess_Error
+
+
+  SUBROUTINE ComputeTemperatureWith_DSY_Single_Guess_NoError &
+    ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, T_Guess )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in)  :: D     , S     , Y
+    REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)  :: Ss(1:,1:,1:)
+    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(out) :: T
+    REAL(dp), INTENT(in)  :: T_Guess
 
     INTEGER  :: Error
 
@@ -831,13 +950,12 @@ CONTAINS
       CALL ComputeTemperatureWith_DXY_Guess &
              ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, T_Guess, Error )
     END IF
-    IF( PRESENT( Error_Option ) ) Error_Option = Error
 
-  END SUBROUTINE ComputeTemperatureWith_DSY_Single_Guess
+  END SUBROUTINE ComputeTemperatureWith_DSY_Single_Guess_NoError
 
 
-  SUBROUTINE ComputeTemperatureWith_DSY_Single_NoGuess &
-    ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, Error_Option )
+  SUBROUTINE ComputeTemperatureWith_DSY_Single_NoGuess_Error &
+    ( D, S, Y, Ds, Ts, Ys, Ss, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -849,7 +967,31 @@ CONTAINS
     REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
-    INTEGER,  INTENT(out), OPTIONAL :: Error_Option
+    INTEGER,  INTENT(out)   :: Error
+
+    T = 0.0_dp
+    Error = CheckInputError( D, S, Y, MinS, MaxS )
+    IF ( Error == 0 ) THEN
+      CALL ComputeTemperatureWith_DXY_NoGuess &
+             ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, Error )
+    END IF
+
+  END SUBROUTINE ComputeTemperatureWith_DSY_Single_NoGuess_Error
+
+
+  SUBROUTINE ComputeTemperatureWith_DSY_Single_NoGuess_NoError &
+    ( D, S, Y, Ds, Ts, Ys, Ss, OS, T )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(dp), INTENT(in)    :: D     , S     , Y
+    REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Ys(1:)
+    REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
+    REAL(dp), INTENT(in)    :: OS
+    REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
 
@@ -859,9 +1001,8 @@ CONTAINS
       CALL ComputeTemperatureWith_DXY_NoGuess &
              ( D, S, Y, Ds, Ts, Ys, Ss, Os, T, Error )
     END IF
-    IF( PRESENT( Error_Option ) ) Error_Option = Error
 
-  END SUBROUTINE ComputeTemperatureWith_DSY_Single_NoGuess
+  END SUBROUTINE ComputeTemperatureWith_DSY_Single_NoGuess_NoError
 
 
 END MODULE wlEOSInversionModule
