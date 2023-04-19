@@ -136,12 +136,39 @@ CONTAINS
 
     INTEGER  :: iX, iY
     REAL(dp) :: dX, dY
+    REAL(dp) :: p00, p10, p01, p11
+    INTEGER :: loX, hiX
+    INTEGER :: loY, hiY
 
-    CALL GetIndexAndDelta_Lin( X, Xs, iX, dX )
-    CALL GetIndexAndDelta_Lin( Y, Ys, iY, dY )
+    loX = LBOUND(Xs,1)
+    hiX = UBOUND(Xs,1)
+    loY = LBOUND(Ys,1)
+    hiY = UBOUND(Ys,1)
 
-    CALL LinearInterp2D_2DArray_Point &
-           ( iX, iY, dX, dY, OS, Table, Interpolant )
+    !CALL GetIndexAndDelta_Lin( X, Xs, iX, dX )
+    !iX = Index1D_Lin( X, Xs )
+    iX = MAX( loX, MIN( hiX-1, loX + FLOOR( (hiX-loX)*(X-Xs(loX))/(Xs(hiX)-Xs(loX)) ) ) )
+    dX = ( X - Xs(iX) ) / ( Xs(iX+1) - Xs(iX) )
+    !CALL GetIndexAndDelta_Lin( Y, Ys, iY, dY )
+    !iY = Index1D_Lin( Y, Ys )
+    iY = MAX( loY, MIN( hiY-1, loY + FLOOR( (hiY-loY)*(Y-Ys(loY))/(Ys(hiY)-Ys(loY)) ) ) )
+    dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+    !CALL LinearInterp2D_2DArray_Point &
+    !       ( iX, iY, dX, dY, OS, Table, Interpolant )
+
+    p00 = Table(iX  , iY  )
+    p10 = Table(iX+1, iY  )
+    p01 = Table(iX  , iY+1)
+    p11 = Table(iX+1, iY+1)
+    Interpolant &
+      = 10.0d0 ** (   ( One - dY ) * ( ( One - dX ) * p00 + dX * p10 ) &
+                    +         dY   * ( ( One - dX ) * p01 + dX * p11 ) ) - OS
+    !Interpolant &
+    !  = 10.0d0**( &
+    !      BiLinear &
+    !        ( p00, p10, p01, p11, &
+    !          dY1, dY2 ) ) - OS
 
   END SUBROUTINE LogInterpolateSingleVariable_2D_Custom_Point
 
