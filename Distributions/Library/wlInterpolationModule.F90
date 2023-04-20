@@ -701,7 +701,7 @@ CONTAINS
     Interpolant &
       = 10.0d0 ** (   ( One - dY ) * (   ( One - dT ) * ( ( One - dD ) * p000 + dD * p100 ) &
                                        +         dT   * ( ( One - dD ) * p010 + dD * p110 ) ) &
-                    +         dY   * (   ( One - dT ) * ( ( One - dD ) * p001 + dD * p101 ) 
+                    +         dY   * (   ( One - dT ) * ( ( One - dD ) * p001 + dD * p101 ) &
                                        +         dT   * ( ( One - dD ) * p011 + dD * p111 ) ) ) &
         - OS
 
