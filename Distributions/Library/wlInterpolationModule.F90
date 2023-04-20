@@ -661,13 +661,56 @@ CONTAINS
 
     INTEGER  :: iD, iT, iY
     REAL(dp) :: dD, dT, dY
+    REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
+    INTEGER  :: loD, hiD
+    INTEGER  :: loT, hiT
+    INTEGER  :: loY, hiY
 
-    CALL GetIndexAndDelta_Log( D, Ds, iD, dD )
-    CALL GetIndexAndDelta_Log( T, Ts, iT, dT )
-    CALL GetIndexAndDelta_Lin( Y, Ys, iY, dY )
+    !CALL GetIndexAndDelta_Log( D, Ds, iD, dD )
+    !CALL GetIndexAndDelta_Log( T, Ts, iT, dT )
+    !CALL GetIndexAndDelta_Lin( Y, Ys, iY, dY )
 
-    CALL LinearInterp3D_3DArray_Point &
-           ( iD, iT, iY, dD, dT, dY, OS, Table, Interpolant )
+    !CALL LinearInterp3D_3DArray_Point &
+    !       ( iD, iT, iY, dD, dT, dY, OS, Table, Interpolant )
+
+    loD = LBOUND(Ds,1)
+    hiD = UBOUND(Ds,1)
+    loT = LBOUND(Ts,1)
+    hiT = UBOUND(Ts,1)
+    loY = LBOUND(Ys,1)
+    hiY = UBOUND(Ys,1)
+
+    iD = MAX( loD, MIN( hiD-1, loD + FLOOR( (hiD-loD)*LOG10(D/Ds(loD))/LOG10(Ds(hiD)/Ds(loD)) ) ) )
+    dD = LOG10( D / Ds(iD) ) / LOG10( Ds(iD+1) / Ds(iD) )
+
+    iT = MAX( loT, MIN( hiT-1, loT + FLOOR( (hiT-loT)*LOG10(T/Ts(loT))/LOG10(Ts(hiT)/Ts(loT)) ) ) )
+    dT = LOG10( T / Ts(iT) ) / LOG10( Ts(iT+1) / Ts(iT) )
+
+    iY = MAX( loY, MIN( hiY-1, loY + FLOOR( (hiY-loY)*(Y-Ys(loY))/(Ys(hiY)-Ys(loY)) ) ) )
+    dY = ( Y - Ys(iY) ) / ( Ys(iY+1) - Ys(iY) )
+
+    p000 = Table(iD  , iT  , iY  )
+    p100 = Table(iD+1, iT  , iY  )
+    p010 = Table(iD  , iT+1, iY  )
+    p110 = Table(iD+1, iT+1, iY  )
+    p001 = Table(iD  , iT  , iY+1)
+    p101 = Table(iD+1, iT  , iY+1)
+    p011 = Table(iD  , iT+1, iY+1)
+    p111 = Table(iD+1, iT+1, iY+1)
+
+    Interpolant &
+      = 10.0d0 ** (   ( One - dY ) * (   ( One - dT ) * ( ( One - dD ) * p000 + dD * p100 ) &
+                                       +         dT   * ( ( One - dD ) * p010 + dD * p110 ) ) &
+                    +         dY   * (   ( One - dT ) * ( ( One - dD ) * p001 + dD * p101 ) 
+                                       +         dT   * ( ( One - dD ) * p011 + dD * p111 ) ) ) &
+        - OS
+
+    !Interpolant &
+    !  = 10.0d0**( &
+    !      TriLinear &
+    !        ( p000, p100, p010, p110, &
+    !          p001, p101, p011, p111, &
+    !          dY1, dY2, dY3 ) ) - OS
 
   END SUBROUTINE LogInterpolateSingleVariable_3D_Custom_Point
 
