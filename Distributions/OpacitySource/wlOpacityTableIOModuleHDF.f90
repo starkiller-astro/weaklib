@@ -1658,127 +1658,116 @@ CONTAINS
 
     USE MPI
 
-    CLASS(OpacityTypeScat),INTENT(inout)              :: Scat
-    INTEGER(HID_T), INTENT(in)                       :: group_id
+    CLASS(OpacityTypeScat),INTENT(inout) :: Scat
+    INTEGER(HID_T), INTENT(in)           :: group_id
 
-    INTEGER(HSIZE_T), DIMENSION(1)                   :: datasize1d
-    INTEGER(HSIZE_T), DIMENSION(2)                   :: datasize2d
-    INTEGER(HSIZE_T), DIMENSION(4)                   :: datasize4d
-    INTEGER(HSIZE_T), DIMENSION(5)                   :: datasize5d
-    INTEGER                                          :: i
-    INTEGER, DIMENSION(1)                            :: buffer
-    REAL(dp), DIMENSION(1)                           :: bufferReal
-    INTEGER(HID_T)                                   :: subgroup_id
+    INTEGER(HSIZE_T), DIMENSION(1)       :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(2)       :: datasize2d
+    INTEGER(HSIZE_T), DIMENSION(4)       :: datasize4d
+    INTEGER(HSIZE_T), DIMENSION(5)       :: datasize5d
+    INTEGER                              :: i
+    INTEGER, DIMENSION(1)                :: buffer
+    REAL(dp), DIMENSION(1)               :: bufferReal
+    INTEGER(HID_T)                       :: subgroup_id
+
+    CHARACTER(len=150)                   :: FileName
+    INTEGER(SIZE_T)                      :: flength
+    INTEGER(HID_T)                       :: dataset_id
 
     SELECT TYPE ( Scat )
 
       TYPE IS ( OpacityTypeScatIso )
 
-        BLOCK
-
-          CHARACTER(len=150) :: FileName
-          INTEGER(SIZE_T)    :: flength
-          INTEGER(HID_T)     :: dataset_id
-
-          CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+        CALL h5fget_name_f( group_id, FileName, flength, hdferr )
           
-          CALL h5eset_auto_f( 0, hdferr )
+        CALL h5eset_auto_f( 0, hdferr )
  
-          CALL h5dopen_f( group_id, "weak_magnetism_corr", dataset_id, hdferr )
+        CALL h5dopen_f( group_id, "weak_magnetism_corr", dataset_id, hdferr )
 
-          IF( hdferr .ne. 0 ) THEN
+        IF( hdferr .ne. 0 ) THEN
           
-            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
-            IF(myid == 0) THEN
-              WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
-              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-            ENDIF
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
 
-            CALL h5eclear_f( hdferr )
-            CALL h5eset_auto_f( 1, hdferr )
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
             
-          ELSE
-            datasize1d(1) = 1
-            CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
-            Scat % weak_magnetism_corrections = buffer(1)
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
+          Scat % weak_magnetism_corrections = buffer(1)
 
-          ENDIF
+        ENDIF
 
-          CALL h5eset_auto_f( 0, hdferr )
+        CALL h5eset_auto_f( 0, hdferr )
  
-          CALL h5dopen_f( group_id, "ion_ion_corr", dataset_id, hdferr )
+        CALL h5dopen_f( group_id, "ion_ion_corr", dataset_id, hdferr )
 
-          IF( hdferr .ne. 0 ) THEN
-            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
-            IF(myid == 0) THEN
-              WRITE(*,*) 'Dataset ion_ion_corr not found in ', TRIM( FileName )
-              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-            ENDIF
-
-            CALL h5eclear_f( hdferr )
-            CALL h5eset_auto_f( 1, hdferr )
-          ELSE
-            datasize1d(1) = 1
-            CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
-            Scat % ion_ion_corrections = buffer(1)
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset ion_ion_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
           ENDIF
 
-          CALL h5eset_auto_f( 0, hdferr )
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
+          Scat % ion_ion_corrections = buffer(1)
+        ENDIF
+
+        CALL h5eset_auto_f( 0, hdferr )
  
-          CALL h5dopen_f( group_id, "many_body_corr", dataset_id, hdferr )
+        CALL h5dopen_f( group_id, "many_body_corr", dataset_id, hdferr )
 
-          IF( hdferr .ne. 0 ) THEN
-            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
-            IF(myid == 0) THEN
-              WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
-              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-            ENDIF
-
-            CALL h5eclear_f( hdferr )
-            CALL h5eset_auto_f( 1, hdferr )
-          ELSE
-            datasize1d(1) = 1
-            CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
-            Scat % many_body_corrections = buffer(1)
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
           ENDIF
 
-        END BLOCK
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
+          Scat % many_body_corrections = buffer(1)
+        ENDIF
 
       TYPE IS ( OpacityTypeScatNES )
 
-        BLOCK
-          CHARACTER(len=150) :: FileName
-          INTEGER(SIZE_T)    :: flength
-          INTEGER(HID_T)     :: dataset_id
-
-          CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+        CALL h5fget_name_f( group_id, FileName, flength, hdferr )
           
-          CALL h5eset_auto_f( 0, hdferr )
+        CALL h5eset_auto_f( 0, hdferr )
  
-          CALL h5dopen_f( group_id, "NPS", dataset_id, hdferr )
+        CALL h5dopen_f( group_id, "NPS", dataset_id, hdferr )
 
-          IF( hdferr .ne. 0 ) THEN
-            CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
-            IF(myid == 0) THEN
-              WRITE(*,*) 'Dataset NPS not found in ', TRIM( FileName )
-              WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-            ENDIF
-
-            CALL h5eclear_f( hdferr )
-            CALL h5eset_auto_f( 1, hdferr )
-            
-          ELSE
-            datasize1d(1) = 1
-            CALL ReadHDF( "NPS", buffer, group_id, datasize1d )
-            Scat % NPS = buffer(1)
-
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset NPS not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
           ENDIF
 
-        END BLOCK
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+            
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "NPS", buffer, group_id, datasize1d )
+          Scat % NPS = buffer(1)
+
+        ENDIF
 
     END SELECT
 
