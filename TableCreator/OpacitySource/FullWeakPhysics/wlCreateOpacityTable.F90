@@ -1266,14 +1266,14 @@ PRINT*, 'Filling OpacityTable ...'
 
   WRITE (*,*) "HDF write successful"
 
-  IF ( EmAb_nuclei_EC_table .gt. 0) THEN
-    DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
-      DEALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
-      DEALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
-    ENDDO
-    DEALLOCATE(OpacityTable % EmAb % EC_table_spec)
-    DEALLOCATE(OpacityTable % EmAb % EC_table_rate)
-  ENDIF
+!  IF ( EmAb_nuclei_EC_table .gt. 0) THEN
+!    DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
+!      DEALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
+!      DEALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
+!    ENDDO
+!    DEALLOCATE(OpacityTable % EmAb % EC_table_spec)
+!    DEALLOCATE(OpacityTable % EmAb % EC_table_rate)
+!  ENDIF
 
   CALL DeAllocateOpacityTable( OpacityTable )
     
