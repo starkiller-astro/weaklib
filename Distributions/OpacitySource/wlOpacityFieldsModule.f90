@@ -244,11 +244,11 @@ CONTAINS
       DEALLOCATE( Opacity % EC_table_Names )
 
       DO i = 1, Opacity % EC_table_nOpacities
-        DEALLOCATE( OpacityTable % EmAb % EC_table_spec(i) % Values )
-        DEALLOCATE( OpacityTable % EmAb % EC_table_rate(i) % Values )
+        DEALLOCATE( Opacity % EC_table_spec(i) % Values )
+        DEALLOCATE( Opacity % EC_table_rate(i) % Values )
       END DO
-      DEALLOCATE(OpacityTable % EmAb % EC_table_spec)
-      DEALLOCATE(OpacityTable % EmAb % EC_table_rate)
+      DEALLOCATE(Opacity % EC_table_spec)
+      DEALLOCATE(Opacity % EC_table_rate)
 
     ENDIF
 
