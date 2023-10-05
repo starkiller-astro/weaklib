@@ -122,13 +122,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 1
+                              = 0
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 0
+                              = 1
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
