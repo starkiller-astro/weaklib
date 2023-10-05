@@ -9,14 +9,18 @@ MODULE wlGridModule
     CHARACTER(LEN=32) :: Name
     CHARACTER(LEN=32) :: Unit
     INTEGER  :: nPoints
-    INTEGER  :: LogInterp
+    INTEGER  :: LogInterp = 0
     REAL(dp) :: minValue
     REAL(dp) :: maxValue
+    REAL(dp) :: Zoom = 0.0d0
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Values
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Edge
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Width
   END TYPE
 
   PUBLIC :: MakeLinearGrid
   PUBLIC :: MakeLogGrid
+  PUBLIC :: MakeGeometricGrid
   PUBLIC :: AllocateGrid
   PUBLIC :: DeAllocateGrid
   PUBLIC :: DescribeGrid
@@ -76,6 +80,40 @@ CONTAINS
 
   END SUBROUTINE MakeLogGrid
 
+
+  SUBROUTINE MakeGeometricGrid ( LowerBound, UpperBound, Zoom, nPoints, Grid, &
+                                 Width, Edge)
+
+    INTEGER,                        INTENT(in)  :: nPoints
+    REAL(dp),                       INTENT(in)  :: LowerBound
+    REAL(dp),                       INTENT(in)  :: UpperBound
+    REAL(dp),                       INTENT(in)  :: Zoom
+    REAl(dp), DIMENSION(nPoints),   INTENT(out) :: Grid 
+    REAl(dp), DIMENSION(nPoints),   INTENT(out) :: Width 
+    REAl(dp), DIMENSION(nPoints+1), INTENT(out) :: Edge 
+
+    INTEGER  :: i
+
+    ASSOCIATE &
+      ( N   =>  nPoints, &
+        xL  =>  LowerBound, &
+        xR  =>  UpperBound )
+
+    Width(1) = ( xR - xL ) * ( Zoom - 1.0_DP ) / ( Zoom**N - 1.0_DP )
+    Grid (1) = xL + 0.5_DP * Width(1)
+    Edge (1) = xL
+    Edge (2) = xL + Width(1)
+    DO i = 2, N
+      Width(i)   = Width(i-1) * Zoom
+      Grid (i)   = xL + SUM( Width(1:i-1) ) + 0.5_DP * Width(i)
+      Edge (i+1) = xL + SUM( Width(1:i) )
+    END DO
+
+    END ASSOCIATE !-- N, etc.
+
+  END SUBROUTINE MakeGeometricGrid
+
+  
   SUBROUTINE AllocateGrid( Grid, nPoints )
 
     TYPE(GridType), INTENT(inout) :: Grid
@@ -84,6 +122,8 @@ CONTAINS
     Grid % nPoints = nPoints
 
     ALLOCATE( Grid % Values(nPoints) )
+    ALLOCATE( Grid % Width(nPoints) )
+    ALLOCATE( Grid % Edge(nPoints+1) )
 
   END SUBROUTINE AllocateGrid
 
@@ -91,6 +131,8 @@ CONTAINS
 
     TYPE(GridType), INTENT(inout) :: Grid
 
+    DEALLOCATE( Grid % Edge )
+    DEALLOCATE( GRID % Width )
     DEALLOCATE( Grid % Values )
 
   END SUBROUTINE DeAllocateGrid
@@ -113,11 +155,16 @@ CONTAINS
       ' ', 'Min Value = ', Grid % minValue
     WRITE(*,'(A6,A12,ES10.3E2)') &
       ' ', 'Max Value = ', Grid % maxValue
+    WRITE(*,'(A6,A12,ES10.3E2)') &
+      ' ', 'Zoom      = ', Grid % Zoom
     WRITE(*,'(A6,A12,I4.4)') &
       ' ', 'nPoints   = ', Grid % nPoints
     IF ( Grid % LogInterp == 1 ) THEN
       WRITE (*,'(A6,A27)') &
           ' ', 'Grid Logarithmically Spaced'
+    ELSE IF ( Grid % Zoom  >=  1.0d0 ) THEN
+      WRITE (*,'(A6,A25)') &
+          ' ', 'Grid Geometrically Spaced'
     ELSE
       WRITE (*,'(A6,A20)') &
           ' ', 'Grid Linearly Spaced'
@@ -128,6 +175,19 @@ CONTAINS
       WRITE(*,'(A8,A6,I4.4,A4,ES10.3E2)') &
         ' ','Value(', i, ') = ', Grid % Values(i)
     END DO
+    WRITE(*,*)
+
+    IF ( Grid % Zoom  >=  1.0d0 ) THEN
+      DO i = 1, size ( Grid % Width )
+        WRITE(*,'(A8,A6,I4.4,A4,ES10.3E2)') &
+          ' ','Width(', i, ') = ', Grid % Width(i)
+      END DO
+      WRITE(*,*)
+      DO i = 1, size ( Grid % Edge )
+        WRITE(*,'(A8,A5,I4.4,A4,ES10.3E2)') &
+          ' ','Edge(', i, ') = ', Grid % Edge(i)
+      END DO
+    END IF
 
   END SUBROUTINE DescribeGrid
 
