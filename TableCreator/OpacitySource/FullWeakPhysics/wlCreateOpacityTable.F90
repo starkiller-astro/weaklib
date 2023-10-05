@@ -55,7 +55,8 @@ PROGRAM wlCreateOpacityTable
       GetIndexAndDelta_Log
   USE wlGridModule, ONLY: &
       MakeLogGrid,        &
-      MakeLinearGrid
+      MakeLinearGrid,     &
+      MakeGeometricGrid
   USE wlIOModuleHDF, ONLY: &
       InitializeHDF,       &
       FinalizeHDF
@@ -121,13 +122,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 0
+                              = 1
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 1
+                              = 0
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
@@ -195,8 +196,9 @@ IMPLICIT NONE
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
-   REAL(dp), PARAMETER     :: Emax     = 3.0d+02 !upper face of last energy cell
+!   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
+   REAL(dp), PARAMETER     :: Emin = 0.0d+00 !lower face of first energy cell
+   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
@@ -434,11 +436,16 @@ PRINT*, "Making Energy Grid ... "
 
    EnergyGrid % MinValue = Emin
    EnergyGrid % MaxValue = Emax
-   EnergyGrid % LogInterp = 1
+!   EnergyGrid % LogInterp = 1
+   EnergyGrid % Zoom = 1.26603816071016d0
 
-   CALL MakeLogGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
-            EnergyGrid % nPoints,  EnergyGrid % Values )
+!   CALL MakeLogGrid &
+!          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+!            EnergyGrid % nPoints,  EnergyGrid % Values )
+   CALL MakeGeometricGrid &
+          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, EnergyGrid % Zoom, &
+            EnergyGrid % nPoints, EnergyGrid % Values, EnergyGrid % Width, &
+            EnergyGrid % Edge )
 
    END ASSOCIATE ! EnergyGrid
 
