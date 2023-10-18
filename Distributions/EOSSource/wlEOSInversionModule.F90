@@ -338,7 +338,7 @@ CONTAINS
 
     f_b = X - X_b
 
-    IF ( f_a * f_b < 0.0_dp ) THEN
+    IF ( f_a * f_b <= 0.0_dp ) THEN
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
       RETURN
     END IF
@@ -363,7 +363,7 @@ CONTAINS
 
     f_b = X - X_b
 
-    IF ( f_a * f_b < 0.0_dp ) THEN
+    IF ( f_a * f_b <= 0.0_dp ) THEN
 
       i_c = MIN( MAX( i_a + 1, iT ), i_b - 1 )
       DO WHILE ( i_b > i_a + 1 )
@@ -376,7 +376,7 @@ CONTAINS
 
         f_c = X - X_c
 
-        IF ( f_a * f_c < 0.0_dp ) THEN
+        IF ( f_a * f_c <= 0.0_dp ) THEN
           i_b = i_c
           T_b = T_c
           X_b = X_c
@@ -412,7 +412,7 @@ CONTAINS
 
         d_c = ABS( i - i_c )
 
-        IF ( f_c * f_b < 0.0_dp .AND. d_c < d_i ) THEN
+        IF ( f_c * f_b <= 0.0_dp .AND. d_c < d_i ) THEN
           d_i = d_c
           i_a = i - 1
           T_a = T_c
@@ -503,7 +503,7 @@ CONTAINS
 
     f_b = X - X_b
 
-    IF ( f_a * f_b < 0.0_dp ) THEN
+    IF ( f_a * f_b <= 0.0_dp ) THEN
 
       DO WHILE ( i_b > i_a + 1 )
 
@@ -516,7 +516,7 @@ CONTAINS
 
         f_c = X - X_c
 
-        IF ( f_a * f_c < 0.0_dp ) THEN
+        IF ( f_a * f_c <= 0.0_dp ) THEN
           i_b = i_c
           T_b = T_c
           X_b = X_c
@@ -544,7 +544,7 @@ CONTAINS
         f_a = X - X_i
         f_b = X - X_b
 
-        IF ( f_a * f_b < 0.0_dp ) THEN
+        IF ( f_a * f_b <= 0.0_dp ) THEN
           i_a = i
           T_a = T_i
           X_a = X_i
@@ -560,7 +560,7 @@ CONTAINS
       f_a = X - X_a
       f_b = X - X_b
 
-      IF ( f_a * f_b >= 0.0_dp ) Error = 13
+      IF ( f_a * f_b > 0.0_dp ) Error = 13
 
     END IF
 
