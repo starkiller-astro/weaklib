@@ -55,7 +55,8 @@ PROGRAM wlCreateOpacityTable
       GetIndexAndDelta_Log
   USE wlGridModule, ONLY: &
       MakeLogGrid,        &
-      MakeLinearGrid
+      MakeLinearGrid,     &
+      MakeGeometricGrid
   USE wlIOModuleHDF, ONLY: &
       InitializeHDF,       &
       FinalizeHDF
@@ -195,8 +196,9 @@ IMPLICIT NONE
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
-   REAL(dp), PARAMETER     :: Emax     = 3.0d+02 !upper face of last energy cell
+!   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
+   REAL(dp), PARAMETER     :: Emin = 0.0d+00 !lower face of first energy cell
+   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
@@ -434,11 +436,16 @@ PRINT*, "Making Energy Grid ... "
 
    EnergyGrid % MinValue = Emin
    EnergyGrid % MaxValue = Emax
-   EnergyGrid % LogInterp = 1
+!   EnergyGrid % LogInterp = 1
+   EnergyGrid % Zoom = 1.26603816071016d0
 
-   CALL MakeLogGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
-            EnergyGrid % nPoints,  EnergyGrid % Values )
+!   CALL MakeLogGrid &
+!          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+!            EnergyGrid % nPoints,  EnergyGrid % Values )
+   CALL MakeGeometricGrid &
+          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, EnergyGrid % Zoom, &
+            EnergyGrid % nPoints, EnergyGrid % Values, EnergyGrid % Width, &
+            EnergyGrid % Edge )
 
    END ASSOCIATE ! EnergyGrid
 
@@ -1266,14 +1273,14 @@ PRINT*, 'Filling OpacityTable ...'
 
   WRITE (*,*) "HDF write successful"
 
-  IF ( EmAb_nuclei_EC_table .gt. 0) THEN
-    DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
-      DEALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
-      DEALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
-    ENDDO
-    DEALLOCATE(OpacityTable % EmAb % EC_table_spec)
-    DEALLOCATE(OpacityTable % EmAb % EC_table_rate)
-  ENDIF
+!  IF ( EmAb_nuclei_EC_table .gt. 0) THEN
+!    DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
+!      DEALLOCATE( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
+!      DEALLOCATE( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
+!    ENDDO
+!    DEALLOCATE(OpacityTable % EmAb % EC_table_spec)
+!    DEALLOCATE(OpacityTable % EmAb % EC_table_rate)
+!  ENDIF
 
   CALL DeAllocateOpacityTable( OpacityTable )
     

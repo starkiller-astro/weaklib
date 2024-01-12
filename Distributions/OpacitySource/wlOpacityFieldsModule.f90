@@ -233,12 +233,22 @@ CONTAINS
     DEALLOCATE( Opacity % Units )
     DEALLOCATE( Opacity % Names )
 
+    !just electron capture on nuclei for now!
+    Opacity % EC_table_nOpacities = 1
+
     IF(Opacity % nuclei_EC_table .gt. 0) THEN
 
       DEALLOCATE( Opacity % EC_table_spec_Offsets )
       DEALLOCATE( Opacity % EC_table_rate_Offsets )
       DEALLOCATE( Opacity % EC_table_Units )
       DEALLOCATE( Opacity % EC_table_Names )
+
+      DO i = 1, Opacity % EC_table_nOpacities
+        DEALLOCATE( Opacity % EC_table_spec(i) % Values )
+        DEALLOCATE( Opacity % EC_table_rate(i) % Values )
+      END DO
+      DEALLOCATE(Opacity % EC_table_spec)
+      DEALLOCATE(Opacity % EC_table_rate)
 
     ENDIF
 

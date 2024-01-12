@@ -13,6 +13,12 @@ wlEosInversionTest: \
 	$(weaklib) wlEosInversionTest.o \
 	$(LIBRARIES)
 
+wlEosInversionQuery: \
+	$(weaklib) wlEosInversionQuery.o
+	$(FLINKER) $(FLAGS) -o wlEosInversionQuery_$(MACHINE) \
+	$(weaklib) wlEosInversionQuery.o \
+	$(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld
 
@@ -27,3 +33,12 @@ wlEosInversionTest.o: \
   wlInterpolationModule.o \
   wlEOSInversionModule.o \
   wlEosInversionTest.F90
+
+wlEosInversionQuery.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlEOSInversionModule.o \
+  wlEosInversionQuery.F90

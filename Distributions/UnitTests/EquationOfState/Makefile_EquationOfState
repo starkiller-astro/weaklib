@@ -1,6 +1,17 @@
-include $(WEAKLIB_DIR)/External/Build/Makefile_Build
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 
-all: wlEosPerformanceTest wlReadEquationOfStateTest wlRewriteEquationOfStateTest
+.DEFAULT_GOAL := all
+
+all: wlEosQueryTest wlEosPerformanceTest wlReadEquationOfStateTest wlRewriteEquationOfStateTest
+
+wlEosQueryTest: \
+	$(weaklib) wlEosQueryTest.o
+	$(FLINKER) $(FLAGS) -o wlEosQueryTest_$(MACHINE) \
+	$(weaklib) wlEosQueryTest.o \
+	$(LIBRARIES)
 
 wlEosPerformanceTest: \
 	$(weaklib) wlEosPerformanceTest.o
@@ -25,6 +36,14 @@ clean:
 
 clobber: clean
 	rm -f wlEosPerformanceTest_$(MACHINE)
+
+wlEosQueryTest.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlEosQueryTest.F90
 
 wlEosPerformanceTest.o: \
   wlKindModule.o \
