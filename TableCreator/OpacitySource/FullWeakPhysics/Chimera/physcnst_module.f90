@@ -19,7 +19,7 @@ REAL(dp), PARAMETER  :: gv        = 1.0d+00       ! Fermi beta decay constant. T
 !                                                       the coupling for Fermi decay is absorbed 
 !                                                       by the weak interaction constant.
 
-REAL(dp), PARAMETER  :: ga        = 1.21d+00      ! Gamow-Teller beta decay constant. This is 
+REAL(dp), PARAMETER  :: ga        = 1.26d+00      ! Gamow-Teller beta decay constant. This is 
 !                                                       not unity as the oupling for Gamow-Teller
 !                                                       decay is renormalized. 
 
