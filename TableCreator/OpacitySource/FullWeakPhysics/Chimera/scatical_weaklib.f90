@@ -1,6 +1,6 @@
 SUBROUTINE scatical_weaklib &
            ( n, egrid, nez, rho, t, ye, xn, xp, xhe, xh, ah, zh, &
-             wm, ion_ion, many_body, cok )
+             wm, ion_ion, many_body, ga_strange, cok )
 !--------------------------------------------------------------------
 !
 !    Author:  R. Chu, Dept. Phys. & Astronomy
@@ -20,20 +20,21 @@ SUBROUTINE scatical_weaklib &
 !
 !    Input arguments:
 !
-!   n         : neutrino type (1, e-neutrino; 2, e-antineutrino)
-!   egrid     : energy grid
-!   nez       : size of energy grid
-!   rho       : matter density [g cm^{-3}]
-!   t         : matter temperature [K]
-!   xn        : mass fraction of free neutrons
-!   xp        : mass fraction of free protons
-!   xhe       : mass fraction of helium nuclei
-!   xh        : mass fraction of heavy nuclei
-!   ah        : mean heavy nucleus mass number
-!   zh        : mean heavy nucleus charge number
-!   wm        : include weak magnetism corrections
-!   ion_ion   : include ion-ion correlation corrections
-!   many_body : include many-body effects corrections
+!   n          : neutrino type (1, e-neutrino; 2, e-antineutrino)
+!   egrid      : energy grid
+!   nez        : size of energy grid
+!   rho        : matter density [g cm^{-3}]
+!   t          : matter temperature [K]
+!   xn         : mass fraction of free neutrons
+!   xp         : mass fraction of free protons
+!   xhe        : mass fraction of helium nuclei
+!   xh         : mass fraction of heavy nuclei
+!   ah         : mean heavy nucleus mass number
+!   zh         : mean heavy nucleus charge number
+!   wm         : include weak magnetism corrections
+!   ion_ion    : include ion-ion correlation corrections
+!   many_body  : include many-body effects corrections
+!   ga_strange : strange quark contributions
 !
 !    Output arguments:
 !
@@ -51,8 +52,8 @@ IMPLICIT NONE
 !        Input variables.
 !--------------------------------------------------------------------
 
-INTEGER,      INTENT(in)     :: n       ! neutrino flavor index
-INTEGER,      INTENT(in)     :: nez     ! number of energy groups
+INTEGER,  INTENT(in)     :: n       ! neutrino flavor index
+INTEGER,  INTENT(in)     :: nez     ! number of energy groups
 REAL(dp), INTENT(in)     :: rho     ! density [g cm^{-3}]
 REAL(dp), INTENT(in)     :: t       ! temperature [K]
 REAL(dp), INTENT(in)     :: ye      ! electron fraction
@@ -67,6 +68,7 @@ REAL(dp), DIMENSION(nez), INTENT(in) :: egrid
 INTEGER, INTENT(IN)      :: wm
 INTEGER, INTENT(IN)      :: ion_ion
 INTEGER, INTENT(IN)      :: many_body
+REAL(DP), INTENT(IN)     :: ga_strange
 
 !--------------------------------------------------------------------
 !        Output variables.
@@ -90,32 +92,11 @@ REAL(dp), PARAMETER      :: cc = 1.0d0 /( cvel * ( 2.d0 * pi * hbar * cvel )**3 
 ! Equation C31 Bruenn 85, proton vector coupling constant
 REAL(dp), PARAMETER      :: hvp =  one - cv
 
-! Equation C32 Bruenn 85, proton axial vector coupling constant
-REAL(dp), PARAMETER      :: hap =  0.5d0 * ga
-
 ! Equation C33 Bruenn 85, neutron vector coupling constant
 REAL(dp), PARAMETER      :: hvn = -0.5d0
 
-! Equation C34 Bruenn 85, neutron axial vector coupling constant
-REAL(dp), PARAMETER      :: han = -0.5d0 * ga
-
-! Coupling constant in Equation C43 Bruenn 85
-REAL(dp), PARAMETER      :: cv0 =  half * ( hvp + hvn )
-
-! Coupling constant in Equation C43 Bruenn 85
-REAL(dp), PARAMETER      :: cv1 =  hvp - hvn
-
-! Bracket in Equation C38 Bruenn 85, proton zero moment coupling constant
-REAL(dp), PARAMETER      :: ap0 =  hvp**2 + 3.d0 * hap**2 
-
-! Bracket in Equation C39 Bruenn 85, proton first moment coupling constant
-REAL(dp), PARAMETER      :: ap1 =  hvp**2 - hap**2
-
-! Bracket in Equation C38 Bruenn 85, neutron zero moment coupling constant
-REAL(dp), PARAMETER      :: an0 =  hvn**2 + 3.d0 * han**2
-
-! Bracket in Equation C39 Bruenn 85, neutron first moment coupling constant
-REAL(dp), PARAMETER      :: an1 =  hvn**2 - han**2
+REAL(DP)                 :: hap, han, cv0, cv1
+REAL(DP)                 :: ap0, ap1, an0, an1
 
 REAL(dp)                 :: eeche        
                              ! helium opacity calculation
@@ -151,9 +132,9 @@ REAL(dp)                 :: xnh
 
 REAL(dp)                 :: aisov         
                              ! vector coupling constant
-REAL(dp), PARAMETER      :: aisosc = cv0  
+REAL(dp)                 :: aisosc
                              ! vector coupling constant
-REAL(dp), PARAMETER      :: a01 = cv0 * cv0 
+REAL(dp)                 :: a01 
                              ! vector coupling constant
 REAL(dp)                 :: a02           
                              ! coupling constant
@@ -204,6 +185,26 @@ INTEGER                           :: nezl          ! local energy loop extent (n
 !--------------------------------------------------------------------
 !  Initialize  mfp^-1
 !--------------------------------------------------------------------
+
+! Equation C32 Bruenn 85, proton axial vector coupling constant
+hap = 0.5d0 * (   ga - ga_strange )
+! Equation C34 Bruenn 85, neutron axial vector coupling constant
+han = 0.5d0 * ( - ga - ga_strange )
+! Coupling constant in Equation C43 Bruenn 85
+cv0 = half * ( hvp + hvn )
+! Coupling constant in Equation C43 Bruenn 85
+cv1 = hvp - hvn
+! Bracket in Equation C38 Bruenn 85, proton zero moment coupling constant
+ap0 = hvp**2 + 3.d0 * hap**2 
+! Bracket in Equation C39 Bruenn 85, proton first moment coupling constant
+ap1 = hvp**2 - hap**2
+! Bracket in Equation C38 Bruenn 85, neutron zero moment coupling constant
+an0 = hvn**2 + 3.d0 * han**2
+! Bracket in Equation C39 Bruenn 85, neutron first moment coupling constant
+an1 = hvn**2 - han**2
+
+aisosc = cv0
+a01 = cv0 * cv0
 
 rmdnps             = zero
 rmdnns             = zero

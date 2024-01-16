@@ -109,7 +109,7 @@ IMPLICIT NONE
    CHARACTER(256)          :: WriteTableNameBrem
 
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER, PARAMETER      :: nOpac_EmAb = 2  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_EmAb = 0  ! 2 for electron type
 
    INTEGER, PARAMETER      :: EmAb_np_FK &
                               = 0 
@@ -178,26 +178,32 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: Iso_many_body_corrections &
                               = 1
                               !Modification to neutral current scattering due to many-body effects
+                              !Horowitz et al 2017
 
-   INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
+   REAL(DP), PARAMETER     :: Iso_ga_strange &
+                              = -0.1d0
+                              !Include strange-quark contributions to the axial vector coupling constant ga
+                              !Value from Hobbs et al 2016
+
+   INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
    INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
 
-   INTEGER, PARAMETER      :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: nOpac_Brem = 1  !Only S_sigma(eps+eps') is needed for all
+   INTEGER, PARAMETER      :: nOpac_Brem = 0  !Only S_sigma(eps+eps') is needed for all
    INTEGER, PARAMETER      :: nMom_Brem  = 1  !species and moments
 
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-!   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
-   REAL(dp), PARAMETER     :: Emin = 0.0d+00 !lower face of first energy cell
+   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
+!   REAL(dp), PARAMETER     :: Emin = 0.0d+00 !lower face of first energy cell
    REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
 
 !---------------------------------------------------------------------
@@ -358,6 +364,9 @@ IMPLICIT NONE
    OpacityTable % Scat_Iso % many_body_corrections = &
                   Iso_many_body_corrections
 
+   OpacityTable % Scat_Iso % ga_strange = &
+                  Iso_ga_strange
+
    END IF
 
 ! -- Set OpacityTableTypeScat NES
@@ -436,16 +445,16 @@ PRINT*, "Making Energy Grid ... "
 
    EnergyGrid % MinValue = Emin
    EnergyGrid % MaxValue = Emax
-!   EnergyGrid % LogInterp = 1
-   EnergyGrid % Zoom = 1.26603816071016d0
+   EnergyGrid % LogInterp = 1
+!   EnergyGrid % Zoom = 1.26603816071016d0
 
-!   CALL MakeLogGrid &
-!          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
-!            EnergyGrid % nPoints,  EnergyGrid % Values )
-   CALL MakeGeometricGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, EnergyGrid % Zoom, &
-            EnergyGrid % nPoints, EnergyGrid % Values, EnergyGrid % Width, &
-            EnergyGrid % Edge )
+   CALL MakeLogGrid &
+          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+            EnergyGrid % nPoints,  EnergyGrid % Values )
+!   CALL MakeGeometricGrid &
+!          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, EnergyGrid % Zoom, &
+!            EnergyGrid % nPoints, EnergyGrid % Values, EnergyGrid % Width, &
+!            EnergyGrid % Edge )
 
    END ASSOCIATE ! EnergyGrid
 
@@ -991,7 +1000,7 @@ PRINT*, 'Filling OpacityTable ...'
            ( i_rb, OpacityTable % EnergyGrid % Values,  &
              nPointsE, rho, T, ye, xn, xp, xhe, xheavy, A, Z, &
              Iso_weak_magnetism, Iso_ion_ion_corrections,     &
-             Iso_many_body_corrections, cok )
+             Iso_many_body_corrections, Iso_ga_strange, cok )
 
            DO t_m = 1, nMom_Iso
 

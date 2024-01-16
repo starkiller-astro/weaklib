@@ -259,6 +259,26 @@ CONTAINS
             CALL WriteGroupAttributeHDF_string("many_body_corrections", tempString, group_id) 
 
           END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(5) :: tempString
+
+            WRITE(tempString(5),'(A13,ES11.3E3)') "ga_strange = ", OpacityTable % Scat_Iso % ga_strange
+
+            tempString(1) = "Strange quark controbutions to neutral-current neutrino nucleon interactions"
+            tempString(2) = "Suggested value is ga_strange = -0.1 or -0.04 from Hobbs et al 2016"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2016PhRvC..93e2801H/doi:10.1103/PhysRevC.93.052801"
+            tempString(4) = "Not active if ga_strange = 0"
+            !IF(OpacityTable % Scat_Iso % ga_strange .ne. 0.0d0) THEN
+            !  tempString(4) = "Included."
+            !ELSE
+            !  tempString(4) = "Not included."
+            !ENDIF
+
+            CALL WriteGroupAttributeHDF_string("strange_quark_contributions", tempString, group_id) 
+
+          END BLOCK
         
           CALL WriteVersionAttribute(group_id)
 
@@ -762,6 +782,9 @@ CONTAINS
         tempInteger(1) = Scat % many_body_corrections
         CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
 
+        tempReal(1)    = Scat % ga_strange
+        CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
+
       TYPE IS ( OpacityTypeScatNES )
 
         datasize1d = 1
@@ -954,8 +977,8 @@ CONTAINS
 
             WRITE(*,*) 'Group EmAb Parameters not found in ', TRIM( FileName )
             WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-            WRITE(*,*) 'Electron capture on nulcei using a LMSH table is not included,'
-            WRITE(*,*) 'as well as corrections to Bruenn85 opacities for EmAb.'
+            WRITE(*,*) 'Neither electron capture on nulcei using a LMSH table'
+            WRITE(*,*) 'nor corrections to Bruenn85 opacities for EmAb are included.'
 
           ENDIF
 
@@ -1741,6 +1764,26 @@ CONTAINS
           datasize1d(1) = 1
           CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
           Scat % many_body_corrections = buffer(1)
+        ENDIF
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "ga_strange", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset ga_strange not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "ga_strange", bufferReal, group_id, datasize1d )
+          Scat % ga_strange = bufferReal(1)
         ENDIF
 
       TYPE IS ( OpacityTypeScatNES )

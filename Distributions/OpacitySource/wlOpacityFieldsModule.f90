@@ -1,6 +1,8 @@
 MODULE wlOpacityFieldsModule
 
   USE wlKindModule, ONLY: dp
+  USE wlParallelModule, ONLY: &
+    myid, ierr, mpi_is_init
 
   IMPLICIT NONE
   PRIVATE
@@ -148,9 +150,10 @@ MODULE wlOpacityFieldsModule
   END TYPE OpacityTypeScat
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatIso
-    INTEGER :: weak_magnetism_corrections !Horowitz 2002
-    INTEGER :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
-    INTEGER :: many_body_corrections
+    INTEGER  :: weak_magnetism_corrections !Horowitz 2002
+    INTEGER  :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
+    INTEGER  :: many_body_corrections      !Horowith et al 2017
+    REAL(DP) :: ga_strange                 !strange quark contributions
   END TYPE OpacityTypeScatIso
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
@@ -257,66 +260,80 @@ CONTAINS
 
   SUBROUTINE DescribeOpacityTypeEmAb( Opacity )
 
+    USE MPI
+
     TYPE(OpacityTypeEmAb), INTENT(in) :: Opacity
 
     INTEGER :: i
 
-    WRITE(*,*)
-    WRITE(*,'(A4,A)') ' ', 'Opacity Type EmAb on nucleons and nuclei'
-    WRITE(*,'(A4,A)') ' ', '--------------'
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nOpacities = ', Opacity % nOpacities
-    WRITE(*,'(A6,A13,4I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints
-    WRITE(*,'(A6,A13,I10.10)') &
-      ' ', 'DOFs       = ', &
-      Opacity % nOpacities * PRODUCT( Opacity % nPoints )
+    CALL MPI_INITIALIZED(mpi_is_init, ierr)
 
-    DO i = 1, Opacity % nOpacities
-      WRITE(*,*)
-      WRITE(*,'(A6,A8,I3.3,A3,A)') &
-        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Min Value = ', MINVAL( Opacity % Opacity(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Max Value = ', MAXVAL( Opacity % Opacity(i) % Values )
-      WRITE(*,'(A8,A12,ES12.4E3)') &
-        ' ', 'Offset    = ', Opacity % Offsets(i)
-    END DO
-
-    IF(Opacity % nuclei_EC_table .gt. 0) THEN
-      DO i = 1, Opacity % EC_table_nOpacities
-        WRITE(*,*)
-        WRITE(*,*) 'EC table:'
-        WRITE(*,'(A6,A8,I3.3,A3,A)') &
-          ' ', 'Opacity(',i,'): ', TRIM( Opacity % EC_table_Names(i) )
-        WRITE(*,'(A8,A17,A)') &
-          ' ', 'Units          = ', TRIM( Opacity % EC_table_Units(i) )
-        WRITE(*,'(A8,A17,ES12.4E3)') &
-          ' ', 'Min Value spec = ', MINVAL( Opacity % EC_table_spec(i) % Values )
-        WRITE(*,'(A8,A17,ES12.4E3)') &
-          ' ', 'Max Value spec = ', MAXVAL( Opacity % EC_table_spec(i) % Values )
-        WRITE(*,'(A8,A17,ES12.4E3)') &
-          ' ', 'Offset spec    = ', Opacity % EC_table_spec_Offsets
-        WRITE(*,'(A8,A17,ES12.4E3)') &
-          ' ', 'Min Value rate = ', MINVAL( Opacity % EC_table_rate(i) % Values )
-        WRITE(*,'(A8,A17,ES12.4E3)') &
-          ' ', 'Max Value rate = ', MAXVAL( Opacity % EC_table_rate(i) % Values )
-        WRITE(*,'(A8,A17,ES12.4E3)') &
-          ' ', 'Offset rate    = ', Opacity % EC_table_rate_Offsets
-      ENDDO
+    IF(mpi_is_init) THEN
+      CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+    ELSE
+      myid = 0
     ENDIF
 
-    WRITE(*,*) 'EmAb on np, Full kinematics, Fischer et al 2020                        ', Opacity % np_FK
-    WRITE(*,*) 'EmAb on np, Full kinematics inverse neutron decay, Fischer et al 2020  ', Opacity % np_FK_inv_n_decay
-    WRITE(*,*) 'EmAb on np, isoenergetic, Bruenn 1985                                  ', Opacity % np_isoenergetic
-    WRITE(*,*) 'EmAb on np, Reddy et al 1998                                           ', Opacity % np_non_isoenergetic
-    WRITE(*,*) 'EmAb on np, weak magnetism corrections                                 ', Opacity % np_weak_magnetism
-    WRITE(*,*) 'EmAb on nuclei,   Bruenn 1985 using FFN formalism                      ', Opacity % nuclei_EC_FFN
-    WRITE(*,*) 'EmAb on nuclei,   NSE-folded LMSH EC table                             ', Opacity % nuclei_EC_table
-    WRITE(*,*)
+    IF(myid == 0) THEN
+
+      WRITE(*,*)
+      WRITE(*,'(A4,A)') ' ', 'Opacity Type EmAb on nucleons and nuclei'
+      WRITE(*,'(A4,A)') ' ', '--------------'
+      WRITE(*,'(A6,A13,I3.3)') &
+        ' ', 'nOpacities = ', Opacity % nOpacities
+      WRITE(*,'(A6,A13,4I5.4)') &
+        ' ', 'nPoints    = ', Opacity % nPoints
+      WRITE(*,'(A6,A13,I10.10)') &
+        ' ', 'DOFs       = ', &
+        Opacity % nOpacities * PRODUCT( Opacity % nPoints )
+
+      DO i = 1, Opacity % nOpacities
+        WRITE(*,*)
+        WRITE(*,'(A6,A8,I3.3,A3,A)') &
+          ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
+        WRITE(*,'(A8,A12,A)') &
+          ' ', 'Units     = ', TRIM( Opacity % Units(i) )
+        WRITE(*,'(A8,A12,ES12.4E3)') &
+          ' ', 'Min Value = ', MINVAL( Opacity % Opacity(i) % Values )
+        WRITE(*,'(A8,A12,ES12.4E3)') &
+          ' ', 'Max Value = ', MAXVAL( Opacity % Opacity(i) % Values )
+        WRITE(*,'(A8,A12,ES12.4E3)') &
+          ' ', 'Offset    = ', Opacity % Offsets(i)
+      END DO
+
+      IF(Opacity % nuclei_EC_table .gt. 0) THEN
+        DO i = 1, Opacity % EC_table_nOpacities
+          WRITE(*,*)
+          WRITE(*,*) 'EC table:'
+          WRITE(*,'(A6,A8,I3.3,A3,A)') &
+            ' ', 'Opacity(',i,'): ', TRIM( Opacity % EC_table_Names(i) )
+          WRITE(*,'(A8,A17,A)') &
+            ' ', 'Units          = ', TRIM( Opacity % EC_table_Units(i) )
+          WRITE(*,'(A8,A17,ES12.4E3)') &
+            ' ', 'Min Value spec = ', MINVAL( Opacity % EC_table_spec(i) % Values )
+          WRITE(*,'(A8,A17,ES12.4E3)') &
+            ' ', 'Max Value spec = ', MAXVAL( Opacity % EC_table_spec(i) % Values )
+          WRITE(*,'(A8,A17,ES12.4E3)') &
+            ' ', 'Offset spec    = ', Opacity % EC_table_spec_Offsets
+          WRITE(*,'(A8,A17,ES12.4E3)') &
+            ' ', 'Min Value rate = ', MINVAL( Opacity % EC_table_rate(i) % Values )
+          WRITE(*,'(A8,A17,ES12.4E3)') &
+            ' ', 'Max Value rate = ', MAXVAL( Opacity % EC_table_rate(i) % Values )
+          WRITE(*,'(A8,A17,ES12.4E3)') &
+            ' ', 'Offset rate    = ', Opacity % EC_table_rate_Offsets
+        ENDDO
+      ENDIF
+
+      WRITE(*,*) 'EmAb on np, Full kinematics, Fischer et al 2020                        ', Opacity % np_FK
+      WRITE(*,*) 'EmAb on np, Full kinematics inverse neutron decay, Fischer et al 2020  ', Opacity % np_FK_inv_n_decay
+      WRITE(*,*) 'EmAb on np, isoenergetic, Bruenn 1985                                  ', Opacity % np_isoenergetic
+      WRITE(*,*) 'EmAb on np, Reddy et al 1998                                           ', Opacity % np_non_isoenergetic
+      WRITE(*,*) 'EmAb on np, weak magnetism corrections, Horowitz 2002                  ', Opacity % np_weak_magnetism
+      WRITE(*,*) 'EmAb on nuclei,   Bruenn 1985 using FFN formalism                      ', Opacity % nuclei_EC_FFN
+      WRITE(*,*) 'EmAb on nuclei,   NSE-folded LMSH EC table                             ', Opacity % nuclei_EC_table
+      WRITE(*,*)
+
+    END IF
 
   END SUBROUTINE DescribeOpacityTypeEmAb
 
@@ -370,53 +387,83 @@ CONTAINS
 
   SUBROUTINE DescribeOpacityTypeScat( Opacity )
 
-    TYPE(OpacityTypeScat), INTENT(in) :: Opacity
+    USE MPI
+
+    CLASS(OpacityTypeScat), INTENT(in) :: Opacity
 
     INTEGER :: i, l
 
-    WRITE(*,*)
-    WRITE(*,'(A4,A)') ' ', 'Opacity Type Scat'
-    WRITE(*,'(A4,A)') ' ', '--------------'
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nOpacities = ', Opacity % nOpacities
-    WRITE(*,'(A6,A13,I3.3)') &
-      ' ', 'nMoments   = ', Opacity % nMoments
-    WRITE(*,'(A6,A13,5I5.4)') &
-      ' ', 'nPoints    = ', Opacity % nPoints
-    WRITE(*,'(A6,A13,I10.10)') &
-      ' ', 'DOFs       = ', &
-      Opacity % nOpacities * PRODUCT( Opacity % nPoints )
+    CALL MPI_INITIALIZED(mpi_is_init, ierr)
 
-    DO i = 1, Opacity % nOpacities
-      WRITE(*,*)
-      WRITE(*,'(A6,A8,I3.3,A3,A)') &
-        ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
-      WRITE(*,'(A8,A12,A)') &
-        ' ', 'Units     = ', TRIM( Opacity % Units(i) )
+    IF(mpi_is_init) THEN
+      CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+    ELSE
+      myid = 0
+    ENDIF
 
-      DO l = 1, Opacity % nMoments
+    IF(myid == 0) THEN
+
       WRITE(*,*)
-         IF( Opacity % nMoments .eq. 4 )THEN
-           WRITE(*,'(A8,A16,I3.3)') &
-             ' ', 'For Moments l = ', l
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
-         ELSE
-           WRITE(*,'(A8,A16,I3.3)') &
-             ' ', 'For Moments l = ', l
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
-           WRITE(*,'(A8,A12,ES12.4E3)') &
-             ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
-         END IF
-         WRITE(*,'(A8,A12,ES12.4E3)') &
-           ' ', 'Offset    = ', Opacity % Offsets(i,l)
-      END DO ! l = nMoment
+      WRITE(*,'(A4,A)') ' ', 'Opacity Type Scat'
+      WRITE(*,'(A4,A)') ' ', '--------------'
+      WRITE(*,'(A6,A13,I3.3)') &
+        ' ', 'nOpacities = ', Opacity % nOpacities
+      WRITE(*,'(A6,A13,I3.3)') &
+        ' ', 'nMoments   = ', Opacity % nMoments
+      WRITE(*,'(A6,A13,5I5.4)') &
+        ' ', 'nPoints    = ', Opacity % nPoints
+      WRITE(*,'(A6,A13,I10.10)') &
+        ' ', 'DOFs       = ', &
+        Opacity % nOpacities * PRODUCT( Opacity % nPoints )
+
+      DO i = 1, Opacity % nOpacities
+        WRITE(*,*)
+        WRITE(*,'(A6,A8,I3.3,A3,A)') &
+          ' ', 'Opacity(',i,'): ', TRIM( Opacity % Names(i) )
+        WRITE(*,'(A8,A12,A)') &
+          ' ', 'Units     = ', TRIM( Opacity % Units(i) )
+
+        DO l = 1, Opacity % nMoments
+          WRITE(*,*)
+          IF( Opacity % nMoments .eq. 4 )THEN
+            WRITE(*,'(A8,A16,I3.3)') &
+              ' ', 'For Moments l = ', l
+            WRITE(*,'(A8,A12,ES12.4E3)') &
+              ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+            WRITE(*,'(A8,A12,ES12.4E3)') &
+              ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,:,l,:,:) )
+          ELSE
+            WRITE(*,'(A8,A16,I3.3)') &
+              ' ', 'For Moments l = ', l
+            WRITE(*,'(A8,A12,ES12.4E3)') &
+              ' ', 'Min Value = ', MINVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
+            WRITE(*,'(A8,A12,ES12.4E3)') &
+              ' ', 'Max Value = ', MAXVAL( Opacity % Kernel(i) % Values(:,l,:,:,:) )
+          END IF
+          WRITE(*,'(A8,A12,ES12.4E3)') &
+            ' ', 'Offset    = ', Opacity % Offsets(i,l)
+        END DO ! l = nMoment
+        WRITE(*,*)
+      END DO
       WRITE(*,*)
-    END DO
-    WRITE(*,*)
+
+      SELECT TYPE ( Opacity )
+
+        TYPE IS ( OpacityTypeScatIso )
+
+          WRITE(*,*) 'Weak magnetism corrections, Horowitz 2002                                   ', &
+                      Opacity % weak_magnetism_corrections
+          WRITE(*,*) 'Ion-ion corrections, Horowitz 1997, Bruenn and Mezzacappa 1997              ', Opacity % ion_ion_corrections
+          WRITE(*,*) 'Many body corrections, Horowitz et al 2017                                  ', Opacity % many_body_corrections
+          WRITE(*,*) 'Strange quark contribution to axial vector coupling constant (0.0 if no-op) ', Opacity % ga_strange
+
+        TYPE IS ( OpacityTypeScatNES )
+
+          WRITE(*,*) 'Neutrino-positron scattering included ', Opacity % NPS
+
+      END SELECT
+
+    END IF
 
   END SUBROUTINE DescribeOpacityTypeScat
 
