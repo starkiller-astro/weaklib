@@ -196,9 +196,11 @@ IMPLICIT NONE
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-!   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
-   REAL(dp), PARAMETER     :: Emin = 0.0d+00 !lower face of first energy cell
-   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
+!   REAL(dp), PARAMETER     :: Emin = 1.0d-01 !lower face of first energy cell
+!   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
+   REAL(dp), PARAMETER     ::  Emin = 0.0d+00 !lower face of first energy cell
+   REAL(dp), PARAMETER     ::  Emax = 3.2d+02 !upper face of last energy cell
+   REAL(dp), PARAMETER     :: dEmin = 0.2d+00 !min energy bin width
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
@@ -436,16 +438,17 @@ PRINT*, "Making Energy Grid ... "
 
    EnergyGrid % MinValue = Emin
    EnergyGrid % MaxValue = Emax
-!   EnergyGrid % LogInterp = 1
-   EnergyGrid % Zoom = 1.26603816071016d0
+   EnergyGrid % MinWidth = dEmin
+!   EnergyGrid % Zoom = 1.26603816071016d0
+   CALL MakeGeometricGrid &
+          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+            EnergyGrid % MinWidth, EnergyGrid % nPoints, EnergyGrid % Values, &
+            EnergyGrid % Width, EnergyGrid % Edge, EnergyGrid % Zoom )
 
+!   EnergyGrid % LogInterp = 1
 !   CALL MakeLogGrid &
 !          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
 !            EnergyGrid % nPoints,  EnergyGrid % Values )
-   CALL MakeGeometricGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, EnergyGrid % Zoom, &
-            EnergyGrid % nPoints, EnergyGrid % Values, EnergyGrid % Width, &
-            EnergyGrid % Edge )
 
    END ASSOCIATE ! EnergyGrid
 
