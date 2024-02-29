@@ -298,7 +298,7 @@ CONTAINS
 
     END IF
 
-    IF( WriteOpacity_NES .or. WriteOpacity_Pair) THEN
+    IF( WriteOpacity_NES .or. WriteOpacity_NNS .or. WriteOpacity_Pair) THEN
 
       CALL OpenGroupHDF( "EtaGrid", .true., file_id, group_id )
       CALL WriteGridHDF( OpacityTable % EtaGrid, group_id )
@@ -345,6 +345,56 @@ CONTAINS
             ENDIF
 
             CALL WriteGroupAttributeHDF_string("Neutrino positron scattering", tempString, group_id) 
+
+          END BLOCK
+
+          CALL WriteVersionAttribute(group_id)
+
+          CALL CloseGroupHDF( group_id )
+  
+        END IF
+
+      END IF
+
+      IF( WriteOpacity_NNS ) THEN
+      WRITE(*,*) "Writing out NNS"
+
+        IF( .NOT. ALLOCATED( OpacityTable % Scat_NNS % Names ) )THEN
+  
+          ! --- Insert Appropriate Reaction ---
+          WRITE(*,'(A4,A)') &
+            '', 'OpacityTable % Scat_NNS not allocated.  Write Skipped.'
+  
+        ELSE
+  
+          CALL OpenGroupHDF &
+                 ( "Scat_NNS_Kernels", .true., file_id, group_id )
+          CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_NNS, group_id )
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(2) :: tempString
+
+            tempString(1) = "Opacity from NNS, Bruenn et al. (2020)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020ApJS..248...11B/doi:10.3847/1538-4365/ab7aff"
+
+            CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
+
+          END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+
+            tempString(1) = "Weak magnetism corrections for NNS, Bruenn et al. (2020)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2020ApJS..248...11B/doi:10.3847/1538-4365/ab7aff"
+            IF(OpacityTable % Scat_NNS % weak_magnetism_corrections .gt. 0) THEN
+              tempString(3) = "Included."
+            ELSE
+              tempString(3) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("weak_magnetism_corrections", tempString, group_id) 
 
           END BLOCK
 
