@@ -122,13 +122,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 0
+                              = 1 !0
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 1
+                              = 0 !1
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
@@ -187,6 +187,10 @@ IMPLICIT NONE
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
+                                              !   ( either 0 or 4 )
+
+   INTEGER, PARAMETER      :: nOpac_NNS  = 1  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nMom_NNS   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
    INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
@@ -276,8 +280,8 @@ IMPLICIT NONE
 
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
-              nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
-              nOpac_Brem, nMom_Brem, &
+              nOpac_NES, nMom_NES, nOpac_NNS, nMom_NNS, &
+              nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, &
               nPointsE, nPointsEta, &
               EquationOfStateTableName_Option = EOSTableName )
    CALL FinalizeHDF( )

@@ -65,19 +65,22 @@ CONTAINS
   SUBROUTINE WriteOpacityTableHDF &
     ( OpacityTable, FileName, WriteOpacity_EmAb_Option, &
       WriteOpacity_Iso_Option, WriteOpacity_NES_Option, &
-      WriteOpacity_Pair_Option, WriteOpacity_Brem_Option )
+      WriteOpacity_NNS_Option, WriteOpacity_Pair_Option, &
+      WriteOpacity_Brem_Option )
  
     TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
     CHARACTER(len=*),       INTENT(in)           :: FileName
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_EmAb_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Iso_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_NES_Option
+    LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_NNS_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Pair_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Brem_Option
 
     LOGICAL           :: WriteOpacity_EmAb
     LOGICAL           :: WriteOpacity_Iso 
     LOGICAL           :: WriteOpacity_NES 
+    LOGICAL           :: WriteOpacity_NNS 
     LOGICAL           :: WriteOpacity_Pair
     LOGICAL           :: WriteOpacity_Brem
     CHARACTER(LEN=32) :: tempString(1)
@@ -102,6 +105,12 @@ CONTAINS
       WriteOpacity_NES = WriteOpacity_NES_Option
     ELSE
       WriteOpacity_NES = .FALSE.
+    END IF
+
+    IF( PRESENT( WriteOpacity_NNS_Option ) )THEN
+      WriteOpacity_NNS = WriteOpacity_NNS_Option
+    ELSE
+      WriteOpacity_NNS = .FALSE.
     END IF
 
     IF( PRESENT( WriteOpacity_Pair_Option ) )THEN
@@ -820,8 +829,8 @@ CONTAINS
 
   SUBROUTINE ReadOpacityTableHDF &
     ( OpacityTable, FileName_EmAb_Option, FileName_Iso_Option, &
-      FileName_NES_Option, FileName_Pair_Option, FileName_Brem_Option, &
-      EquationOfStateTableName_Option, Verbose_Option )
+      FileName_NES_Option, FileName_NNS_Option, FileName_Pair_Option, &
+      FileName_Brem_Option, EquationOfStateTableName_Option, Verbose_Option )
 
     USE MPI
  
@@ -829,6 +838,7 @@ CONTAINS
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_EmAb_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Iso_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NES_Option
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NNS_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Pair_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Brem_Option
     CHARACTER(LEN=*),       INTENT(in),   OPTIONAL :: EquationOfStateTableName_Option
@@ -837,12 +847,13 @@ CONTAINS
     INTEGER, PARAMETER :: iEmAb = 1
     INTEGER, PARAMETER :: iIso  = 2
     INTEGER, PARAMETER :: iNES  = 3
-    INTEGER, PARAMETER :: iPair = 4
-    INTEGER, PARAMETER :: iBrem = 5
+    INTEGER, PARAMETER :: iNNS  = 4
+    INTEGER, PARAMETER :: iPair = 5
+    INTEGER, PARAMETER :: iBrem = 6
 
-    LOGICAL            :: ReadOpacity(5)
+    LOGICAL            :: ReadOpacity(6)
     LOGICAL            :: Verbose
-    CHARACTER(128)     :: FileName(5)
+    CHARACTER(128)     :: FileName(6)
     CHARACTER(128)     :: EquationOfStateTableName
     INTEGER            :: iOp
     INTEGER            :: nPointsE
@@ -853,6 +864,8 @@ CONTAINS
     INTEGER            :: nMom_Iso
     INTEGER            :: nOpac_NES
     INTEGER            :: nMom_NES
+    INTEGER            :: nOpac_NNS
+    INTEGER            :: nMom_NNS
     INTEGER            :: nOpac_Pair
     INTEGER            :: nMom_Pair
     INTEGER            :: nOpac_Brem
@@ -903,6 +916,16 @@ CONTAINS
       ReadOpacity(iNES) = .FALSE.
       nOpac_NES = 0
       nMom_NES  = 0
+    END IF
+
+    IF( PRESENT( FileName_NNS_Option ) &
+        .AND. ( LEN( FileName_NNS_Option ) > 1 ) )THEN
+      ReadOpacity(iNNS) = .TRUE.
+      FileName   (iNNS) = TRIM( FileName_NNS_Option )
+    ELSE
+      ReadOpacity(iNNS) = .FALSE.
+      nOpac_NNS = 0
+      nMom_NNS  = 0
     END IF
 
     IF( PRESENT( FileName_Pair_Option ) &
@@ -1241,8 +1264,8 @@ CONTAINS
 
     CALL AllocateOpacityTable &
            ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
-             nMom_NES, nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, &
-             nPointsE, nPointsEta, &
+             nMom_NES, nOpac_NNS, nMom_NNS, nOpac_Pair, nMom_Pair, &
+             nOpac_Brem, nMom_Brem, nPointsE, nPointsEta, &
              EquationOfStateTableName_Option = EquationOfStateTableName, &
              OpacityThermoState_Option = TS, &
              Verbose_Option = Verbose )
