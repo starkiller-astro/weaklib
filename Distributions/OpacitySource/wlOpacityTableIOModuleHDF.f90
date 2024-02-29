@@ -31,7 +31,8 @@ MODULE wlOpacityTableIOModuleHDF
     OpacityTypeEmAb,                 &
     OpacityTypeScat,                 &
     OpacityTypeScatIso,              &
-    OpacityTypeScatNES
+    OpacityTypeScatNES,              &
+    OpacityTypeScatNNS
   USE wlIOModuleHDF, ONLY:           &
     ReadHDF,                         &
     WriteHDF,                        &
@@ -784,7 +785,6 @@ CONTAINS
         datasize1d = 1
         tempInteger(1) = Scat % weak_magnetism_corrections
         CALL WriteHDF( "weak_magnetism_corr", tempInteger, group_id, datasize1d )
-
         tempInteger(1) = Scat % ion_ion_corrections
         CALL WriteHDF( "ion_ion_corr", tempInteger, group_id, datasize1d )
 
@@ -794,12 +794,20 @@ CONTAINS
         tempReal(1)    = Scat % ga_strange
         CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
 
+        tempInteger(1) = Scat % includes_nucleons
+        CALL WriteHDF( "includes_nucleons", tempInteger, group_id, datasize1d )
+
       TYPE IS ( OpacityTypeScatNES )
 
         datasize1d = 1
         tempInteger(1) = Scat % NPS
         CALL WriteHDF( "NPS", tempInteger, group_id, datasize1d )
 
+      TYPE IS ( OpacityTypeScatNNS )
+
+        datasize1d = 1
+        tempInteger(1) = Scat % weak_magnetism_corrections
+        CALL WriteHDF( "weak_magnetism_corr", tempInteger, group_id, datasize1d )
     END SELECT
 
     datasize1d = 1
@@ -1777,7 +1785,7 @@ CONTAINS
           CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
           IF(myid == 0) THEN
-            WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'Dataset many_body_corr not found in ', TRIM( FileName )
             WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
           ENDIF
 
@@ -1809,6 +1817,26 @@ CONTAINS
           Scat % ga_strange = bufferReal(1)
         ENDIF
 
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "includes_nucleons", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset includes_nucleons not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "includes_nucleons", buffer, group_id, datasize1d )
+          Scat % includes_nucleons = buffer(1)
+        ENDIF
+
       TYPE IS ( OpacityTypeScatNES )
 
         CALL h5fget_name_f( group_id, FileName, flength, hdferr )
@@ -1832,6 +1860,33 @@ CONTAINS
           datasize1d(1) = 1
           CALL ReadHDF( "NPS", buffer, group_id, datasize1d )
           Scat % NPS = buffer(1)
+
+        ENDIF
+
+      TYPE IS ( OpacityTypeScatNNS )
+
+        CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+          
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "weak_magnetism_corr", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+            
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
+          Scat % weak_magnetism_corrections = buffer(1)
 
         ENDIF
 

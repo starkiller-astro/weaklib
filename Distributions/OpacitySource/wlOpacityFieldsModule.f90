@@ -154,11 +154,16 @@ MODULE wlOpacityFieldsModule
     INTEGER  :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
     INTEGER  :: many_body_corrections      !Horowith et al 2017
     REAL(DP) :: ga_strange                 !strange quark contributions
+    INTEGER  :: includes_nucleons
   END TYPE OpacityTypeScatIso
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
     INTEGER :: NPS !include neutrino-positron scattering as well 
   END TYPE OpacityTypeScatNES
+
+  TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNNS
+    INTEGER :: weak_magnetism_corrections ! Bruenn 2020 adjustment to Horowitz 2002
+  END TYPE OpacityTypeScatNNS
 
   PUBLIC :: AllocateOpacity
   PUBLIC :: DeallocateOpacity
