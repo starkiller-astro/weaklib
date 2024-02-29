@@ -31,8 +31,9 @@ PROGRAM wlCreateOpacityTable
 !       v_i/anti(v_i) + A --> v_i/anti(v_i) + A
 !       v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
 !
-! OpacityType C for non-iso scattering NES/Pair( e_in, e_out, l, T, eta)
+! OpacityType C for non-iso scattering NES/NNS/Pair( e_in, e_out, l, T, eta)
 !
+!       v_i/anti(v_i) + e+/e-/n/p  <-->  v_i/anti(v_i) + e+/e-/n/p
 !       e+ + e-  <--> v_i + anti(v_i);   i=e, muon, tau
 !       N + N   <--> N + N + v_i + anti(v_i)
 !
@@ -179,6 +180,23 @@ IMPLICIT NONE
                               = 1
                               !Modification to neutral current scattering due to many-body effects
 
+   INTEGER, PARAMETER      :: Scat_np_isoenergetic &
+                              = 0
+                              !Neutrino-nucleon scattering is isoenergetic 
+                              !Included in the Iso table
+
+   INTEGER, PARAMETER      :: Scat_np_non_isoenergetic &
+                              = 1
+                              !Neutrino-nucleon scattering is non-isoenergetic 
+                              !Excluded from Iso table
+                              !Separate ScatNNS table
+                              !Reddy (1998) and Bruenn et al. (2020)
+
+   INTEGER, PARAMETER      :: Scat_np_weak_magnetism &
+                              = 1
+                              !Weak magnetism correction for non-isoenergetic
+                              !neutrino-nucleon scattering, Bruenn (2020)
+
    INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
@@ -199,7 +217,7 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
-   INTEGER,  PARAMETER     :: nPointsE = 40
+   INTEGER,  PARAMETER     :: nPointsE = 16
 !   REAL(dp), PARAMETER     :: Emin = 1.0d-01 !lower face of first energy cell
 !   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
    REAL(dp), PARAMETER     ::  Emin = 0.0d+00 !lower face of first energy cell
