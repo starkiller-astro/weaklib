@@ -150,8 +150,9 @@ MODULE wlOpacityFieldsModule
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatIso
     INTEGER :: weak_magnetism_corrections !Horowitz 2002
     INTEGER :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
-    INTEGER :: many_body_corrections
-    INTEGER :: includes_nucleons
+    INTEGER :: many_body_corrections      !Horowitz et al. 2017
+    INTEGER :: includes_nucleons          !false if inelastic NNS 
+                                          !(Reddy 1998 and Bruenn et al. 2020)
   END TYPE OpacityTypeScatIso
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
@@ -159,7 +160,8 @@ MODULE wlOpacityFieldsModule
   END TYPE OpacityTypeScatNES
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNNS
-    INTEGER :: weak_magnetism_corrections ! Bruenn 2020 adjustment to Horowitz 2002
+    INTEGER :: weak_magnetism_corrections !Bruenn 2020 adjustment to Horowitz 2002
+    INTEGER :: many_body_corrections      !Horowitz et al. 2017
   END TYPE OpacityTypeScatNNS
 
   PUBLIC :: AllocateOpacity

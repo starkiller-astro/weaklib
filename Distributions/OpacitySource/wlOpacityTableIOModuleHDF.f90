@@ -378,6 +378,22 @@ CONTAINS
 
           END BLOCK
 
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+
+            tempString(1) = "Many-body effects corrections for isoenergetic scattering, Horowitz et al (2017)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2017PhRvC..95b5801H/doi:10.1103/PhysRevC.95.025801"
+            IF(OpacityTable % Scat_NNS % many_body_corrections .gt. 0) THEN
+              tempString(3) = "Included."
+            ELSE
+              tempString(3) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("many_body_corrections", tempString, group_id) 
+
+          END BLOCK
+        
           CALL WriteVersionAttribute(group_id)
 
           CALL CloseGroupHDF( group_id )
@@ -835,7 +851,11 @@ CONTAINS
         datasize1d = 1
         tempInteger(1) = Scat % weak_magnetism_corrections
         CALL WriteHDF( "weak_magnetism_corr", tempInteger, group_id, datasize1d )
-    END SELECT
+
+        tempInteger(1) = Scat % many_body_corrections
+        CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
+
+     END SELECT
 
     datasize1d = 1
     tempInteger(1) = Scat % nOpacities
@@ -1880,7 +1900,7 @@ CONTAINS
           CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
           IF(myid == 0) THEN
-            WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'Dataset many_body_corr not found in ', TRIM( FileName )
             WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
           ENDIF
 
@@ -1888,9 +1908,13 @@ CONTAINS
           CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
-          CALL ReadHDF( "includes_nucleons", buffer, group_id, datasize1d )
+          CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
           Scat % many_body_corrections = buffer(1)
         ENDIF
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "includes_nucleons", dataset_id, hdferr )
 
         IF( hdferr .ne. 0 ) THEN
           CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
@@ -1959,6 +1983,26 @@ CONTAINS
           CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
           Scat % weak_magnetism_corrections = buffer(1)
 
+        ENDIF
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "many_body_corr", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset many_body_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+          CALL h5eset_auto_f( 1, hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
+          Scat % many_body_corrections = buffer(1)
         ENDIF
 
     END SELECT
