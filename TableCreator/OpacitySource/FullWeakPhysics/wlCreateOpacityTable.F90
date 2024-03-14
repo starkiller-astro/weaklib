@@ -203,6 +203,10 @@ IMPLICIT NONE
                               !Weak magnetism correction for non-isoenergetic
                               !neutrino-nucleon scattering, Bruenn (2020)
 
+   INTEGER, PARAMETER      :: Scat_np_many_body_corrections &
+                              = 1
+                              !Modification to neutral current scattering due to many-body effects, Horowitz et al. 2017
+
    INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
