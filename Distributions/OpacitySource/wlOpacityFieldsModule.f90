@@ -151,8 +151,15 @@ MODULE wlOpacityFieldsModule
     INTEGER :: weak_magnetism_corrections !Horowitz 2002
     INTEGER :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
     INTEGER :: many_body_corrections      !Horowitz et al. 2017
-    INTEGER :: includes_nucleons          !false if inelastic NNS 
-                                          !(Reddy 1998 and Bruenn et al. 2020)
+    INTEGER :: np_non_isoenergetic        ! 0: elastic NNS 
+                                          ! 1: inelastic NNS 
+                                          !    (Reddy 1998 
+                                          !     and Bruenn et al. 2020)
+                                          ! 2: inelastic NNS
+                                          !    (Hannested and Raffelt)
+                                          ! Only used for 
+                                          !   rho > rho_non_iso_min
+    REAL(dp) :: rho_non_iso_min
   END TYPE OpacityTypeScatIso
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
@@ -160,8 +167,18 @@ MODULE wlOpacityFieldsModule
   END TYPE OpacityTypeScatNES
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNNS
-    INTEGER :: weak_magnetism_corrections !Bruenn 2020 adjustment to Horowitz 2002
-    INTEGER :: many_body_corrections      !Horowitz et al. 2017
+    INTEGER :: weak_magnetism_corrections ! Bruenn 2020 adjustment to 
+                                          !   Horowitz 2002
+    INTEGER :: many_body_corrections      ! Horowitz et al. 2017
+    INTEGER :: np_non_isoenergetic        ! 0: elastic NNS 
+                                          ! 1: inelastic NNS 
+                                          !    (Reddy 1998 
+                                          !     and Bruenn et al. 2020)
+                                          ! 2: inelastic NNS
+                                          !    (Hannested and Raffelt)
+                                          ! Only used for 
+                                          !   rho > rho_non_iso_min
+    REAL(dp) :: rho_non_iso_min
   END TYPE OpacityTypeScatNNS
 
   PUBLIC :: AllocateOpacity
