@@ -857,20 +857,11 @@ CONTAINS
         tempInteger(1) = Scat % many_body_corrections
         CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
 
-<<<<<<< HEAD
         tempReal(1)    = Scat % ga_strange
         CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
 
-        tempInteger(1) = Scat % includes_nucleons
-        CALL WriteHDF( "includes_nucleons", tempInteger, group_id, datasize1d )
-=======
         tempInteger(1) = Scat % np_non_isoenergetic
         CALL WriteHDF( "np_non_isoenergetic", tempInteger, group_id, datasize1d )
-
-        tempReal(1) = Scat % rho_non_iso_min
-        CALL WriteHDF( "rho_non_iso_min", tempInteger, group_id, datasize1d )
->>>>>>> 2e3accd (Adjusting metadata related to inelastic neutrino-nucleon scattering.)
-
       TYPE IS ( OpacityTypeScatNES )
 
         datasize1d = 1
@@ -888,9 +879,6 @@ CONTAINS
 
         tempInteger(1) = Scat % np_non_isoenergetic
         CALL WriteHDF( "np_non_isoenergetic", tempInteger, group_id, datasize1d )
-
-        tempReal(1) = Scat % rho_non_iso_min
-        CALL WriteHDF( "rho_non_iso_min", tempInteger, group_id, datasize1d )
 
      END SELECT
 
@@ -1989,26 +1977,6 @@ CONTAINS
           Scat % np_non_isoenergetic = buffer(1)
         ENDIF
 
-        CALL h5eset_auto_f( 0, hdferr )
- 
-        CALL h5dopen_f( group_id, "rho_non_iso_min", dataset_id, hdferr )
-
-        IF( hdferr .ne. 0 ) THEN
-          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
-
-          IF(myid == 0) THEN
-            WRITE(*,*) 'Dataset rho_non_iso_min not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-          ENDIF
-
-          CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
-        ELSE
-          datasize1d(1) = 1
-          CALL ReadHDF( "rho_non_iso_min", bufferReal, group_id, datasize1d )
-          Scat % rho_non_iso_min = bufferReal(1)
-        ENDIF
-
       TYPE IS ( OpacityTypeScatNES )
 
         CALL h5fget_name_f( group_id, FileName, flength, hdferr )
@@ -2100,26 +2068,6 @@ CONTAINS
           datasize1d(1) = 1
           CALL ReadHDF( "np_non_isoenergetic", buffer, group_id, datasize1d )
           Scat % np_non_isoenergetic = buffer(1)
-        ENDIF
-
-        CALL h5eset_auto_f( 0, hdferr )
- 
-        CALL h5dopen_f( group_id, "rho_non_iso_min", dataset_id, hdferr )
-
-        IF( hdferr .ne. 0 ) THEN
-          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
-
-          IF(myid == 0) THEN
-            WRITE(*,*) 'Dataset rho_non_iso_min not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-          ENDIF
-
-          CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
-        ELSE
-          datasize1d(1) = 1
-          CALL ReadHDF( "rho_non_iso_min", bufferReal, group_id, datasize1d )
-          Scat % rho_non_iso_min = bufferReal(1)
         ENDIF
 
     END SELECT
