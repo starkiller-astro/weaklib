@@ -157,9 +157,8 @@ MODULE wlOpacityFieldsModule
                                           !     and Bruenn et al. 2020)
                                           ! 2: inelastic NNS
                                           !    (Hannested and Raffelt)
-                                          ! Only used for 
-                                          !   rho > rho_non_iso_min
-    REAL(dp) :: rho_non_iso_min
+                                          ! Unlike Chimera, used for all 
+                                          !   densities
   END TYPE OpacityTypeScatIso
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
@@ -176,9 +175,8 @@ MODULE wlOpacityFieldsModule
                                           !     and Bruenn et al. 2020)
                                           ! 2: inelastic NNS
                                           !    (Hannested and Raffelt)
-                                          ! Only used for 
-                                          !   rho > rho_non_iso_min
-    REAL(dp) :: rho_non_iso_min
+                                          ! Unlike Chimera, used for all 
+                                          !   densities
   END TYPE OpacityTypeScatNNS
 
   PUBLIC :: AllocateOpacity
