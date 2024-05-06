@@ -1,0 +1,27 @@
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/Old/EOSInterface: \
+..
+
+Weaklib_EOSTableCreator = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(WL_OPACITYSOURCE) \
+  $(SHAREDMODULES) \
+  $(EOS_OBJ) \
+  $(Interface_OBJ)
+
+all: wlCreateEOSTable
+
+wlCreateEOSTable: \
+	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o
+	$(FLINKER) $(FLAGS) -o wlCreateEOSTable_$(MACHINE) \
+	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateEOSTable_$(MACHINE)
