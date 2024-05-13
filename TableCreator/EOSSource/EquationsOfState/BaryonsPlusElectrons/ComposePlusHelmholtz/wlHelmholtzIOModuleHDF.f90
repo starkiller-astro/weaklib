@@ -1,7 +1,10 @@
 MODULE wlHelmholtzIOModuleHDF
     
     USE wlKindModule, ONLY: dp
-    USE wlElectronEOSModule, ONLY: HelmholtzEOSType
+    USE wlElectronEOSModule, ONLY: &
+        HelmholtzEOSType, &
+        AllocateHelmEOS,  &
+        DeAllocateHelmEOS
     USE HDF5
     USE wlIOModuleHDF
     
@@ -26,7 +29,7 @@ MODULE wlHelmholtzIOModuleHDF
         
         REAL(dp), DIMENSION(1) :: buffer
         
-        CALL OpenFileHDF( FileName, NewFile, file_id )
+        CALL OpenFileHDF( FileName, NewFile, file_id, ReadWrite_Option = .TRUE. )
         
         datasize2d = (/ HelmholtzTable % nPointsDen, HelmholtzTable % nPointsTemp /) 
         
@@ -192,6 +195,8 @@ MODULE wlHelmholtzIOModuleHDF
     !CALL CloseGroupHDF( group_id )
     
     CALL CloseFileHDF( file_id )
+
+    CALL DeAllocateHelmEOS( HelmholtzTable )
     
     END SUBROUTINE ReadHelmholtzTableHDF
     

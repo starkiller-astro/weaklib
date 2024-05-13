@@ -167,7 +167,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! NOW ADD Helmholtz EOS TO PREVIOUSLY CREATED H5 FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Appending Helmholtz EOS to HDF file"
-    CALL WriteHelmholtzTableHDF( HelmEOSTable, HelmEOSTableName, .true. )
+    CALL WriteHelmholtzTableHDF( HelmEOSTable, BaryonEOSTableName, .false. )
     CALL FinalizeHDF( )
         
     WRITE (*,*) "HDF write successful"

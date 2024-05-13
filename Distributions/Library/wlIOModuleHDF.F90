@@ -72,11 +72,20 @@ CONTAINS
 
   END SUBROUTINE FinalizeHDF 
 
-  SUBROUTINE OpenFileHDF( FileName, NewFile, file_id )  
+  SUBROUTINE OpenFileHDF( FileName, NewFile, file_id, ReadWrite_Option )  
 
-    CHARACTER(len=*), INTENT(in)               :: FileName
-    LOGICAL, INTENT(in)                        :: NewFile
-    INTEGER(HID_T), INTENT(out)                :: file_id
+    CHARACTER(len=*), INTENT(in)  :: FileName
+    LOGICAL, INTENT(in)           :: NewFile
+    LOGICAL, INTENT(in), OPTIONAL :: ReadWrite_Option
+    INTEGER(HID_T), INTENT(out)   :: file_id
+
+    LOGICAL :: rdwr
+
+    IF( PRESENT( ReadWrite_Option ) )THEN
+      rdwr = ReadWrite_Option
+    ELSE
+      rdwr = .FALSE.
+    END IF 
 
     IF ( NewFile ) THEN
 
@@ -86,7 +95,11 @@ CONTAINS
       
       CALL h5eset_auto_f( 0, hdferr )
       CALL h5open_f(hdferr)
-      CALL h5fopen_f( TRIM( FileName ), H5F_ACC_RDONLY_F, file_id, hdferr)
+      IF ( rdwr ) THEN
+        CALL h5fopen_f( TRIM( FileName ), H5F_ACC_RDWR_F,   file_id, hdferr)
+      ELSE
+        CALL h5fopen_f( TRIM( FileName ), H5F_ACC_RDONLY_F, file_id, hdferr)
+      ENDIF
       IF( hdferr .ne. 0 ) THEN
         WRITE(*,*) 'Unable to open ',TRIM( FileName )
         WRITE(*,*) 'Aborting.'
