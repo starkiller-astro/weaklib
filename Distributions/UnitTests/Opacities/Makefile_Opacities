@@ -70,6 +70,12 @@ wlInterpolateBrem: \
 	$(Weaklib_TableCreator) wlInterpolateBrem.o \
 	$(LIBRARIES)
 
+wlQueryTables: \
+        $(Weaklib_TableCreator) wlQueryTables.o
+	$(FLINKER) $(FLAGS) -o wlQueryTables_$(MACHINE) \
+	$(Weaklib_TableCreator) wlQueryTables.o \
+	$(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld *.acc.s
 
