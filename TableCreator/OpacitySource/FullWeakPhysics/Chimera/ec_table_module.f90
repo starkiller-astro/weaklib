@@ -317,10 +317,10 @@ MODULE ec_table_module
     yeoffset(2) = iye-yefloor(rhoup)
 
     !Comment below to allow for extrapolation in Ye
-    !IF (sum(yeoffset) < -2) RETURN
+    IF (sum(yeoffset) < -2) RETURN
 
     !Comment below to allow for extrapolation in Ye
-    !IF (sum(yeoffset) > (2*nye-2)) RETURN
+    IF (sum(yeoffset) > (2*nye-2)) RETURN
 
     !-----------------------------------------------------------------------
     !  Because of density dependence, Ye may require askew interpolation.
