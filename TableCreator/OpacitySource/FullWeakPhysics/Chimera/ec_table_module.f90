@@ -316,8 +316,10 @@ MODULE ec_table_module
     yeoffset(1) = iye-yefloor(rhodown)
     yeoffset(2) = iye-yefloor(rhoup)
 
+    !Comment below to allow for extrapolation in Ye
     IF (sum(yeoffset) < -2) RETURN
 
+    !Comment below to allow for extrapolation in Ye
     IF (sum(yeoffset) > (2*nye-2)) RETURN
 
     !-----------------------------------------------------------------------

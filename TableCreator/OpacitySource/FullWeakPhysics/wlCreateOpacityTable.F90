@@ -110,7 +110,7 @@ IMPLICIT NONE
    CHARACTER(256)          :: WriteTableNameBrem
 
    TYPE(OpacityTableType)  :: OpacityTable
-   INTEGER, PARAMETER      :: nOpac_EmAb = 0  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_EmAb = 2  ! 2 for electron type
 
    INTEGER, PARAMETER      :: EmAb_np_FK &
                               = 0 
@@ -162,9 +162,9 @@ IMPLICIT NONE
    REAL(dp), PARAMETER     :: EC_E_min   =   0.0d0
    REAL(dp), PARAMETER     :: EC_E_max   = 100.0d0
 
-   INTEGER, PARAMETER      :: nOpac_Iso  = 2  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_Iso  = 0  ! 2 for electron type
                                               !   ( flavor identical )
-   INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
+   INTEGER, PARAMETER      :: nMom_Iso   = 0  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Iso_weak_magnetism &
                               = 1
