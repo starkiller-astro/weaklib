@@ -926,19 +926,11 @@ PRINT*, 'Filling OpacityTable ...'
              
              ELSE IF(EmAb_np_non_isoenergetic == 1) THEN
 
-               IF(rho >= 1.0d9) THEN
-                 CALL abem_np_non_isoenergetic_weaklib & 
-                      ( i_r, E_cells, &
-                        rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
-                        ab_nucleons, em_nucleons, nPointsE)
+               CALL abem_np_non_isoenergetic_weaklib & 
+                    ( i_r, E_cells, &
+                      rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
+                      ab_nucleons, em_nucleons, nPointsE)
 
-               ELSE
-                 CALL abem_nucleons_isoenergetic_weaklib & 
-                      ( i_r, E_cells, &
-                        rho, T, ye, xn, xp, xheavy, A, Z, chem_n, chem_p, chem_e, &
-                        ab_nucleons, em_nucleons, nPointsE)
-               END IF
-             
                IF (i_r == 1) THEN !electron neutrino weak mag correction
 
                  ab_nucleons = ab_nucleons * xi_n_wm
