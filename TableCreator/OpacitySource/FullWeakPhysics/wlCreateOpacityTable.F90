@@ -152,7 +152,7 @@ IMPLICIT NONE
                               !EmAb on nuclei using a NSE-folded LMSH table
                               !Langanke et al. (2003), Hix et al. (2003)
    !tabulated EC table range
-   REAL(dp), PARAMETER     :: EC_rho_min =   1.0d8
+   REAL(dp), PARAMETER     :: EC_rho_min =   1.0d7
    REAL(dp), PARAMETER     :: EC_rho_max =   1.0d13
    REAL(dp), PARAMETER     :: EC_T_min   =   0.4d0 / kMeV
    REAL(dp), PARAMETER     :: EC_T_max   =   4.0d0 / kMeV

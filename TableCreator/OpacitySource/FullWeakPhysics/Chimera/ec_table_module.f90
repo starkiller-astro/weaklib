@@ -303,8 +303,16 @@ MODULE ec_table_module
     rhodown=irho
     rhoup = irho+1
 
-    IF (rhoup > rhomx .or. rhodown < rhomn) then
-      RETURN
+    !IF (rhoup > rhomx .or. rhodown < rhomn) then
+    !  RETURN
+    !endif
+
+    !Allow for extrapolation at lower density end of the table
+    IF (rhoup > rhomx) RETURN
+
+    IF (rhodown < rhomn) then
+      rhodown = rhomn
+      rhoup   = rhomn+1
     endif
 
     !-----------------------------------------------------------------------
