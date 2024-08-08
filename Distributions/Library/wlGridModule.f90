@@ -10,13 +10,13 @@ MODULE wlGridModule
     CHARACTER(LEN=32) :: Unit
     INTEGER  :: nPoints
     INTEGER  :: LogInterp = 0
-    REAL(dp) :: minValue
-    REAL(dp) :: maxValue
-    REAL(dp) :: minWidth = 0.0d0
-    REAL(dp) :: Zoom = 0.0d0
+    REAL(dp) :: minValue = 0.0d0 !-- with Zoom: inner face of first cell
+    REAL(dp) :: maxValue = 0.0d0 !-- with Zoom: outer face of last cell
+    REAL(dp) :: minWidth = 0.0d0 !-- only applies with Zoom
+    REAL(dp) :: Zoom = 0.0d0     !-- non-zero value means geometric spacing
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Values
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: Edge
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: Width
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Edge !-- only applies with Zoom
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Width !-- only applies with Zoom 
   END TYPE
 
   PUBLIC :: MakeLinearGrid

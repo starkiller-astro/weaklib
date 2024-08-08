@@ -429,7 +429,8 @@ CONTAINS
     CHARACTER(LEN=32)                           :: tempString(1)
     INTEGER                                     :: tempInteger(1)
     INTEGER(HSIZE_T)                            :: datasize1d(1)
-
+    REAL(dp)                                    :: tempReal(1)
+    
     datasize1d(1) = 1
 
     tempString(1) = Grid % Name
@@ -444,8 +445,26 @@ CONTAINS
     tempInteger(1) = Grid % LogInterp 
     CALL WriteHDF( "LogInterp", tempInteger,      group_id, datasize1d )
    
+    tempReal(1) = Grid % minValue
+    CALL WriteHDF( "minValue",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % maxValue
+    CALL WriteHDF( "maxValue",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % minWidth
+    CALL WriteHDF( "minWidth",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % Zoom
+    CALL WriteHDF( "Zoom",      tempReal,         group_id, datasize1d )
+
     datasize1d(1) = Grid % nPoints
     CALL WriteHDF( "Values",    Grid % Values(:), group_id, datasize1d )
+
+    datasize1d(1) = Grid % nPoints + 1
+    CALL WriteHDF( "Edge",      Grid % Edge(:),   group_id, datasize1d )
+
+    datasize1d(1) = Grid % nPoints
+    CALL WriteHDF( "Width",     Grid % Width(:),  group_id, datasize1d )
 
   END SUBROUTINE WriteGridHDF
 
@@ -1851,12 +1870,19 @@ CONTAINS
 
   SUBROUTINE ReadGridHDF( Grid, group_id )
 
+    USE MPI
+ 
     TYPE(GridType), INTENT(inout)               :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER, DIMENSION(1)                       :: buffer
+    REAL(dp), DIMENSION(1)                      :: bufferReal
     CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
+
+    CHARACTER(len=150)                   :: FileName
+    INTEGER(SIZE_T)                      :: flength
+    INTEGER(HID_T)                       :: dataset_id
 
     datasize1d(1) = 1
     Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
@@ -1875,9 +1901,65 @@ CONTAINS
     CALL ReadHDF( "Values", Grid % Values, &
                               group_id, datasize1d )
 
-    Grid % minValue = MINVAL( Grid % Values )
+    !-- Read Zoom if present (geometric grid)
     
-    Grid % maxValue = MAXVAL( Grid % Values )
+    CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+          
+    CALL h5eset_auto_f( 0, hdferr )
+ 
+    CALL h5dopen_f( group_id, "Zoom", dataset_id, hdferr )
+
+    IF( hdferr .ne. 0 ) THEN
+      CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+      IF(myid == 0) THEN
+        WRITE(*,*) 'Dataset Zoom not found in ', TRIM( FileName )
+        WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+      ENDIF
+
+      CALL h5eclear_f( hdferr )
+      CALL h5eset_auto_f( 1, hdferr )
+            
+    ELSE
+      datasize1d(1) = 1
+      CALL ReadHDF( "Zoom", bufferReal, group_id, datasize1d )
+      Grid % Zoom = bufferReal(1)
+    ENDIF
+
+    !-- Fill in additional values
+
+    if ( Grid % Zoom  >  0.d0 ) then
+
+      !-- minValue refers to the lower face of the first cell
+      !-- maxValue refers to the upper face of the last cell
+
+      datasize1d(1) = 1
+      CALL ReadHDF( "minValue", bufferReal, group_id, datasize1d )
+      Grid % minValue = bufferReal(1)
+
+      CALL ReadHDF( "maxValue", bufferReal, group_id, datasize1d )
+      Grid % maxValue = bufferReal(1)
+
+      CALL ReadHDF( "minWidth", bufferReal, group_id, datasize1d )
+      Grid % minWidth = bufferReal(1)
+
+      datasize1d = Grid % nPoints + 1
+      CALL ReadHDF( "Edge", Grid % Edge, &
+                              group_id, datasize1d )
+
+      datasize1d = Grid % nPoints
+      CALL ReadHDF( "Width", Grid % Width, &
+                              group_id, datasize1d )
+
+    else 
+       
+      !-- minValue and maxValue refer to points, not cell edges
+
+      Grid % minValue = MINVAL( Grid % Values )
+    
+      Grid % maxValue = MAXVAL( Grid % Values )
+
+    end if
 
   END SUBROUTINE ReadGridHDF
 
