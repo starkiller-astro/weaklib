@@ -10,12 +10,14 @@ MODULE wlGridModule
     CHARACTER(LEN=32) :: Unit
     INTEGER  :: nPoints
     INTEGER  :: LogInterp = 0
-    REAL(dp) :: minValue = 0.0d0 !-- with Zoom: inner face of first cell
-    REAL(dp) :: maxValue = 0.0d0 !-- with Zoom: outer face of last cell
+    REAL(dp) :: minValue = 0.0d0
+    REAL(dp) :: maxValue = 0.0d0
+    REAL(dp) :: minEdge  = 0.0d0 !-- only applies with Zoom
+    REAL(dp) :: maxEdge  = 0.0d0 !-- only applies with Zoom
     REAL(dp) :: minWidth = 0.0d0 !-- only applies with Zoom
     REAL(dp) :: Zoom = 0.0d0     !-- non-zero value means geometric spacing
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Values
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: Edge !-- only applies with Zoom
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Edge  !-- only applies with Zoom
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Width !-- only applies with Zoom 
   END TYPE
 
@@ -85,26 +87,28 @@ CONTAINS
   END SUBROUTINE MakeLogGrid
 
 
-  SUBROUTINE MakeGeometricGrid( LowerBound, UpperBound, MinWidth, nPoints, &
-                                Grid, Width, Edge, Zoom)
+  SUBROUTINE MakeGeometricGrid( LowerEdge, UpperEdge, MinWidth, nPoints, &
+                                Grid, Width, Edge, Zoom, MinCenter, MaxCenter )
 
     INTEGER,                        INTENT(in)  :: nPoints
-    REAL(dp),                       INTENT(in)  :: LowerBound
-    REAL(dp),                       INTENT(in)  :: UpperBound
+    REAL(dp),                       INTENT(in)  :: LowerEdge
+    REAL(dp),                       INTENT(in)  :: UpperEdge
     REAL(dp),                       INTENT(in)  :: MinWidth
     REAL(dp), DIMENSION(nPoints),   INTENT(out) :: Grid 
     REAL(dp), DIMENSION(nPoints),   INTENT(out) :: Width 
     REAL(dp), DIMENSION(nPoints+1), INTENT(out) :: Edge
     REAL(dp),                       INTENT(out) :: Zoom
+    REAL(dp),                       INTENT(out) :: MinCenter
+    REAL(dp),                       INTENT(out) :: MaxCenter
 
     INTEGER  :: i
 
     ASSOCIATE &
       ( N   =>  nPoints, &
-        xL  =>  LowerBound, &
-        xR  =>  UpperBound )
+        xL  =>  LowerEdge, &
+        xR  =>  UpperEdge )
 
-    call ComputeZoom( LowerBound, UpperBound, MinWidth, nPoints, Zoom )
+    call ComputeZoom( LowerEdge, UpperEdge, MinWidth, nPoints, Zoom )
 
     Width(1) = ( xR - xL ) * ( Zoom - 1.0_DP ) / ( Zoom**N - 1.0_DP )
     Grid (1) = xL + 0.5_DP * Width(1)
@@ -115,6 +119,8 @@ CONTAINS
       Grid (i)   = xL + SUM( Width(1:i-1) ) + 0.5_DP * Width(i)
       Edge (i+1) = xL + SUM( Width(1:i) )
     END DO
+    MinCenter = Grid(1)
+    MaxCenter = Grid(N)
 
     END ASSOCIATE !-- N, etc.
 
@@ -200,10 +206,10 @@ CONTAINS
 
   END SUBROUTINE DescribeGrid
 
-  SUBROUTINE ComputeZoom( LowerBound, UpperBound, MinWidth, nPoints, Zoom )
+  SUBROUTINE ComputeZoom( LowerEdge, UpperEdge, MinWidth, nPoints, Zoom )
 
-    REAL(dp), INTENT(in)  :: LowerBound
-    REAL(dp), INTENT(in)  :: UpperBound
+    REAL(dp), INTENT(in)  :: LowerEdge
+    REAL(dp), INTENT(in)  :: UpperEdge
     REAL(dp), INTENT(in)  :: MinWidth
     INTEGER,  INTENT(in)  :: nPoints
     REAL(dp), INTENT(out) :: Zoom
@@ -214,8 +220,8 @@ CONTAINS
 
     a  = 1.000001_dp
     b  = 2.0_dp
-    fa = ZeroZoom ( a, LowerBound, UpperBound, MinWidth, nPoints )
-    fb = ZeroZoom ( b, LowerBound, UpperBound, MinWidth, nPoints )
+    fa = ZeroZoom ( a, LowerEdge, UpperEdge, MinWidth, nPoints )
+    fb = ZeroZoom ( b, LowerEdge, UpperEdge, MinWidth, nPoints )
 
     !-- Bisection
     do i = 1, 100
@@ -224,7 +230,7 @@ CONTAINS
         Zoom = c
         return
       end if
-      fc = ZeroZoom ( c, LowerBound, UpperBound, MinWidth, nPoints )
+      fc = ZeroZoom ( c, LowerEdge, UpperEdge, MinWidth, nPoints )
       if ( sign ( 1.0_dp, fc )  ==  sign ( 1.0_dp, fa ) ) then
         a  = c
         fa = fc
@@ -237,17 +243,17 @@ CONTAINS
   END SUBROUTINE ComputeZoom
 
   FUNCTION ZeroZoom &
-             ( Zoom, LowerBound, UpperBound, MinWidth, nPoints ) &
+             ( Zoom, LowerEdge, UpperEdge, MinWidth, nPoints ) &
              result ( ZZ )
 
     REAL(dp), INTENT(in) :: Zoom
-    REAL(dp), INTENT(in) :: LowerBound
-    REAL(dp), INTENT(in) :: UpperBound
+    REAL(dp), INTENT(in) :: LowerEdge
+    REAL(dp), INTENT(in) :: UpperEdge
     REAL(dp), INTENT(in) :: MinWidth
     INTEGER,  INTENT(in) :: nPoints
     REAL(dp)             :: ZZ
 
-    ZZ  =  ( UpperBound - LowerBound ) * ( Zoom - 1.0_dp ) &
+    ZZ  =  ( UpperEdge - LowerEdge ) * ( Zoom - 1.0_dp ) &
               /  ( Zoom ** nPoints  -  1.0_dp ) &
             -  MinWidth
 

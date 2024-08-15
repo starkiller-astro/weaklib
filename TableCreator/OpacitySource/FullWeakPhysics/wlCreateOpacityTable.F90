@@ -122,13 +122,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 0
+                              = 1
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 1
+                              = 0
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
@@ -447,19 +447,25 @@ PRINT*, "Making Energy Grid ... "
    EnergyGrid % Unit &
      = 'MeV                           '
 
-   EnergyGrid % MinValue = Emin
-   EnergyGrid % MaxValue = Emax
+!-- Logarithmic grid
 
+!   EnergyGrid % MinValue = Emin
+!   EnergyGrid % MaxValue = Emax
 !   EnergyGrid % LogInterp = 1
 !   CALL MakeLogGrid &
 !          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
 !            EnergyGrid % nPoints,  EnergyGrid % Values )
 
+!-- Geometric grid
+
+   EnergyGrid % MinEdge = Emin
+   EnergyGrid % MaxEdge = Emax
    EnergyGrid % MinWidth = dEmin
    CALL MakeGeometricGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+          ( EnergyGrid % MinEdge, EnergyGrid % MaxEdge, &
             EnergyGrid % MinWidth, EnergyGrid % nPoints, EnergyGrid % Values, &
-            EnergyGrid % Width, EnergyGrid % Edge, EnergyGrid % Zoom )
+            EnergyGrid % Width, EnergyGrid % Edge, EnergyGrid % Zoom, &
+            EnergyGrid % MinValue, EnergyGrid % MaxValue )
 
    END ASSOCIATE ! EnergyGrid
 

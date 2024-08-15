@@ -451,6 +451,12 @@ CONTAINS
     tempReal(1) = Grid % maxValue
     CALL WriteHDF( "maxValue",  tempReal,         group_id, datasize1d )
 
+    tempReal(1) = Grid % minEdge
+    CALL WriteHDF( "minEdge",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % maxEdge
+    CALL WriteHDF( "maxEdge",  tempReal,         group_id, datasize1d )
+
     tempReal(1) = Grid % minWidth
     CALL WriteHDF( "minWidth",  tempReal,         group_id, datasize1d )
 
@@ -1926,19 +1932,16 @@ CONTAINS
       Grid % Zoom = bufferReal(1)
     ENDIF
 
-    !-- Fill in additional values
+    !-- Fill in additional values for geometric grid
 
     if ( Grid % Zoom  >  0.d0 ) then
 
-      !-- minValue refers to the lower face of the first cell
-      !-- maxValue refers to the upper face of the last cell
-
       datasize1d(1) = 1
-      CALL ReadHDF( "minValue", bufferReal, group_id, datasize1d )
-      Grid % minValue = bufferReal(1)
+      CALL ReadHDF( "minEdge", bufferReal, group_id, datasize1d )
+      Grid % minEdge = bufferReal(1)
 
-      CALL ReadHDF( "maxValue", bufferReal, group_id, datasize1d )
-      Grid % maxValue = bufferReal(1)
+      CALL ReadHDF( "maxEdge", bufferReal, group_id, datasize1d )
+      Grid % maxEdge = bufferReal(1)
 
       CALL ReadHDF( "minWidth", bufferReal, group_id, datasize1d )
       Grid % minWidth = bufferReal(1)
@@ -1951,15 +1954,13 @@ CONTAINS
       CALL ReadHDF( "Width", Grid % Width, &
                               group_id, datasize1d )
 
-    else 
-       
-      !-- minValue and maxValue refer to points, not cell edges
-
-      Grid % minValue = MINVAL( Grid % Values )
-    
-      Grid % maxValue = MAXVAL( Grid % Values )
-
     end if
+
+    !-- set minValue and maxValue
+
+    Grid % minValue = MINVAL( Grid % Values )
+    
+    Grid % maxValue = MAXVAL( Grid % Values )
 
   END SUBROUTINE ReadGridHDF
 
