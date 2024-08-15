@@ -1016,7 +1016,6 @@ CONTAINS
           OpacityTable % EmAb % nuclei_EC_table     = -1
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
 
         ELSE
 
@@ -1043,6 +1042,8 @@ CONTAINS
           CALL CloseGroupHDF( group_id )
 
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
       END BLOCK
 
@@ -1764,12 +1765,13 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
           CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
           Scat % ion_ion_corrections = buffer(1)
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
         CALL h5eset_auto_f( 0, hdferr )
  
@@ -1784,12 +1786,13 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
           CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
           Scat % many_body_corrections = buffer(1)
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
         CALL h5eset_auto_f( 0, hdferr )
  
@@ -1804,12 +1807,13 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
           CALL ReadHDF( "ga_strange", bufferReal, group_id, datasize1d )
           Scat % ga_strange = bufferReal(1)
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
       TYPE IS ( OpacityTypeScatNES )
 
@@ -1828,7 +1832,6 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
             
         ELSE
           datasize1d(1) = 1
@@ -1836,6 +1839,8 @@ CONTAINS
           Scat % NPS = buffer(1)
 
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
     END SELECT
 
@@ -1924,13 +1929,14 @@ CONTAINS
       ENDIF
 
       CALL h5eclear_f( hdferr )
-      CALL h5eset_auto_f( 1, hdferr )
             
     ELSE
       datasize1d(1) = 1
       CALL ReadHDF( "Zoom", bufferReal, group_id, datasize1d )
       Grid % Zoom = bufferReal(1)
     ENDIF
+
+    CALL h5eset_auto_f( 1, hdferr )
 
     !-- Fill in additional values for geometric grid
 
