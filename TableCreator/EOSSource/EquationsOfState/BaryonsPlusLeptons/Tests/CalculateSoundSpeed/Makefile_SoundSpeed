@@ -1,0 +1,32 @@
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
+include ../Makefile_SoundSpeed_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_Dependencies
+
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules: \
+$(WEAKLIB_DIR)/TableCreator/SharedModules: \
+..
+
+wlComparison = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(SHAREDMODULES) \
+  $(COMMON_MODS_OBJ)
+
+all: wlCalculateSoundSpeed
+
+wlCalculateSoundSpeed: \
+	$(wlComparison) wlCalculateSoundSpeed.o
+	$(FLINKER) $(FLAGS) -o wlCalculateSoundSpeed_$(MACHINE) \
+	$(wlComparison) wlCalculateSoundSpeed.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCalculateSoundSpeed_$(MACHINE)

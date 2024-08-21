@@ -1,4 +1,0 @@
-EOS_OBJ  = \
-  wlCompOSEInterface.o \
-  wlElectronEOSModule.o \
-  wlHelmholtzIOModuleHDF.o

@@ -1,0 +1,23 @@
+wlCompOSEInterface.o: \
+  wlKindModule.o \
+  wlExtPhysicalConstantsModule.o \
+  wlExtNumericalModule.o
+
+wlLeptonEOSModule.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o
+
+wlHelmMuonIOModuleHDF.o: \
+  wlKindModule.o \
+  wlLeptonEOSModule.o \
+  wlIOModuleHDF.o
+
+wlElectronEOS.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlLeptonEOSModule.o
+  
+wlGammaSoundSpeed.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o  \
+  wlExtPhysicalConstantsModule.o

@@ -1,0 +1,30 @@
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
+include ../Makefile_ComposeEOS_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_Dependencies
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules: \
+$(WEAKLIB_DIR)/TableCreator/SharedModules: \
+..
+
+Weaklib_EOSTableCreator = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(SHAREDMODULES) \
+  $(COMMON_MODS_OBJ)
+  
+all: wlCreateEOSTable
+
+wlCreateEOSTable: \
+	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o
+	$(FLINKER) $(FLAGS) -o wlCreateEOSTable_$(MACHINE) \
+	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateEOSTable_$(MACHINE)

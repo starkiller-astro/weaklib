@@ -1,2 +1,0 @@
-TABLE_MODS  = wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlIOModuleHDF.o wlEquationOfStateTableModule.o wlEOSIOModuleHDF.o
-Interface_OBJ = wlCompOSEInterface.o

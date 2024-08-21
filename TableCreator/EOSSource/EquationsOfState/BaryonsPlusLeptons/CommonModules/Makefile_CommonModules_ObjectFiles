@@ -1,0 +1,7 @@
+COMMON_MODS_OBJ  = \
+  wlCompOSEInterface.o \
+  wlLeptonEOSModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlElectronEOS.o \
+  wlGammaSoundSpeed.o
+  

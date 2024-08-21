@@ -1,0 +1,10 @@
+wlCalculateSoundSpeed.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlElectronEOS.o \
+  wlExtPhysicalConstantsModule.o
