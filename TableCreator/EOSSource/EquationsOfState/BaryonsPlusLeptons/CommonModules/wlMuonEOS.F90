@@ -2,8 +2,12 @@ MODULE wlMuonEOS
 	
 	USE wlKindModule, ONLY: dp
 	USE wlExtNumericalModule, ONLY: zero, one, pi, half
-	USE wlLeptonEOSModule
-	
+	USE wlInterpolationUtilitiesModule, ONLY: &
+		Index1D_Lin, &
+		Index1D_Log
+	USE wlLeptonEOSModule, ONLY: &
+		MuonEOSType
+		
 	IMPLICIT NONE
 	PRIVATE
 	
@@ -20,7 +24,7 @@ MODULE wlMuonEOS
 	
 	PUBLIC :: FullMuonEOS
 	
-	CONTAINS
+CONTAINS
 	
 	! INTERPOLATION ROUTINES FROM TOBIAS
 	SUBROUTINE FullMuonEOS(MuonTable, MuonState)
@@ -31,10 +35,10 @@ MODULE wlMuonEOS
 		!----locals ------------------------------------------------------------
 		integer :: i
 		
-		real :: temp, rhoymu, logt
-		real :: dt,dd
-		real :: rd,rt
-		integer :: it,imu
+		real(dp) :: temp, rhoymu, logt
+		real(dp) :: dt,dd
+		real(dp) :: rd,rt
+		integer :: it, it_1, imu, it_max, imu_max
 		
 		!....convert input variables to log scale .............................
 		temp = MuonState % t
@@ -44,29 +48,56 @@ MODULE wlMuonEOS
 		it_max = MuonTable % nPointsTemp
 		imu_max = MuonTable % nPointsMu
 
-		!.....find t-index......................................................
-		IF (temp .le. MuonTable % t(1)) THEN
-			it = 1
-		ELSE IF (temp .ge. MuonTable % t(it_max)) THEN
-			it = it_max
-		ELSE
-			DO i=1,it_max-1
-				IF ( (temp .ge. MuonTable % t(i)) .and. (temp .lt. MuonTable % t(i+1)) ) THEN
-					it = i
-					EXIT
-				END IF
-			END DO
-		END IF
+		it = Index1D_Log( temp, MuonTable % t(:) )
+
+		! At these low temperatures muons don't really matter
+		IF (it .eq. 1) THEN
+			MuonState % p = 0.0d0
+			MuonState % e = 0.0d0
+			MuonState % s = 0.0d0
+			MuonState % mu = 0.0d0
+			RETURN
+		ENDIF
+		
+		! ! .....find t-index......................................................
+		! IF (temp .le. MuonTable % t(1)) THEN
+			! ! At these low temperatures muons don't really matter
+			! MuonState % p = 0.0d0
+			! MuonState % e = 0.0d0
+			! MuonState % s = 0.0d0
+			! MuonState % mu = 0.0d0
+			! RETURN
+			
+		! ELSE IF (temp .ge. MuonTable % t(it_max)) THEN
+			! it = it_max
+		! ELSE
+			! DO i=1,it_max-1
+				! IF ( (temp .ge. MuonTable % t(i)) .and. (temp .lt. MuonTable % t(i+1)) ) THEN
+					! it = i
+					! EXIT
+				! END IF
+			! END DO
+		! END IF
+		
+		! IF (it .ne. it_1) THEN
+			! WRITE(*,*) it, it_1
+			! STOP
+		! ENDIF
 		
 		!.....find d-index......................................................
 		IF (rhoymu .le. MuonTable % rhoymu(it,1)) THEN
-			imu = 1
+			! At these low densities muons don't really matter
+			MuonState % p = 0.0d0
+			MuonState % e = 0.0d0
+			MuonState % s = 0.0d0
+			MuonState % mu = 0.0d0
+			RETURN
 		ELSE IF (rhoymu .ge. MuonTable % rhoymu(it,imu_max)) THEN
 			imu = imu_max
 		ELSE
-			DO i=1,imu_max-1
+			DO i=imu_max-1,1,-1
 				IF((rhoymu .ge. MuonTable % rhoymu(it,i)) .and. &
-				   (rhoymu .lt. MuonTable % rhoymu(it,i+1)))THEN
+				(rhoymu .lt. MuonTable % rhoymu(it,i+1)))THEN
 					imu = i
 					exit
 				END IF
@@ -79,18 +110,12 @@ MODULE wlMuonEOS
 		
 		rt = (logt - LOG10( MuonTable % t(it) ))/dt
 		rd = (rhoymu - MuonTable % rhoymu(it,imu))/dd
-		
-				REAL(dp) :: mu
-		REAL(dp) :: p
-		REAL(dp) :: e
-		REAL(dp) :: s
-		
+				
 		!.....interpolation scheme.............................................
 		MuonState % mu = & ! muon chemical potential  [MeV]
-			(1.-rt)*(1.-rd) * MuonTable % mu(it  ,imu  ) &
-			 +  rt *(1.-rd) * MuonTable % mu(it+1,imu  ) &
-			 +     rt * rd  * MuonTable % mu(it+1,imu+1) &
-			 + (1.-rt)* rd  * MuonTable % mu(it  ,imu+1)
+					MuonTable % mu(imu  ) &
+			 + rt * MuonTable % mu(imu+1) &
+			 - rt * MuonTable % mu(imu  )
 
 		MuonState % p = & ! pressure              [MeV/fm^3]
 			(1.-rt)*(1.-rd) * MuonTable % p(it  ,imu  ) &
@@ -110,6 +135,6 @@ MODULE wlMuonEOS
 			 +     rt * rd  * MuonTable % s(it+1,imu+1) &
 			 + (1.-rt)* rd  * MuonTable % s(it  ,imu+1)
 			 
-	END SUBROUTINE InterpolateMuon
+	END SUBROUTINE FullMuonEOS
 
 END MODULE wlMuonEOS	

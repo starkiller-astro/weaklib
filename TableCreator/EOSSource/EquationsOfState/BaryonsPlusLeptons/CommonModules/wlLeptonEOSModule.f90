@@ -1,8 +1,12 @@
 MODULE wlLeptonEOSModule
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtNumericalModule, ONLY: zero, one, pi
-	
+	USE wlExtNumericalModule, ONLY: &
+		zero, one, pi
+	USE wlExtPhysicalConstantsModule, ONLY: &
+		cvel, ergmev, cm3fm3, kmev, kmev_inv, &
+		rmu, mn, me, mp
+
 	IMPLICIT NONE
 	PRIVATE
 	
@@ -334,7 +338,20 @@ CONTAINS
 		ENDDO
 		
 		! DO UNIT CONVERSION
-		MuonEOS % t =
+		! Based on Tobias's code, the chemical potential includes the muon rest mass
+		MuonEOS % t = MuonEOS % t * kmev_inv !MeV to kelvin
+		MuonEOS % rhoymu = MuonEOS % rhoymu * rmu/cm3fm3 !baryon number to g/cm^3
+		MuonEOS % p = MuonEOS % p * ergmev / cm3fm3 !MeV/fm^3 to dyn
+		MuonEOS % e = MuonEOS % e * ergmev / rmu 
+		MuonEOS % s = MuonEOS % s / (kmev * ergmev / rmu)
+		
+		WRITE(*,*) 'Bounds of the Muon Table'
+		WRITE(*,*) MAXVAL(MuonEOS % t), MINVAL(MuonEOS % t)
+		WRITE(*,*) MAXVAL(MuonEOS % rhoymu), MINVAL(MuonEOS % rhoymu)
+		WRITE(*,*) MAXVAL(MuonEOS % p), MINVAL(MuonEOS % p)
+		WRITE(*,*) MAXVAL(MuonEOS % e), MINVAL(MuonEOS % e)
+		WRITE(*,*) MAXVAL(MuonEOS % s), MINVAL(MuonEOS % s)
+		WRITE(*,*) MAXVAL(MuonEOS % mu), MINVAL(MuonEOS % mu)
 		
 	END	SUBROUTINE ReadMuonEOSdat
 

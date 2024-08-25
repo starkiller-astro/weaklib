@@ -2,8 +2,11 @@ MODULE wlElectronEOS
 	
 	USE wlKindModule, ONLY: dp
 	USE wlExtNumericalModule, ONLY: zero, one, pi, half
-	USE wlLeptonEOSModule
-	
+	USE wlLeptonEOSModule, ONLY: &
+		HelmholtzEOSType
+	USE wlExtPhysicalConstantsModule, ONLY: &
+		ergmev, kmev, kmev_inv, rmu
+		
 	IMPLICIT NONE
 	PRIVATE
 	
@@ -1100,9 +1103,9 @@ CONTAINS
 		state % dedT = det_row
 		state % dedr = ded_row
 		
-		state % s    = stot_row
-		state % dsdT = dst_row
-		state % dsdr = dsd_row
+		state % s    = stot_row / (kmev * ergmev / rmu)
+		state % dsdT = dst_row / (kmev * ergmev / rmu)
+		state % dsdr = dsd_row / (kmev * ergmev / rmu)
 		
 		state % h    = htot_row
 		state % dhdR = dhd_row
@@ -1155,7 +1158,7 @@ CONTAINS
 			ELSEIF (input .eq. eos_input_ps) THEN
 				
 				state % p = v1_want
-				state % s = v2_want
+				state % s = v2_want / (kmev * ergmev / rmu)
 			
 			ELSEIF (input .eq. eos_input_ph) THEN
 				

@@ -35,7 +35,7 @@ PROGRAM wlCreateEquationOfStateTable
     LOGICAL  :: ReadFullTable, RedHDF5Table
     INTEGER :: iLepton, iRho, iTemp, iYe
 
-    ReadFullTable = .true.
+    ReadFullTable = .false.
     RedHDF5Table = .false.
 
     IF (ReadFullTable) THEN
@@ -57,9 +57,9 @@ PROGRAM wlCreateEquationOfStateTable
         CompOSEFilePath = '../../../../../../../Compare_different_tables/SFHo_no_ele/'
         CompOSEFHDF5Path = '../../../../../../../Compare_different_tables/SFHo_no_ele/eoscompose.h5'
         IF (RedHDF5Table) THEN
-            BaryonEOSTableName = 'BaryonsPlusHelmEOS_interpolated.h5'
+            BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
         ELSE
-            BaryonEOSTableName = 'BaryonsPlusHelmEOS.h5'
+            BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
         ENDIF
         HelmEOSTableName = BaryonEOSTableName
         MuonEOSTableName = BaryonEOSTableName
@@ -245,7 +245,6 @@ PROGRAM wlCreateEquationOfStateTable
     CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
     
     ! NOW CREATE BARYONIC FILE
-    
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"
     CALL WriteEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )

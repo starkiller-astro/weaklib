@@ -3,5 +3,7 @@ COMMON_MODS_OBJ  = \
   wlLeptonEOSModule.o \
   wlHelmMuonIOModuleHDF.o \
   wlElectronEOS.o \
-  wlGammaSoundSpeed.o
+  wlMuonEOS.o \
+  wlGammaSoundSpeed.o \
+  wlEOSComponentsInversionModule.o
   

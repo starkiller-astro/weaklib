@@ -1,11 +1,13 @@
 wlCompOSEInterface.o: \
   wlKindModule.o \
   wlExtPhysicalConstantsModule.o \
-  wlExtNumericalModule.o
+  wlExtNumericalModule.o \
+  wlIOModuleHDF.o
 
 wlLeptonEOSModule.o: \
   wlKindModule.o \
-  wlExtNumericalModule.o
+  wlExtNumericalModule.o \
+  wlExtPhysicalConstantsModule.o
 
 wlHelmMuonIOModuleHDF.o: \
   wlKindModule.o \
@@ -15,9 +17,27 @@ wlHelmMuonIOModuleHDF.o: \
 wlElectronEOS.o: \
   wlKindModule.o \
   wlExtNumericalModule.o \
+  wlLeptonEOSModule.o \
+  wlExtPhysicalConstantsModule.o
+  
+wlMuonEOS.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlInterpolationUtilitiesModule.o \
   wlLeptonEOSModule.o
   
 wlGammaSoundSpeed.o: \
   wlKindModule.o \
   wlExtNumericalModule.o  \
   wlExtPhysicalConstantsModule.o
+  
+wlEOSComponentsInversionModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o  \
+  wlInterpolationUtilitiesModule.o  \
+  wlHelmMuonIOModuleHDF.o \
+  wlMuonEOS.o  \
+  wlElectronEOS.o  \
+  wlLeptonEOSModule.o  \
+  wlExtPhysicalConstantsModule.o
+  

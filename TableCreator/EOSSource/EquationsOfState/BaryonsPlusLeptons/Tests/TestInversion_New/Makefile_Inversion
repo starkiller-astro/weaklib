@@ -18,30 +18,30 @@ wlInversion = \
   $(SHAREDMODULES) \
   $(COMMON_MODS_OBJ)
   
-all: wlComposeInversionTest
+all: wlComposeNewInversionTest
 
-wlComposeInversionTest: \
-	$(wlInversion) wlComposeInversionTest.o
-	$(FLINKER) $(FLAGS) -o wlComposeInversionTest_$(MACHINE) \
-	$(wlInversion) wlComposeInversionTest.o \
+wlComposeNewInversionTest: \
+	$(wlInversion) wlComposeNewInversionTest.o
+	$(FLINKER) $(FLAGS) -o wlComposeNewInversionTest_$(MACHINE) \
+	$(wlInversion) wlComposeNewInversionTest.o \
 	$(LIBRARIES)
 
 clean:
 	rm -f *.o *.mod *.ld
 
 clobber: clean
-	rm -f wlComposeInversionTest_$(MACHINE)
+	rm -f wlComposeNewInversionTest_$(MACHINE)
 
-wlComposeInversionTest.o: \
+wlComposeNewInversionTest.o: \
   wlKindModule.o \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlInterpolationModule.o \
-  wlEOSInversionModule.o \
+  wlEOSComponentsInversionModule.o \
   wlLeptonEOSModule.o \
   wlElectronEOS.o \
   wlMuonEOS.o \
   wlHelmMuonIOModuleHDF.o \
   wlExtPhysicalConstantsModule.o \
-  wlComposeInversionTest.F90
+  wlComposeNewInversionTest.F90
