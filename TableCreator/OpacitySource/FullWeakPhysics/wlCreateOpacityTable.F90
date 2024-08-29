@@ -161,9 +161,9 @@ IMPLICIT NONE
    REAL(dp), PARAMETER     :: EC_E_min   =   0.0d0
    REAL(dp), PARAMETER     :: EC_E_max   = 100.0d0
 
-   INTEGER, PARAMETER      :: nOpac_Iso  = 0  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_Iso  = 2  ! 2 for electron type
                                               !   ( flavor identical )
-   INTEGER, PARAMETER      :: nMom_Iso   = 0  ! 2 for 0th & 1st order
+   INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Iso_weak_magnetism &
                               = 1
@@ -510,10 +510,10 @@ PRINT*, 'Filling OpacityTable ...'
        DVar    => OpacityTable % EOSTable % DV % Variables  )
 
 !-----------------  ECAPEM --------------------
-  IF( ( nOpac_EmAb + nOpac_Iso ) .gt. 0 ) THEN
-    WRITE(*,*) 'Calculating EmAb and Elastic Scattering Kernel ...'
+  IF( ( nOpac_EmAb ) .gt. 0 ) THEN
+    WRITE(*,*) 'Calculating EmAb ...'
 
-    EmAb_Scat_Iso: BLOCK
+    EmAb: BLOCK
    
     REAL(dp), PARAMETER :: mass_e  =   0.510998950d0 !electron restmass
     REAL(dp), PARAMETER :: mass_mu = 105.6583755d0   !muon restmass
@@ -992,7 +992,75 @@ PRINT*, 'Filling OpacityTable ...'
              END DO  !i_e
          END DO !i_r
 
+       END DO  !j_rho
+     END DO  !k_t
+   END DO  !l_ye
+
+!------- EmAb % Offsets
+   DO i_r = 1, nOpac_EmAb
+     minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
+     OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar )
+
+     IF (i_r == 1 .and. EmAb_nuclei_EC_table == 1) THEN
+       minvar = MINVAL( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
+       OpacityTable % EmAb % EC_table_spec_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
+       minvar = MINVAL( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
+       OpacityTable % EmAb % EC_table_rate_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
+     ENDIF
+   END DO
+
+   END BLOCK EmAb
+
+   END IF
+
 !----------------  Scat_Iso -----------------------
+   IF( ( nOpac_Iso ) .gt. 0 ) THEN
+     WRITE(*,*) 'Calculating Elastic Scattering Kernel ...'
+
+   DO l_ye = 1, nYe
+
+     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+
+     DO k_t = 1, nT
+
+       T = OpacityTable % TS % States (iT) % Values (k_t)
+       TMeV = T * kMeV
+
+       DO j_rho = 1, nRho
+
+         rho = OpacityTable % TS % States (iRho) % &
+               Values (j_rho)
+
+            xp  = 10**DVar(Indices % iProtonMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iProtonMassFraction)   &
+                  - epsilon
+
+            xn  = 10**DVar(Indices % iNeutronMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iNeutronMassFraction)   &
+                  - epsilon
+
+           xhe  = 10**DVar(Indices % iAlphaMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iAlphaMassFraction)   &
+                  - epsilon
+
+        xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iHeavyMassFraction)   &
+                  - epsilon
+
+            Z   = 10**DVar(Indices % iHeavyChargeNumber) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iHeavyChargeNumber)   &
+                  - epsilon
+
+            A   = 10**DVar(Indices % iHeavyMassNumber) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iHeavyMassNumber)   &
+                  - epsilon
+
          DO i_rb = 1, nOpac_Iso
 
            in = 1
@@ -1019,18 +1087,7 @@ PRINT*, 'Filling OpacityTable ...'
      END DO  !k_t
    END DO  !l_ye
 
-!------- EmAb % Offsets
-   DO i_r = 1, nOpac_EmAb
-     minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
-     OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar )
-
-     IF (i_r == 1 .and. EmAb_nuclei_EC_table == 1) THEN
-       minvar = MINVAL( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
-       OpacityTable % EmAb % EC_table_spec_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
-       minvar = MINVAL( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
-       OpacityTable % EmAb % EC_table_rate_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
-     ENDIF
-   END DO
+   END IF
 
 !------- Scat_Iso % Offsets
    DO i_r = 1, nOpac_Iso
@@ -1042,9 +1099,6 @@ PRINT*, 'Filling OpacityTable ...'
      END DO
    END DO
 
-   END BLOCK EmAb_Scat_Iso
-
-   END IF
 !----------------  Scat_NES -----------------------
   IF( nOpac_NES .gt. 0 ) THEN
   PRINT*, 'Calculating Scat_NES Kernel ... '
