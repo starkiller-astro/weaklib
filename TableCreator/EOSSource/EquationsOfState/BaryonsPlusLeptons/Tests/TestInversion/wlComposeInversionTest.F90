@@ -27,7 +27,7 @@ PROGRAM wlComposeInversionTest
   USE wlLeptonEOSModule, ONLY: &
     HelmholtzEOSType, MuonEOSType
   USE wlElectronEOS, ONLY: &
-    FullHelmEOS, ElectronStateType
+    FullHelmEOS, MinimalHelmEOS_rt, ElectronStateType
   USE wlMuonEOS, ONLY: &
     FullMuonEOS, MuonStateType
   USE wlHelmMuonIOModuleHDF, ONLY: &
@@ -96,7 +96,8 @@ PROGRAM wlComposeInversionTest
 
   ReadFullEOS = .false.
   
-  BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+  BaryonPlusHelmTableName = '../../../../../../../../weaklib_tables/BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
+  !BaryonPlusHelmTableName = '../../../../../../../../weaklib_tables/BaryonsPlusHelmPlusMuonsEOS.h5'
   FullTableName = 'wl-EOS-SFHo-15-25-50-noBCK.h5'
   
   CALL InitializeHDF( )
@@ -171,6 +172,7 @@ PROGRAM wlComposeInversionTest
           
           ! calculate electron quantities
           CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+          CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
           Es_T_helm = ElectronState % e + me / rmu * ergmev * ElectronState % y_e ! add back mass to internal energy!
           Ps_T_helm = ElectronState % p

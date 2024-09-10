@@ -12,7 +12,7 @@ MODULE wlEOSComponentsInversionModule
   USE wlMuonEOS, ONLY: &
     MuonStateType, FullMuonEOS
   USE wlElectronEOS, ONLY: &
-    ElectronStateType, FullHelmEOS
+    ElectronStateType, FullHelmEOS, MinimalHelmEOS_rt
   USE wlLeptonEOSModule, ONLY: &
     HelmholtzEOSType, MuonEOSType
   USE wlExtPhysicalConstantsModule, ONLY: &
@@ -289,8 +289,8 @@ CONTAINS
   
 
   SUBROUTINE ComputeTemperatureWith_DXYpYl_Guess &
-    ( D, X, Yp, Ye, Ymu, Ds, Ts, Yps, Xs, X_name, OS, T, T_Guess, &
-    Error, time_ele, time_muon )
+    ( D, X, Yp, Ye, Ymu, Ds, Ts, Yps, Xs, InputE, InputP, InputS, OS, T, T_Guess, &
+    Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -301,11 +301,11 @@ CONTAINS
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
-    CHARACTER(len=*), INTENT(in) :: X_name
+    REAL(dp), INTENT(in)  :: InputE, InputP, InputS
+    ! CHARACTER(len=*), INTENT(in) :: X_name
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    REAL(dp),  INTENT(out) :: time_ele, time_muon
 
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
@@ -318,8 +318,10 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
     REAL(dp) :: tBegin, tEnd
+    REAL(dp) :: E_leptons, P_leptons, S_leptons
     
     LOGICAL :: InvertP, InvertE, InvertS
+    REAL(dp) :: Is_this_P, Is_this_E, Is_this_S
     
     ! Electron and Muon quantities
     TYPE(ElectronStateType) :: ElectronState
@@ -327,31 +329,20 @@ CONTAINS
     
     ! Make sure that Yp = Ye + Ymu also at the table level
     REAL(dp) :: Ye_over_Yp, Ymu_over_Yp
-    
-    InvertP = .FALSE.
-    InvertE = .FALSE.
-    InvertS = .FALSE.
-    time_ele = 0.0d0
-    time_muon = 0.0d0
-    
+
     Ye_over_Yp = Ye/Yp
     Ymu_over_Yp = Ymu/Yp
 
-    ! Figure out what to invert
-    IF (TRIM(ADJUSTL(X_name)) == 'Pressure') THEN
-      InvertP = .TRUE.
-    ELSE IF (TRIM(ADJUSTL(X_name)) == 'Energy') THEN
-      InvertE = .TRUE.
-    ELSE IF (TRIM(ADJUSTL(X_name)) == 'Entropy') THEN
-      InvertS = .TRUE.
-    ELSE 
-      WRITE(*,*) 'String for inversion not recognized'
-      STOP
-    END IF
     ! -------------------------------------------------------------------
     ! Initialize ElectronState
     ElectronState % abar = 1.0d0 ! these are only used for ion contribution
     ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
+    
+    MuonState % rhoymu = 0.0d0
+    MuonState % t = 0.0d0
+    MuonState % p = 0.0d0
+    MuonState % e = 0.0d0
+    MuonState % s = 0.0d0
     
     T = 0.0_dp
     Error = 0
@@ -385,27 +376,21 @@ CONTAINS
         ElectronState % rho = Ds(iD+iL_D-1)
         ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
         
-        CALL CPU_TIME( tBegin )
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL CPU_TIME( tEnd )
-        time_ele = time_ele + tEnd - tBegin
-          
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
         MuonState % t = T_a
         MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
         
-        CALL CPU_TIME( tBegin )
         CALL FullMuonEOS(MuonTable, MuonState)
-        CALL CPU_TIME( tEnd )
-        time_muon = time_muon + tEnd - tBegin
-          
-        IF (InvertP) THEN
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % p + MuonState % p
-        ELSE IF (InvertE) THEN
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+        
+        E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                   MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-        ELSE
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % s + MuonState % s
-        END IF
+        P_leptons = ElectronState % p + MuonState % p
+        S_leptons = ElectronState % s + MuonState % s
+        
+        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
       END DO
     END DO
     Xs_a = LOG10(Xs_a+OS)
@@ -425,27 +410,21 @@ CONTAINS
         ElectronState % rho = Ds(iD+iL_D-1)
         ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
         
-        CALL CPU_TIME( tBegin )
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL CPU_TIME( tEnd )
-        time_ele = time_ele + tEnd - tBegin
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
           
         MuonState % t = T_b
         MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
         
-        CALL CPU_TIME( tBegin )
         CALL FullMuonEOS(MuonTable, MuonState)
-        CALL CPU_TIME( tEnd )
-        time_muon = time_muon + tEnd - tBegin
-          
-        IF (InvertP) THEN
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % p + MuonState % p
-        ELSE IF (InvertE) THEN
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+
+        E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                   MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-        ELSE
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % s + MuonState % s
-        END IF
+        P_leptons = ElectronState % p + MuonState % p
+        S_leptons = ElectronState % s + MuonState % s
+        
+        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
       END DO
     END DO
     Xs_b = LOG10(Xs_b+OS)
@@ -472,27 +451,21 @@ CONTAINS
         ElectronState % rho = Ds(iD+iL_D-1)
         ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
         
-        CALL CPU_TIME( tBegin )
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL CPU_TIME( tEnd )
-        time_ele = time_ele + tEnd - tBegin
-          
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
         MuonState % t = T_a
         MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
         
-        CALL CPU_TIME( tBegin )
         CALL FullMuonEOS(MuonTable, MuonState)
-        CALL CPU_TIME( tEnd )
-        time_muon = time_muon + tEnd - tBegin
           
-        IF (InvertP) THEN
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % p + MuonState % p
-        ELSE IF (InvertE) THEN
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+        E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                   MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-        ELSE
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % s + MuonState % s
-        END IF
+        P_leptons = ElectronState % p + MuonState % p
+        S_leptons = ElectronState % s + MuonState % s
+        
+        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
       END DO
     END DO
     Xs_a = LOG10(Xs_a+OS)
@@ -512,27 +485,21 @@ CONTAINS
         ElectronState % rho = Ds(iD+iL_D-1)
         ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
         
-        CALL CPU_TIME( tBegin )
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL CPU_TIME( tEnd )
-        time_ele = time_ele + tEnd - tBegin
-          
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
         MuonState % t = T_b
         MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
         
-        CALL CPU_TIME( tBegin )
         CALL FullMuonEOS(MuonTable, MuonState)
-        CALL CPU_TIME( tEnd )
-        time_muon = time_muon + tEnd - tBegin
-          
-        IF (InvertP) THEN
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % p + MuonState % p
-        ELSE IF (InvertE) THEN
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+
+        E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                   MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-        ELSE
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % s + MuonState % s
-        END IF
+        P_leptons = ElectronState % p + MuonState % p
+        S_leptons = ElectronState % s + MuonState % s
+        
+        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
       END DO
     END DO
     Xs_b = LOG10(Xs_b+OS)
@@ -556,27 +523,21 @@ CONTAINS
             ElectronState % rho = Ds(iD+iL_D-1)
             ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
             
-            CALL CPU_TIME( tBegin )
-            CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-            CALL CPU_TIME( tEnd )
-            time_ele = time_ele + tEnd - tBegin
-              
+            ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+            CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
             MuonState % t = T_c
             MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
             
-            CALL CPU_TIME( tBegin )
             CALL FullMuonEOS(MuonTable, MuonState)
-            CALL CPU_TIME( tEnd )
-            time_muon = time_muon + tEnd - tBegin
-              
-            IF (InvertP) THEN
-              Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronState % p + MuonState % p
-            ELSE IF (InvertE) THEN
-              Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+
+            E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                       MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-            ELSE
-              Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronState % s + MuonState % s
-            END IF
+            P_leptons = ElectronState % p + MuonState % p
+            S_leptons = ElectronState % s + MuonState % s
+            
+            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
           END DO
         END DO
         Xs_c = LOG10(Xs_c+OS)
@@ -620,27 +581,21 @@ CONTAINS
             ElectronState % rho = Ds(iD+iL_D-1)
             ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
             
-            CALL CPU_TIME( tBegin )
-            CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-            CALL CPU_TIME( tEnd )
-            time_ele = time_ele + tEnd - tBegin
-              
+            ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+            CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
             MuonState % t = T_i
             MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
             
-            CALL CPU_TIME( tBegin )
             CALL FullMuonEOS(MuonTable, MuonState)
-            CALL CPU_TIME( tEnd )
-            time_muon = time_muon + tEnd - tBegin
-              
-            IF (InvertP) THEN
-              Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronState % p + MuonState % p
-            ELSE IF (InvertE) THEN
-              Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+  
+            E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                       MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-            ELSE
-              Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronState % s + MuonState % s
-            END IF
+            P_leptons = ElectronState % p + MuonState % p
+            S_leptons = ElectronState % s + MuonState % s
+            
+            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
           END DO
         END DO
         Xs_i = LOG10(Xs_i+OS)
@@ -668,8 +623,9 @@ CONTAINS
 
       END DO
 
-      IF ( d_i >= SizeTs ) Error = 13
-
+      IF ( d_i >= SizeTs ) THEN
+        Error = 13
+      ENDIF
     END IF
 
     IF ( Error .NE. 0 ) THEN
@@ -681,8 +637,8 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DXYpYl_Guess
   
   SUBROUTINE ComputeTemperatureWith_DXYpYl_NoGuess &
-    ( D, X, Yp, Ye, Ymu, Ds, Ts, Yps, Xs, X_name, OS, T, &
-    Error, time_ele, time_muon )
+    ( D, X, Yp, Ye, Ymu, Ds, Ts, Yps, Xs, InputE, InputP, InputS, OS, T, &
+    Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -693,10 +649,10 @@ CONTAINS
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
-    CHARACTER(len=*), INTENT(in) :: X_name
+    ! CHARACTER(len=*), INTENT(in) :: X_name
+    REAL(dp), INTENT(in)  :: InputE, InputP, InputS
     REAL(dp), INTENT(out) :: T
     INTEGER,  INTENT(out) :: Error
-    REAL(dp),  INTENT(out) :: time_ele, time_muon
 
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
@@ -709,8 +665,11 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
     
-    LOGICAL :: InvertP, InvertE, InvertS
     REAL(dp) :: tBegin, tEnd
+    REAL(dp) :: E_leptons, P_leptons, S_leptons
+    
+    LOGICAL :: InvertP, InvertE, InvertS
+    REAL(dp) :: Is_this_P, Is_this_E, Is_this_S
     
     ! Electron and Muon quantities
     TYPE(ElectronStateType) :: ElectronState
@@ -718,27 +677,11 @@ CONTAINS
     
     ! Make sure that Yp = Ye + Ymu also at the table level
     REAL(dp) :: Ye_over_Yp, Ymu_over_Yp
-
-    InvertP = .FALSE.
-    InvertE = .FALSE.
-    InvertS = .FALSE.
-    time_ele = 0.0d0
-    time_muon = 0.0d0
     
+
     Ye_over_Yp = Ye/Yp
     Ymu_over_Yp = Ymu/Yp
 
-    ! Figure out what to invert
-    IF (TRIM(ADJUSTL(X_name)) == 'Pressure') THEN
-      InvertP = .TRUE.
-    ELSE IF (TRIM(ADJUSTL(X_name)) == 'Energy') THEN
-      InvertE = .TRUE.
-    ELSE IF (TRIM(ADJUSTL(X_name)) == 'Entropy') THEN
-      InvertS = .TRUE.
-    ELSE 
-      WRITE(*,*) 'String for inversion not recognized'
-      STOP
-    END IF
     ! -------------------------------------------------------------------
     ! Initialize ElectronState
     ElectronState % abar = 1.0d0 ! these are only used for ion contribution
@@ -774,27 +717,21 @@ CONTAINS
         ElectronState % rho = Ds(iD+iL_D-1)
         ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
         
-        CALL CPU_TIME( tBegin )
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL CPU_TIME( tEnd )
-        time_ele = time_ele + tEnd - tBegin
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
           
         MuonState % t = T_a
         MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
         
-        CALL CPU_TIME( tBegin )
         CALL FullMuonEOS(MuonTable, MuonState)
-        CALL CPU_TIME( tEnd )
-        time_muon = time_muon + tEnd - tBegin
           
-        IF (InvertP) THEN
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % p + MuonState % p
-        ELSE IF (InvertE) THEN
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+        E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                   MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-        ELSE
-          Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronState % s + MuonState % s
-        END IF
+        P_leptons = ElectronState % p + MuonState % p
+        S_leptons = ElectronState % s + MuonState % s
+        
+        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        
       END DO
     END DO
     Xs_a = LOG10(Xs_a+OS)
@@ -814,27 +751,29 @@ CONTAINS
         ElectronState % rho = Ds(iD+iL_D-1)
         ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
         
-        CALL CPU_TIME( tBegin )
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL CPU_TIME( tEnd )
-        time_ele = time_ele + tEnd - tBegin
-          
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
         MuonState % t = T_b
         MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
         
-        CALL CPU_TIME( tBegin )
         CALL FullMuonEOS(MuonTable, MuonState)
-        CALL CPU_TIME( tEnd )
-        time_muon = time_muon + tEnd - tBegin
           
-        IF (InvertP) THEN
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % p + MuonState % p
-        ELSE IF (InvertE) THEN
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+        E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                   MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-        ELSE
-          Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % s + MuonState % s
-        END IF
+        P_leptons = ElectronState % p + MuonState % p
+        S_leptons = ElectronState % s + MuonState % s
+        
+        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        
+        ! IF (InvertP) THEN
+          ! Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % p + MuonState % p
+        ! ELSE IF (InvertE) THEN
+          ! Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+                                  ! MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
+        ! ELSE
+          ! Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % s + MuonState % s
+        ! END IF
       END DO
     END DO
     Xs_b = LOG10(Xs_b+OS)
@@ -858,27 +797,21 @@ CONTAINS
             ElectronState % rho = Ds(iD+iL_D-1)
             ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
             
-            CALL CPU_TIME( tBegin )
-            CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-            CALL CPU_TIME( tEnd )
-            time_ele = time_ele + tEnd - tBegin
-              
+            ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+            CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
             MuonState % t = T_c
             MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
             
-            CALL CPU_TIME( tBegin )
             CALL FullMuonEOS(MuonTable, MuonState)
-            CALL CPU_TIME( tEnd )
-            time_muon = time_muon + tEnd - tBegin
               
-            IF (InvertP) THEN
-              Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronState % p + MuonState % p
-            ELSE IF (InvertE) THEN
-              Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+            E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                       MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-            ELSE
-              Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronState % s + MuonState % s
-            END IF
+            P_leptons = ElectronState % p + MuonState % p
+            S_leptons = ElectronState % s + MuonState % s
+            
+            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
           END DO
         END DO
         Xs_c = LOG10(Xs_c+OS)
@@ -916,27 +849,21 @@ CONTAINS
             ElectronState % rho = Ds(iD+iL_D-1)
             ElectronState % y_e = Yps(iYp+iL_Y-1) * Ye_over_Yp
             
-            CALL CPU_TIME( tBegin )
-            CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-            CALL CPU_TIME( tEnd )
-            time_ele = time_ele + tEnd - tBegin
-              
+            ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+            CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
             MuonState % t = T_i
             MuonState % rhoymu = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ymu_over_Yp
             
-            CALL CPU_TIME( tBegin )
             CALL FullMuonEOS(MuonTable, MuonState)
-            CALL CPU_TIME( tEnd )
-            time_muon = time_muon + tEnd - tBegin
               
-            IF (InvertP) THEN
-              Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronState % p + MuonState % p
-            ELSE IF (InvertE) THEN
-              Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+            E_leptons = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
                                       MuonState % e + mmu / rmu * ergmev * Yps(iYp+iL_Y-1) * Ymu_over_Yp
-            ELSE
-              Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronState % s + MuonState % s
-            END IF
+            P_leptons = ElectronState % p + MuonState % p
+            S_leptons = ElectronState % s + MuonState % s
+            
+            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+
           END DO
         END DO
         Xs_i = LOG10(Xs_i+OS)
@@ -976,7 +903,7 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DXYpYl_NoGuess
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error &
-    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, T_Guess, Error, time_ele, time_muon )
+    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -990,14 +917,19 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    REAL(dp),  INTENT(out) :: time_ele, time_muon
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 1.0d0
+    InputP  = 0.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
              ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
-             'Energy', OS, T, T_Guess, Error, time_ele, time_muon )
+             InputE, InputP, InputS, OS, T, T_Guess, Error )
     END IF
     
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error
@@ -1019,20 +951,26 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
 
     INTEGER  :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 1.0d0
+    InputP  = 0.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
              ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
-             'Energy', Os, T, T_Guess, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error &
-    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, Error, time_ele, time_muon )
+    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -1045,14 +983,19 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    REAL(dp), INTENT(out)   :: time_ele, time_muon
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 1.0d0
+    InputP  = 0.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
              ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
-             'Energy', Os, T, Error, time_ele, time_muon )
+             InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error
@@ -1073,13 +1016,19 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 1.0d0
+    InputP  = 0.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
              ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
-             'Energy', Os, T, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError
@@ -1099,13 +1048,19 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 1.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
              ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
-             'Pressure', Os, T, T_Guess, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_Error
@@ -1127,13 +1082,19 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
 
     INTEGER  :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 1.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
              ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
-             'Pressure', Os, T, T_Guess, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_NoError
@@ -1153,13 +1114,19 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 1.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
              ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
-             'Pressure', Os, T, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_Error
@@ -1180,13 +1147,19 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 1.0d0
+    InputS  = 0.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
              ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
-             'Pressure', Os, T, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError
@@ -1206,13 +1179,19 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 0.0d0
+    InputS  = 1.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
              ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
-             'Entropy', OS, T, T_Guess, Error, dummy, dummy )
+             InputE, InputP, InputS, OS, T, T_Guess, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_Error
@@ -1234,13 +1213,19 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
 
     INTEGER  :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 0.0d0
+    InputS  = 1.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
              ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
-             'Entropy', Os, T, T_Guess, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_NoError
@@ -1260,13 +1245,19 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 0.0d0
+    InputS  = 1.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
              ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
-             'Entropy', Os, T, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error
@@ -1287,13 +1278,19 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
+    
+    REAL(DP) :: InputE, InputP, InputS
 
+    InputE = 0.0d0
+    InputP  = 0.0d0
+    InputS  = 1.0d0
+    
     T = 0.0_dp
     Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
              ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
-             'Entropy', Os, T, Error, dummy, dummy )
+             InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError

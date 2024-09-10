@@ -243,13 +243,13 @@ MODULE wlHelmMuonIOModuleHDF
         CALL WriteHDF( "Temperature", MuonTable % t, group_id, datasize1d )
         
         datasize1d = MuonTable % nPointsMu
-        CALL WriteHDF( "Mu", MuonTable % mu, group_id, datasize1d )
+        CALL WriteHDF( "Density", MuonTable % rhoymu, group_id, datasize1d )
 
         datasize2d = (/ MuonTable % nPointsTemp, MuonTable % nPointsMu /) 
         CALL WriteHDF( "Pressure", MuonTable % p(:,:),     group_id, datasize2d )
         CALL WriteHDF( "InternalEnergy", MuonTable % e(:,:),    group_id, datasize2d )
         CALL WriteHDF( "Entropy", MuonTable % s(:,:),    group_id, datasize2d )
-        CALL WriteHDF( "Density", MuonTable % rhoymu, group_id, datasize2d )
+        CALL WriteHDF( "Mu", MuonTable % mu, group_id, datasize2d )
         CALL CloseGroupHDF( group_id )
         CALL CloseFileHDF( file_id )
   
@@ -283,13 +283,13 @@ MODULE wlHelmMuonIOModuleHDF
 
         datasize1d = MuonTable % nPointsTemp
         CALL ReadHDF( "Temperature", MuonTable % t, group_id, datasize1d )
-        CALL ReadHDF( "Mu", MuonTable % mu, group_id, datasize1d )
+        CALL ReadHDF( "Density", MuonTable % rhoymu, group_id, datasize1d )
 
         datasize2d = (/ MuonTable % nPointsTemp, MuonTable % nPointsMu /) 
         CALL ReadHDF( "Pressure", MuonTable % p(:,:),     group_id, datasize2d )
         CALL ReadHDF( "InternalEnergy", MuonTable % e(:,:),    group_id, datasize2d )
         CALL ReadHDF( "Entropy", MuonTable % s(:,:),    group_id, datasize2d )
-        CALL ReadHDF( "Density", MuonTable % rhoymu, group_id, datasize2d )
+        CALL ReadHDF( "Mu", MuonTable % mu, group_id, datasize2d )
 
         CALL CloseGroupHDF( group_id )
         CALL CloseFileHDF( file_id )

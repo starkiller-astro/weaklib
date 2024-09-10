@@ -12,6 +12,9 @@ PROGRAM wlComposeNewInversionTest
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable_3D_Custom, &
     LogInterpolateSingleVariable_3D_Custom_Point
+  USE wlInterpolationUtilitiesModule, ONLY: &
+    Index1D_Lin, &
+    Index1D_Log
   USE wlEOSComponentsInversionModule, ONLY: &
     InitializeEOSComponentsInversion, &
     ComputeTemperatureWith_DEYpYl_Single_Guess, &
@@ -24,7 +27,7 @@ PROGRAM wlComposeNewInversionTest
   USE wlLeptonEOSModule, ONLY: &
     HelmholtzEOSType, MuonEOSType
   USE wlElectronEOS, ONLY: &
-    FullHelmEOS, ElectronStateType
+    FullHelmEOS, MinimalHelmEOS_rt, ElectronStateType
   USE wlMuonEOS, ONLY: &
     FullMuonEOS, MuonStateType
   USE wlHelmMuonIOModuleHDF, ONLY: &
@@ -58,6 +61,7 @@ PROGRAM wlComposeNewInversionTest
     E_T, S_T, P_T
   REAL(dp), DIMENSION(nPoints) :: &
     D, T, Yp, Ye, Ymu, E, P, S, T_E, T_P, T_S, dT, &
+    E_int_error, P_int_error, S_int_error, &
     rndm_D, &
     rndm_T, &
     rndm_Yp, &
@@ -80,10 +84,9 @@ PROGRAM wlComposeNewInversionTest
     iD_bary, iT_bary, iYp_bary, iP_bary, iS_bary, iE_bary
   
   INTEGER :: iRho, iTemp, iYp
+  REAL(DP) :: P_bary, E_bary, S_bary
   REAL(DP) :: Ps_Helm, Es_Helm, Ss_Helm
   REAL(DP) :: Ymu_temp, Ps_muon, Es_muon, Ss_muon, Yp_over_Ymu
-  REAL(DP) :: time_ele, time_muon
-  REAL(DP) :: time_ele_tot, time_muon_tot
 
   CHARACTER(len=128) :: BaryonPlusHelmTableName
     
@@ -91,11 +94,12 @@ PROGRAM wlComposeNewInversionTest
 
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !!$ACC INIT
+  !$ACC INIT
 #endif
   
-  BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
-  Yp_over_Ymu = 5.0d0
+  BaryonPlusHelmTableName = '../../../../../../../../weaklib_tables/BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
+  BaryonPlusHelmTableName = '../../../../../../../../weaklib_tables/BaryonsPlusHelmPlusMuonsEOS.h5'
+  Yp_over_Ymu = 2.0d0
   
   CALL InitializeHDF( )
   
@@ -175,6 +179,7 @@ PROGRAM wlComposeNewInversionTest
       DO iYp=1,EOSBaryonTable % DV % nPoints(3)
 
         Ymu_temp = Yps_bary(iYp) / Yp_over_Ymu
+        ! Ymu_temp = 0.0d0
 
         ! Now add electron component
         ! Initialize temperature, DensitY, Yp, Zbar and Abar
@@ -186,6 +191,7 @@ PROGRAM wlComposeNewInversionTest
         
         ! calculate electron quantities
         CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         Es_helm = ElectronState % e + me / rmu * ergmev * ElectronState % Y_e ! add back mass to internal Energy!
         Ps_helm = ElectronState % p
@@ -256,7 +262,7 @@ PROGRAM wlComposeNewInversionTest
   associate &
     ( minD => EOSBaryonTable % TS % MinValues(iD), &
       maxD => EOSBaryonTable % TS % MaxValues(iD) )
-
+  
   D(:) = 10**( LOG10(minD) + ( LOG10(maxD) - LOG10(minD) ) * rndm_D )
 
   PRINT*, "Min/Max D = ", MINVAL( D ), MAXVAL( D )
@@ -273,7 +279,7 @@ PROGRAM wlComposeNewInversionTest
     ( minT => EOSBaryonTable % TS % MinValues(iT), &
       maxT => EOSBaryonTable % TS % MaxValues(iT) )
 
-  T(:) = 10**( LOG10(minT) + ( LOG10(maxT) - LOG10(minT) ) * rndm_T )
+  T(:) = 10**( LOG10(minT*3) + ( LOG10(maxT) - LOG10(minT*3) ) * rndm_T )
 
   PRINT*, "Min/Max T = ", MINVAL( T ), MAXVAL( T )
   PRINT*, "            ", minT, maxT
@@ -288,7 +294,7 @@ PROGRAM wlComposeNewInversionTest
   associate &
     ( minYp => EOSBaryonTable % TS % MinValues(iY), &
       maxYp => EOSBaryonTable % TS % MaxValues(iY) )
-
+  
   Yp(:) = minYp + ( maxYp - minYp ) * rndm_Yp
 
   PRINT*, "Min/Max Yp = ", MINVAL( Yp ), MAXVAL( Yp )
@@ -299,7 +305,11 @@ PROGRAM wlComposeNewInversionTest
   ! --- Compute Internal Energy, Pressure, and Entropy ---
 
   DO iP = 1, nPoints
-
+    
+    Ymu(iP) = Yp(iP) / Yp_over_Ymu
+    ! Ymu(iP) = 0.0d0
+    Ye(iP) = Yp(iP) - Ymu(iP)
+    
     CALL LogInterpolateSingleVariable_3D_Custom_Point &
            ( D(iP), T(iP), Yp(iP), Ds_full, Ts_full, Yps_full, OS_E, Es_full, E(iP) )
 
@@ -309,12 +319,59 @@ PROGRAM wlComposeNewInversionTest
     CALL LogInterpolateSingleVariable_3D_Custom_Point &
            ( D(iP), T(iP), Yp(iP), Ds_full, Ts_full, Yps_full, OS_S, Ss_full, S(iP) )
            
-  END DO
+    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+           ( D(iP), T(iP), Yp(iP), Ds_bary, Ts_bary, Yps_bary, OS_E, Es_bary, E_bary )
 
+    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+           ( D(iP), T(iP), Yp(iP), Ds_bary, Ts_bary, Yps_bary, OS_P, Ps_bary, P_bary )
+
+    CALL LogInterpolateSingleVariable_3D_Custom_Point &
+           ( D(iP), T(iP), Yp(iP), Ds_bary, Ts_bary, Yps_bary, OS_S, Ss_bary, S_bary )
+           
+    ! Now add electron component
+    ! Initialize temperature, DensitY, Yp, Zbar and Abar
+    ElectronState % t = T(iP)
+    ElectronState % rho = D(iP)
+    ElectronState % abar = 1.0d0 ! these are ONLY used for ion contribution
+    ElectronState % zbar = 1.0d0 ! these are ONLY used for ion contribution
+    ElectronState % Y_e = Ye(iP)
+    
+    ! calculate electron quantities
+    CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
+    Es_helm = ElectronState % e + me / rmu * ergmev * ElectronState % Y_e ! add back mass to internal Energy!
+    Ps_helm = ElectronState % p
+    Ss_helm = ElectronState % s
+
+    ! calculate muon quantities 
+    MuonState % t = T(iP)
+    MuonState % rhoYmu = D(iP) * Ymu(iP)
+    
+    CALL FullMuonEOS(MuonTable, MuonState)
+
+    Es_muon = MuonState % e + mmu / rmu * ergmev * Ymu(iP) ! add back mass to internal Energy!
+    Ps_muon = MuonState % p
+    Ss_muon = MuonState % s
+           
+    E_int_error(iP) = ABS( E_bary + Es_helm + Es_muon - E(iP))/ABS(E(iP))
+    P_int_error(iP) = ABS( P_bary + Ps_helm + Ps_muon - P(iP))/ABS(P(iP))
+    S_int_error(iP) = ABS( S_bary + Ss_helm + Ss_muon - S(iP))/ABS(S(iP))
+    
+    ! E(iP) = E_bary + Es_helm + Es_muon
+    ! P(iP) = P_bary + Ps_helm + Ps_muon
+    ! S(iP) = S_bary + Ss_helm + Ss_muon
+    
+  END DO
+  
   WRITE(*,*)
   WRITE(*,*) "Min/Max E = ", MINVAL( E ), MAXVAL( E )
   WRITE(*,*) "Min/Max P = ", MINVAL( P ), MAXVAL( P )
   WRITE(*,*) "Min/Max S = ", MINVAL( S ), MAXVAL( S )
+
+  WRITE(*,*) MAXVAL(E_int_error), MINVAL(E_int_error)
+  WRITE(*,*) MAXVAL(P_int_error), MINVAL(P_int_error)
+  WRITE(*,*) MAXVAL(S_int_error), MINVAL(S_int_error)
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE TO( D, T, Yp, P, E, S )
@@ -345,33 +402,12 @@ PROGRAM wlComposeNewInversionTest
   end associate
   
   Error_E = 0
-  
+
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE TO( T_E, Error_E )
 #elif defined (WEAKLIB_OACC)
   !$ACC UPDATE DEVICE( T_E, Error_E )
 #endif
-
-  CALL CPU_TIME( tBegin )
-  time_ele_tot = 0.0d0
-  time_muon_tot = 0.0d0
-  DO iP = 1, nPoints
-    T_Guess = T_E(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
-    CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
-           ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
-           Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, &
-           T_E(iP), T_Guess, Error_E(iP), time_ele, time_muon )
-           
-    time_ele_tot = time_ele_tot + time_ele
-    time_muon_tot = time_muon_tot + time_muon
-  END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
-
-  WRITE(*,*) 'CPU', time_ele_tot, time_muon_tot, tCPU
 
   CALL CPU_TIME( tBegin )
 
@@ -387,48 +423,27 @@ PROGRAM wlComposeNewInversionTest
   !$OMP PRIVATE( T_Guess )
 #endif
 
-  time_ele_tot = 0.0d0
-  time_muon_tot = 0.0d0
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
            ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
            Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, &
-           T_E(iP), T_Guess, Error_E(iP), time_ele, time_muon )
-    time_ele_tot = time_ele_tot + time_ele
-    time_muon_tot = time_muon_tot + time_muon
+           T_E(iP), T_Guess, Error_E(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
-  WRITE(*,*) 'GPU', time_ele_tot, time_muon_tot, tGPU
   PRINT*
   PRINT*, "ComputeTemperatureWith_DEYp (Good Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
   DO iP = 1, nPoints
-    IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
+    IF( Error_E(iP) .NE. 0 ) THEN 
+      CALL DescribeEOSComponentsInversionError( Error_E(iP) )
+    ENDIF
   END DO
 
-  Error = ABS( T - T_E ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_E(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_E, Es_full, E_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_E )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_E, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_E, Error_E )
-#endif
-  DO iP = 1, nPoints
-    IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
-  END DO
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
   CALL LogInterpolateSingleVariable_3D_Custom_Point &
@@ -436,7 +451,7 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   PRINT*, "GPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_E )
-  
+
   ! -------------------------------------------------------------------
 
   associate &
@@ -463,25 +478,6 @@ PROGRAM wlComposeNewInversionTest
 #endif
 
   CALL CPU_TIME( tBegin )
-  time_ele_tot = 0.0d0
-  time_muon_tot = 0.0d0
-  DO iP = 1, nPoints
-    T_Guess = T_E(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
-    CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
-           ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), T_Guess, &
-             Error_E(iP), time_ele, time_muon )
-    time_ele_tot = time_ele_tot + time_ele
-    time_muon_tot = time_muon_tot + time_muon
-  END DO
-
-  WRITE(*,*) 'CPU', time_ele_tot, time_muon_tot, tCPU
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
-
-  CALL CPU_TIME( tBegin )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
@@ -494,27 +490,21 @@ PROGRAM wlComposeNewInversionTest
   !$OMP PARALLEL DO &
   !$OMP PRIVATE( T_Guess )
 #endif
-  time_ele_tot = 0.0d0
-  time_muon_tot = 0.0d0
+
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
            ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), T_Guess, &
-             Error_E(iP), time_ele, time_muon )
-    time_ele_tot = time_ele_tot + time_ele
-    time_muon_tot = time_muon_tot + time_muon
+             Error_E(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
-  WRITE(*,*) 'GPU', time_ele_tot, time_muon_tot, tGPU
   PRINT*
   PRINT*, "ComputeTemperatureWith_DEYp (Bad Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
   DO iP = 1, nPoints
     IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
@@ -522,27 +512,12 @@ PROGRAM wlComposeNewInversionTest
   Error = ABS( T - T_E ) / T
   iMaxError = MAXLOC( Error, DIM=1 )
   CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_E(iMaxError), Yp(iMaxError), Ds_bary, Ts_bary, Yps_bary, OS_E, Es_bary, E_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_E )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_E, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_E, Error_E )
-#endif
-  DO iP = 1, nPoints
-    IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
-  END DO
-  Error = ABS( T - T_E ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_E(iMaxError), Yp(iMaxError), Ds_bary, Ts_bary, Yps_bary, OS_E, Es_bary, E_T )
+         ( D(iMaxError), T_E(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_E, Es_full, E_T )
   PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   PRINT*, "GPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_E )
-
+  WRITE(*,*) iMaxError, T(iMaxError), T_E(iMaxError), E(iMaxError), E_T
+  
   ! -------------------------------------------------------------------
 
   T_E = 0.0_dp
@@ -555,25 +530,6 @@ PROGRAM wlComposeNewInversionTest
 #endif
 
   CALL CPU_TIME( tBegin )
-  time_ele_tot = 0.0d0
-  time_muon_tot = 0.0d0
-  DO iP = 1, nPoints
-    T_Guess = T_E(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
-    CALL ComputeTemperatureWith_DEYpYl_Single_NoGuess &
-           ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), &
-             Error_E(iP), time_ele, time_muon )
-    time_ele_tot = time_ele_tot + time_ele
-    time_muon_tot = time_muon_tot + time_muon
-  END DO
-
-  WRITE(*,*) 'CPU', time_ele_tot, time_muon_tot, tCPU
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
-
-  CALL CPU_TIME( tBegin )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
@@ -586,44 +542,23 @@ PROGRAM wlComposeNewInversionTest
   !$OMP PARALLEL DO &
   !$OMP PRIVATE( T_Guess )
 #endif
-  time_ele_tot = 0.0d0
-  time_muon_tot = 0.0d0
+
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_NoGuess &
            ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), &
-             Error_E(iP), time_ele, time_muon )
-    time_ele_tot = time_ele_tot + time_ele
-    time_muon_tot = time_muon_tot + time_muon
+             Error_E(iP) )
   END DO
+
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
-  WRITE(*,*) 'GPU', time_ele_tot, time_muon_tot, tGPU
   PRINT*
   PRINT*, "ComputeTemperatureWith_DEYp (No Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
-  END DO
-  Error = ABS( T - T_E ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_E(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_E, Es_full, E_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_E )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_E, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_E, Error_E )
-#endif
   DO iP = 1, nPoints
     IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
   END DO
@@ -634,7 +569,8 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   PRINT*, "GPU  Error(E) = ", ABS( E(iMaxError) - E_T ) / E(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_E )
-  STOP
+  WRITE(*,*) iMaxError, T(iMaxError), T_E(iMaxError), E(iMaxError), E_T
+  
   ! -------------------------------------------------------------------
 
   !T_E = 0.0_dp
@@ -659,10 +595,8 @@ PROGRAM wlComposeNewInversionTest
   !PRINT*, MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   !PRINT*, "MINVAL(T) = ", MINVAL( T_E )
 
-  !STOP
-
   ! -------------------------------------------------------------------
-  ! --- Recover Temperature from Entropy Per Baryon -------------------
+  ! --- Recover Temperature from Entropy ----------------------
   ! -------------------------------------------------------------------
 
   Amp = 0.001_dp
@@ -676,7 +610,7 @@ PROGRAM wlComposeNewInversionTest
 
   end associate
 
-  Error_S = 0
+  Error_P = 0
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET UPDATE TO( T_S, Error_S )
@@ -686,65 +620,32 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_S(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
-           ! ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             ! Error_S(iP) )
-  ! END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
-
-  CALL CPU_TIME( tBegin )
-
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
   !$OMP PRIVATE( T_Guess )
 #elif defined (WEAKLIB_OACC)
   !$ACC PARALLEL LOOP GANG VECTOR &
   !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, S, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
-#elif defined (WEAKLIB_OMP)
+  !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
+#elif defined(WEAKLIB_OMP_OL)
   !$OMP PARALLEL DO &
   !$OMP PRIVATE( T_Guess )
 #endif
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_S(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
-           ! ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             ! Error_S(iP) )
-  ! END DO
+  DO iP = 1, nPoints
+    T_Guess = T_S(iP)
+    CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
+           ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
+             Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
+             Error_S(iP) )
+  END DO
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
   PRINT*
   PRINT*, "ComputeTemperatureWith_DSYp (Good Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
-  END DO
-  Error = ABS( T - T_S ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_S(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_S, Ss_full, S_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_S )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_S, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_S, Error_S )
-#endif
   DO iP = 1, nPoints
     IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
   END DO
@@ -772,25 +673,10 @@ PROGRAM wlComposeNewInversionTest
   Error_S = 0
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE TO( T_S, Error_S )
+  !$OMP TARGET UPDATE TO( T_E, Error_E )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE DEVICE( T_S, Error_S )
+  !$ACC UPDATE DEVICE( T_E, Error_E )
 #endif
-
-  CALL CPU_TIME( tBegin )
-
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_S(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
-           ! ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             ! Error_S(iP) )
-  ! END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
 
   CALL CPU_TIME( tBegin )
 
@@ -805,39 +691,21 @@ PROGRAM wlComposeNewInversionTest
   !$OMP PARALLEL DO &
   !$OMP PRIVATE( T_Guess )
 #endif
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_S(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
-           ! ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             ! Error_S(iP) )
-  ! END DO
+  DO iP = 1, nPoints
+    T_Guess = T_S(iP)
+    CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
+           ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
+             Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
+             Error_S(iP) )
+  END DO
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
   PRINT*
   PRINT*, "ComputeTemperatureWith_DSYp (Bad Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_fullIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
-  END DO
-  Error = ABS( T - T_S ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_S(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_S, Ss_full, S_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_S )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_S, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_S, Error_S )
-#endif
   DO iP = 1, nPoints
     IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
   END DO
@@ -855,25 +723,10 @@ PROGRAM wlComposeNewInversionTest
   Error_S = 0
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE TO( T_S, Error_S )
+  !$OMP TARGET UPDATE TO( T_E, Error_E )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE DEVICE( T_S, Error_S )
+  !$ACC UPDATE DEVICE( T_E, Error_E )
 #endif
-
-  CALL CPU_TIME( tBegin )
-
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_S(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DSYpYl_Single_NoGuess &
-           ! ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), &
-             ! Error_S(iP) )
-  ! END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
 
   CALL CPU_TIME( tBegin )
 
@@ -890,8 +743,6 @@ PROGRAM wlComposeNewInversionTest
 #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_NoGuess &
            ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), &
@@ -903,24 +754,8 @@ PROGRAM wlComposeNewInversionTest
 
   PRINT*
   PRINT*, "ComputeTemperatureWith_DSYp (No Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_fullIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
-  END DO
-  Error = ABS( T - T_S ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_S(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_S, Ss_full, S_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_S )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_S, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_S, Error_S )
-#endif
   DO iP = 1, nPoints
     IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
   END DO
@@ -931,8 +766,6 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "GPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
   PRINT*, "GPU  Error(S) = ", ABS( S(iMaxError) - S_T ) / S(iMaxError)
   PRINT*, "GPU MINVAL(T) = ", MINVAL( T_S )
-
-  ! -------------------------------------------------------------------
 
   ! -------------------------------------------------------------------
   ! --- Recover Temperature from Pressure ----------------------
@@ -952,25 +785,10 @@ PROGRAM wlComposeNewInversionTest
   Error_P = 0
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE TO( T_P, Error_P )
+  !$OMP TARGET UPDATE TO( T_E, Error_E )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE DEVICE( T_P, Error_P )
+  !$ACC UPDATE DEVICE( T_E, Error_E )
 #endif
-
-  CALL CPU_TIME( tBegin )
-
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_P(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
-           ! ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             ! Error_P(iP) )
-  ! END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
 
   CALL CPU_TIME( tBegin )
 
@@ -985,39 +803,21 @@ PROGRAM wlComposeNewInversionTest
   !$OMP PARALLEL DO &
   !$OMP PRIVATE( T_Guess )
 #endif
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_P(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
-           ! ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             ! Error_P(iP) )
-  ! END DO
+  DO iP = 1, nPoints
+    T_Guess = T_P(iP)
+    CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
+           ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
+             Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
+             Error_P(iP) )
+  END DO
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
   PRINT*
   PRINT*, "ComputeTemperatureWith_DPYp (Good Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
-  END DO
-  Error = ABS( T - T_P ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_P(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_P, Ps_full, P_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_P )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_P, Error_P )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_P, Error_P )
-#endif
   DO iP = 1, nPoints
     IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
   END DO
@@ -1045,25 +845,10 @@ PROGRAM wlComposeNewInversionTest
   Error_P = 0
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE TO( T_P, Error_P )
+  !$OMP TARGET UPDATE TO( T_E, Error_E )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE DEVICE( T_P, Error_P )
+  !$ACC UPDATE DEVICE( T_E, Error_E )
 #endif
-
-  CALL CPU_TIME( tBegin )
-
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_P(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
-           ! ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             ! Error_P(iP) )
-  ! END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
 
   CALL CPU_TIME( tBegin )
 
@@ -1078,39 +863,21 @@ PROGRAM wlComposeNewInversionTest
   !$OMP PARALLEL DO &
   !$OMP PRIVATE( T_Guess )
 #endif
-  ! DO iP = 1, nPoints
-    ! T_Guess = T_P(iP)
-    ! Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    ! Ye(iP) = Yp(iP) - Ymu(iP)
-    ! CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
-           ! ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             ! Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             ! Error_P(iP) )
-  ! END DO
+  DO iP = 1, nPoints
+    T_Guess = T_P(iP)
+    CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
+           ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
+             Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
+             Error_P(iP) )
+  END DO
 
   CALL CPU_TIME( tEnd )
   tGPU = tEnd - tBegin
 
   PRINT*
   PRINT*, "ComputeTemperatureWith_DPYp (Bad Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_TIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
-  END DO
-  Error = ABS( T - T_P ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_P(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_P, Ps_full, P_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_P )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_P, Error_P )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_P, Error_P )
-#endif
   DO iP = 1, nPoints
     IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
   END DO
@@ -1128,25 +895,10 @@ PROGRAM wlComposeNewInversionTest
   Error_P = 0
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE TO( T_P, Error_P )
+  !$OMP TARGET UPDATE TO( T_E, Error_E )
 #elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE DEVICE( T_P, Error_P )
+  !$ACC UPDATE DEVICE( T_E, Error_E )
 #endif
-
-  CALL CPU_TIME( tBegin )
-
-  DO iP = 1, nPoints
-    T_Guess = T_P(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
-    CALL ComputeTemperatureWith_DPYpYl_Single_NoGuess &
-           ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
-             Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), &
-             Error_P(iP) )
-  END DO
-
-  CALL CPU_TIME( tEnd )
-  tCPU = tEnd - tBegin
 
   CALL CPU_TIME( tBegin )
 
@@ -1163,8 +915,6 @@ PROGRAM wlComposeNewInversionTest
 #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    Ye(iP) = Yp(iP) - Ymu(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_NoGuess &
            ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), &
@@ -1176,24 +926,8 @@ PROGRAM wlComposeNewInversionTest
 
   PRINT*
   PRINT*, "ComputeTemperatureWith_DPYp (No Guess):"
-  PRINT*, "CPU_TIME = ", tCPU, "GPU_fullIME = ", tGPU
+  PRINT*, "GPU_TIME = ", tGPU
 
-  DO iP = 1, nPoints
-    IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
-  END DO
-  Error = ABS( T - T_P ) / T
-  iMaxError = MAXLOC( Error, DIM=1 )
-  CALL LogInterpolateSingleVariable_3D_Custom_Point &
-         ( D(iMaxError), T_P(iMaxError), Yp(iMaxError), Ds_full, Ts_full, Yps_full, OS_P, Ps_full, P_T )
-  PRINT*, "CPU  Error(T) = ", MAXVAL( Error ), MINVAL( Error ), SUM( Error ) / DBLE( nPoints )
-  PRINT*, "CPU  Error(P) = ", ABS( P(iMaxError) - P_T ) / P(iMaxError)
-  PRINT*, "CPU MINVAL(T) = ", MINVAL( T_P )
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_P, Error_P )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_P, Error_P )
-#endif
   DO iP = 1, nPoints
     IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
   END DO
@@ -1240,7 +974,7 @@ PROGRAM wlComposeNewInversionTest
 
 #if defined(WEAKLIB_OMP_OL)
 #elif defined(WEAKLIB_OACC)
-  !!$ACC SHUTDOWN
+  !$ACC SHUTDOWN
 #endif
 
   CALL MPI_FINALIZE( ierr )

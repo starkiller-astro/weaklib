@@ -38,6 +38,7 @@ wlComposeNewInversionTest.o: \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
   wlEOSComponentsInversionModule.o \
   wlLeptonEOSModule.o \
   wlElectronEOS.o \

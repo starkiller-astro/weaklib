@@ -188,32 +188,36 @@ PROGRAM wlCreateEquationOfStateTable
     
     EOSBaryonTable % DV % Offsets(:) = zero
     
-    ! Handle negative pressures ad hoc
-    DO iRho=1,nPointsBaryon(1)
-     DO iTemp=1,nPointsBaryon(2)
-      DO iYe=1,nPointsBaryon(3)
-        IF (EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) .lt. 0.0d0) THEN
-            EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = 1.0d-300
-        ENDIF
-      ENDDO
-     ENDDO
-    ENDDO
+    ! ! Handle negative pressures ad hoc
+    ! DO iRho=1,nPointsBaryon(1)
+     ! DO iTemp=1,nPointsBaryon(2)
+      ! DO iYe=1,nPointsBaryon(3)
+        ! IF (EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) .lt. 0.0d0) THEN
+            ! EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = 1.0d0
+        ! ENDIF
+      ! ENDDO
+     ! ENDDO
+    ! ENDDO
     
-    
+    WRITE(*,*) 'PRESS', MAXVAL(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values), &
+        MINVAL(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
     DO iVars = 1, EOSBaryonTable % DV % nVariables
         Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
         IF ( Minimum_Value .LT. zero) THEN
-            IF (iVars .eq. EOSBaryonTable % DV % Indices % iPressure) THEN
-                WRITE(*,*) 'Warning, negative pressure will not be offset!'
-                EOSBaryonTable % DV % Offsets(iVars) = zero
-            ELSE IF (iVars .eq. EOSBaryonTable % DV % Indices % iEntropyPerBaryon) THEN
-                WRITE(*,*) 'Warning, negative entropy will not be offset!'
-                EOSBaryonTable % DV % Offsets(iVars) = zero
-            ELSE
-                EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
-                EOSBaryonTable % DV % Variables(iVars) % Values =  &
-                    EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
-            END IF
+            ! IF (iVars .eq. EOSBaryonTable % DV % Indices % iPressure) THEN
+                ! WRITE(*,*) 'Warning, negative pressure will not be offset!'
+                ! EOSBaryonTable % DV % Offsets(iVars) = zero
+            ! ELSE IF (iVars .eq. EOSBaryonTable % DV % Indices % iEntropyPerBaryon) THEN
+                ! WRITE(*,*) 'Warning, negative entropy will not be offset!'
+                ! EOSBaryonTable % DV % Offsets(iVars) = zero
+            ! ELSE
+                ! EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
+                ! EOSBaryonTable % DV % Variables(iVars) % Values =  &
+                ! EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
+            ! END IF
+            EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
+            EOSBaryonTable % DV % Variables(iVars) % Values =  &
+            EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
         ELSE
             EOSBaryonTable % DV % Offsets(iVars) = zero
         END IF
@@ -241,7 +245,7 @@ PROGRAM wlCreateEquationOfStateTable
     PRINT*, "Allocate Muon EOS"
     CALL AllocateMuonEOS( MuonEOSTable, nPointsMuon )
     
-    MuonDatFilePath = '../muons.dat'
+    MuonDatFilePath = '../muons_fixedrho.dat'
     CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
     
     ! NOW CREATE BARYONIC FILE

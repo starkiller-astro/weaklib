@@ -111,57 +111,17 @@ MODULE wlElectronEOS
 		
 	END TYPE ElectronStateType
 	
-	TYPE, PUBLIC :: HelmholtzStateType
-			
-		REAL(dp) :: rho
-		REAL(dp) :: T
-		REAL(dp) :: ye
-		REAL(dp) :: abar
-		REAL(dp) :: zbar
-		
-		REAL(dp) :: prad
-		REAL(dp) :: pion
-		REAL(dp) :: pele
-		REAL(dp) :: pcoul
-	
-		REAL(dp) :: erad
-		REAL(dp) :: eion
-		REAL(dp) :: eele
-		REAL(dp) :: ecoul
-		
-		REAL(dp) :: srad
-		REAL(dp) :: sion
-		REAL(dp) :: sele
-		REAL(dp) :: scoul
-
-		REAL(dp) :: dpraddd
-		REAL(dp) :: dpiondd
-		REAL(dp) :: dpepdd
-		REAL(dp) :: dpcouldd
-
-		REAL(dp) :: deraddd
-		REAL(dp) :: deiondd
-		REAL(dp) :: deepdd
-		REAL(dp) :: decouldd
-		
-		REAL(dp) :: dsraddd
-		REAL(dp) :: dsiondd
-		REAL(dp) :: dsepdd
-		REAL(dp) :: dscouldd
-		
-	END TYPE HelmholtzStateType
-	
-	PUBLIC :: FullHelmEOS, HelmEOSComponents
+	PUBLIC :: FullHelmEOS, MinimalHelmEOS_rt
 	
 CONTAINS
 
-    SUBROUTINE FullHelmEOS(input, HelmTable, state, include_ion_contribution, do_coulomb)
+    SUBROUTINE FullHelmEOS(input, HelmTable, ElectronState, include_ion_contribution, do_coulomb)
 		
         !..input arguments
         INTEGER, INTENT(IN) :: input
 		LOGICAL, INTENT(IN) :: include_ion_contribution, do_coulomb
         TYPE(HelmholtzEOSType), INTENT(IN) :: HelmTable
-        TYPE (ElectronStateType), INTENT(INOUT) :: state
+        TYPE (ElectronStateType), INTENT(INOUT) :: ElectronState
 		
         !..rows to store EOS data
         REAL(dp) :: temp_row, &
@@ -253,11 +213,11 @@ CONTAINS
 		tstpi = one / tstp
 		dstpi = one / dstp
 		
-		temp_row = state % T
-		den_row  = state % rho
-		abar_row = state % abar
-		zbar_row = state % zbar
-		ye_row   = state % y_e
+		temp_row = ElectronState % T
+		den_row  = ElectronState % rho
+		abar_row = ElectronState % abar
+		zbar_row = ElectronState % zbar
+		ye_row   = ElectronState % y_e
 		
 		! Initial setup for iterations
 		
@@ -271,51 +231,51 @@ CONTAINS
 		ELSEIF (input .eq. eos_input_rh) THEN
 			
 			single_iter = .true.
-			v_want = state % h
+			v_want = ElectronState % h
 			var  = ienth
 			dvar = itemp
 		
 		ELSEIF (input .eq. eos_input_tp) THEN
 			
 			single_iter = .true.
-			v_want = state % p
+			v_want = ElectronState % p
 			var  = ipres
 			dvar = idens
 		
 		ELSEIF (input .eq. eos_input_rp) THEN
 			
 			single_iter = .true.
-			v_want = state % p
+			v_want = ElectronState % p
 			var  = ipres
 			dvar = itemp
 		
 		ELSEIF (input .eq. eos_input_re) THEN
 			
 			single_iter = .true.
-			v_want = state % e
+			v_want = ElectronState % e
 			var  = iener
 			dvar = itemp
 		
 		ELSEIF (input .eq. eos_input_ps) THEN
 			
 			double_iter = .true.
-			v1_want = state % p
-			v2_want = state % s
+			v1_want = ElectronState % p
+			v2_want = ElectronState % s
 			var1 = ipres
 			var2 = ientr
 		
 		ELSEIF (input .eq. eos_input_ph) THEN
 			
 			double_iter = .true.
-			v1_want = state % p
-			v2_want = state % h
+			v1_want = ElectronState % p
+			v2_want = ElectronState % h
 			var1 = ipres
 			var2 = ienth
 		
 		ELSEIF (input .eq. eos_input_th) THEN
 			
 			single_iter = .true.
-			v_want = state % h
+			v_want = ElectronState % h
 			var  = ienth
 			dvar = idens
 			
@@ -1088,86 +1048,86 @@ CONTAINS
 			
 		ENDDO
 		
-		state % T    = temp_row
-		state % rho  = den_row
+		ElectronState % T    = temp_row
+		ElectronState % rho  = den_row
 		
-		state % p    = ptot_row
-		state % dpdT = dpt_row
-		state % dpdr = dpd_row
+		ElectronState % p    = ptot_row
+		ElectronState % dpdT = dpt_row
+		ElectronState % dpdr = dpd_row
 		
 		
-		state % dpde = dpe_row
-		state % dpdr_e = dpdr_e_row
+		ElectronState % dpde = dpe_row
+		ElectronState % dpdr_e = dpdr_e_row
 		
-		state % e    = etot_row
-		state % dedT = det_row
-		state % dedr = ded_row
+		ElectronState % e    = etot_row
+		ElectronState % dedT = det_row
+		ElectronState % dedr = ded_row
 		
-		state % s    = stot_row / (kmev * ergmev / rmu)
-		state % dsdT = dst_row / (kmev * ergmev / rmu)
-		state % dsdr = dsd_row / (kmev * ergmev / rmu)
+		ElectronState % s    = stot_row / (kmev * ergmev / rmu)
+		ElectronState % dsdT = dst_row / (kmev * ergmev / rmu)
+		ElectronState % dsdr = dsd_row / (kmev * ergmev / rmu)
 		
-		state % h    = htot_row
-		state % dhdR = dhd_row
-		state % dhdT = dht_row
+		ElectronState % h    = htot_row
+		ElectronState % dhdR = dhd_row
+		ElectronState % dhdT = dht_row
 		
-		state % pele = pele_row
-		state % ppos = ppos_row
+		ElectronState % pele = pele_row
+		ElectronState % ppos = ppos_row
 		
-		state % xne = xne_row
-		state % xnp = xnp_row
+		ElectronState % xne = xne_row
+		ElectronState % xnp = xnp_row
 		
-		state % eta = etaele_row
-		state % detadt = detadt_row
+		ElectronState % eta = etaele_row
+		ElectronState % detadt = detadt_row
 		
-		state % cv   = cv_row
-		state % cp   = cp_row
-		state % gam1 = gam1_row
-		state % cs   = cs_row
+		ElectronState % cv   = cv_row
+		ElectronState % cp   = cp_row
+		ElectronState % gam1 = gam1_row
+		ElectronState % cs   = cs_row
 		
 		! Take care of final housekeeping.
 		
 		! Count the positron contribution in the electron quantities.
 		
-		state % xne  = state % xne  + state % xnp
-		state % pele = state % pele + state % ppos
+		ElectronState % xne  = ElectronState % xne  + ElectronState % xnp
+		ElectronState % pele = ElectronState % pele + ElectronState % ppos
 		
 		! Use the non-relativistic version of the sound speed, cs = SQRT(gam_1 * P / rho).
 		! This replaces the relativistic version that comes out of helmeos.
 		
-		! state % cs = SQRT(state % gam1 * state % p / state % rho)
+		! ElectronState % cs = SQRT(ElectronState % gam1 * ElectronState % p / ElectronState % rho)
 		
 		IF (input_is_constant) THEN
 			
 			IF (input .eq. eos_input_rh) THEN
 				
-				state % h = v_want
+				ElectronState % h = v_want
 			
 			ELSEIF (input .eq. eos_input_tp) THEN
 				
-				state % p = v_want
+				ElectronState % p = v_want
 			
 			ELSEIF (input .eq. eos_input_rp) THEN
 				
-				state % p = v_want
+				ElectronState % p = v_want
 			
 			ELSEIF (input .eq. eos_input_re) THEN
 				
-				state % e = v_want
+				ElectronState % e = v_want
 			
 			ELSEIF (input .eq. eos_input_ps) THEN
 				
-				state % p = v1_want
-				state % s = v2_want / (kmev * ergmev / rmu)
+				ElectronState % p = v1_want
+				ElectronState % s = v2_want / (kmev * ergmev / rmu)
 			
 			ELSEIF (input .eq. eos_input_ph) THEN
 				
-				state % p = v1_want
-				state % h = v2_want
+				ElectronState % p = v1_want
+				ElectronState % h = v2_want
 			
 			ELSEIF (input .eq. eos_input_th) THEN
 				
-				state % h = v_want
+				ElectronState % h = v_want
 				
 			ENDIF
 			
@@ -1175,16 +1135,49 @@ CONTAINS
 		
 	END SUBROUTINE FullHelmEOS
 	
-   SUBROUTINE HelmEOSComponents(input, HelmTable, HelmState)
+   SUBROUTINE MinimalHelmEOS_rt(HelmTable, ElectronState)
 	   
-		! In principle this should make the calculation very efficient, and only calculate electron, positrons, and photons,
-		! and ions only if needed. But it's not complete yet, please disregard
         !..input arguments
-        INTEGER, INTENT(IN) :: input
         TYPE(HelmholtzEOSType), INTENT(IN) :: HelmTable
-        TYPE (HelmholtzStateType), INTENT(INOUT) :: HelmState
-				
+        TYPE (ElectronStateType), INTENT(INOUT) :: ElectronState
+		
+        !..rows to store EOS data
+        REAL(dp) :: temp_row, &
+		den_row, &
+		abar_row, &
+		zbar_row, &
+		ye_row, &
+		etot_row, &
+		ptot_row, &
+		cv_row, &
+		cp_row,  &
+		xne_row, &
+		xnp_row, &
+		etaele_row, &
+		detadt_row, &
+		pele_row, &
+		ppos_row, &
+		dpd_row,  &
+		dpt_row, &
+		dpa_row, &
+		dpz_row,  &
+		ded_row, &
+		det_row, &
+		dea_row,  &
+		dez_row,  &
+		stot_row, &
+		dsd_row, &
+		dst_row, &
+		htot_row, &
+		dhd_row, &
+		dht_row, &
+		dpe_row, &
+		dpdr_e_row, &
+		gam1_row, &
+		cs_row
+		
 		!..declare local variables
+		
 		REAL(dp) :: x,y,z,zz,zzi,deni,tempi,xni,dxnidd,dxnida, &
 		dpepdt,dpepdd,deepdt,deepdd,dsepdd,dsepdt, &
 		dpraddd,dpraddt,deraddd,deraddt,dpiondd,dpiondt, &
@@ -1196,7 +1189,6 @@ CONTAINS
 		detadt,detadd,xnefer,dxnedt,dxnedd,s, &
 		temp,den,abar,zbar,ytot1,ye,din
 		
-		
 		!..for the interpolations
 		INTEGER  :: iat,jat
 		REAL(dp) :: free,df_d,df_t,df_tt,df_dt
@@ -1206,16 +1198,7 @@ CONTAINS
 		dsi0t,dsi1t,dsi2t,dsi0mt,dsi1mt,dsi2mt, &
 		dsi0d,dsi1d,dsi2d,dsi0md,dsi1md,dsi2md, &
 		ddsi0t,ddsi1t,ddsi2t,ddsi0mt,ddsi1mt,ddsi2mt
-		
-		!..for the coulomb corrections
-		REAL(dp) :: dsdd,dsda,lami,inv_lami,lamida,lamidd,     &
-		plasg,plasgdd,plasgdt,plasgda,plasgdz,     &
-		ecoul,decouldd,decouldt,decoulda,decouldz, &
-		pcoul,dpcouldd,dpcouldt,dpcoulda,dpcouldz, &
-		scoul,dscouldd,dscouldt,dscoulda,dscouldz
-				
-		REAL(dp) :: p_temp, e_temp
-		
+
 		! extra variables I added that were previously allocated
 		REAL(dp) :: smallt, smalld, hight, highd
 		REAL(dp) :: tstp, dstp, dstpi, tstpi
@@ -1231,18 +1214,55 @@ CONTAINS
 		tstpi = one / tstp
 		dstpi = one / dstp
 		
-		IF (.not. (input .eq. eos_input_rt)) THEN
-			WRITE(*,*) 'This routine is not optimized for anything other than temperature and density as inputs'
-			STOP
-		ENDIF 
-
-		temp = HelmState % T
-		den  = HelmState % rho
-		abar = HelmState % abar
-		zbar = HelmState % zbar
-		ye   = HelmState % ye
-
+		temp_row = ElectronState % T
+		den_row  = ElectronState % rho
+		abar_row = ElectronState % abar
+		zbar_row = ElectronState % zbar
+		ye_row   = ElectronState % y_e
+		
+		ptot_row = 0.0d0
+		dpt_row = 0.0d0
+		dpd_row = 0.0d0
+		dpa_row = 0.0d0
+		dpz_row = 0.0d0
+		dpe_row = 0.0d0
+		dpdr_e_row = 0.0d0
+		
+		etot_row = 0.0d0
+		det_row = 0.0d0
+		ded_row = 0.0d0
+		dea_row = 0.0d0
+		dez_row = 0.0d0
+		
+		stot_row = 0.0d0
+		dst_row = 0.0d0
+		dsd_row = 0.0d0
+		
+		htot_row = 0.0d0
+		dhd_row = 0.0d0
+		dht_row = 0.0d0
+		
+		pele_row = 0.0d0
+		ppos_row = 0.0d0
+		
+		xne_row = 0.0d0
+		xnp_row = 0.0d0
+		
+		etaele_row = 0.0d0
+		detadt_row = 0.0d0
+		
+		cv_row = 0.0d0
+		cp_row = 0.0d0
+		cs_row = 0.0d0
+		gam1_row = 0.0d0
+								
+		temp  = temp_row
+		den   =  den_row
+		abar  = abar_row
+		zbar  = zbar_row
+		
 		ytot1 = 1.0d0 / abar
+		ye    = ye_row
 		din   = ye * den
 		
 		!..initialize
@@ -1390,13 +1410,13 @@ CONTAINS
 		ddsi1mt = -ddpsi1(mxt)*HelmTable % dti(jat)
 		ddsi2mt =  ddpsi2(mxt)
 		
-		! ddsi0d =   ddpsi0(xd)*dd2i(iat)
-		! ddsi1d =   ddpsi1(xd)*HelmTable % ddi(iat)
-		! ddsi2d =   ddpsi2(xd)
-	
-		! ddsi0md =  ddpsi0(mxd)*dd2i(iat)
-		! ddsi1md = -ddpsi1(mxd)*HelmTable % ddi(iat)
-		! ddsi2md =  ddpsi2(mxd)
+		!     ddsi0d =   ddpsi0(xd)*dd2i(iat)
+		!     ddsi1d =   ddpsi1(xd)*HelmTable % ddi(iat)
+		!     ddsi2d =   ddpsi2(xd)
+		
+		!     ddsi0md =  ddpsi0(mxd)*dd2i(iat)
+		!     ddsi1md = -ddpsi1(mxd)*HelmTable % ddi(iat)
+		!     ddsi2md =  ddpsi2(mxd)
 		
 		!..the free energy
 		free  = h5( fi, &
@@ -1514,6 +1534,7 @@ CONTAINS
 		dsi0t,  dsi1t,  dsi0mt,  dsi1mt, &
 		si0d,   si1d,   si0md,   si1md)
 		
+		
 		!..look in the number density table only once
 		fi(1)  = HelmTable % xf(iat,jat)
 		fi(2)  = HelmTable % xf(iat+1,jat)
@@ -1569,168 +1590,125 @@ CONTAINS
 		eele    = ye*free + temp * sele
 		deepdt  = temp * dsepdt
 		deepdd  = x * df_d + temp * dsepdd
+
+		pres    = prad + pele
+		ener    = erad + eele
+		entr    = srad + sele
 		
-		!..coulomb section:
-		!..initialize
-		pcoul    = 0.0d0
-		dpcouldd = 0.0d0
-		dpcouldt = 0.0d0
-		dpcoulda = 0.0d0
-		dpcouldz = 0.0d0
-		ecoul    = 0.0d0
-		decouldd = 0.0d0
-		decouldt = 0.0d0
-		decoulda = 0.0d0
-		decouldz = 0.0d0
-		scoul    = 0.0d0
-		dscouldd = 0.0d0
-		dscouldt = 0.0d0
-		dscoulda = 0.0d0
-		dscouldz = 0.0d0
+		dpresdd = dpraddd + dpepdd
+		dpresdt = dpraddt + dpepdt
+		denerdd = deraddd + deepdd
+		denerdt = deraddt + deepdt
 		
-		!..uniform background corrections only
-		!..from yakovlev & shalybkov 1989
-		!..lami is the average ion seperation
-		!..plasg is the plasma coupling PARAMETER
-		z        = forth * pi
-		s        = z * xni
-		dsdd     = z * dxnidd
-		dsda     = z * dxnida
-		
-		lami     = 1.0d0/s**onethird
-		inv_lami = 1.0d0/lami
-		z        = -onethird * lami
-		lamidd   = z * dsdd/s
-		lamida   = z * dsda/s
-		
-		plasg    = zbar*zbar*esqu*ktinv*inv_lami
-		z        = -plasg * inv_lami
-		plasgdd  = z * lamidd
-		plasgda  = z * lamida
-		plasgdt  = -plasg*ktinv * kerg
-		plasgdz  = 2.0d0 * plasg/zbar
-		
-		! Calcuate Coulomb correction, it's up to the user to decide if you need to include them
-		
-		!...yakovlev & shalybkov 1989 equations 82, 85, 86, 87
-		IF (plasg .ge. 1.0D0) THEN
-			x        = plasg**(0.25d0)
-			y        = avo_eos * ytot1 * kerg
-			ecoul    = y * temp * (a1*plasg + b1*x + c1/x + d1)
-			pcoul    = onethird * den * ecoul
-			scoul    = -y * (3.0d0*b1*x - 5.0d0*c1/x &
-			+ d1 * (LOG(plasg) - 1.0d0) - e1)
-			
-			y        = avo_eos*ytot1*kt*(a1 + 0.25d0/plasg*(b1*x - c1/x))
-			decouldd = y * plasgdd
-			decouldt = y * plasgdt + ecoul/temp
-			decoulda = y * plasgda - ecoul/abar
-			decouldz = y * plasgdz
-			
-			y        = onethird * den
-			dpcouldd = onethird * ecoul + y*decouldd
-			dpcouldt = y * decouldt
-			dpcoulda = y * decoulda
-			dpcouldz = y * decouldz
-			
-			y        = -avo_eos*kerg/(abar*plasg)* &
-			(0.75d0*b1*x+1.25d0*c1/x+d1)
-			dscouldd = y * plasgdd
-			dscouldt = y * plasgdt
-			dscoulda = y * plasgda - scoul/abar
-			dscouldz = y * plasgdz
-			
-		!...yakovlev & shalybkov 1989 equations 102, 103, 104
-		ELSE IF (plasg .lt. 1.0D0) THEN
-			x        = plasg*SQRT(plasg)
-			y        = plasg**b2
-			z        = c2 * x - onethird * a2 * y
-			pcoul    = -pion * z
-			ecoul    = 3.0d0 * pcoul/den
-			scoul    = -avo_eos/abar*kerg*(c2*x -a2*(b2-1.0d0)/b2*y)
-			
-			s        = 1.5d0*c2*x/plasg - onethird*a2*b2*y/plasg
-			dpcouldd = -dpiondd*z - pion*s*plasgdd
-			dpcouldt = -dpiondt*z - pion*s*plasgdt
-			
-			s        = 3.0d0/den
-			decouldd = s * dpcouldd - ecoul/den
-			decouldt = s * dpcouldt
-			decoulda = s * dpcoulda
-			decouldz = s * dpcouldz
-			
-			s        = -avo_eos*kerg/(abar*plasg)* &
-			(1.5d0*c2*x-a2*(b2-1.0d0)*y)
-			dscouldd = s * plasgdd
-			dscouldt = s * plasgdt
-			dscoulda = s * plasgda - scoul/abar
-			dscouldz = s * plasgdz
-		END IF
+		dentrdd = dsraddd + dsepdd
+		dentrdt = dsraddt + dsepdt
 	
-		p_temp = prad + pion + pele + pcoul
-		e_temp = erad + eion + eele + ecoul
+		!..the temperature and density exponents (c&g 9.81 9.82)
+			!..the specific heat at constant volume (c&g 9.92)
+			!..the third adiabatic exponent (c&g 9.93)
+			!..the first adiabatic exponent (c&g 9.97)
+			!..the second adiabatic exponent (c&g 9.105)
+			!..the specific heat at constant pressure (c&g 9.98)
+		!..and relativistic formula for the sound speed (c&g 14.29)
+		zz    = pres*deni
+		zzi   = den/pres
+		chit  = temp/pres * dpresdt
+		chid  = dpresdd*zzi
+		cv    = denerdt
+		x     = zz * chit/(temp * cv)
+		gam3  = x + 1.0d0
+		gam1  = chit*x + chid
+		nabad = x/gam1
+		gam2  = 1.0d0/(1.0d0 - nabad)
+		cp    = cv * gam1/chid
+		z     = 1.0d0 + (ener + light2)*zzi
+		sound = clight * SQRT(gam1/z)
 		
-		! Disable Coulomb corrections IF they cause
-		! the energy or pressure to go negative.				
-		IF (p_temp .le. ZERO .or. e_temp .le. ZERO) THEN
-			
-			pcoul    = 0.0d0
-			dpcouldd = 0.0d0
-			dpcouldt = 0.0d0
-			dpcoulda = 0.0d0
-			dpcouldz = 0.0d0
-			ecoul    = 0.0d0
-			decouldd = 0.0d0
-			decouldt = 0.0d0
-			decoulda = 0.0d0
-			decouldz = 0.0d0
-			scoul    = 0.0d0
-			dscouldd = 0.0d0
-			dscouldt = 0.0d0
-			dscoulda = 0.0d0
-			dscouldz = 0.0d0
-			
-		END IF
-
-		! pres    = prad + pion + pele + pcoul
-		! ener    = erad + eion + eele + ecoul
-		! entr    = srad + sion + sele + scoul
+		!..maxwell relations; each is zero IF the consistency is perfect
+		x   = den * den
+		dse = temp*dentrdt/denerdt - 1.0d0
+		dpe = (denerdd*x + temp*dpresdt)/pres - 1.0d0
+		dsp = -dentrdd*x/dpresdt - 1.0d0
 		
-		! dpresdd = dpraddd + dpiondd + dpepdd + dpcouldd
-		! denerdd = deraddd + deiondd + deepdd + decouldd
-		! dentrdd = dsraddd + dsiondd + dsepdd + dscouldd
-
-		HelmState % prad = prad
-		HelmState % pion = pion
-		HelmState % pele = pele
-		HelmState % pcoul = pcoul
-
-		HelmState % erad = erad
-		HelmState % eion = eion
-		HelmState % eele = eele
-		HelmState % ecoul = ecoul
-
-		HelmState % srad = srad
-		HelmState % sion = sion
-		HelmState % sele = sele
-		HelmState % scoul = scoul
+		ptot_row = pres
+		dpt_row = dpresdt
+		dpd_row = dpresdd
+		dpe_row = dpresdt / denerdt
+		dpdr_e_row = dpresdd - dpresdt * denerdd / denerdt
 		
-		HelmState % dpraddd = dpraddd
-		HelmState % dpiondd = dpiondd
-		HelmState % dpepdd = dpepdd
-		HelmState % dpcouldd = dpcouldd
-
-		HelmState % deraddd = deraddd
-		HelmState % deiondd = deiondd
-		HelmState % deepdd = deepdd
-		HelmState % decouldd = decouldd
+		etot_row = ener
+		det_row = denerdt
+		ded_row = denerdd
 		
-		HelmState % dsraddd = dsraddd
-		HelmState % dsiondd = dsiondd
-		HelmState % dsepdd = dsepdd
-		HelmState % dscouldd = dscouldd
+		stot_row = entr
+		dst_row = dentrdt
+		dsd_row = dentrdd
 		
-	END SUBROUTINE HelmEOSComponents
+		htot_row = ener + pres / den
+		dhd_row = denerdd + dpresdd / den - pres / den**2
+		dht_row = denerdt + dpresdt / den
+		
+		pele_row = pele
+		ppos_row = 0.0d0
+		
+		xne_row = xnefer
+		xnp_row = 0.0d0
+		
+		etaele_row = etaele
+		detadt_row = detadt
+		
+		cv_row = cv
+		cp_row = cp
+		cs_row = sound
+		gam1_row = gam1
+					
+		ElectronState % T    = temp_row
+		ElectronState % rho  = den_row
+		
+		ElectronState % p    = ptot_row
+		ElectronState % dpdT = dpt_row
+		ElectronState % dpdr = dpd_row
+		
+		
+		ElectronState % dpde = dpe_row
+		ElectronState % dpdr_e = dpdr_e_row
+		
+		ElectronState % e    = etot_row
+		ElectronState % dedT = det_row
+		ElectronState % dedr = ded_row
+		
+		ElectronState % s    = stot_row / (kmev * ergmev / rmu)
+		ElectronState % dsdT = dst_row / (kmev * ergmev / rmu)
+		ElectronState % dsdr = dsd_row / (kmev * ergmev / rmu)
+		
+		ElectronState % h    = htot_row
+		ElectronState % dhdR = dhd_row
+		ElectronState % dhdT = dht_row
+		
+		ElectronState % pele = pele_row
+		ElectronState % ppos = ppos_row
+		
+		ElectronState % xne = xne_row
+		ElectronState % xnp = xnp_row
+		
+		ElectronState % eta = etaele_row
+		ElectronState % detadt = detadt_row
+		
+		ElectronState % cv   = cv_row
+		ElectronState % cp   = cp_row
+		ElectronState % gam1 = gam1_row
+		ElectronState % cs   = cs_row
+		
+		! Take care of final housekeeping.
+		
+		! Count the positron contribution in the electron quantities.
+		
+		ElectronState % xne  = ElectronState % xne  + ElectronState % xnp
+		ElectronState % pele = ElectronState % pele + ElectronState % ppos
+		
+		! ElectronState % cs = SQRT(ElectronState % gam1 * ElectronState % p / ElectronState % rho)
+		
+	END SUBROUTINE MinimalHelmEOS_rt
 	
 	
 	! These are all the functions used fro the interpolation

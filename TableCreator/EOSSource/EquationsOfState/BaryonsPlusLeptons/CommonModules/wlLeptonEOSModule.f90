@@ -11,7 +11,7 @@ MODULE wlLeptonEOSModule
 	PRIVATE
 	
     INTEGER, PARAMETER, PUBLIC :: iTempMax=541, iDenMax=201 
-    INTEGER, PARAMETER, PUBLIC :: nTempMuon=270, nDenMuon=1301 
+    INTEGER, PARAMETER, PUBLIC :: nTempMuon=270, nDenMuon=1501 
 	
  	TYPE, PUBLIC :: HelmholtzEOSType
 		
@@ -61,7 +61,7 @@ MODULE wlLeptonEOSModule
 		REAL(dp), DIMENSION(:), ALLOCATABLE :: ddi
 		REAL(dp), DIMENSION(:), ALLOCATABLE :: dd2i
 		
-		! minimum and maximum possible densities
+		! miniDenm and maxiDenm possible densities
 		REAL(dp) :: mintemp
 		REAL(dp) :: maxtemp
 		REAL(dp) :: mindens
@@ -75,8 +75,8 @@ MODULE wlLeptonEOSModule
 		INTEGER :: nPointsTemp
 		
 		REAL(dp), DIMENSION(:), ALLOCATABLE :: t
-		REAL(dp), DIMENSION(:), ALLOCATABLE :: mu
-		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rhoymu
+		REAL(dp), DIMENSION(:), ALLOCATABLE :: rhoymu
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: mu
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: p
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: e
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: s
@@ -194,8 +194,8 @@ CONTAINS
 		MuonEOS % nPointsMu   = nPoints(2)
 
 		ALLOCATE( MuonEOS % t( nPoints(1) ) )
-		ALLOCATE( MuonEOS % mu( nPoints(2) ) )
-		ALLOCATE( MuonEOS % rhoymu( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % rhoymu( nPoints(2) ) )
+		ALLOCATE( MuonEOS % mu( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % p( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % e( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % s( nPoints(1), nPoints(2) ) )
@@ -301,7 +301,7 @@ CONTAINS
 			HelmholtzEOS % dd2i(iDen) = 1.0d0/HelmholtzEOS % dd2(iDen)
 		end do
 		
-		! Set up the minimum and maximum possible densities.
+		! Set up the miniDenm and maxiDenm possible densities.
 		HelmholtzEOS % mintemp = 10.d0**tlo
 		HelmholtzEOS % maxtemp = 10.d0**thi
 		HelmholtzEOS % mindens = 10.d0**dlo
@@ -316,7 +316,7 @@ CONTAINS
 		
 		! Local variables
 		INTEGER :: istat=0
-		INTEGER :: iMu, iT
+		INTEGER :: iDen, iT
 
         !..   read the muon table with Tobias' format
 		OPEN(UNIT=1234,FILE=TRIM(ADJUSTL(MuonDatFilePath)), STATUS='old', IOSTAT=istat)
@@ -329,11 +329,10 @@ CONTAINS
 			IF (iT .eq. (nDenMuon+1)*iT) THEN
 				READ(1234,*)
 			ENDIF
-			DO iMu=1,MuonEOS % nPointsMu
-				READ(1234,*) MuonEOS % t(iT), MuonEOS % rhoymu(iT,iMu), &
-					MuonEOS % p(iT,iMu), MuonEOS % e(iT,iMu), &
-					MuonEOS % s(iT,iMu), MuonEOS % mu(iMu)
-
+			DO iDen=1,MuonEOS % nPointsMu
+				READ(1234,*) MuonEOS % t(iT), MuonEOS % rhoymu(iDen), &
+					MuonEOS % p(iT,iDen), MuonEOS % e(iT,iDen), &
+					MuonEOS % s(iT,iDen), MuonEOS % mu(iT,iDen)
 			ENDDO
 		ENDDO
 		
