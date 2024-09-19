@@ -138,6 +138,9 @@ pr_w_lt_wp_wp_lt_e.o: \
 pr_w_lt_wp_e_lt_wp.o: \
   pair_module.o
 
+scat_n_module_weaklib.o: \
+  wlKindModule.o
+
 scatergn_weaklib.o: \
   pair_module.o
 

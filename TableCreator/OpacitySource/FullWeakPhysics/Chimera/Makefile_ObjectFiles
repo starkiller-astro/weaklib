@@ -3,7 +3,8 @@ CHIMERA = \
   $(ChimeraTP) \
   $(ChimeraIS) \
   $(ChimeraNES) \
-  $(ChimeraAB)
+  $(ChimeraAB) \
+  $(ChimeraNNS)
 
 ChimeraShare = \
   gquad.o \
@@ -55,3 +56,5 @@ ChimeraAB = \
   abem_nuclei_Bruenn85_FFN_weaklib.o \
   ec_table_module.o
 
+ChimeraNNS = \
+  scat_n_module_weaklib.o
