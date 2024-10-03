@@ -1,6 +1,7 @@
 MODULE scat_n_module_weaklib
 
 USE wlKindModule, ONLY: dp
+USE polylog_module_weaklib, ONLY: polylog
 
 !-----------------------------------------------------------------------
 !  Constants
@@ -158,34 +159,34 @@ CONTAINS
       return
       end
 
+!-- moved to polylog_module_weaklib.f90
+! !--------------------------------------------------   
+!       SUBROUTINE POLYLOG(x,pl1,pl2,pl3)
+! !--------------------------------------------------
+!       use polylog_module_weaklib
+!       implicit none
+!       real(dp) :: x,pl1,pl2,pl3
+!       integer j
+!       real(dp) :: arg,a,b
+!       real(dp), parameter :: pi2=9.8696044d0
 
-!--------------------------------------------------   
-      SUBROUTINE POLYLOG(x,pl1,pl2,pl3)
-!--------------------------------------------------
-      use polylog_module_weaklib
-      implicit none
-      real(dp) :: x,pl1,pl2,pl3
-      integer j
-      real(dp) :: arg,a,b
-      real(dp), parameter :: pi2=9.8696044d0
-
-      pl1 = x+dlog(1.d0+dexp(-x))
+!       pl1 = x+dlog(1.d0+dexp(-x))
     
-      if (x.ge.4.6) then
-        pl2 = -(0.5d0*x*x + pi2/6.d0)/(1.d0+dexp(-1.5*x))
-        pl3 = -x*(x*x + pi2)/6.d0/(1.d0+dexp(-1.69*x))
-      else
-        arg=dexp(x) 
-        j = int(10.d0*arg)
-        a = 10.d0*arg - dble(j)
-        b = 1.d0 - a
-        pl2 = pl2a(j)*b+pl2a(j+1)*a
-        pl3 = pl3a(j)*b+pl3a(j+1)*a
-      endif
+!       if (x.ge.4.6) then
+!         pl2 = -(0.5d0*x*x + pi2/6.d0)/(1.d0+dexp(-1.5*x))
+!         pl3 = -x*(x*x + pi2)/6.d0/(1.d0+dexp(-1.69*x))
+!       else
+!         arg=dexp(x) 
+!         j = int(10.d0*arg)
+!         a = 10.d0*arg - dble(j)
+!         b = 1.d0 - a
+!         pl2 = pl2a(j)*b+pl2a(j+1)*a
+!         pl3 = pl3a(j)*b+pl3a(j+1)*a
+!       endif
 
-      return
-      end
+!       return
+!       end
 
-!------------------------------------------------------------------
+! !------------------------------------------------------------------
 
 END module scat_n_module_weaklib
