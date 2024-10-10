@@ -147,7 +147,8 @@ scatergn_weaklib.o: \
 scatical_weaklib.o: \
   wlKindModule.o \
   numerical_module.o \
-  physcnst_module.o
+  physcnst_module.o \
+  prb_cntl_module.o
 
 sctlgndv_weaklib.o: \
   wlKindModule.o \

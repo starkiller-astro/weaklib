@@ -45,6 +45,9 @@ SUBROUTINE scatical_weaklib &
 USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, half, twothd, one, epsilon, pi
 USE physcnst_module, ONLY: Gw, mp, hbar, cvel, cv, ga, rmu, kfm, kmev
+!USE prb_cntl_module, ONLY: iscat, in, ip, ihe, iheavy, isctn, rhosctnmn, &
+!& g_strange
+USE prb_cntl_module, ONLY: in, ip
 
 IMPLICIT NONE
 
@@ -361,6 +364,42 @@ DO k = 1, nez
 
 ! Compute Equation C45 for heavy element with coeff.: (cvel*(hc)**3)*e2*( C45 )
   rmdnhs1(k)     = cc * xhaa * a02 * sbg
+
+!-----------------------------------------------------------------------
+!  Incorporate scattering keys.
+!-----------------------------------------------------------------------
+
+! IF ( in      == 0 ) rmdnns  = zero
+! IF ( ip      == 0 ) rmdnps  = zero
+! IF ( ihe     == 0 ) rmdnhes = zero
+! IF ( iheavy  == 0 ) rmdnhs  = zero
+! IF ( isctn /= 0  .and.  rho > rhosctnmn .and. nse == 1 ) THEN
+!   rmdnps0        = zero
+!   rmdnns0        = zero
+!   rmdnbps0       = zero
+!   rmdnbns0       = zero
+!   rmdnps1        = zero
+!   rmdnns1        = zero
+!   rmdnbps1       = zero
+!   rmdnbns1       = zero
+!   rmdnps         = zero
+!   rmdnns         = zero
+!   rmdnbps        = zero
+!   rmdnbns        = zero
+! END IF ! isctn /= 0  .and.  rho > rhosctnmn
+
+  IF ( in == 0 ) THEN
+    rmdnns0  = zero
+    rmdnbns0 = zero
+    rmdnns1  = zero
+    rmdnbns1 = zero
+  END IF
+  IF ( ip == 0 ) THEN
+    rmdnps0  = zero
+    rmdnbps0 = zero
+    rmdnps1  = zero
+    rmdnbps1 = zero
+  END IF
 
 !!-------------------------------------------------------------------
 !!  Ion-ion correlation correction for coherent scattering.
