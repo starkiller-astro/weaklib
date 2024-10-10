@@ -19,6 +19,19 @@ REAL(dp), DIMENSION (nleg_e) :: wt_e          ! scaled weights of energy quadrat
 
 CONTAINS
 
+
+SUBROUTINE init_quad_abem
+
+  !-----------------------------------------------------------------------
+  ! Get integration points and weights
+  !-----------------------------------------------------------------------
+
+  CALL gquad(nleg_a,x_a,wt_a,nleg_a)
+  CALL gquad(nleg_e,x_e,wt_e,nleg_e)
+
+END SUBROUTINE init_quad_abem
+
+
 SUBROUTINE nu_N_absr_momts( enu_in, tmev, m_trgt_i, m_trgt_f, m_lep, &
 & cmp_trgt_i, cmp_trgt_f, cmp_lep, ab_r0, ab_r1, e_out )
 !-----------------------------------------------------------------------

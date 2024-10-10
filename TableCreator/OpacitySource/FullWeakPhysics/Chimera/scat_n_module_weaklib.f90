@@ -44,6 +44,31 @@ REAL(dp), DIMENSION(nquad_a2) :: x_a2           ! normalized points of angular G
 REAL(dp), DIMENSION(nquad_a2) :: wt_a2          ! weights of angular Gauss-Lagendre quadrature
 
 CONTAINS
+
+
+SUBROUTINE init_quad_scat_n
+
+  !-----------------------------------------------------------------------
+  !  Initialize
+  !
+  !  C_nes converts d sigma/ V d Omega dE3 from /m to /cm
+  !  R_nes converts d sigma/ V d cos theta to dE3 to d sigma/ V d Omega dE3
+  !  Get quadrature points and weights
+  !-----------------------------------------------------------------------
+
+  C_nes                     = m_cm
+  R_nes                     = one/( 2.d0 * pi )
+
+  CALL gquad( nquad_a,    x_a,    wt_a,    nquad_a    )
+  CALL gquad( nquad_e,    x_e,    wt_e,    nquad_e    )
+  CALL gquad( nquad_ein1, x_ein1, wt_ein1, nquad_ein1 )
+  CALL gquad( nquad_eot1, x_eot1, wt_eot1, nquad_eot1 )
+  CALL gquad( nquad_ein2, x_ein2, wt_ein2, nquad_ein2 )
+  CALL gquad( nquad_eot2, x_eot2, wt_eot2, nquad_eot2 )
+  CALL gquad( nquad_a2,   x_a2,   wt_a2,   nquad_a2   )
+
+END SUBROUTINE init_quad_scat_n
+
  
 !-------------------------------------------------------------------   
       SUBROUTINE N_DIFCS(E,EP,costh,T,s,mun,cv,ca,fwqt)
