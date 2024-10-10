@@ -75,12 +75,14 @@ PROGRAM wlCreateOpacityTable
       edmpa, edmpe, iaenca, in, ip, ietann
 
   USE abem_module_weaklib, ONLY: &
-      nleg_a, x_a, wt_a, &
-      nleg_e, x_e, wt_e
+        init_quad_abem
 
   USE CC_module_weaklib
 
   USE ec_table_module
+
+  USE scat_n_module_weaklib, ONLY: &
+        init_quad_scat_n
 
   USE, INTRINSIC :: iso_fortran_env, only : stdin=>input_unit, &
                                             stdout=>output_unit, &
@@ -184,6 +186,21 @@ IMPLICIT NONE
                               = -0.1d0
                               !Include strange-quark contributions to the axial vector coupling constant ga
                               !Value from Hobbs et al 2016
+
+   INTEGER, PARAMETER      :: Scat_np_isoenergetic &
+                              = 0
+                              !Scat on free nucleons using isoenergetic approximation
+                              !Bruenn 1985
+                              !Mezzacappa & Bruenn (1993)
+
+   INTEGER, PARAMETER      :: Scat_np_non_isoenergetic &
+                              = 1
+                              !Scat on free nucleons taking into account recoil,
+                              !nucleon final-state blocking, and special relativity
+                              !Reddy et al 1998
+                              !Only used for rho > 1e9, for low densities 
+                              !the isoenergetic approximation of Bruenn 1985 
+                              !and Mezzacappa & Bruenn (1993) is used
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
@@ -340,8 +357,16 @@ IMPLICIT NONE
    OpacityTable % EmAb % EC_table_E_max      = EC_T_max
 
    END IF
+
 ! -- Set OpacityTableTypeScat Iso
+
    IF( nOpac_Iso .gt. 0 ) THEN
+
+   if(Scat_np_isoenergetic + Scat_np_non_isoenergetic .gt. 1) then
+     write (*,*) "Must choose either Bruenn85 or Reddy et al 98 for Scat on free nucleons"
+     write (*,*) "When choosing Reddy et al 98, Bruenn85 is still used for rho < 1e9!" 
+     return
+   endif
 
    OpacityTable % Scat_Iso % nOpacities   = nOpac_Iso
 
@@ -768,9 +793,7 @@ PRINT*, 'Filling OpacityTable ...'
 
    IF(EmAb_np_non_isoenergetic == 1) THEN
 
-     CALL gquad(nleg_a,x_a,wt_a,nleg_a)
-     CALL gquad(nleg_e,x_e,wt_e,nleg_e)
-
+     CALL init_quad_abem
      CALL load_polylog_weaklib
 
    END IF
@@ -1063,8 +1086,8 @@ PRINT*, 'Filling OpacityTable ...'
 
          DO i_rb = 1, nOpac_Iso
 
-           in = 1
-           ip = 1
+           in = Scat_np_isoenergetic
+           ip = Scat_np_isoenergetic
            ietann = 1
 
            CALL scatical_weaklib &
@@ -1098,6 +1121,14 @@ PRINT*, 'Filling OpacityTable ...'
                       -2.d0 * MIN( 0.d0, minvar )
      END DO
    END DO
+
+!----------------  Scat_NNS -----------------------
+   IF(Scat_np_non_isoenergetic == 1) THEN
+
+     CALL init_quad_scat_n
+     CALL load_polylog_weaklib
+
+   END IF
 
 !----------------  Scat_NES -----------------------
   IF( nOpac_NES .gt. 0 ) THEN
