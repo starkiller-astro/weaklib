@@ -153,6 +153,15 @@ MODULE wlOpacityFieldsModule
     INTEGER  :: weak_magnetism_corrections !Horowitz 2002
     INTEGER  :: ion_ion_corrections        !Horowitz 1997, Bruenn and Mezzacappa 1997
     INTEGER  :: many_body_corrections      !Horowith et al 2017
+    INTEGER  :: np_isoenergetic       
+                !Scat on free nucleons using isoenergetic approximation
+                !Bruenn 1985
+                !Mezzacappa & Bruenn (1993)
+    INTEGER  :: np_non_isoenergetic             
+                !Scat on free nucleons taking into account recoil,
+                !nucleon final-state blocking, and special relativity
+                !Reddy et al 1998
+                !Only used for rho > 1e9
     REAL(DP) :: ga_strange                 !strange quark contributions
   END TYPE OpacityTypeScatIso
 
@@ -455,6 +464,8 @@ CONTAINS
                       Opacity % weak_magnetism_corrections
           WRITE(*,*) 'Ion-ion corrections, Horowitz 1997, Bruenn and Mezzacappa 1997              ', Opacity % ion_ion_corrections
           WRITE(*,*) 'Many body corrections, Horowitz et al 2017                                  ', Opacity % many_body_corrections
+          WRITE(*,*) 'Scat on np, isoenergetic, Bruenn 1985                                       ', Opacity % np_isoenergetic
+          WRITE(*,*) 'Scat on np, Reddy et al 1998                                                ', Opacity % np_non_isoenergetic
           WRITE(*,*) 'Strange quark contribution to axial vector coupling constant (0.0 if no-op) ', Opacity % ga_strange
 
         TYPE IS ( OpacityTypeScatNES )

@@ -396,7 +396,13 @@ IMPLICIT NONE
    OpacityTable % Scat_Iso % ga_strange = &
                   Iso_ga_strange
 
-   END IF
+   OpacityTable % Scat_Iso % np_isoenergetic = &
+                  Scat_np_isoenergetic
+
+   OpacityTable % Scat_Iso % np_non_isoenergetic = &
+                  Scat_np_non_isoenergetic
+
+END IF
 
 ! -- Set OpacityTableTypeScat NES
    IF( nOpac_NES .gt. 0 ) THEN

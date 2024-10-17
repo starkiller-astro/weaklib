@@ -807,6 +807,12 @@ CONTAINS
         tempInteger(1) = Scat % many_body_corrections
         CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
 
+        tempInteger(1) = Scat % np_isoenergetic
+        CALL WriteHDF( "np_isoenergetic", tempInteger, group_id, datasize1d )
+
+        tempInteger(1) = Scat % np_non_isoenergetic
+        CALL WriteHDF( "np_non_isoenergetic", tempInteger, group_id, datasize1d )
+
         tempReal(1)    = Scat % ga_strange
         CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
 
@@ -1743,7 +1749,6 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
             
         ELSE
           datasize1d(1) = 1
@@ -1751,6 +1756,8 @@ CONTAINS
           Scat % weak_magnetism_corrections = buffer(1)
 
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
         CALL h5eset_auto_f( 0, hdferr )
  
@@ -1781,7 +1788,7 @@ CONTAINS
           CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 
           IF(myid == 0) THEN
-            WRITE(*,*) 'Dataset many_many_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'Dataset many_body_corr not found in ', TRIM( FileName )
             WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
           ENDIF
 
@@ -1790,6 +1797,48 @@ CONTAINS
           datasize1d(1) = 1
           CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
           Scat % many_body_corrections = buffer(1)
+        ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "np_isoenergetic", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset np_isoenergetic not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "np_isoenergetic", buffer, group_id, datasize1d )
+          Scat % np_isoenergetic = buffer(1)
+        ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "np_non_isoenergetic", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset np_non_isoenergetic not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "np_non_isoenergetic", buffer, group_id, datasize1d )
+          Scat % np_non_isoenergetic = buffer(1)
         ENDIF
 
         CALL h5eset_auto_f( 1, hdferr )
