@@ -101,7 +101,6 @@ MODULE wlOpacityFieldsModule
                                     !EmAb on free nucleons taking into account recoil,
                                     !nucleon final-state blocking, and special relativity
                                     !Reddy et al 1998
-                                    !Only used for rho > 1e9
 
     INTEGER                         :: np_weak_magnetism     
                                     !Weak magnetism corrections for EmAb on free nucleons
@@ -135,6 +134,14 @@ MODULE wlOpacityFieldsModule
 !     T:   Temperature
 !     Eta: Electron Chemical Pot. / Temperature
 !
+! OpacityTypeScat (Inelastic Neutrino-Nucleon Scattering)
+!   Dependency ( E', E, l, T, MuB )
+!     E':  Neutrino Energy
+!     E:   Neutrino Energy
+!     l:   Legendre Moment
+!     T:   Temperature
+!     MuB: Baryon Chemical Potential
+!
 !---------------------------------------------
 
   TYPE, PUBLIC :: OpacityTypeScat
@@ -160,8 +167,7 @@ MODULE wlOpacityFieldsModule
     INTEGER  :: np_non_isoenergetic             
                 !Scat on free nucleons taking into account recoil,
                 !nucleon final-state blocking, and special relativity
-                !Reddy et al 1998
-                !Only used for rho > 1e9
+                !Reddy et al 1998, Bruenn et al. 2020
     REAL(DP) :: ga_strange                 !strange quark contributions
   END TYPE OpacityTypeScatIso
 
@@ -465,7 +471,7 @@ CONTAINS
           WRITE(*,*) 'Ion-ion corrections, Horowitz 1997, Bruenn and Mezzacappa 1997              ', Opacity % ion_ion_corrections
           WRITE(*,*) 'Many body corrections, Horowitz et al 2017                                  ', Opacity % many_body_corrections
           WRITE(*,*) 'Scat on np, isoenergetic, Bruenn 1985                                       ', Opacity % np_isoenergetic
-          WRITE(*,*) 'Scat on np, Reddy et al 1998                                                ', Opacity % np_non_isoenergetic
+          WRITE(*,*) 'Scat on np, Reddy et al 1998, Bruenn et al. 2020                            ', Opacity % np_non_isoenergetic
           WRITE(*,*) 'Strange quark contribution to axial vector coupling constant (0.0 if no-op) ', Opacity % ga_strange
 
         TYPE IS ( OpacityTypeScatNES )

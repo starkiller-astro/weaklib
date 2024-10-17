@@ -134,9 +134,6 @@ IMPLICIT NONE
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
-                              !Only used for rho > 1e9, for low densities 
-                              !the isoenergetic approximation of Bruenn 1985 
-                              !and Mezzacappa & Bruenn (1993) is used
 
    INTEGER, PARAMETER      :: EmAb_np_weak_magnetism &
                               = 1
@@ -197,10 +194,7 @@ IMPLICIT NONE
                               = 1
                               !Scat on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
-                              !Reddy et al 1998
-                              !Only used for rho > 1e9, for low densities 
-                              !the isoenergetic approximation of Bruenn 1985 
-                              !and Mezzacappa & Bruenn (1993) is used
+                              !Reddy et al 1998, Bruenn et al. 2020
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
@@ -364,7 +358,6 @@ IMPLICIT NONE
 
    if(Scat_np_isoenergetic + Scat_np_non_isoenergetic .gt. 1) then
      write (*,*) "Must choose either Bruenn85 or Reddy et al 98 for Scat on free nucleons"
-     write (*,*) "When choosing Reddy et al 98, Bruenn85 is still used for rho < 1e9!" 
      return
    endif
 
