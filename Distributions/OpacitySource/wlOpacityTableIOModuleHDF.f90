@@ -429,7 +429,8 @@ CONTAINS
     CHARACTER(LEN=32)                           :: tempString(1)
     INTEGER                                     :: tempInteger(1)
     INTEGER(HSIZE_T)                            :: datasize1d(1)
-
+    REAL(dp)                                    :: tempReal(1)
+    
     datasize1d(1) = 1
 
     tempString(1) = Grid % Name
@@ -444,8 +445,32 @@ CONTAINS
     tempInteger(1) = Grid % LogInterp 
     CALL WriteHDF( "LogInterp", tempInteger,      group_id, datasize1d )
    
+    tempReal(1) = Grid % minValue
+    CALL WriteHDF( "minValue",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % maxValue
+    CALL WriteHDF( "maxValue",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % minEdge
+    CALL WriteHDF( "minEdge",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % maxEdge
+    CALL WriteHDF( "maxEdge",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % minWidth
+    CALL WriteHDF( "minWidth",  tempReal,         group_id, datasize1d )
+
+    tempReal(1) = Grid % Zoom
+    CALL WriteHDF( "Zoom",      tempReal,         group_id, datasize1d )
+
     datasize1d(1) = Grid % nPoints
     CALL WriteHDF( "Values",    Grid % Values(:), group_id, datasize1d )
+
+    datasize1d(1) = Grid % nPoints + 1
+    CALL WriteHDF( "Edge",      Grid % Edge(:),   group_id, datasize1d )
+
+    datasize1d(1) = Grid % nPoints
+    CALL WriteHDF( "Width",     Grid % Width(:),  group_id, datasize1d )
 
   END SUBROUTINE WriteGridHDF
 
@@ -991,7 +1016,6 @@ CONTAINS
           OpacityTable % EmAb % nuclei_EC_table     = -1
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
 
         ELSE
 
@@ -1018,6 +1042,8 @@ CONTAINS
           CALL CloseGroupHDF( group_id )
 
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
       END BLOCK
 
@@ -1739,12 +1765,13 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
           CALL ReadHDF( "ion_ion_corr", buffer, group_id, datasize1d )
           Scat % ion_ion_corrections = buffer(1)
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
         CALL h5eset_auto_f( 0, hdferr )
  
@@ -1759,12 +1786,13 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
           CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
           Scat % many_body_corrections = buffer(1)
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
         CALL h5eset_auto_f( 0, hdferr )
  
@@ -1779,12 +1807,13 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
         ELSE
           datasize1d(1) = 1
           CALL ReadHDF( "ga_strange", bufferReal, group_id, datasize1d )
           Scat % ga_strange = bufferReal(1)
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
       TYPE IS ( OpacityTypeScatNES )
 
@@ -1803,7 +1832,6 @@ CONTAINS
           ENDIF
 
           CALL h5eclear_f( hdferr )
-          CALL h5eset_auto_f( 1, hdferr )
             
         ELSE
           datasize1d(1) = 1
@@ -1811,6 +1839,8 @@ CONTAINS
           Scat % NPS = buffer(1)
 
         ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
 
     END SELECT
 
@@ -1851,12 +1881,19 @@ CONTAINS
 
   SUBROUTINE ReadGridHDF( Grid, group_id )
 
+    USE MPI
+ 
     TYPE(GridType), INTENT(inout)               :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER, DIMENSION(1)                       :: buffer
+    REAL(dp), DIMENSION(1)                      :: bufferReal
     CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
+
+    CHARACTER(len=150)                   :: FileName
+    INTEGER(SIZE_T)                      :: flength
+    INTEGER(HID_T)                       :: dataset_id
 
     datasize1d(1) = 1
     Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
@@ -1874,6 +1911,58 @@ CONTAINS
     datasize1d = Grid % nPoints
     CALL ReadHDF( "Values", Grid % Values, &
                               group_id, datasize1d )
+
+    !-- Read Zoom if present (geometric grid)
+    
+    CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+          
+    CALL h5eset_auto_f( 0, hdferr )
+ 
+    CALL h5dopen_f( group_id, "Zoom", dataset_id, hdferr )
+
+    IF( hdferr .ne. 0 ) THEN
+      CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+      IF(myid == 0) THEN
+        WRITE(*,*) 'Dataset Zoom not found in ', TRIM( FileName )
+        WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+      ENDIF
+
+      CALL h5eclear_f( hdferr )
+            
+    ELSE
+      datasize1d(1) = 1
+      CALL ReadHDF( "Zoom", bufferReal, group_id, datasize1d )
+      Grid % Zoom = bufferReal(1)
+    ENDIF
+
+    CALL h5eset_auto_f( 1, hdferr )
+
+    !-- Fill in additional values for geometric grid
+
+    if ( Grid % Zoom  >  0.d0 ) then
+
+      datasize1d(1) = 1
+      CALL ReadHDF( "minEdge", bufferReal, group_id, datasize1d )
+      Grid % minEdge = bufferReal(1)
+
+      CALL ReadHDF( "maxEdge", bufferReal, group_id, datasize1d )
+      Grid % maxEdge = bufferReal(1)
+
+      CALL ReadHDF( "minWidth", bufferReal, group_id, datasize1d )
+      Grid % minWidth = bufferReal(1)
+
+      datasize1d = Grid % nPoints + 1
+      CALL ReadHDF( "Edge", Grid % Edge, &
+                              group_id, datasize1d )
+
+      datasize1d = Grid % nPoints
+      CALL ReadHDF( "Width", Grid % Width, &
+                              group_id, datasize1d )
+
+    end if
+
+    !-- set minValue and maxValue
 
     Grid % minValue = MINVAL( Grid % Values )
     

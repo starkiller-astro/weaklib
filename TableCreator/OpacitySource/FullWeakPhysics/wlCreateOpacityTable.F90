@@ -122,13 +122,13 @@ IMPLICIT NONE
                               !inverse neutron decay 
 
    INTEGER, PARAMETER      :: EmAb_np_isoenergetic &
-                              = 0
+                              = 1
                               !EmAb on free nucleons using isoenergetic approximation
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
    INTEGER, PARAMETER      :: EmAb_np_non_isoenergetic &
-                              = 1
+                              = 0
                               !EmAb on free nucleons taking into account recoil,
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998
@@ -161,9 +161,9 @@ IMPLICIT NONE
    REAL(dp), PARAMETER     :: EC_E_min   =   0.0d0
    REAL(dp), PARAMETER     :: EC_E_max   = 100.0d0
 
-   INTEGER, PARAMETER      :: nOpac_Iso  = 0  ! 2 for electron type
+   INTEGER, PARAMETER      :: nOpac_Iso  = 2  ! 2 for electron type
                                               !   ( flavor identical )
-   INTEGER, PARAMETER      :: nMom_Iso   = 0  ! 2 for 0th & 1st order
+   INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Iso_weak_magnetism &
                               = 1
@@ -202,9 +202,13 @@ IMPLICIT NONE
 ! Set E grid limits
 !---------------------------------------------------------------------
    INTEGER,  PARAMETER     :: nPointsE = 40
-   REAL(dp), PARAMETER     :: Emin     = 1.0d-01   !lower face of first energy cell
-!   REAL(dp), PARAMETER     :: Emin = 0.0d+00 !lower face of first energy cell
-   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !upper face of last energy cell
+!   !-- Logarithmically spaced grid points
+!   REAL(dp), PARAMETER     :: Emin = 1.0d-01 !lowest energy point
+!   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !highest energy point
+   !-- Geometrically spaced cells
+   REAL(dp), PARAMETER     ::  Emin = 0.0d+00 !lower face of first energy cell
+   REAL(dp), PARAMETER     ::  Emax = 3.2d+02 !upper face of last energy cell
+   REAL(dp), PARAMETER     :: dEmin = 0.2d+00 !min energy bin width
 
 !---------------------------------------------------------------------
 ! Set Eta grid limits
@@ -443,18 +447,25 @@ PRINT*, "Making Energy Grid ... "
    EnergyGrid % Unit &
      = 'MeV                           '
 
-   EnergyGrid % MinValue = Emin
-   EnergyGrid % MaxValue = Emax
-   EnergyGrid % LogInterp = 1
-!   EnergyGrid % Zoom = 1.26603816071016d0
+!-- Logarithmic grid
 
-   CALL MakeLogGrid &
-          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
-            EnergyGrid % nPoints,  EnergyGrid % Values )
-!   CALL MakeGeometricGrid &
-!          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, EnergyGrid % Zoom, &
-!            EnergyGrid % nPoints, EnergyGrid % Values, EnergyGrid % Width, &
-!            EnergyGrid % Edge )
+!   EnergyGrid % MinValue = Emin
+!   EnergyGrid % MaxValue = Emax
+!   EnergyGrid % LogInterp = 1
+!   CALL MakeLogGrid &
+!          ( EnergyGrid % MinValue, EnergyGrid % MaxValue, &
+!            EnergyGrid % nPoints,  EnergyGrid % Values )
+
+!-- Geometric grid
+
+   EnergyGrid % MinEdge = Emin
+   EnergyGrid % MaxEdge = Emax
+   EnergyGrid % MinWidth = dEmin
+   CALL MakeGeometricGrid &
+          ( EnergyGrid % MinEdge, EnergyGrid % MaxEdge, &
+            EnergyGrid % MinWidth, EnergyGrid % nPoints, EnergyGrid % Values, &
+            EnergyGrid % Width, EnergyGrid % Edge, EnergyGrid % Zoom, &
+            EnergyGrid % MinValue, EnergyGrid % MaxValue )
 
    END ASSOCIATE ! EnergyGrid
 
@@ -499,10 +510,10 @@ PRINT*, 'Filling OpacityTable ...'
        DVar    => OpacityTable % EOSTable % DV % Variables  )
 
 !-----------------  ECAPEM --------------------
-  IF( ( nOpac_EmAb + nOpac_Iso ) .gt. 0 ) THEN
-    WRITE(*,*) 'Calculating EmAb and Elastic Scattering Kernel ...'
+  IF( ( nOpac_EmAb ) .gt. 0 ) THEN
+    WRITE(*,*) 'Calculating EmAb ...'
 
-    EmAb_Scat_Iso: BLOCK
+    EmAb: BLOCK
    
     REAL(dp), PARAMETER :: mass_e  =   0.510998950d0 !electron restmass
     REAL(dp), PARAMETER :: mass_mu = 105.6583755d0   !muon restmass
@@ -981,7 +992,75 @@ PRINT*, 'Filling OpacityTable ...'
              END DO  !i_e
          END DO !i_r
 
+       END DO  !j_rho
+     END DO  !k_t
+   END DO  !l_ye
+
+!------- EmAb % Offsets
+   DO i_r = 1, nOpac_EmAb
+     minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
+     OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar )
+
+     IF (i_r == 1 .and. EmAb_nuclei_EC_table == 1) THEN
+       minvar = MINVAL( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
+       OpacityTable % EmAb % EC_table_spec_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
+       minvar = MINVAL( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
+       OpacityTable % EmAb % EC_table_rate_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
+     ENDIF
+   END DO
+
+   END BLOCK EmAb
+
+   END IF
+
 !----------------  Scat_Iso -----------------------
+   IF( ( nOpac_Iso ) .gt. 0 ) THEN
+     WRITE(*,*) 'Calculating Elastic Scattering Kernel ...'
+
+   DO l_ye = 1, nYe
+
+     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+
+     DO k_t = 1, nT
+
+       T = OpacityTable % TS % States (iT) % Values (k_t)
+       TMeV = T * kMeV
+
+       DO j_rho = 1, nRho
+
+         rho = OpacityTable % TS % States (iRho) % &
+               Values (j_rho)
+
+            xp  = 10**DVar(Indices % iProtonMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iProtonMassFraction)   &
+                  - epsilon
+
+            xn  = 10**DVar(Indices % iNeutronMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iNeutronMassFraction)   &
+                  - epsilon
+
+           xhe  = 10**DVar(Indices % iAlphaMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iAlphaMassFraction)   &
+                  - epsilon
+
+        xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iHeavyMassFraction)   &
+                  - epsilon
+
+            Z   = 10**DVar(Indices % iHeavyChargeNumber) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iHeavyChargeNumber)   &
+                  - epsilon
+
+            A   = 10**DVar(Indices % iHeavyMassNumber) % &
+                  Values(j_rho, k_t, l_ye) &
+                  - DVOffs(Indices % iHeavyMassNumber)   &
+                  - epsilon
+
          DO i_rb = 1, nOpac_Iso
 
            in = 1
@@ -1008,18 +1087,7 @@ PRINT*, 'Filling OpacityTable ...'
      END DO  !k_t
    END DO  !l_ye
 
-!------- EmAb % Offsets
-   DO i_r = 1, nOpac_EmAb
-     minvar = MINVAL( OpacityTable % EmAb % Opacity(i_r) % Values )
-     OpacityTable % EmAb % Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar )
-
-     IF (i_r == 1 .and. EmAb_nuclei_EC_table == 1) THEN
-       minvar = MINVAL( OpacityTable % EmAb % EC_table_spec(i_r) % Values )
-       OpacityTable % EmAb % EC_table_spec_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
-       minvar = MINVAL( OpacityTable % EmAb % EC_table_rate(i_r) % Values )
-       OpacityTable % EmAb % EC_table_rate_Offsets(i_r) = -2.d0 * MIN( 0.d0, minvar ) 
-     ENDIF
-   END DO
+   END IF
 
 !------- Scat_Iso % Offsets
    DO i_r = 1, nOpac_Iso
@@ -1031,9 +1099,6 @@ PRINT*, 'Filling OpacityTable ...'
      END DO
    END DO
 
-   END BLOCK EmAb_Scat_Iso
-
-   END IF
 !----------------  Scat_NES -----------------------
   IF( nOpac_NES .gt. 0 ) THEN
   PRINT*, 'Calculating Scat_NES Kernel ... '
