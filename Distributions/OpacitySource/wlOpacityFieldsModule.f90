@@ -171,6 +171,12 @@ MODULE wlOpacityFieldsModule
     REAL(DP) :: ga_strange                 !strange quark contributions
   END TYPE OpacityTypeScatIso
 
+  TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNNS
+    INTEGER  :: weak_magnetism_corrections !Horowitz 2002
+    INTEGER  :: many_body_corrections      !Horowith et al 2017
+    REAL(DP) :: ga_strange                 !strange quark contributions
+  END TYPE OpacityTypeScatNNS
+
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
     INTEGER :: NPS !include neutrino-positron scattering as well 
   END TYPE OpacityTypeScatNES
@@ -472,6 +478,13 @@ CONTAINS
           WRITE(*,*) 'Many body corrections, Horowitz et al 2017                                  ', Opacity % many_body_corrections
           WRITE(*,*) 'Scat on np, isoenergetic, Bruenn 1985                                       ', Opacity % np_isoenergetic
           WRITE(*,*) 'Scat on np, Reddy et al 1998, Bruenn et al. 2020                            ', Opacity % np_non_isoenergetic
+          WRITE(*,*) 'Strange quark contribution to axial vector coupling constant (0.0 if no-op) ', Opacity % ga_strange
+
+        TYPE IS ( OpacityTypeScatNNS )
+
+          WRITE(*,*) 'Weak magnetism corrections, Horowitz 2002                                   ', &
+                      Opacity % weak_magnetism_corrections
+          WRITE(*,*) 'Many body corrections, Horowitz et al 2017                                  ', Opacity % many_body_corrections
           WRITE(*,*) 'Strange quark contribution to axial vector coupling constant (0.0 if no-op) ', Opacity % ga_strange
 
         TYPE IS ( OpacityTypeScatNES )
