@@ -44,6 +44,7 @@ MODULE wlOpacityTableModule
     OpacityTypeEmAb,    &
     OpacityTypeScat,    &
     OpacityTypeScatIso, &
+    OpacityTypeScatNNS, &
     OpacityTypeScatNES, &
     AllocateOpacity,    &
     DeallocateOpacity,  &
@@ -78,15 +79,20 @@ MODULE wlOpacityTableModule
     INTEGER        :: nOpacities_Brem, nMoments_Brem
     INTEGER        :: nPointsE
     INTEGER        :: nPointsEta
+    INTEGER        :: nPointsMuB
     INTEGER        :: nPointsTS(3)
     TYPE(GridType) :: EnergyGrid
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
+    TYPE(GridType) :: MuBGrid ! -- baryon chemical potential
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
     TYPE(OpacityTypeScatIso)       :: &
       Scat_Iso   ! -- Isoenergenic Scattering
+    TYPE(OpacityTypeScatNNS)       :: &
+      Scat_NNS_n, &  ! -- Inelastic Neutrino-Neutron Scattering
+      Scat_NNS_p     ! -- Inelastic Neutrino-Proton  Scattering
     TYPE(OpacityTypeScatNES)       :: &
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
@@ -103,8 +109,9 @@ CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
     ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
-      nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, nPointsE, nPointsEta, &
-      EquationOfStateTableName_Option, OpacityThermoState_Option, Verbose_Option )
+      nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, nPointsE, nPointsEta, NNS, &
+      EquationOfStateTableName_Option, OpacityThermoState_Option, &
+      Verbose_Option, nPointsMuB_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
     INTEGER,                INTENT(in)           :: nOpac_EmAb
@@ -114,9 +121,11 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nOpac_Brem, nMom_Brem
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
+    INTEGER,                INTENT(in)           :: NNS
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
     TYPE(ThermoStateType),  INTENT(in), OPTIONAL :: OpacityThermoState_Option
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
+    INTEGER,                INTENT(in), OPTIONAL :: nPointsMuB_Option
 
     LOGICAL               :: Verbose
     CHARACTER(256)        :: EquationOfStateTableName
@@ -156,9 +165,19 @@ CONTAINS
     OpTab % nMoments_Brem   = nMom_Brem
     OpTab % nPointsE        = nPointsE
     OpTab % nPointsEta      = nPointsEta
+    if ( NNS == 1 ) then  !-- inelastic NeutrinoNucleonScattering
+      if ( present ( nPointsMuB_Option ) ) then
+        OpTab % nPointsMuB  =  nPointsMuB_Option
+      else
+        OpTab % nPointsMuB  =  nPointsEta
+      end if
+    else
+      OpTab % nPointsMuB  =  0
+    end if  !-- inelastic NeutrinoNucleonScattering
 
-    CALL AllocateGrid( OpTab % EnergyGrid, nPointsE   )
-    CALL AllocateGrid( OpTab % EtaGrid,    nPointsEta )
+    CALL AllocateGrid( OpTab % EnergyGrid, OpTab % nPointsE   )
+    CALL AllocateGrid( OpTab % EtaGrid,    OpTab % nPointsEta )
+    CALL AllocateGrid( OpTab % MuBGrid,    OpTab % nPointsMuB )
 
     IF( PRESENT( OpacityThermoState_Option ) )THEN
       OpTab % nPointsTS       = OpacityThermoState_Option % nPoints
@@ -175,7 +194,6 @@ CONTAINS
                iT      => OpTab % TS % Indices % iT)
 
     nPointsTemp(1:4) = [ nPointsE, nPoints ]
-
     CALL AllocateOpacity &
            ( OpTab % EmAb, nPointsTemp(1:4), nOpacities = nOpac_EmAb )
 
@@ -184,22 +202,42 @@ CONTAINS
            ( OpTab % Scat_Iso % OpacityTypeScat, nPointsTemp(1:5), &
              nMoments = nMom_Iso, nOpacities = nOpac_Iso )
   
+    if ( NNS == 1 ) then !-- inelastic NeutrinoNucleonScattering
+
+      nPointsTemp(1:5) = &
+             [ nPointsE, nPointsE, nMom_Iso, nPoints(iT), OpTab % nPointsMuB ]
+      CALL AllocateOpacity &
+             ( OpTab % Scat_NNS_n % OpacityTypeScat, nPointsTemp(1:5), &
+               nMoments = nMom_Iso, nOpacities = nOpac_Iso )
+      CALL AllocateOpacity &
+             ( OpTab % Scat_NNS_p % OpacityTypeScat, nPointsTemp(1:5), &
+               nMoments = nMom_Iso, nOpacities = nOpac_Iso )
+
+    else !-- no inelastic NeutrinoNucleonScattering
+
+      nPointsTemp(1:5) = 0
+      CALL AllocateOpacity &
+             ( OpTab % Scat_NNS_n % OpacityTypeScat, nPointsTemp(1:5), &
+               nMoments = 0, nOpacities = 0 )
+      CALL AllocateOpacity &
+             ( OpTab % Scat_NNS_p % OpacityTypeScat, nPointsTemp(1:5), &
+               nMoments = 0, nOpacities = 0 )
+
+    end if !-- inelastic NeutrinoNucleonScattering
+
     nPointsTemp(1:5) = &
            [ nPointsE, nPointsE, nMom_NES, nPoints(iT), nPointsEta]
-
     CALL AllocateOpacity &
            ( OpTab % Scat_NES % OpacityTypeScat, nPointsTemp(1:5), &
              nMoments = nMom_NES, nOpacities = nOpac_NES )
 
     nPointsTemp(1:5) = &
            [ nPointsE, nPointsE, nMom_Pair, nPoints(iT), nPointsEta]
-
     CALL AllocateOpacity &
            ( OpTab % Scat_Pair, nPointsTemp(1:5), &
              nMoments = nMom_Pair, nOpacities = nOpac_Pair )
 
     nPointsTemp(1:5) = [ nPointsE, nPointsE, nMom_Brem, nPoints(iRho), nPoints(iT) ]
-
     CALL AllocateOpacity &
            ( OpTab % Scat_Brem, nPointsTemp(1:5), &
              nMoments = nMom_Brem, nOpacities = nOpac_Brem )
@@ -229,6 +267,8 @@ CONTAINS
 
     CALL DeAllocateOpacity( OpTab % EmAb ) 
     CALL DeAllocateOpacity( OpTab % Scat_Iso % OpacityTypeScat )
+    CALL DeAllocateOpacity( OpTab % Scat_NNS_n % OpacityTypeScat )
+    CALL DeAllocateOpacity( OpTab % Scat_NNS_p % OpacityTypeScat )
     CALL DeAllocateOpacity( OpTab % Scat_NES % OpacityTypeScat )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
     CALL DeAllocateOpacity( OpTab % Scat_Brem )
@@ -288,12 +328,25 @@ CONTAINS
       CALL DescribeGrid( OpTab % EtaGrid )
     end if
 
+    if(OpTab % Scat_NNS_n % nOpacities .gt. 0 .or. &
+       OpTab % Scat_NNS_p % nOpacities .gt. 0) then
+      CALL DescribeGrid( OpTab % MuBGrid )
+    end if
+
     if(OpTab % EmAb % nOpacities .gt. 0) then
       CALL DescribeOpacity( OpTab % EmAb )
     end if
 
     if(OpTab % Scat_Iso % nOpacities .gt. 0) then
       CALL DescribeOpacity( OpTab % Scat_Iso % OpacityTypeScat )
+    end if
+
+    if(OpTab % Scat_NNS_n % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % Scat_NNS_n % OpacityTypeScat )
+    end if
+
+    if(OpTab % Scat_NNS_p % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % Scat_NNS_p % OpacityTypeScat )
     end if
 
     if(OpTab % Scat_NES % nOpacities .gt. 0) then
