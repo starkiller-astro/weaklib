@@ -1,5 +1,4 @@
 include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
-include ../Makefile_SoundSpeed_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
 include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_ObjectFiles
@@ -30,3 +29,16 @@ clean:
 
 clobber: clean
 	rm wlCalculateSoundSpeed_$(MACHINE)
+
+wlCalculateSoundSpeed.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlElectronEOS.o \
+  wlExtPhysicalConstantsModule.o \
+  wlGammaSoundSpeed.o \
+  wlBolligSoundSpeed.o

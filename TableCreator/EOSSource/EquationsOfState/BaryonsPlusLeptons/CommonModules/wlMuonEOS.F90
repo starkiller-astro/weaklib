@@ -1,7 +1,6 @@
 MODULE wlMuonEOS
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtNumericalModule, ONLY: zero, one, pi, half
 	USE wlInterpolationUtilitiesModule, ONLY: &
 		Index1D_Lin, &
 		Index1D_Log
@@ -19,6 +18,12 @@ MODULE wlMuonEOS
 		REAL(dp) :: p
 		REAL(dp) :: e
 		REAL(dp) :: s
+		REAL(dp) :: dlnPdlnrho
+		REAL(dp) :: dlnPdlnT
+		REAL(dp) :: dlnsdlnrho
+		REAL(dp) :: dlnsdlnT
+		REAL(dp) :: dlnedlnrho
+		REAL(dp) :: dlnedlnT
 		
 	END TYPE MuonStateType
 	
@@ -27,10 +32,13 @@ MODULE wlMuonEOS
 CONTAINS
 	
 	! INTERPOLATION ROUTINES FROM TOBIAS
-	SUBROUTINE FullMuonEOS(MuonTable, MuonState)
+	SUBROUTINE FullMuonEOS(MuonTable, MuonState, CalculateDerivatives_Option)
 		
 		TYPE(MuonEOSType), INTENT(IN) :: MuonTable
         TYPE (MuonStateType), INTENT(INOUT) :: MuonState
+		LOGICAL, DIMENSION(3), OPTIONAL, INTENT(IN)  :: CalculateDerivatives_Option
+		LOGICAL :: CalculatePressureDerivatives, CalculateEntropyDerivatives, &
+				   CalculateEnergyDerivatives
 		
 		!----locals ------------------------------------------------------------
 		integer :: i
@@ -40,6 +48,16 @@ CONTAINS
 		real(dp) :: rd,rt
 		integer :: it, it_1, iDen, it_max, iDen_max
 		
+		IF ( PRESENT(CalculateDerivatives_Option) ) THEN
+			CalculatePressureDerivatives = CalculateDerivatives_Option(1)
+			CalculateEnergyDerivatives = CalculateDerivatives_Option(2)
+			CalculateEntropyDerivatives = CalculateDerivatives_Option(3)
+		ELSE
+			CalculatePressureDerivatives = .FALSE.
+			CalculateEnergyDerivatives = .FALSE.
+			CalculateEntropyDerivatives = .FALSE.
+		END IF
+		
 		!....convert input variables to log scale .............................
 		temp = MuonState % t
 		rhoymu = MuonState % rhoymu
@@ -47,7 +65,7 @@ CONTAINS
 		logrhoymu = log10(rhoymu)
 		
 		it_max = MuonTable % nPointsTemp
-		iDen_max = MuonTable % nPointsMu
+		iDen_max = MuonTable % nPointsDen
 
 		it = Index1D_Log( temp, MuonTable % t(:) )
 
@@ -150,6 +168,51 @@ CONTAINS
 			 +     rt * rd  * MuonTable % s(it+1,iDen+1) &
 			 + (1.-rt)* rd  * MuonTable % s(it  ,iDen+1)
 			 
+		IF (CalculatePressureDerivatives) THEN
+			MuonState % dlnPdlnT = & ! Pressure derivatives
+				(1.-rt)*(1.-rd) * MuonTable % dlnPdlnT(it  ,iDen  ) &
+				 +  rt *(1.-rd) * MuonTable % dlnPdlnT(it+1,iDen  ) &
+				 +     rt * rd  * MuonTable % dlnPdlnT(it+1,iDen+1) &
+				 + (1.-rt)* rd  * MuonTable % dlnPdlnT(it  ,iDen+1)			
+
+			MuonState % dlnPdlnrho = & ! Pressure derivatives
+				(1.-rt)*(1.-rd) * MuonTable % dlnPdlnrho(it  ,iDen  ) &
+				 +  rt *(1.-rd) * MuonTable % dlnPdlnrho(it+1,iDen  ) &
+				 +     rt * rd  * MuonTable % dlnPdlnrho(it+1,iDen+1) &
+				 + (1.-rt)* rd  * MuonTable % dlnPdlnrho(it  ,iDen+1)		
+		
+		ENDIF
+			 
+		IF (CalculateEnergyDerivatives) THEN
+			MuonState % dlnedlnT = & ! Energy derivatives
+				(1.-rt)*(1.-rd) * MuonTable % dlnedlnT(it  ,iDen  ) &
+				 +  rt *(1.-rd) * MuonTable % dlnedlnT(it+1,iDen  ) &
+				 +     rt * rd  * MuonTable % dlnedlnT(it+1,iDen+1) &
+				 + (1.-rt)* rd  * MuonTable % dlnedlnT(it  ,iDen+1)			
+
+			MuonState % dlnedlnrho = & ! Energy derivatives
+				(1.-rt)*(1.-rd) * MuonTable % dlnedlnrho(it  ,iDen  ) &
+				 +  rt *(1.-rd) * MuonTable % dlnedlnrho(it+1,iDen  ) &
+				 +     rt * rd  * MuonTable % dlnedlnrho(it+1,iDen+1) &
+				 + (1.-rt)* rd  * MuonTable % dlnedlnrho(it  ,iDen+1)		
+		
+		ENDIF
+
+		IF (CalculateEntropyDerivatives) THEN
+			MuonState % dlnsdlnT = & ! Entropy derivatives
+				(1.-rt)*(1.-rd) * MuonTable % dlnsdlnT(it  ,iDen  ) &
+				 +  rt *(1.-rd) * MuonTable % dlnsdlnT(it+1,iDen  ) &
+				 +     rt * rd  * MuonTable % dlnsdlnT(it+1,iDen+1) &
+				 + (1.-rt)* rd  * MuonTable % dlnsdlnT(it  ,iDen+1)			
+
+			MuonState % dlnsdlnrho = & ! Entropy derivatives
+				(1.-rt)*(1.-rd) * MuonTable % dlnsdlnrho(it  ,iDen  ) &
+				 +  rt *(1.-rd) * MuonTable % dlnsdlnrho(it+1,iDen  ) &
+				 +     rt * rd  * MuonTable % dlnsdlnrho(it+1,iDen+1) &
+				 + (1.-rt)* rd  * MuonTable % dlnsdlnrho(it  ,iDen+1)		
+		
+		ENDIF
+
 	END SUBROUTINE FullMuonEOS
 
 END MODULE wlMuonEOS	

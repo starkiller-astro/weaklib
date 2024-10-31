@@ -221,7 +221,7 @@ MODULE wlCompOSEInterface
 		OPEN(123, FILE=TRIM(ADJUSTL(CompOSEFilePath))//'/eos.compo.wl', & 
 		FORM = "formatted", ACTION = 'read')
 		
-		! Read the composition, you need to decide what to do with the light nuclei
+		! Read the composition, you need to decide what to DO with the light nuclei
 		DO i_tot=1,nTemp*nRho*nYp
 			
 			READ(123,*) iT, iRho, iYp, Xp, Xn, Xa, Xh, Abar, Zbar
@@ -584,6 +584,6 @@ MODULE wlCompOSEInterface
 		call h5aclose_f(attr_id, h5err)
 		
 	end subroutine hdf5_read_int4_attr0D                                                                                                                
-	
+
 END MODULE wlCompOSEInterface
 		

@@ -1,9 +1,7 @@
 MODULE wlLeptonEOSModule
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtNumericalModule, ONLY: &
-		zero, one, pi
-	USE wlExtPhysicalConstantsModule, ONLY: &
+	USE wlEosConstantsModule, ONLY: &
 		cvel, ergmev, cm3fm3, kmev, kmev_inv, &
 		rmu, mn, me, mp
 
@@ -71,7 +69,7 @@ MODULE wlLeptonEOSModule
 	
 	TYPE, PUBLIC :: MuonEOSType
 			
-		INTEGER :: nPointsMu
+		INTEGER :: nPointsDen
 		INTEGER :: nPointsTemp
 		
 		REAL(dp), DIMENSION(:), ALLOCATABLE :: t
@@ -80,6 +78,12 @@ MODULE wlLeptonEOSModule
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: p
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: e
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: s
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnPdlnrho
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnPdlnT
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnsdlnrho
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnsdlnT
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnedlnrho
+		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnedlnT
 
 	END TYPE MuonEOSType
 
@@ -191,7 +195,7 @@ CONTAINS
 		INTEGER, DIMENSION(2), INTENT(IN) :: nPoints
 
 		MuonEOS % nPointsTemp  = nPoints(1)
-		MuonEOS % nPointsMu   = nPoints(2)
+		MuonEOS % nPointsDen   = nPoints(2)
 
 		ALLOCATE( MuonEOS % t( nPoints(1) ) )
 		ALLOCATE( MuonEOS % rhoymu( nPoints(2) ) )
@@ -199,6 +203,12 @@ CONTAINS
 		ALLOCATE( MuonEOS % p( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % e( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % s( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % dlnPdlnrho( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % dlnPdlnT( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % dlnsdlnrho( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % dlnsdlnT( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % dlnedlnrho( nPoints(1), nPoints(2) ) )
+		ALLOCATE( MuonEOS % dlnedlnT( nPoints(1), nPoints(2) ) )
 
 	END SUBROUTINE AllocateMuonEOS
 
@@ -212,6 +222,12 @@ CONTAINS
 		DEALLOCATE( MuonEOS % p )
 		DEALLOCATE( MuonEOS % e )
 		DEALLOCATE( MuonEOS % s )
+		DEALLOCATE( MuonEOS % dlnPdlnrho )
+		DEALLOCATE( MuonEOS % dlnPdlnT )
+		DEALLOCATE( MuonEOS % dlnsdlnrho )
+		DEALLOCATE( MuonEOS % dlnsdlnT )
+		DEALLOCATE( MuonEOS % dlnedlnrho )
+		DEALLOCATE( MuonEOS % dlnedlnT )
 
 	END SUBROUTINE DeAllocateMuonEOS
 
@@ -329,7 +345,7 @@ CONTAINS
 			IF (iT .eq. (nDenMuon+1)*iT) THEN
 				READ(1234,*)
 			ENDIF
-			DO iDen=1,MuonEOS % nPointsMu
+			DO iDen=1,MuonEOS % nPointsDen
 				READ(1234,*) MuonEOS % t(iT), MuonEOS % rhoymu(iDen), &
 					MuonEOS % p(iT,iDen), MuonEOS % e(iT,iDen), &
 					MuonEOS % s(iT,iDen), MuonEOS % mu(iT,iDen)
@@ -344,6 +360,20 @@ CONTAINS
 		MuonEOS % e = MuonEOS % e * ergmev / rmu 
 		MuonEOS % s = MuonEOS % s / (kmev * ergmev / rmu)
 		
+		! NOW CALCULATE DERIVATIVES AT CONSTANT RHO
+		DO iDen=1,MuonEOS % nPointsDen
+			MuonEOS % dlnsdlnT(:,iDen) = Gradient3pts( LOG10(MuonEOS % s(:,iDen)), LOG10(MuonEOS % t), MuonEOS % nPointsTemp)
+			MuonEOS % dlnPdlnT(:,iDen) = Gradient3pts( LOG10(MuonEOS % p(:,iDen)), LOG10(MuonEOS % t), MuonEOS % nPointsTemp)
+			MuonEOS % dlnedlnT(:,iDen) = Gradient3pts( LOG10(MuonEOS % e(:,iDen)), LOG10(MuonEOS % t), MuonEOS % nPointsTemp)
+		ENDDO
+
+		! NOW CALCULATE DERIVATIVES AT CONSTANT T
+		DO iT=1,MuonEOS % nPointsTemp
+			MuonEOS % dlnsdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % s(iT,:)), LOG10(MuonEOS % rhoymu), MuonEOS % nPointsDen)
+			MuonEOS % dlnPdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % p(iT,:)), LOG10(MuonEOS % rhoymu), MuonEOS % nPointsDen)
+			MuonEOS % dlnedlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % e(iT,:)), LOG10(MuonEOS % rhoymu), MuonEOS % nPointsDen)
+		ENDDO
+		
 		WRITE(*,*) 'Bounds of the Muon Table'
 		WRITE(*,*) MAXVAL(MuonEOS % t), MINVAL(MuonEOS % t)
 		WRITE(*,*) MAXVAL(MuonEOS % rhoymu), MINVAL(MuonEOS % rhoymu)
@@ -353,6 +383,96 @@ CONTAINS
 		WRITE(*,*) MAXVAL(MuonEOS % mu), MINVAL(MuonEOS % mu)
 		
 	END	SUBROUTINE ReadMuonEOSdat
+
+	! Tools to calculate derivatives, maybe worth moving into another MODULE
+	FUNCTION Gradient(y, x, nX) RESULT(grad)
+	 
+	  INTEGER,  INTENT(IN) :: nX
+	  REAL(DP), INTENT(IN) :: y(nX), x(nX)
+	  
+	  INTEGER  :: i
+	  REAL(DP) :: grad(nX)
+
+	  grad(:) = 0.0d0
+	  !calculate derivativees with standard gradient formula
+	  DO i=2,nX-1
+	    grad(i) = (y(i+1) - y(i-1))/(x(i+1) - x(i-1))
+	  ENDDO
+	  
+	  ! calculate one-sided derivatives
+	  grad(1) = (y(2) - y(1))/ (x(2) - x(1))
+	  grad(nX) = (y(nX) - y(nX-1))/ (x(nX) - x(nX-1))
+
+	END FUNCTION Gradient 
+
+	FUNCTION Gradient3pts(y, x, nX) RESULT(grad)
+
+	  INTEGER,  INTENT(IN) :: nX
+	  REAL(DP), INTENT(IN) :: y(nX), x(nX)
+	  
+	  INTEGER  :: i
+	  REAL(DP) :: grad(nX)
+	  REAL(DP) :: h1, h2
+
+	  grad(:) = 0.0d0
+	  
+	  ! calculate derivatives with the 3 point formula
+	  DO i=2,nX-1
+		 
+		 h1 = x(i)   - x(i-1)
+		 h2 = x(i+1) - x(i)
+		
+		 grad(i) = - y(i-1)*(h2/(h1*(h1+h2))) &
+				   + y(i  )*((h2-h1)/(h1*h2)) &
+				   + y(i+1)*((h1/(h2*(h1+h2))))
+	  
+	  ENDDO
+						
+	  ! calculate one-sided derivatives
+	  grad(1) = (y(2) - y(1))/ (x(2) - x(1))
+	  grad(nX) = (y(nX) - y(nX-1))/ (x(nX) - x(nX-1))
+
+	END FUNCTION Gradient3pts
+
+	FUNCTION Gradient5pts(y, x, nX) RESULT(grad)
+
+	  INTEGER,  INTENT(IN) :: nX
+	  REAL(DP), INTENT(IN) :: y(nX), x(nX)
+	  
+	  INTEGER  :: i
+	  REAL(DP) :: grad(nX)
+	  REAL(DP) :: h1,h2,h3,h4,Ht1,Ht2
+
+	  grad(:) = 0.0d0
+	  
+	  ! calculate derivatives with the 5 point formula
+	  DO i=3,nX-2
+		 
+		 h1 = x(i-1) - x(i-2)
+		 h2 = x(i)   - x(i-1)
+		 h3 = x(i+1) - x(i)
+		 h4 = x(i+2) - x(i+1)
+		 Ht1 = h1+h2+h3
+		 Ht2 = Ht1+h4
+		
+		 grad(i) = y(i-2)*(h2*h3*(h3+h4))/(h1*(h1+h2)*Ht1*Ht2) &
+				 - y(i-1)*((h1+h2)*h3*(h3+h4))/(h1*h2*(h2+h3)*(Ht2-h1)) &
+				 + y(i)*((h1+2.0d0*h2)*h3*(h3+h4)-(h1+h2)*h2*(2.0d0*h3+h4)) &
+						 /((h1+h2)*h2*h3*(h3+h4)) &
+				 + y(i+1)*((h2+h1)*h2*(h3+h4))/(Ht1*(h2+h3)*h3*h4) &
+				 - y(i+2)*(h2*(h1+h2)*h3)/(Ht2*(Ht2-h1)*(h3+h4)*h4)
+
+	  ENDDO
+	  
+	  ! simple gradient should be okay
+	  grad(2) = (y(3) - y(1)) / (x(3) - x(1))
+	  grad(nX-1) = (y(nX) - y(nX-2)) / (x(nX) - x(nX-2))
+						 
+	  ! calculate one-sided derivatives
+	  grad(1) = (y(2) - y(1)) / (x(2) - x(1))
+	  grad(nX) = (y(nX) - y(nX-1)) / (x(nX) - x(nX-1))
+
+	END FUNCTION Gradient5pts
 
 END MODULE wlLeptonEOSModule
 				

@@ -1,9 +1,11 @@
 COMMON_MODS_OBJ  = \
-  wlCompOSEInterface.o \
+  wlEosConstantsModule.o \
   wlLeptonEOSModule.o \
   wlHelmMuonIOModuleHDF.o \
   wlElectronEOS.o \
   wlMuonEOS.o \
   wlGammaSoundSpeed.o \
-  wlEOSComponentsInversionModule.o
+  wlBolligSoundSpeed.o \
+  wlEOSComponentsCombinedInversionModule.o \
+  wlEOSComponentsSeparateInversionModule.o
   

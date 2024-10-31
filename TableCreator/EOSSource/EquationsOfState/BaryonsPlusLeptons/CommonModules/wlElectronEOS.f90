@@ -1,11 +1,11 @@
 MODULE wlElectronEOS
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtNumericalModule, ONLY: zero, one, pi, half
 	USE wlLeptonEOSModule, ONLY: &
 		HelmholtzEOSType
-	USE wlExtPhysicalConstantsModule, ONLY: &
-		ergmev, kmev, kmev_inv, rmu
+	USE wlEosConstantsModule, ONLY: &
+		pi, rmu, kerg, h_cgs, avn, cvel, qe, &
+		kmev, ergmev, sigma_sb
 		
 	IMPLICIT NONE
 	PRIVATE
@@ -35,28 +35,17 @@ MODULE wlElectronEOS
 	INTEGER, PARAMETER :: ipres = 6
 
     ! Physical constants
-    REAL(dp), PARAMETER :: h       = 6.62607535359d-27
-    REAL(dp), PARAMETER :: hbar    = 0.5d0 * h/pi
-    REAL(dp), PARAMETER :: qe      = 4.8032042712d-10
-    REAL(dp), PARAMETER :: avo_eos = 6.022141d+23
-    REAL(dp), PARAMETER :: clight  = 2.99792d+10
-    REAL(dp), PARAMETER :: kerg    = 1.380648792741d-16
-    REAL(dp), PARAMETER :: ev2erg_eos  = 1.602177d-12
-    REAL(dp), PARAMETER :: kev     = kerg/ev2erg_eos
-    REAL(dp), PARAMETER :: amu     = 1.0d0/avo_eos
-
-    REAL(dp), PARAMETER :: ssol    = 5.67051d-5
-    REAL(dp), PARAMETER :: asol    = 4.0d0 * ssol / clight
+    REAL(dp), PARAMETER :: asol    = 4.0d0 * sigma_sb / cvel
 	
     ! Some other useful combinations of the constants
-    REAL(dp), PARAMETER :: sioncon = (2.0d0 * pi * amu * kerg)/(h*h)
+    REAL(dp), PARAMETER :: sioncon = (2.0d0 * pi * rmu * kerg)/(h_cgs*h_cgs)
     REAL(dp), PARAMETER :: forth   = 4.0d0/3.0d0
     REAL(dp), PARAMETER :: forpi   = 4.0d0 * pi
     REAL(dp), PARAMETER :: forthpi = forth * pi
-    REAL(dp), PARAMETER :: kergavo = kerg * avo_eos
+    REAL(dp), PARAMETER :: kergavo = kerg * avn
     REAL(dp), PARAMETER :: ikavo   = 1.0d0/kergavo
     REAL(dp), PARAMETER :: asoli3  = asol/3.0d0
-    REAL(dp), PARAMETER :: light2  = clight * clight
+    REAL(dp), PARAMETER :: light2  = cvel * cvel
 
     ! Constants used for the Coulomb corrections
     REAL(dp), PARAMETER :: a1    = -0.898004d0
@@ -98,7 +87,6 @@ MODULE wlElectronEOS
 		REAL(dp) :: detadt
 		REAL(dp) :: pele
 		REAL(dp) :: ppos
-		REAL(dp) :: mu
 		REAL(dp) :: mu_e
 		REAL(dp) :: y_e
 		REAL(dp) :: gam1
@@ -210,8 +198,8 @@ CONTAINS
 		tstp  = (LOG10(hight) - LOG10(smallt))/float(HelmTable % nPointsTemp -1)
 		dstp  = (LOG10(highd) - LOG10(smalld))/float(HelmTable % nPointsDen -1)
 		
-		tstpi = one / tstp
-		dstpi = one / dstp
+		tstpi = 1.0_dp / tstp
+		dstpi = 1.0_dp / dstp
 		
 		temp_row = ElectronState % T
 		den_row  = ElectronState % rho
@@ -352,8 +340,8 @@ CONTAINS
 			dsraddt = (dpraddt*deni + deraddt - srad)*tempi
 			
 			!..ion section:
-			xni     = avo_eos * ytot1 * den
-			dxnidd  = avo_eos * ytot1
+			xni     = avn * ytot1 * den
+			dxnidd  = avn * ytot1
 			dxnida  = -xni * ytot1
 			
 			pion    = xni * kt
@@ -364,7 +352,7 @@ CONTAINS
 			deiondd = (1.5d0 * dpiondd - eion)*deni
 			deiondt = 1.5d0 * dpiondt*deni
 			
-			x       = abar*abar*SQRT(abar) * deni/avo_eos
+			x       = abar*abar*SQRT(abar) * deni/avn
 			s       = sioncon * temp
 			z       = x * s * SQRT(s)
 			y       = LOG(z)
@@ -374,20 +362,20 @@ CONTAINS
 			dsiondt = (dpiondt*deni + deiondt)*tempi -  &
 			(pion*deni + eion) * tempi*tempi  &
 			+ 1.5d0 * kergavo * tempi*ytot1
-			x       = avo_eos*kerg/abar
+			x       = avn*kerg/abar
 			
 			! IF (.NOT. include_ion_contribution) THEN
-				! pion = zero
-				! eion = zero
-				! sion = zero
+				! pion = 0.0_dp
+				! eion = 0.0_dp
+				! sion = 0.0_dp
 
-				! dpiondd = zero
-				! dpiondt = zero
-				! deiondd = zero
-				! deiondt = zero
+				! dpiondd = 0.0_dp
+				! dpiondt = 0.0_dp
+				! deiondd = 0.0_dp
+				! deiondt = 0.0_dp
 
-				! dsiondd = zero
-				! dsiondt = zero
+				! dsiondd = 0.0_dp
+				! dsiondt = 0.0_dp
 			! END IF
 				
 			!..electron-positron section:
@@ -443,8 +431,8 @@ CONTAINS
 			fi(36) = HelmTable % fddtt(iat+1,jat+1)
 			
 			!..various differences
-			xt  = MAX( (temp - HelmTable % t(jat))*HelmTable % dti(jat), zero)
-			xd  = MAX( (din - HelmTable % d(iat))*HelmTable % ddi(iat), zero)
+			xt  = MAX( (temp - HelmTable % t(jat))*HelmTable % dti(jat), 0.0_dp)
+			xd  = MAX( (din - HelmTable % d(iat))*HelmTable % ddi(iat), 0.0_dp)
 			mxt = 1.0d0 - xt
 			mxd = 1.0d0 - xd
 						
@@ -579,7 +567,7 @@ CONTAINS
 			dpepdd  = h3(   fi, &
 			si0t,   si1t,   si0mt,   si1mt, &
 			si0d,   si1d,   si0md,   si1md)
-			dpepdd  = MAX(ye * dpepdd,zero)
+			dpepdd  = MAX(ye * dpepdd,0.0_dp)
 			
 			!..look in the electron chemical potential table only once
 			fi(1)  = HelmTable % ef(iat,jat)
@@ -643,7 +631,7 @@ CONTAINS
 			x        = h3( fi, &
 			si0t,   si1t,   si0mt,   si1mt, &
 			dsi0d,  dsi1d,  dsi0md,  dsi1md)
-			x = MAX(x,zero)
+			x = MAX(x,0.0_dp)
 			dxnedd   = ye * x
 			
 			!..derivative with respect to temperature
@@ -717,13 +705,13 @@ CONTAINS
 				!...yakovlev & shalybkov 1989 equations 82, 85, 86, 87
 				IF (plasg .ge. 1.0D0) THEN
 					x        = plasg**(0.25d0)
-					y        = avo_eos * ytot1 * kerg
+					y        = avn * ytot1 * kerg
 					ecoul    = y * temp * (a1*plasg + b1*x + c1/x + d1)
 					pcoul    = onethird * den * ecoul
 					scoul    = -y * (3.0d0*b1*x - 5.0d0*c1/x &
 					+ d1 * (LOG(plasg) - 1.0d0) - e1)
 					
-					y        = avo_eos*ytot1*kt*(a1 + 0.25d0/plasg*(b1*x - c1/x))
+					y        = avn*ytot1*kt*(a1 + 0.25d0/plasg*(b1*x - c1/x))
 					decouldd = y * plasgdd
 					decouldt = y * plasgdt + ecoul/temp
 					decoulda = y * plasgda - ecoul/abar
@@ -735,7 +723,7 @@ CONTAINS
 					dpcoulda = y * decoulda
 					dpcouldz = y * decouldz
 					
-					y        = -avo_eos*kerg/(abar*plasg)* &
+					y        = -avn*kerg/(abar*plasg)* &
 					(0.75d0*b1*x+1.25d0*c1/x+d1)
 					dscouldd = y * plasgdd
 					dscouldt = y * plasgdt
@@ -749,7 +737,7 @@ CONTAINS
 					z        = c2 * x - onethird * a2 * y
 					pcoul    = -pion * z
 					ecoul    = 3.0d0 * pcoul/den
-					scoul    = -avo_eos/abar*kerg*(c2*x -a2*(b2-1.0d0)/b2*y)
+					scoul    = -avn/abar*kerg*(c2*x -a2*(b2-1.0d0)/b2*y)
 					
 					s        = 1.5d0*c2*x/plasg - onethird*a2*b2*y/plasg
 					dpcouldd = -dpiondd*z - pion*s*plasgdd
@@ -761,7 +749,7 @@ CONTAINS
 					decoulda = s * dpcoulda
 					decouldz = s * dpcouldz
 					
-					s        = -avo_eos*kerg/(abar*plasg)* &
+					s        = -avn*kerg/(abar*plasg)* &
 					(1.5d0*c2*x-a2*(b2-1.0d0)*y)
 					dscouldd = s * plasgdd
 					dscouldt = s * plasgdt
@@ -779,7 +767,7 @@ CONTAINS
 				
 				! Disable Coulomb corrections IF they cause
 				! the energy or pressure to go negative.				
-				IF (p_temp .le. ZERO .or. e_temp .le. ZERO) THEN
+				IF (p_temp .le. 0.0_dp .or. e_temp .le. 0.0_dp) THEN
 					
 					pcoul    = 0.0d0
 					dpcouldd = 0.0d0
@@ -846,7 +834,7 @@ CONTAINS
 			gam2  = 1.0d0/(1.0d0 - nabad)
 			cp    = cv * gam1/chid
 			z     = 1.0d0 + (ener + light2)*zzi
-			sound = clight * SQRT(gam1/z)
+			sound = cvel * SQRT(gam1/z)
 			
 			!..maxwell relations; each is zero IF the consistency is perfect
 			x   = den * den
@@ -1027,8 +1015,8 @@ CONTAINS
 				
 				! Don't let the temperature or density change by more
 				! than a factor of two
-				tnew = MAX(HALF * told, MIN(tnew, 2.0d0 * told))
-				rnew = MAX(HALF * rold, MIN(rnew, 2.0d0 * rold))
+				tnew = MAX(0.5_dp * told, MIN(tnew, 2.0d0 * told))
+				rnew = MAX(0.5_dp * rold, MIN(rnew, 2.0d0 * rold))
 				
 				! Don't let us freeze or evacuate
 				tnew = MAX(smallt, tnew)
@@ -1055,7 +1043,6 @@ CONTAINS
 		ElectronState % dpdT = dpt_row
 		ElectronState % dpdr = dpd_row
 		
-		
 		ElectronState % dpde = dpe_row
 		ElectronState % dpdr_e = dpdr_e_row
 		
@@ -1078,6 +1065,7 @@ CONTAINS
 		ElectronState % xnp = xnp_row
 		
 		ElectronState % eta = etaele_row
+		ElectronState % mu_e = etaele_row*temp_row
 		ElectronState % detadt = detadt_row
 		
 		ElectronState % cv   = cv_row
@@ -1211,8 +1199,8 @@ CONTAINS
 		tstp  = (LOG10(hight) - LOG10(smallt))/float(HelmTable % nPointsTemp -1)
 		dstp  = (LOG10(highd) - LOG10(smalld))/float(HelmTable % nPointsDen -1)
 		
-		tstpi = one / tstp
-		dstpi = one / dstp
+		tstpi = 1.0_dp / tstp
+		dstpi = 1.0_dp / dstp
 		
 		temp_row = ElectronState % T
 		den_row  = ElectronState % rho
@@ -1285,8 +1273,8 @@ CONTAINS
 		dsraddt = (dpraddt*deni + deraddt - srad)*tempi
 		
 		!..ion section:
-		xni     = avo_eos * ytot1 * den
-		dxnidd  = avo_eos * ytot1
+		xni     = avn * ytot1 * den
+		dxnidd  = avn * ytot1
 		dxnida  = -xni * ytot1
 		
 		pion    = xni * kt
@@ -1297,7 +1285,7 @@ CONTAINS
 		deiondd = (1.5d0 * dpiondd - eion)*deni
 		deiondt = 1.5d0 * dpiondt*deni
 		
-		x       = abar*abar*SQRT(abar) * deni/avo_eos
+		x       = abar*abar*SQRT(abar) * deni/avn
 		s       = sioncon * temp
 		z       = x * s * SQRT(s)
 		y       = LOG(z)
@@ -1307,7 +1295,7 @@ CONTAINS
 		dsiondt = (dpiondt*deni + deiondt)*tempi -  &
 		(pion*deni + eion) * tempi*tempi  &
 		+ 1.5d0 * kergavo * tempi*ytot1
-		x       = avo_eos*kerg/abar
+		x       = avn*kerg/abar
 			
 		!..electron-positron section:
 		!..assume complete ionization
@@ -1362,8 +1350,8 @@ CONTAINS
 		fi(36) = HelmTable % fddtt(iat+1,jat+1)
 		
 		!..various differences
-		xt  = MAX( (temp - HelmTable % t(jat))*HelmTable % dti(jat), zero)
-		xd  = MAX( (din - HelmTable % d(iat))*HelmTable % ddi(iat), zero)
+		xt  = MAX( (temp - HelmTable % t(jat))*HelmTable % dti(jat), 0.0_dp)
+		xd  = MAX( (din - HelmTable % d(iat))*HelmTable % ddi(iat), 0.0_dp)
 		mxt = 1.0d0 - xt
 		mxd = 1.0d0 - xd
 					
@@ -1498,7 +1486,7 @@ CONTAINS
 		dpepdd  = h3(   fi, &
 		si0t,   si1t,   si0mt,   si1mt, &
 		si0d,   si1d,   si0md,   si1md)
-		dpepdd  = MAX(ye * dpepdd,zero)
+		dpepdd  = MAX(ye * dpepdd,0.0_dp)
 		
 		!..look in the electron chemical potential table only once
 		fi(1)  = HelmTable % ef(iat,jat)
@@ -1562,7 +1550,7 @@ CONTAINS
 		x        = h3( fi, &
 		si0t,   si1t,   si0mt,   si1mt, &
 		dsi0d,  dsi1d,  dsi0md,  dsi1md)
-		x = MAX(x,zero)
+		x = MAX(x,0.0_dp)
 		dxnedd   = ye * x
 		
 		!..derivative with respect to temperature
@@ -1622,9 +1610,9 @@ CONTAINS
 		gam2  = 1.0d0/(1.0d0 - nabad)
 		cp    = cv * gam1/chid
 		z     = 1.0d0 + (ener + light2)*zzi
-		sound = clight * SQRT(gam1/z)
+		sound = cvel * SQRT(gam1/z)
 		
-		!..maxwell relations; each is zero IF the consistency is perfect
+		!..maxwell relations; each is 0.0_dp IF the consistency is perfect
 		x   = den * den
 		dse = temp*dentrdt/denerdt - 1.0d0
 		dpe = (denerdd*x + temp*dpresdt)/pres - 1.0d0

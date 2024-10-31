@@ -1,4 +1,4 @@
-MODULE wlEOSComponentsInversionModule
+MODULE wlEOSComponentsCombinedInversionModule
 
   USE wlKindModule, ONLY: &
     dp
@@ -7,15 +7,15 @@ MODULE wlEOSComponentsInversionModule
   USE wlInterpolationUtilitiesModule, ONLY: &
     Index1D_Lin, &
     Index1D_Log
-  USE wlHelmMuonIOModuleHDF, ONLY: &
-    ReadHelmholtzTableHDF, ReadMuonTableHDF
   USE wlMuonEOS, ONLY: &
     MuonStateType, FullMuonEOS
   USE wlElectronEOS, ONLY: &
     ElectronStateType, FullHelmEOS, MinimalHelmEOS_rt
   USE wlLeptonEOSModule, ONLY: &
     HelmholtzEOSType, MuonEOSType
-  USE wlExtPhysicalConstantsModule, ONLY: &
+  USE wlHelmMuonIOModuleHDF, ONLY: &
+    ReadHelmholtzTableHDF, ReadMuonTableHDF
+  USE wlEosConstantsModule, ONLY: &
     kmev, rmu, kmev_inv, ergmev, me, mmu, cvel
     
   IMPLICIT NONE
@@ -389,7 +389,7 @@ CONTAINS
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
       END DO
     END DO
@@ -423,7 +423,7 @@ CONTAINS
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
       END DO
     END DO
@@ -464,7 +464,7 @@ CONTAINS
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
       END DO
     END DO
@@ -498,7 +498,7 @@ CONTAINS
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
       END DO
     END DO
@@ -536,7 +536,7 @@ CONTAINS
             P_leptons = ElectronState % p + MuonState % p
             S_leptons = ElectronState % s + MuonState % s
             
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
           END DO
         END DO
@@ -594,7 +594,7 @@ CONTAINS
             P_leptons = ElectronState % p + MuonState % p
             S_leptons = ElectronState % s + MuonState % s
             
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
           END DO
         END DO
@@ -625,6 +625,7 @@ CONTAINS
 
       IF ( d_i >= SizeTs ) THEN
         Error = 13
+        WRITE(*,*) X, X_a, X_b, i_a, i_b
       ENDIF
     END IF
 
@@ -730,7 +731,7 @@ CONTAINS
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
         
       END DO
     END DO
@@ -764,7 +765,7 @@ CONTAINS
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
         
         ! IF (InvertP) THEN
           ! Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronState % p + MuonState % p
@@ -810,7 +811,7 @@ CONTAINS
             P_leptons = ElectronState % p + MuonState % p
             S_leptons = ElectronState % s + MuonState % s
             
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
           END DO
         END DO
@@ -862,7 +863,7 @@ CONTAINS
             P_leptons = ElectronState % p + MuonState % p
             S_leptons = ElectronState % s + MuonState % s
             
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputE*S_leptons
+            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
           END DO
         END DO
@@ -1295,4 +1296,4 @@ CONTAINS
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError
   
-END MODULE wlEOSComponentsInversionModule
+END MODULE wlEOSComponentsCombinedInversionModule

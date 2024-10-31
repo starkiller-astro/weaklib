@@ -1,8 +1,7 @@
 MODULE wlGammaSoundSpeed
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtNumericalModule, ONLY: zero, half, one, pi
-	USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, cvel, cm3fm3
+	USE wlEosConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, cvel, cm3fm3
 	
 	IMPLICIT NONE
 	PRIVATE
@@ -11,6 +10,8 @@ MODULE wlGammaSoundSpeed
 	
 	CONTAINS
 	
+	
+	! This is taken from the stellarcollapse.org routines
 	subroutine derivatives_production(igamma, nrho, ntemp, nye, logrho, logtemp, ye, &
 		eos_table, energy_shift, cs2, gamma)
 		

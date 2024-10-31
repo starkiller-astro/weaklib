@@ -1,7 +1,6 @@
 PROGRAM wlCompareToFullEOS
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtNumericalModule, ONLY: zero, one, pi
     USE wlEquationOfStateTableModule
     USE wlIOModuleHDF
 	USE wlEOSIOModuleHDF	

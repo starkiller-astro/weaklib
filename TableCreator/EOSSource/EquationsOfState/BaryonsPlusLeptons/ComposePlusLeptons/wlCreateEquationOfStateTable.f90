@@ -21,7 +21,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     INTEGER                        :: iVars
     INTEGER, DIMENSION(3)          :: nPointsBaryon
-    INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsMuon
+    INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsDenon
     INTEGER                        :: nVariables
     TYPE(EquationOfStateTableType) :: EOSBaryonTable
     TYPE(HelmholtzEOSType) :: HelmEOSTable
@@ -33,7 +33,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     REAL(dp) :: Minimum_Value
     LOGICAL  :: ReadFullTable, RedHDF5Table
-    INTEGER :: iLepton, iRho, iTemp, iYe
+    INTEGER  :: iLepton, iRho, iTemp, iYe
 
     ReadFullTable = .false.
     RedHDF5Table = .false.
@@ -121,7 +121,7 @@ PROGRAM wlCreateEquationOfStateTable
     'Sound Speed                     ', &
     'Gamma1                          '/)
     
-    PRINT*, "Set Dependent Variable Identifier Indicies " 
+    PRINT*, "Set Dependent Variable Identifier Indicies "
     
     EOSBaryonTable % DV % Indices % iPressure = 1
     EOSBaryonTable % DV % Indices % iEntropyPerBaryon = 2
@@ -199,38 +199,35 @@ PROGRAM wlCreateEquationOfStateTable
      ! ENDDO
     ! ENDDO
     
-    WRITE(*,*) 'PRESS', MAXVAL(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values), &
-        MINVAL(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
-    DO iVars = 1, EOSBaryonTable % DV % nVariables
-        Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
-        IF ( Minimum_Value .LT. zero) THEN
-            ! IF (iVars .eq. EOSBaryonTable % DV % Indices % iPressure) THEN
-                ! WRITE(*,*) 'Warning, negative pressure will not be offset!'
-                ! EOSBaryonTable % DV % Offsets(iVars) = zero
-            ! ELSE IF (iVars .eq. EOSBaryonTable % DV % Indices % iEntropyPerBaryon) THEN
-                ! WRITE(*,*) 'Warning, negative entropy will not be offset!'
-                ! EOSBaryonTable % DV % Offsets(iVars) = zero
-            ! ELSE
-                ! EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
-                ! EOSBaryonTable % DV % Variables(iVars) % Values =  &
-                ! EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
-            ! END IF
-            EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
-            EOSBaryonTable % DV % Variables(iVars) % Values =  &
-            EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
-        ELSE
-            EOSBaryonTable % DV % Offsets(iVars) = zero
-        END IF
+
+!    DO iVars = 1, EOSBaryonTable % DV % nVariables
+!        Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
+!        IF ( Minimum_Value .LT. zero) THEN
+!            EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
+!            EOSBaryonTable % DV % Variables(iVars) % Values =  &
+!            EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
+!        ELSE
+!            EOSBaryonTable % DV % Offsets(iVars) = zero
+!        END IF
+!        
+!        WRITE(*,*) iVars, EOSBaryonTable % DV % Offsets(iVars)
+!    END DO
+!    
+!    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
+!        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
+!    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values = &
+!        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values)
+!    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values = &
+!        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values)
         
-        WRITE(*,*) iVars, EOSBaryonTable % DV % Offsets(iVars)
-    END DO
-    
-    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
-        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
-    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values = &
-        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values)
-    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values = &
-        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values)
+    ! ! Now calculate derivatives of pressure and energy
+    ! DO iRho=1,nPointsBaryon(1)
+        ! DO iTemp=1,nPointsBaryon(2)
+            ! DO iYe=1,nPointsBaryon(3)    
+                ! dln
+            ! ENDDO
+        ! ENDDO
+    ! ENDDO
         
     ! ------------- NOW DO ELECTRON EOS ------------------ !
     nPointsHelm = (/ iTempMax, iDenMax /)
@@ -241,9 +238,9 @@ PROGRAM wlCreateEquationOfStateTable
     CALL ReadHelmEOSdat( HelmDatFilePath, HelmEOSTable )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPointsMuon = (/ nTempMuon, nDenMuon /)
+    nPointsDenon = (/ nTempMuon, nDenMuon /)
     PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonEOS( MuonEOSTable, nPointsMuon )
+    CALL AllocateMuonEOS( MuonEOSTable, nPointsDenon )
     
     MuonDatFilePath = '../muons_fixedrho.dat'
     CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
