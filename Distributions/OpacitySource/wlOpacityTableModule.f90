@@ -159,8 +159,8 @@ CONTAINS
     OpTab % nOpacities_EmAb = nOpac_EmAb
     OpTab % nOpacities_Iso  = nOpac_Iso
     OpTab % nMoments_Iso    = nMom_Iso
-    OpTab % nOpacities_NES  = nOpac_NNS
-    OpTab % nMoments_NES    = nMom_NNS
+    OpTab % nOpacities_NNS  = nOpac_NNS
+    OpTab % nMoments_NNS    = nMom_NNS
     OpTab % nOpacities_NES  = nOpac_NES
     OpTab % nMoments_NES    = nMom_NES
     OpTab % nOpacities_Pair = nOpac_Pair
