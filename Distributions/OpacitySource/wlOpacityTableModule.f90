@@ -74,6 +74,7 @@ MODULE wlOpacityTableModule
   TYPE, PUBLIC :: OpacityTableType
     INTEGER        :: nOpacities_EmAb
     INTEGER        :: nOpacities_Iso,  nMoments_Iso
+    INTEGER        :: nOpacities_NNS,  nMoments_NNS
     INTEGER        :: nOpacities_NES,  nMoments_NES
     INTEGER        :: nOpacities_Pair, nMoments_Pair
     INTEGER        :: nOpacities_Brem, nMoments_Brem
@@ -108,24 +109,25 @@ MODULE wlOpacityTableModule
 CONTAINS
 
   SUBROUTINE AllocateOpacityTable &
-    ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, nMom_NES, &
-      nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, nPointsE, nPointsEta, NNS, &
+    ( OpTab, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NNS, nMom_NNS, &
+      nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, &
+      nPointsE, nPointsEta, nPointsMuB, &
       EquationOfStateTableName_Option, OpacityThermoState_Option, &
-      Verbose_Option, nPointsMuB_Option )
+      Verbose_Option )
 
     TYPE(OpacityTableType), INTENT(inout)        :: OpTab
     INTEGER,                INTENT(in)           :: nOpac_EmAb
     INTEGER,                INTENT(in)           :: nOpac_Iso, nMom_Iso
+    INTEGER,                INTENT(in)           :: nOpac_NNS, nMom_NNS
     INTEGER,                INTENT(in)           :: nOpac_NES, nMom_NES
     INTEGER,                INTENT(in)           :: nOpac_Pair, nMom_Pair
     INTEGER,                INTENT(in)           :: nOpac_Brem, nMom_Brem
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
-    INTEGER,                INTENT(in)           :: NNS
+    INTEGER,                INTENT(in)           :: nPointsMuB
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
     TYPE(ThermoStateType),  INTENT(in), OPTIONAL :: OpacityThermoState_Option
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
-    INTEGER,                INTENT(in), OPTIONAL :: nPointsMuB_Option
 
     LOGICAL               :: Verbose
     CHARACTER(256)        :: EquationOfStateTableName
@@ -157,6 +159,8 @@ CONTAINS
     OpTab % nOpacities_EmAb = nOpac_EmAb
     OpTab % nOpacities_Iso  = nOpac_Iso
     OpTab % nMoments_Iso    = nMom_Iso
+    OpTab % nOpacities_NES  = nOpac_NNS
+    OpTab % nMoments_NES    = nMom_NNS
     OpTab % nOpacities_NES  = nOpac_NES
     OpTab % nMoments_NES    = nMom_NES
     OpTab % nOpacities_Pair = nOpac_Pair
@@ -165,15 +169,7 @@ CONTAINS
     OpTab % nMoments_Brem   = nMom_Brem
     OpTab % nPointsE        = nPointsE
     OpTab % nPointsEta      = nPointsEta
-    if ( NNS == 1 ) then  !-- inelastic NeutrinoNucleonScattering
-      if ( present ( nPointsMuB_Option ) ) then
-        OpTab % nPointsMuB  =  nPointsMuB_Option
-      else
-        OpTab % nPointsMuB  =  nPointsEta
-      end if
-    else
-      OpTab % nPointsMuB  =  0
-    end if  !-- inelastic NeutrinoNucleonScattering
+    OpTab % nPointsMuB      = nPointsMuB
 
     CALL AllocateGrid( OpTab % EnergyGrid, OpTab % nPointsE   )
     CALL AllocateGrid( OpTab % EtaGrid,    OpTab % nPointsEta )
@@ -202,28 +198,14 @@ CONTAINS
            ( OpTab % Scat_Iso % OpacityTypeScat, nPointsTemp(1:5), &
              nMoments = nMom_Iso, nOpacities = nOpac_Iso )
   
-    if ( NNS == 1 ) then !-- inelastic NeutrinoNucleonScattering
-
-      nPointsTemp(1:5) = &
-             [ nPointsE, nPointsE, nMom_Iso, nPoints(iT), OpTab % nPointsMuB ]
-      CALL AllocateOpacity &
-             ( OpTab % Scat_NNS_n % OpacityTypeScat, nPointsTemp(1:5), &
-               nMoments = nMom_Iso, nOpacities = nOpac_Iso )
-      CALL AllocateOpacity &
-             ( OpTab % Scat_NNS_p % OpacityTypeScat, nPointsTemp(1:5), &
-               nMoments = nMom_Iso, nOpacities = nOpac_Iso )
-
-    else !-- no inelastic NeutrinoNucleonScattering
-
-      nPointsTemp(1:5) = 0
-      CALL AllocateOpacity &
-             ( OpTab % Scat_NNS_n % OpacityTypeScat, nPointsTemp(1:5), &
-               nMoments = 0, nOpacities = 0 )
-      CALL AllocateOpacity &
-             ( OpTab % Scat_NNS_p % OpacityTypeScat, nPointsTemp(1:5), &
-               nMoments = 0, nOpacities = 0 )
-
-    end if !-- inelastic NeutrinoNucleonScattering
+    nPointsTemp(1:5) = &
+           [ nPointsE, nPointsE, nMom_NNS, nPoints(iT), OpTab % nPointsMuB ]
+    CALL AllocateOpacity &
+           ( OpTab % Scat_NNS_n % OpacityTypeScat, nPointsTemp(1:5), &
+             nMoments = nMom_NNS, nOpacities = nOpac_NNS )
+    CALL AllocateOpacity &
+           ( OpTab % Scat_NNS_p % OpacityTypeScat, nPointsTemp(1:5), &
+             nMoments = nMom_NNS, nOpacities = nOpac_NNS )
 
     nPointsTemp(1:5) = &
            [ nPointsE, nPointsE, nMom_NES, nPoints(iT), nPointsEta]
