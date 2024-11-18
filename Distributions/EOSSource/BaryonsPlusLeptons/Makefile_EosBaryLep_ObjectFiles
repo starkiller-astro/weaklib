@@ -5,7 +5,7 @@ COMMON_MODS_OBJ  = \
   wlElectronEOS.o \
   wlMuonEOS.o \
   wlGammaSoundSpeed.o \
-  wlBolligSoundSpeed.o \
+  wlSoundSpeedModule.o \
   wlEOSComponentsCombinedInversionModule.o \
   wlEOSComponentsSeparateInversionModule.o
   

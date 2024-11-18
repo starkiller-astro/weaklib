@@ -6,7 +6,6 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlEquationOfStateTableModule
     USE wlIOModuleHDF
     USE wlEOSIOModuleHDF
-    USE wlExtNumericalModule, ONLY: zero
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
         ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
     USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
@@ -32,12 +31,13 @@ PROGRAM wlCreateEquationOfStateTable
         BaryonEOSTableName, HelmEOSTableName, MuonEOSTableName
     
     REAL(dp) :: Minimum_Value
-    LOGICAL  :: ReadFullTable, RedHDF5Table
+    LOGICAL  :: ReadFullTable, RedHDF5Table, ResetNegativePressure
     INTEGER  :: iLepton, iRho, iTemp, iYe
 
     ReadFullTable = .false.
     RedHDF5Table = .false.
-
+    ResetNegativePressure = .true.
+    
     IF (ReadFullTable) THEN
         ! for two separate tables
         ! path of the original compose table (.thermo and .compo for now, will add hdf5 option later)
@@ -184,51 +184,54 @@ PROGRAM wlCreateEquationOfStateTable
     DEALLOCATE(YpCompOSE)
     DEALLOCATE(EOSCompOSE)
     
-    PRINT*, "Offset negative quantities, not done for now, change it later"
+    PRINT*, "Offset negative quantities"
     
-    EOSBaryonTable % DV % Offsets(:) = zero
+    EOSBaryonTable % DV % Offsets(:) = 0.0_dp
     
-    ! ! Handle negative pressures ad hoc
-    ! DO iRho=1,nPointsBaryon(1)
-     ! DO iTemp=1,nPointsBaryon(2)
-      ! DO iYe=1,nPointsBaryon(3)
-        ! IF (EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) .lt. 0.0d0) THEN
-            ! EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = 1.0d0
-        ! ENDIF
-      ! ENDDO
-     ! ENDDO
-    ! ENDDO
+    IF (ResetNegativePressure) THEN
+        DO iRho=1,nPointsBaryon(1)
+         DO iTemp=1,nPointsBaryon(2)
+          DO iYe=1,nPointsBaryon(3)
+            IF (EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) .lt. 0.0d0) THEN
+                EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = 1.0d0
+            ENDIF
+          ENDDO
+         ENDDO
+        ENDDO
+    ENDIF
     
-
-!    DO iVars = 1, EOSBaryonTable % DV % nVariables
-!        Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
-!        IF ( Minimum_Value .LT. zero) THEN
-!            EOSBaryonTable % DV % Offsets(iVars) = -1.1d0*Minimum_Value
-!            EOSBaryonTable % DV % Variables(iVars) % Values =  &
-!            EOSBaryonTable % DV % Variables(iVars) % Values -1.1d0*Minimum_Value
-!        ELSE
-!            EOSBaryonTable % DV % Offsets(iVars) = zero
-!        END IF
-!        
-!        WRITE(*,*) iVars, EOSBaryonTable % DV % Offsets(iVars)
-!    END DO
-!    
-!    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
-!        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
-!    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values = &
-!        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values)
-!    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values = &
-!        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values)
-        
-    ! ! Now calculate derivatives of pressure and energy
-    ! DO iRho=1,nPointsBaryon(1)
-        ! DO iTemp=1,nPointsBaryon(2)
-            ! DO iYe=1,nPointsBaryon(3)    
-                ! dln
-            ! ENDDO
-        ! ENDDO
-    ! ENDDO
-        
+    
+   DO iVars = 1, EOSBaryonTable % DV % Indices % iNeutronChemicalPotential
+       Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
+       IF ( Minimum_Value .eq. 0.0_dp) THEN
+           EOSBaryonTable % DV % Offsets(iVars) = 1.0d-30
+           EOSBaryonTable % DV % Variables(iVars) % Values =  &
+               EOSBaryonTable % DV % Variables(iVars) % Values + & 
+               EOSBaryonTable % DV % Offsets(iVars)
+       ELSE IF ( Minimum_Value .lt. 0.0_dp) THEN
+           EOSBaryonTable % DV % Offsets(iVars) = -1.1_dp * Minimum_Value
+           EOSBaryonTable % DV % Variables(iVars) % Values =  &
+               EOSBaryonTable % DV % Variables(iVars) % Values + & 
+               EOSBaryonTable % DV % Offsets(iVars)
+       ELSE
+           EOSBaryonTable % DV % Offsets(iVars) = 0.0_dp
+       END IF
+       
+       WRITE(*,*) iVars, EOSBaryonTable % DV % Offsets(iVars), Minimum_Value
+   END DO
+   
+   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
+       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
+   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values = &
+       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values)
+   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values = &
+       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values)
+       
+   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iProtonChemicalPotential) % Values = &
+       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iProtonChemicalPotential) % Values)
+   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iNeutronChemicalPotential) % Values = &
+       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iNeutronChemicalPotential) % Values)
+                
     ! ------------- NOW DO ELECTRON EOS ------------------ !
     nPointsHelm = (/ iTempMax, iDenMax /)
     PRINT*, "Allocate Helmholtz EOS"

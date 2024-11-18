@@ -1,18 +1,9 @@
 include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
-include ../Makefile_ComposeEOS_Dependencies
-include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
-include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_ObjectFiles
-include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules/Makefile_CommonModules_Dependencies
-
-VPATH += \
-$(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/CommonModules: \
-$(WEAKLIB_DIR)/TableCreator/SharedModules: \
-..
 
 Weaklib_EOSTableCreator = \
   $(WL_LIBRARY) \
   $(WL_EOSSOURCE) \
-  $(SHAREDMODULES) \
+  wlCompOSEInterface.o \
   $(COMMON_MODS_OBJ)
   
 all: wlCreateEOSTable
@@ -23,6 +14,21 @@ wlCreateEOSTable: \
 	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o \
 	$(LIBRARIES)
 
+wlCompOSEInterface.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlIOModuleHDF.o
+  
+wlCreateEquationOfStateTable.o: \
+  wlKindModule.o \
+  wlGridModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlCompOSEInterface.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlLeptonEOSModule.o
+  
 clean:
 	rm -f *.o *.mod *.ld
 

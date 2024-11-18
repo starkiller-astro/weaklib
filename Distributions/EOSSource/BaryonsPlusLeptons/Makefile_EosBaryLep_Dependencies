@@ -24,7 +24,7 @@ wlGammaSoundSpeed.o: \
   wlKindModule.o \
   wlEosConstantsModule.o
 
-wlBolligSoundSpeed.o: \
+wlSoundSpeedModule.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlLeptonEOSModule.o \

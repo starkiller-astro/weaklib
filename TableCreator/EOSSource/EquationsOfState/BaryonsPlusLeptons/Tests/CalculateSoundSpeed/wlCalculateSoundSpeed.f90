@@ -15,7 +15,7 @@ PROGRAM wlCalculateSoundSpeed
 		ReadHelmholtzTableHDF, ReadMuonTableHDF
 	USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, cvel
 	USE wlGammaSoundSpeed
-	USE wlBolligSoundSpeed
+	USE wlSoundSpeedModule
 	
 	IMPLICIT NONE
 	
@@ -36,7 +36,7 @@ PROGRAM wlCalculateSoundSpeed
 	REAL(dp) :: mup_baryons, mup_total, mun_baryons, mun_total
 	
 	REAL(DP) :: OS_P, OS_E, OS_S, OS_V
-	REAL(DP) :: D, T, Yp, Ye, Ymu, cs2, Gamma
+	REAL(DP) :: D, T, Yp, Ye, Ym, cs2, Gamma
 	REAL(dp), ALLOCATABLE :: eos_table(:,:,:,:), Pe(:,:,:), Ee(:,:,:), &
 		P_T(:,:,:), V_T(:,:,:), D_T(:), T_T(:), Yp_T(:)
 	
@@ -248,9 +248,9 @@ PROGRAM wlCalculateSoundSpeed
 				Yp = EOSBaryonTable % TS % States(3) % Values(iYp)
 				
 				Ye = Yp
-				Ymu = 0.0d0
+				Ym = 0.0d0
 				
-				CALL CalculateBolligSoundSpeed( D, T, Yp, Ye, Ymu, D_T, T_T, Yp_T, P_T, OS_P, V_T, OS_V, &
+				CALL CalculatewlSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, V_T, OS_V, &
 					'Energy', HelmholtzTable, MuonTable, Gamma, cs2)
 								
 				EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2

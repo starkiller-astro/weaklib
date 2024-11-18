@@ -6,10 +6,7 @@ MODULE wlHelmMuonIOModuleHDF
         AllocateHelmEOS, DeAllocateHelmEOS, &
         MuonEOSType, &
         AllocateMuonEOS, DeAllocateMuonEOS
-    USE wlIOModuleHDF, ONLY: &
-        InitializeHDF, FinalizeHDF, &
-        OpenFileHDF, CloseFileHDF, &
-        OpenGroupHDF, CloseGroupHDF
+    USE wlIOModuleHDF
     USE HDF5
     
     IMPLICIT NONE
@@ -246,7 +243,7 @@ CONTAINS
         CALL WriteHDF( "Temperature", MuonTable % t, group_id, datasize1d )
         
         datasize1d = MuonTable % nPointsDen
-        CALL WriteHDF( "Density", MuonTable % rhoymu, group_id, datasize1d )
+        CALL WriteHDF( "Density", MuonTable % rhoym, group_id, datasize1d )
 
         datasize2d = (/ MuonTable % nPointsTemp, MuonTable % nPointsDen /) 
         CALL WriteHDF( "Pressure", MuonTable % p(:,:),     group_id, datasize2d )
@@ -286,7 +283,7 @@ CONTAINS
 
         datasize1d = MuonTable % nPointsTemp
         CALL ReadHDF( "Temperature", MuonTable % t, group_id, datasize1d )
-        CALL ReadHDF( "Density", MuonTable % rhoymu, group_id, datasize1d )
+        CALL ReadHDF( "Density", MuonTable % rhoym, group_id, datasize1d )
 
         datasize2d = (/ MuonTable % nPointsTemp, MuonTable % nPointsDen /) 
         CALL ReadHDF( "Pressure", MuonTable % p(:,:),     group_id, datasize2d )

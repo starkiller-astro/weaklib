@@ -73,7 +73,7 @@ MODULE wlLeptonEOSModule
 		INTEGER :: nPointsTemp
 		
 		REAL(dp), DIMENSION(:), ALLOCATABLE :: t
-		REAL(dp), DIMENSION(:), ALLOCATABLE :: rhoymu
+		REAL(dp), DIMENSION(:), ALLOCATABLE :: rhoym
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: mu
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: p
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: e
@@ -198,7 +198,7 @@ CONTAINS
 		MuonEOS % nPointsDen   = nPoints(2)
 
 		ALLOCATE( MuonEOS % t( nPoints(1) ) )
-		ALLOCATE( MuonEOS % rhoymu( nPoints(2) ) )
+		ALLOCATE( MuonEOS % rhoym( nPoints(2) ) )
 		ALLOCATE( MuonEOS % mu( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % p( nPoints(1), nPoints(2) ) )
 		ALLOCATE( MuonEOS % e( nPoints(1), nPoints(2) ) )
@@ -217,7 +217,7 @@ CONTAINS
 		TYPE(MuonEOSType)      :: MuonEOS
 
 		DEALLOCATE( MuonEOS % t )
-		DEALLOCATE( MuonEOS % rhoymu )
+		DEALLOCATE( MuonEOS % rhoym )
 		DEALLOCATE( MuonEOS % mu )
 		DEALLOCATE( MuonEOS % p )
 		DEALLOCATE( MuonEOS % e )
@@ -346,7 +346,7 @@ CONTAINS
 				READ(1234,*)
 			ENDIF
 			DO iDen=1,MuonEOS % nPointsDen
-				READ(1234,*) MuonEOS % t(iT), MuonEOS % rhoymu(iDen), &
+				READ(1234,*) MuonEOS % t(iT), MuonEOS % rhoym(iDen), &
 					MuonEOS % p(iT,iDen), MuonEOS % e(iT,iDen), &
 					MuonEOS % s(iT,iDen), MuonEOS % mu(iT,iDen)
 			ENDDO
@@ -355,7 +355,7 @@ CONTAINS
 		! DO UNIT CONVERSION
 		! Based on Tobias's code, the chemical potential includes the muon rest mass
 		MuonEOS % t = MuonEOS % t * kmev_inv !MeV to kelvin
-		MuonEOS % rhoymu = MuonEOS % rhoymu * rmu/cm3fm3 !baryon number to g/cm^3
+		MuonEOS % rhoym = MuonEOS % rhoym * rmu/cm3fm3 !baryon number to g/cm^3
 		MuonEOS % p = MuonEOS % p * ergmev / cm3fm3 !MeV/fm^3 to dyn
 		MuonEOS % e = MuonEOS % e * ergmev / rmu 
 		MuonEOS % s = MuonEOS % s / (kmev * ergmev / rmu)
@@ -369,14 +369,14 @@ CONTAINS
 
 		! NOW CALCULATE DERIVATIVES AT CONSTANT T
 		DO iT=1,MuonEOS % nPointsTemp
-			MuonEOS % dlnsdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % s(iT,:)), LOG10(MuonEOS % rhoymu), MuonEOS % nPointsDen)
-			MuonEOS % dlnPdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % p(iT,:)), LOG10(MuonEOS % rhoymu), MuonEOS % nPointsDen)
-			MuonEOS % dlnedlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % e(iT,:)), LOG10(MuonEOS % rhoymu), MuonEOS % nPointsDen)
+			MuonEOS % dlnsdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % s(iT,:)), LOG10(MuonEOS % rhoym), MuonEOS % nPointsDen)
+			MuonEOS % dlnPdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % p(iT,:)), LOG10(MuonEOS % rhoym), MuonEOS % nPointsDen)
+			MuonEOS % dlnedlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % e(iT,:)), LOG10(MuonEOS % rhoym), MuonEOS % nPointsDen)
 		ENDDO
 		
 		WRITE(*,*) 'Bounds of the Muon Table'
 		WRITE(*,*) MAXVAL(MuonEOS % t), MINVAL(MuonEOS % t)
-		WRITE(*,*) MAXVAL(MuonEOS % rhoymu), MINVAL(MuonEOS % rhoymu)
+		WRITE(*,*) MAXVAL(MuonEOS % rhoym), MINVAL(MuonEOS % rhoym)
 		WRITE(*,*) MAXVAL(MuonEOS % p), MINVAL(MuonEOS % p)
 		WRITE(*,*) MAXVAL(MuonEOS % e), MINVAL(MuonEOS % e)
 		WRITE(*,*) MAXVAL(MuonEOS % s), MINVAL(MuonEOS % s)

@@ -1,7 +1,7 @@
 MODULE wlEOSComponentsSeparateInversionModule
 
   USE wlKindModule, ONLY: &
-    dp
+  dp
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable_2D_Custom_Point
   USE wlInterpolationUtilitiesModule, ONLY: &
@@ -170,7 +170,7 @@ CONTAINS
     CALL ReadMuonTableHDF( MuonTable, MuonTableName )
     
 	! For maximum and minimum you only need to calculate 
-    ! maximum and minimum Ye and Ymu
+    ! maximum and minimum Ye and Ym
     MinD = MINVAL( Ds ); MaxD = MAXVAL( Ds )
     MinT = MINVAL( Ts ); MaxT = MAXVAL( Ts )
     MinYp = MINVAL( Yps ); MaxYp = MAXVAL( Yps )
@@ -184,7 +184,7 @@ CONTAINS
       WRITE(*,*)
       WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max D   [g cm^-3] = ', MinD, MaxD
       WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max T         [K] = ', MinT, MaxT
-      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max Yp             = ', MinYp, MaxYp
+      WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max Yp            = ', MinYp, MaxYp
       WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max E  [erg g^-1] = ', MinE, MaxE
       WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max P [dyn cm^-2] = ', MinP, MaxP
       WRITE(*,'(A6,A24,2ES11.3E3)') '', 'Min/Max S       [k_B] = ', MinS, MaxS
@@ -206,41 +206,43 @@ CONTAINS
   END SUBROUTINE InitializeEOSComponentsInversion
   
   INTEGER FUNCTION CheckInputError &
-        ( D, X, Yp, Ye, Ymu, MinX, MaxX )
+        ( D, X, Ye, Ym, MinX, MaxX )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in) :: D, X, Yp, Ye, Ymu, MinX, MaxX
-
+    REAL(dp), INTENT(in) :: D, X, Ye, Ym, MinX, MaxX
+    REAL(dp) :: Yp
+    
+    Yp = Ye + Ym
     CheckInputError = 0
 
     IF ( .NOT. InversionComponentsInitialized ) THEN
       CheckInputError = 10
     ELSE IF ( D /= D .OR. X /= X .OR.  &
-        Yp /= Yp  .OR. Ye /= Ye  .OR. Ymu /= Ymu ) THEN
+        Yp /= Yp  .OR. Ye /= Ye  .OR. Ym /= Ym ) THEN
       CheckInputError = 11
     ELSE IF ( D < MinD .OR. D > MaxD ) THEN
       CheckInputError = 01
 #if EOS_DEBUG
       WRITE(*,*) 'ComputeTemperature ERROR 01'
-      WRITE(*,*) 'input D, E/P/S, Yp, Ye, Ymu :', D, X, Yp, Ye, Ymu
+      WRITE(*,*) 'input D, E/P/S, Ye, Ym :', D, X, Ye, Ym
       WRITE(*,*) 'Table Min/Max D:', MinD, MaxD
 #endif
     ELSE IF ( X < MinX .OR. X > MaxX ) THEN
       CheckInputError = 02
 #if EOS_DEBUG
       WRITE(*,*) 'ComputeTemperature ERROR 02'
-      WRITE(*,*) 'input D, E/P/S, Yp, Ye, Ymu :', D, X, Yp, Ye, Ymu
+      WRITE(*,*) 'input D, E/P/S, Ye, Ym :', D, X, Ye, Ym
       WRITE(*,*) 'Table Min/Max E/P/S:', MinX, MaxX
 #endif
     ELSE IF ( Yp < MinYp .OR. Yp > MaxYp ) THEN
       CheckInputError = 03
 #if EOS_DEBUG
       WRITE(*,*) 'ComputeTemperature ERROR 03'
-      WRITE(*,*) 'input D, E/P/S, Yp, Ye, Ymu :', D, X, Yp, Ye, Ymu
+      WRITE(*,*) 'input D, E/P/S, Ye, Ym :', D, X, Ye, Ym
       WRITE(*,*) 'Table Min/Max Yp:', MinYp, MaxYp
 #endif
     END IF
@@ -287,7 +289,7 @@ CONTAINS
   
 
   SUBROUTINE ComputeTemperatureWith_DXYpYl_Guess &
-    ( D, X, Yp, Ye, Ymu, Ds, Ts, Yps, Xs, &
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, &
     InputE, InputP, InputS, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -295,7 +297,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , X     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -305,6 +307,8 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
 
+    REAL(dp) :: Yp
+    
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
@@ -326,6 +330,8 @@ CONTAINS
     TYPE(ElectronStateType) :: ElectronState
     TYPE(MuonStateType) :: MuonState
 
+    Yp = Ye + Ym
+    
     ! -------------------------------------------------------------------
     ! Initialize ElectronState
     ElectronState % abar = 1.0d0 ! these are only used for ion contribution
@@ -370,12 +376,12 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     MuonState % t = T_a
-    MuonState % rhoymu = D * Ymu
+    MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
  
     E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                              MuonState % e + mmu / rmu * ergmev * Ymu
+                              MuonState % e + mmu / rmu * ergmev * Ym
     P_leptons = ElectronState % p + MuonState % p
     S_leptons = ElectronState % s + MuonState % s
     
@@ -399,12 +405,12 @@ CONTAINS
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_b
-    MuonState % rhoymu = D * Ymu
+    MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
     E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                              MuonState % e + mmu / rmu * ergmev * Ymu
+                              MuonState % e + mmu / rmu * ergmev * Ym
     P_leptons = ElectronState % p + MuonState % p
     S_leptons = ElectronState % s + MuonState % s
     
@@ -435,12 +441,12 @@ CONTAINS
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_a
-    MuonState % rhoymu = D * Ymu
+    MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
     E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                              MuonState % e + mmu / rmu * ergmev * Ymu
+                              MuonState % e + mmu / rmu * ergmev * Ym
     P_leptons = ElectronState % p + MuonState % p
     S_leptons = ElectronState % s + MuonState % s
     
@@ -464,12 +470,12 @@ CONTAINS
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_b
-    MuonState % rhoymu = D * Ymu
+    MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
     E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                              MuonState % e + mmu / rmu * ergmev * Ymu
+                              MuonState % e + mmu / rmu * ergmev * Ym
     P_leptons = ElectronState % p + MuonState % p
     S_leptons = ElectronState % s + MuonState % s
     
@@ -505,12 +511,12 @@ CONTAINS
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         MuonState % t = T_c
-        MuonState % rhoymu = D * Ymu
+        MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
    
         E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                                  MuonState % e + mmu / rmu * ergmev * Ymu
+                                  MuonState % e + mmu / rmu * ergmev * Ym
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
@@ -558,12 +564,12 @@ CONTAINS
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         MuonState % t = T_i
-        MuonState % rhoymu = D * Ymu
+        MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
         E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                                  MuonState % e + mmu / rmu * ergmev * Ymu
+                                  MuonState % e + mmu / rmu * ergmev * Ym
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
@@ -605,7 +611,7 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DXYpYl_Guess
   
   SUBROUTINE ComputeTemperatureWith_DXYpYl_NoGuess &
-    ( D, X, Yp, Ye, Ymu, Ds, Ts, Yps, Xs, &
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, &
     InputE, InputP, InputS, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -613,7 +619,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , X     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -622,6 +628,7 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     INTEGER,  INTENT(out) :: Error
 
+    REAL(dp) :: Yp
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
@@ -640,6 +647,8 @@ CONTAINS
     ! Electron and Muon quantities
     TYPE(ElectronStateType) :: ElectronState
     TYPE(MuonStateType) :: MuonState
+
+    Yp = Ye + Ym
 
     ! -------------------------------------------------------------------
     ! Initialize ElectronState
@@ -682,12 +691,12 @@ CONTAINS
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_a
-    MuonState % rhoymu = D * Ymu
+    MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
    
     E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                              MuonState % e + mmu / rmu * ergmev * Ymu
+                              MuonState % e + mmu / rmu * ergmev * Ym
     P_leptons = ElectronState % p + MuonState % p
     S_leptons = ElectronState % s + MuonState % s
     
@@ -711,12 +720,12 @@ CONTAINS
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_b
-    MuonState % rhoymu = D * Ymu
+    MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
   
     E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                              MuonState % e + mmu / rmu * ergmev * Ymu
+                              MuonState % e + mmu / rmu * ergmev * Ym
     P_leptons = ElectronState % p + MuonState % p
     S_leptons = ElectronState % s + MuonState % s
     
@@ -744,12 +753,12 @@ CONTAINS
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         MuonState % t = T_c
-        MuonState % rhoymu = D * Ymu
+        MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
  
         E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                                  MuonState % e + mmu / rmu * ergmev * Ymu
+                                  MuonState % e + mmu / rmu * ergmev * Ym
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
@@ -791,12 +800,12 @@ CONTAINS
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         MuonState % t = T_i
-        MuonState % rhoymu = D * Ymu
+        MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
         E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
-                                  MuonState % e + mmu / rmu * ergmev * Ymu
+                                  MuonState % e + mmu / rmu * ergmev * Ym
         P_leptons = ElectronState % p + MuonState % p
         S_leptons = ElectronState % s + MuonState % s
         
@@ -834,14 +843,14 @@ CONTAINS
   END SUBROUTINE ComputeTemperatureWith_DXYpYl_NoGuess
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error &
-    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, T_Guess, Error )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , E     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , E     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -856,10 +865,10 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
+    Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
-             ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
+             ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
              InputE, InputP, InputS, OS, T, T_Guess, Error )
     END IF
     
@@ -867,14 +876,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError &
-    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, T_Guess )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , E     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , E     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -890,10 +899,10 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
+    Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
-             ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
+             ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
              InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
@@ -901,14 +910,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error &
-    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T, Error )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D     , E     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)    :: D     , E     , Ye, Ym
     REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)    :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
@@ -922,10 +931,10 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
+    Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
-             ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
+             ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
              InputE, InputP, InputS, Os, T, Error )
     END IF
 
@@ -933,14 +942,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError &
-    ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, OS, T )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D     , E     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)    :: D     , E     , Ye, Ym
     REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)    :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
@@ -955,24 +964,24 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, E, Yp, Ye, Ymu, MinE, MaxE )
+    Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
-             ( D, E, Yp, Ye, Ymu, Ds, Ts, Yps, Es, &
+             ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
              InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_Error &
-    ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, OS, T, T_Guess, Error )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , P     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , P     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -987,10 +996,10 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
+    Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
-             ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
+             ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
              InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
@@ -998,14 +1007,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_NoError &
-    ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, OS, T, T_Guess )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , P     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , P     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -1021,10 +1030,10 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
+    Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
-             ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
+             ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
              InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
@@ -1032,14 +1041,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_Error &
-    ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, OS, T, Error )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D     , P     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)    :: D     , P     , Ye, Ym
     REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
@@ -1053,10 +1062,10 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
+    Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
-             ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
+             ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
              InputE, InputP, InputS, Os, T, Error )
     END IF
 
@@ -1064,14 +1073,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError &
-    ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, OS, T )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D     , P     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)    :: D     , P     , Ye, Ym
     REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
@@ -1086,24 +1095,24 @@ CONTAINS
     InputS  = 0.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, P, Yp, Ye, Ymu, MinP, MaxP )
+    Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
-             ( D, P, Yp, Ye, Ymu, Ds, Ts, Yps, Ps, &
+             ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
              InputE, InputP, InputS, Os, T, Error )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_Error &
-    ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, OS, T, T_Guess, Error )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , S     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , S     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -1118,10 +1127,10 @@ CONTAINS
     InputS  = 1.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
+    Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
-             ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
+             ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
              InputE, InputP, InputS, OS, T, T_Guess, Error )
     END IF
 
@@ -1129,14 +1138,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_NoError &
-    ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, OS, T, T_Guess )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)  :: D     , S     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)  :: D     , S     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)  :: OS
@@ -1152,10 +1161,10 @@ CONTAINS
     InputS  = 1.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
+    Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_Guess &
-             ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
+             ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
              InputE, InputP, InputS, Os, T, T_Guess, Error )
     END IF
 
@@ -1163,14 +1172,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error &
-    ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, OS, T, Error )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, Error )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D     , S     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)    :: D     , S     , Ye, Ym
     REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
@@ -1184,10 +1193,10 @@ CONTAINS
     InputS  = 1.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
+    Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
-             ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
+             ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
              InputE, InputP, InputS, Os, T, Error )
     END IF
 
@@ -1195,14 +1204,14 @@ CONTAINS
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError &
-    ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, OS, T )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in)    :: D     , S     , Yp, Ye, Ymu
+    REAL(dp), INTENT(in)    :: D     , S     , Ye, Ym
     REAL(dp), INTENT(in)    :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
@@ -1217,10 +1226,10 @@ CONTAINS
     InputS  = 1.0d0
     
     T = 0.0_dp
-    Error = CheckInputError( D, S, Yp, Ye, Ymu, MinS, MaxS )
+    Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL ComputeTemperatureWith_DXYpYl_NoGuess &
-             ( D, S, Yp, Ye, Ymu, Ds, Ts, Yps, Ss, &
+             ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
              InputE, InputP, InputS, Os, T, Error )
     END IF
 

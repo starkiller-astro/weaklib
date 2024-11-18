@@ -82,7 +82,7 @@ PROGRAM wlComposeInversionTest
   
   INTEGER :: iRho, iTemp, iYp
   REAL(DP) :: Ps_T_Helm, Es_T_Helm, Ss_T_Helm
-  REAL(DP) :: Ps_T_muon, Es_T_muon, Ss_T_muon, Ymu
+  REAL(DP) :: Ps_T_muon, Es_T_muon, Ss_T_muon, Ym
   LOGICAL :: OnlyOneTable
   
   CHARACTER(len=128) :: BaryonPlusHelmTableName, FullTableName
@@ -160,7 +160,7 @@ PROGRAM wlComposeInversionTest
       DO iTemp=1,EOSBaryonTable % DV % nPoints(2)
         DO iYp=1,EOSBaryonTable % DV % nPoints(3)
   
-          Ymu = Ys_T(iYp) / 5.0d0
+          Ym = Ys_T(iYp) / 5.0d0
 
           ! Now add electron component
           ! Initialize temperature, density, yp, Zbar and Abar
@@ -168,7 +168,7 @@ PROGRAM wlComposeInversionTest
           ElectronState % rho = Ds_T(iRho)
           ElectronState % abar = 1.0d0 ! these are only used for ion contribution
           ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
-          ElectronState % y_e = Ys_T(iYp) - Ymu
+          ElectronState % y_e = Ys_T(iYp) - Ym
           
           ! calculate electron quantities
           CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
@@ -180,11 +180,11 @@ PROGRAM wlComposeInversionTest
 
           ! calculate muon quantities 
           MuonState % t = Ts_T(iTemp)
-          MuonState % rhoymu = Ds_T(iRho) * Ymu
+          MuonState % rhoym = Ds_T(iRho) * Ym
           
           CALL FullMuonEOS(MuonTable, MuonState)
 
-          Es_T_muon = MuonState % e + mmu / rmu * ergmev * Ymu ! add back mass to internal energy!
+          Es_T_muon = MuonState % e + mmu / rmu * ergmev * Ym ! add back mass to internal energy!
           Ps_T_muon = MuonState % p
           Ss_T_muon = MuonState % s
                   

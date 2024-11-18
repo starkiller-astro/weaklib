@@ -1,8 +1,7 @@
 MODULE wlCompOSEInterface
 	
 	USE wlKindModule, ONLY: dp
-	USE wlExtPhysicalConstantsModule, ONLY: cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp
-	USE wlExtNumericalModule, ONLY: zero, half, one, pi
+	USE wlEosConstantsModule, ONLY: cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp
 	USE HDF5
     USE wlIOModuleHDF
 	
@@ -127,11 +126,10 @@ MODULE wlCompOSEInterface
 		CLOSE(123)
 		
 		! Uncomment if you DO NOT want to read the lepton component
-		IF (iLepton .ne. zero) THEN
+		IF (iLepton .ne. 0.0_dp) THEN
 			WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!! CAREFUL !!!!!!!!!!!!!!!!!!!!!!!!!!'
 			WRITE(*,*) 'The table you are trying to read already contains leptons!'
 			WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!! CAREFUL !!!!!!!!!!!!!!!!!!!!!!!!!!'
-			!STOP
 		END IF
 		
 		! Get density. DECIDE HOW TO CALCULATE THE MASS DENSITY SINCE IT IS NOT OBVIOUS,
@@ -198,15 +196,18 @@ MODULE wlCompOSEInterface
 			
 			EOSCompOSE(iRho,iT,iYp,iPressCompOSE) = Q1 * nbCompOSE(iRho) * ergmev / cm3fm3
 			EOSCompOSE(iRho,iT,iYp,iEntropyCompOSE) = Q2
-			TotalInternalEnergy = (one + Q7) * NeutronMass
+			TotalInternalEnergy = (1.0_dp + Q7) * NeutronMass
 			EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
 			TotalInternalEnergy*nbCompOSE(iRho)/cm3fm3 * ergmev / RhoCompOSE(iRho) - cvel**2.0d0
 			
 			! now handle the chemical potentials. This is the relativistic expression including the 
 			! nucleon mass. Be careful because some opacities need the NR version, or shifted to a reference
 			! mass, e.g. both mup and mun use the neutron mass...
-			EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = (Q3 + Q4 + one)*NeutronMass
-			EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = (Q3 + one)*NeutronMass
+			EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass
+			EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) + Q4*NeutronMass
+			IF (Q4 == -0.0d0) THEN
+				WRITE(*,*) iT, iRho, iYp
+			ENDIF
 			IF (iLepton .eq. 0) THEN
 				EOSCompOSE(iRho,iT,iYp,iElectronChemPotCompOSE) = 0.0d0
 			ELSE
@@ -234,9 +235,9 @@ MODULE wlCompOSEInterface
 			EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE) = Zbar
 			
 			! Finally set other things to zero for now, CompOSE does not tell you what they are
-			EOSCompOSE(iRho,iT,iYp,iHeavyBindingEnergyCompOSE) = zero
-			EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE) = zero
-			EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = zero
+			EOSCompOSE(iRho,iT,iYp,iHeavyBindingEnergyCompOSE) = 0.0_dp
+			EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE) = 0.0_dp
+			EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = 0.0_dp
 			
 		END DO
 		
@@ -399,18 +400,17 @@ MODULE wlCompOSEInterface
 		
 		ALLOCATE( EOSCompOSE(nRho,nTemp,nYp,nVariablesCompOSE) )
 		
-		WRITE(*,*) MAXVAL(ThermoTable(:,:,:,iGamma_in_Table))
 		! Now copy into Compose array
 		DO iRho=1,nRho
 			DO iT=1,nTemp
 				DO iYp=1,nYp
 					EOSCompOSE(iRho,iT,iYp,iPressCompOSE) = ThermoTable(iRho,iT,iYp,iPress_in_Table) * ergmev / cm3fm3
 					EOSCompOSE(iRho,iT,iYp,iEntropyCompOSE) = ThermoTable(iRho,iT,iYp,iEntr_in_Table)
-					TotalInternalEnergy = (one + ThermoTable(iRho,iT,iYp,iEps_in_Table)) * NeutronMass
+					TotalInternalEnergy = (1.0_dp + ThermoTable(iRho,iT,iYp,iEps_in_Table)) * NeutronMass
 					EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
 						TotalInternalEnergy*nbCompOSE(iRho)/cm3fm3 * ergmev / RhoCompOSE(iRho) - cvel**2.0d0
 					
-					! now handle the chemical potentials
+					! now handle the chemical potentials. These include rest mass already.
 					EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = ThermoTable(iRho,iT,iYp,iMub_in_Table) + NeutronMass
 					EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = &
 						ThermoTable(iRho,iT,iYp,iMuq_in_Table) + EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE)
@@ -418,7 +418,7 @@ MODULE wlCompOSEInterface
 					IF (iGamma_in_Table > 0 ) THEN
 						EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = ThermoTable(iRho,iT,iYp,iGamma_in_Table)
 					ELSE
-						EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = zero		
+						EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = 0.0_dp
 					ENDIF
 					
 					IF (iLepton .eq. 0) THEN
@@ -429,7 +429,7 @@ MODULE wlCompOSEInterface
 					END IF	
 					
 					! Finally set other things to zero for now, CompOSE does not tell you what they are
-					EOSCompOSE(iRho,iT,iYp,iHeavyBindingEnergyCompOSE) = zero
+					EOSCompOSE(iRho,iT,iYp,iHeavyBindingEnergyCompOSE) = 0.0_dp
 					EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE) = ThermoTable(iRho,iT,iYp,ics2_in_Table) * cvel**2
 				END DO
 			END DO
@@ -490,9 +490,9 @@ MODULE wlCompOSEInterface
 						ENDDO
 						
 						IF (NewHeavyDenominator .eq. 0.0d0) THEN
-							EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE) = zero
-							EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE) = zero
-							EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE) = zero
+							EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE) = 0.0_dp
+							EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE) = 0.0_dp
+							EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE) = 0.0_dp
 						ELSE
 							EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE) = &
 								NewAbarNumerator / NewHeavyDenominator

@@ -60,7 +60,7 @@ PROGRAM wlComposeNewInversionTest
     Amp, &
     E_T, S_T, P_T
   REAL(dp), DIMENSION(nPoints) :: &
-    D, T, Yp, Ye, Ymu, E, P, S, T_E, T_P, T_S, dT, &
+    D, T, Yp, Ye, Ym, E, P, S, T_E, T_P, T_S, dT, &
     E_int_error, P_int_error, S_int_error, &
     rndm_D, &
     rndm_T, &
@@ -199,7 +199,7 @@ PROGRAM wlComposeNewInversionTest
 
         ! calculate muon quantities 
         MuonState % t = Ts_bary(iTemp)
-        MuonState % rhoYmu = Ds_bary(iRho) * Ymu_temp
+        MuonState % rhoym = Ds_bary(iRho) * Ymu_temp
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
@@ -310,9 +310,9 @@ PROGRAM wlComposeNewInversionTest
 
   DO iP = 1, nPoints
     
-    Ymu(iP) = Yp(iP) / Yp_over_Ymu
-    !Ymu(iP) = 0.0d0
-    Ye(iP) = Yp(iP) - Ymu(iP)
+    Ym(iP) = Yp(iP) / Yp_over_Ymu
+    !Ym(iP) = 0.0d0
+    Ye(iP) = Yp(iP) - Ym(iP)
     
     CALL LogInterpolateSingleVariable_3D_Custom_Point &
            ( D(iP), T(iP), Yp(iP), Ds_full, Ts_full, Yps_full, OS_E, Es_full, E(iP) )
@@ -350,11 +350,11 @@ PROGRAM wlComposeNewInversionTest
 
     ! calculate muon quantities 
     MuonState % t = T(iP)
-    MuonState % rhoYmu = D(iP) * Ymu(iP)
+    MuonState % rhoym = D(iP) * Ym(iP)
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
-    Es_muon = MuonState % e + mmu / rmu * ergmev * Ymu(iP) ! add back mass to internal Energy!
+    Es_muon = MuonState % e + mmu / rmu * ergmev * Ym(iP) ! add back mass to internal Energy!
     Ps_muon = MuonState % p
     Ss_muon = MuonState % s
            
@@ -431,7 +431,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
-           ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), E(iP), Ye(iP), Ym(iP), &
            Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, &
            T_E(iP), T_Guess, Error_E(iP) )
   END DO
@@ -506,7 +506,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
-           ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), E(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), T_Guess, &
              Error_E(iP) )
   END DO
@@ -562,7 +562,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_NoGuess &
-           ( D(iP), E(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), E(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), &
              Error_E(iP) )
   END DO
@@ -632,7 +632,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
-           ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
              Error_S(iP) )
   END DO
@@ -701,7 +701,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
-           ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
              Error_S(iP) )
   END DO
@@ -758,7 +758,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_NoGuess &
-           ( D(iP), S(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), &
              Error_S(iP) )
   END DO
@@ -833,7 +833,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
-           ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
              Error_P(iP) )
   END DO
@@ -904,7 +904,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
-           ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
              Error_P(iP) )
   END DO
@@ -959,7 +959,7 @@ PROGRAM wlComposeNewInversionTest
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_NoGuess &
-           ( D(iP), P(iP), Yp(iP), Ye(iP), Ymu(iP), &
+           ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), &
              Error_P(iP) )
   END DO
