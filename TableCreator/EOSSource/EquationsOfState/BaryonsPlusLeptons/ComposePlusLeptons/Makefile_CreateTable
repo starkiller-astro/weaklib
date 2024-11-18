@@ -1,0 +1,36 @@
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
+
+Weaklib_EOSTableCreator = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  wlCompOSEInterface.o \
+  $(COMMON_MODS_OBJ)
+  
+all: wlCreateEOSTable
+
+wlCreateEOSTable: \
+	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o
+	$(FLINKER) $(FLAGS) -o wlCreateEOSTable_$(MACHINE) \
+	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o \
+	$(LIBRARIES)
+
+wlCompOSEInterface.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlIOModuleHDF.o
+  
+wlCreateEquationOfStateTable.o: \
+  wlKindModule.o \
+  wlGridModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlCompOSEInterface.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlLeptonEOSModule.o
+  
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateEOSTable_$(MACHINE)

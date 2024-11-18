@@ -1,0 +1,10 @@
+COMMON_MODS_OBJ  = \
+  wlEosConstantsModule.o \
+  wlLeptonEOSModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlElectronEOS.o \
+  wlMuonEOS.o \
+  wlSoundSpeedModule.o \
+  wlEOSComponentsCombinedInversionModule.o \
+  wlEOSComponentsSeparateInversionModule.o
+  

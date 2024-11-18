@@ -1,5 +1,6 @@
 include $(WEAKLIB_DIR)/Distributions/Library/Makefile_Library_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/Makefile_EOSSource_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBaryLep_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_ObjectFiles
 
 weaklib = \

@@ -53,7 +53,7 @@ CONTAINS
 
     CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
     CALL WriteEOSMetadataHDF( EOSTable % MD, group_id )
-    !CALL CloseGroupHDF( group_id )
+    CALL CloseGroupHDF( group_id )
 
     CALL CloseFileHDF( file_id )
 
@@ -175,7 +175,7 @@ CONTAINS
     CALL WriteHDF( "TableLink", MD % TableLink(:), &
                               group_id, datasize1d )
 
-    CALL CloseGroupHDF( group_id )
+    !CALL CloseGroupHDF( group_id )
 
   END SUBROUTINE WriteEOSMetadataHDF
   

@@ -1,0 +1,43 @@
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep/Makefile_EosBaryLep_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep/Makefile_EosBaryLep_Dependencies
+
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep: \
+$(WEAKLIB_DIR)/TableCreator/SharedModules: \
+..
+
+wlComparison = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(SHAREDMODULES) \
+  $(COMMON_MODS_OBJ)
+
+all: wlCalculateSoundSpeed
+
+wlCalculateSoundSpeed: \
+	$(wlComparison) wlCalculateSoundSpeed.o
+	$(FLINKER) $(FLAGS) -o wlCalculateSoundSpeed_$(MACHINE) \
+	$(wlComparison) wlCalculateSoundSpeed.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCalculateSoundSpeed_$(MACHINE)
+
+wlCalculateSoundSpeed.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlElectronEOS.o \
+  wlExtPhysicalConstantsModule.o \
+  wlSoundSpeedModule.o
