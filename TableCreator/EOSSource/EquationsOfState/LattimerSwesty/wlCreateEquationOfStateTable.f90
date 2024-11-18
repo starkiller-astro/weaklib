@@ -7,12 +7,15 @@ PROGRAM wlCreateEquationOfStateTable
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
+  USE wlExtPhysicalConstantsModule, ONLY: kMeV, cvel
                   
                  
 
   implicit none
 
   INTEGER                        :: i, j, k, l, kmax, count
+  INTEGER                        :: count_LS_call_fails
+  INTEGER                        :: count_unphysical
   INTEGER, DIMENSION(3)          :: nPoints
   INTEGER                        :: nVariables
   TYPE(EquationOfStateTableType) :: EOSTable
@@ -27,6 +30,8 @@ PROGRAM wlCreateEquationOfStateTable
 
   REAL(8)                                       :: Ye_tmp
   REAL(8), DIMENSION(:), ALLOCATABLE            :: Ye_save
+ 
+  REAL(dp) :: total_fraction
 
   94 FORMAT ("rho=", es12.5,1x, "T=", es12.5,1x, "Ye=" , es12.5 )
   95 FORMAT ("Press=", es12.5,1x, "Entropy=", es12.5,1x, "Energy=" , es12.5 )
@@ -49,13 +54,14 @@ PROGRAM wlCreateEquationOfStateTable
 !  nPoints = (/161,93,25/) ! High Res in T only
 !  nPoints = (/161,47,25/) ! Standard C Res
 !  nPoints = (/161,47,49/) ! Hi Res in Ye
-  nPoints = (/161,108,49/) ! Standard D Res
+!  nPoints = (/161,108,49/) ! Standard D Res
+  nPoints = (/201,109,1/)
 !  nPoints = (/1,93,3/) ! one line
 !  nPoints = (/321,47,25/) ! High Res in Rho
 !  nPoints = (/321,93,49/) ! High Res
   nVariables = 15
   LScompress = '220'
-  LSFilePath = '../../../LS/Data'
+  LSFilePath = '../../../../Old/LS/Data/'
 
   CALL wlExtInitializeEOS( LSFilePath, LScompress )
 
@@ -76,8 +82,9 @@ PRINT*, "Allocate Independent Variable Units "
                                  'K                               ', &
                                  '                                '/) 
 
- EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.3, 0.06d0/)
- EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+ EOSTable % TS % minValues(1:3) =  (/1.0d07, 10.d0**9.3, 0.51d0/)
+ !EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.54d0/)
+ EOSTable % TS % maxValues(1:3) =  (/1.0d15, 1.0d12, 0.51d0/)
 
 
 !------------------------------------------------------------------------------
@@ -175,19 +182,17 @@ PRINT*, "Begin Associate"
   EOSFlag = "L" 
 
   count = 0
+  count_LS_call_fails = 0
+  count_unphysical    = 0
 
   EOSTable % DV % Repaired(:,:,:) = 0
 
   ALLOCATE( Ye_save( EOSTable % nPoints(3) ) ) 
 
- ! DO k = 1, EOSTable % nPoints(3) 
- ! Ye_save(k) = Ye(k)
-  !DO k = 1, kmax
-    !DO j = 1, EOSTable % nPoints(2)
+
       DO i = 1, EOSTable % nPoints(1) 
        DO k = EOSTable % nPoints(3), 1, -1
-    DO j = EOSTable % nPoints(2), 1, -1
-  !Ye_save(k) = Ye(k)
+        DO j = EOSTable % nPoints(2), 1, -1
           Ye_tmp = Ye(k)
           CALL wlGetFullEOS( Density(i), Temperature(j), Ye_tmp, EOSFlag, fail,      &
                        press(i,j,k), energ(i,j,k), entrop(i,j,k), chem_n(i,j,k),    &
@@ -195,43 +200,44 @@ PRINT*, "Begin Associate"
                        xn_alpha(i,j,k), xn_heavy(i,j,k), a_heavy(i,j,k),            &
                        z_heavy(i,j,k), be_heavy(i,j,k), thermalenergy(i,j,k), gamma1(i,j,k), i, j, k )   
 
-          IF ( energ(i,j,k) < 0. .or. entrop(i,j,k) < 0. .or. press(i,j,k) < 0.   &
-            .or. xn_prot(i,j,k) < 0. .or. xn_alpha(i,j,k) < 0. .or. xn_heavy(i,j,k) < 0. &
-            .or. a_heavy(i,j,k) < 0. .or. z_heavy(i,j,k) < 0. &
-            .or. xn_neut(i,j,k) < 0. .or. fail ) THEN
+          total_fraction = xn_prot(i,j,k) + xn_neut(i,j,k) + xn_alpha(i,j,k) + xn_heavy(i,j,k)
+
+          IF ( energ(i,j,k) < 0.0d0 .or. entrop(i,j,k) < 0.0d0 .or. press(i,j,k) < 0.0d0   &
+            .or. xn_prot(i,j,k) < 0.0d0 .or. xn_prot(i,j,k) > 1.0d0 &
+            .or. xn_neut(i,j,k) < 0.0d0 .or. xn_neut(i,j,k) > 1.0d0 &
+            .or. xn_alpha(i,j,k) < 0.0d0 .or. xn_alpha(i,j,k) > 1.0d0 &
+            .or. xn_heavy(i,j,k) < 0.0d0 .or. xn_heavy(i,j,k) > 1.0d0 &
+            .or. a_heavy(i,j,k) < 0.0d0 .or. z_heavy(i,j,k) < 0.0d0 &
+            .or. ABS(total_fraction-1.0d0) > 1d-10 &
+            .or. gamma1(i,j,k) < 0.0d0 ) THEN
+            write(*,'(A15,f5.2,A8,es12.3,A6,f5.2,A7,f5.2)') 'Total fraction ', &
+            total_fraction, ' rho = ', Density(i), ' T = ', Temperature(j)*kMeV, &
+            ' Ye = ', Ye_tmp
+            write(*,'(A8,es12.3)') 'energ = ', energ(i,j,k) 
+            write(*,'(A6,es12.3)') 'ent = ', entrop(i,j,k) 
+            write(*,'(A8,es12.3)') 'press = ', press(i,j,k) 
+            write(*,'(A7,es12.3)') 'xn_n = ', xn_neut(i,j,k) 
+            write(*,'(A7,es12.3)') 'xn_p = ', xn_prot(i,j,k) 
+            write(*,'(A7,es12.3)') 'xn_a = ', xn_alpha(i,j,k) 
+            write(*,'(A7,es12.3)') 'xn_h = ', xn_heavy(i,j,k) 
+            write(*,'(A5,es12.3)') 'ah = ', a_heavy(i,j,k) 
+            write(*,'(A5,es12.3)') 'zh = ', z_heavy(i,j,k) 
+            write(*,'(A9,es12.3)') 'Gamma1 = ', gamma1(i,j,k) 
+            count_unphysical = count_unphysical + 1
             EOSTable % DV % Repaired(i,j,k) = -1
-            count = count + 1
+            !count = count + 1
           END IF
+          IF ( fail ) THEN 
+            EOSTable % DV % Repaired(i,j,k) = -1
+            count_LS_call_fails = count_LS_call_fails + 1
+          ENDIF
                
       END DO
     END DO
   END DO
 
-  !DO k = kmax, EOSTable % nPoints(3) 
-  !  Ye(k) = Ye_save(k)
-  !END DO
-
-!DO k = kmax+1, EOSTable % nPoints(3) 
-!  DO j = 1, EOSTable % nPoints(2)
-!    DO i = 1, EOSTable % nPoints(1) 
-!      press(i,j,k) = press(i,j,kmax)
-!      energ(i,j,k) = energ(i,j,kmax)
-!      entrop(i,j,k) = entrop(i,j,kmax) 
-!      chem_n(i,j,k) = chem_n(i,j,kmax)
-!      chem_p(i,j,k) = chem_p(i,j,kmax) 
-!      chem_e(i,j,k) = chem_e(i,j,kmax) 
-!      xn_neut(i,j,k) = xn_neut(i,j,kmax) 
-!      xn_prot(i,j,k) = xn_prot(i,j,kmax) 
-!      xn_alpha(i,j,k) = xn_alpha(i,j,kmax)
-!      xn_heavy(i,j,k) = xn_heavy(i,j,kmax)
-!      a_heavy(i,j,k) = a_heavy(i,j,kmax) 
-!      z_heavy(i,j,k) = z_heavy(i,j,kmax)
-!      be_heavy(i,j,k) = be_heavy(i,j,kmax)
-!      thermalenergy(i,j,k) = thermalenergy(i,j,kmax)
-!      gamma1(i,j,k) = gamma1(i,j,kmax)
-
-!write(*,*) "Ye grid post",Ye
-WRITE (*,*) count, " fails out of " , nPoints(1)*nPoints(2)*nPoints(3) 
+WRITE (*,*) count_LS_call_fails, " fails from LS call out of " , nPoints(1)*nPoints(2)*nPoints(3) 
+WRITE (*,*) count_unphysical, " unphysical output out of " , nPoints(1)*nPoints(2)*nPoints(3) 
 
   END ASSOCIATE
 

@@ -6,7 +6,7 @@
 
 MODULE prb_cntl_module
 
-USE kind_module
+USE wlKindModule
 
 !-----------------------------------------------------------------------
 !
@@ -261,10 +261,10 @@ INTEGER                                    :: iaence
 INTEGER                                    :: iaenca
 INTEGER                                    :: iaenct
 
-REAL(double)                               :: rhoaefnp
-REAL(double)                               :: edmpe
-REAL(double)                               :: edmpa
-REAL(double)                               :: roaenct
+REAL(dp)                               :: rhoaefnp
+REAL(dp)                               :: edmpe
+REAL(dp)                               :: edmpa
+REAL(dp)                               :: roaenct
 
 !-----------------------------------------------------------------------
 !  Weak magnetism correction for charged current interactions
@@ -373,8 +373,8 @@ INTEGER                                    :: inc_wm
 
 INTEGER                                    :: nes
 
-REAL(double)                               :: rhonesmn
-REAL(double)                               :: rhonesmx
+REAL(dp)                               :: rhonesmn
+REAL(dp)                               :: rhonesmx
 
 !-----------------------------------------------------------------------
 !  Neutrino-positron scattering controls
@@ -393,8 +393,8 @@ REAL(double)                               :: rhonesmx
 
 INTEGER                                    :: nps
 
-REAL(double)                               :: rhonpsmn
-REAL(double)                               :: rhonpsmx
+REAL(dp)                               :: rhonpsmn
+REAL(dp)                               :: rhonpsmx
 
 !-----------------------------------------------------------------------
 !  Neutrino-nucleon elastic scattering controls
@@ -416,8 +416,8 @@ REAL(double)                               :: rhonpsmx
 
 INTEGER                                    :: isctn
 
-REAL(double)                               :: rhosctnmn
-REAL(double)                               :: rhosctnmx
+REAL(dp)                               :: rhosctnmn
+REAL(dp)                               :: rhosctnmx
 
 !-----------------------------------------------------------------------
 !  Neutrino-nucleus inelastic scattering controls
@@ -442,10 +442,10 @@ REAL(double)                               :: rhosctnmx
 
 INTEGER                                    :: isctnA
 
-REAL(double)                               :: rhosctnAemn
-REAL(double)                               :: rhosctnAemx
-REAL(double)                               :: rhosctnAtmn
-REAL(double)                               :: rhosctnAtmx
+REAL(dp)                               :: rhosctnAemn
+REAL(dp)                               :: rhosctnAemx
+REAL(dp)                               :: rhosctnAtmn
+REAL(dp)                               :: rhosctnAtmx
 
 !-----------------------------------------------------------------------
 !  Electron-positron pair annihilation controls
@@ -470,10 +470,10 @@ REAL(double)                               :: rhosctnAtmx
 
 INTEGER                                    :: ipair
 
-REAL(double)                               :: rhopairemn
-REAL(double)                               :: rhopairemx
-REAL(double)                               :: rhopairtmn
-REAL(double)                               :: rhopairtmx
+REAL(dp)                               :: rhopairemn
+REAL(dp)                               :: rhopairemx
+REAL(dp)                               :: rhopairtmn
+REAL(dp)                               :: rhopairtmx
 
 !-----------------------------------------------------------------------
 !  Bremsstrahlung pair annihilation controls
@@ -492,8 +492,8 @@ REAL(double)                               :: rhopairtmx
 
 INTEGER                                    :: ibrem
 
-REAL(double)                               :: rhobrememn
-REAL(double)                               :: rhobrememx
+REAL(dp)                               :: rhobrememn
+REAL(dp)                               :: rhobrememx
 
 !-----------------------------------------------------------------------
 !  NSE flashing and deflashing controls
@@ -505,8 +505,8 @@ REAL(double)                               :: rhobrememx
 !  deflash_pre_bounce : deflashing permitted before bounce
 !-----------------------------------------------------------------------
 
-REAL(double)                               :: tnse
-REAL(double)                               :: tdnse
+REAL(dp)                               :: tnse
+REAL(dp)                               :: tdnse
 
 LOGICAL                                    :: deflash_pre_bounce
 
@@ -520,8 +520,8 @@ LOGICAL                                    :: deflash_pre_bounce
 !   is to be applied [milli-seconds]
 !-----------------------------------------------------------------------
 
-REAL(double)                               :: t_wndw_grpot
-REAL(double)                               :: t_apply_gr_ave
+REAL(dp)                               :: t_wndw_grpot
+REAL(dp)                               :: t_apply_gr_ave
 
 !-----------------------------------------------------------------------
 !  ave_pole: pole average width

@@ -42,12 +42,12 @@ SUBROUTINE w_lt_wp_e_lt_wp( xl, xu, eta, h0i, h0ii, h1i, h1ii )
 !      none
 !
 !    Modules:
-!      kind_module, numerical_module
+!      wlKindModule, numerical_module
 !      nes_module
 !
 !-----------------------------------------------------------------------
 
-USE kind_module
+USE wlKindModule
 USE numerical_module, ONLY: zero, half, one
 
 USE nes_module
@@ -59,18 +59,18 @@ SAVE
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(in)      :: xl            ! lower limit of integration
-REAL(KIND=double), INTENT(in)      :: xu            ! upper limit of integration
-REAL(KIND=double), INTENT(in)      :: eta           ! (electron chemical potential - mc2)/kt
+REAL(dp), INTENT(in)      :: xl            ! lower limit of integration
+REAL(dp), INTENT(in)      :: xu            ! upper limit of integration
+REAL(dp), INTENT(in)      :: eta           ! (electron chemical potential - mc2)/kt
 
 !-----------------------------------------------------------------------
 !        Input-Output variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(inout)   :: h0i           ! partial integral contributed by this subroutine
-REAL(KIND=double), INTENT(inout)   :: h0ii          ! partial integral contributed by this subroutine
-REAL(KIND=double), INTENT(inout)   :: h1i           ! partial integral contributed by this subroutine
-REAL(KIND=double), INTENT(inout)   :: h1ii          ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: h0i           ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: h0ii          ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: h1i           ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: h1ii          ! partial integral contributed by this subroutine
 
 !-----------------------------------------------------------------------
 !        Local variables
@@ -81,33 +81,33 @@ LOGICAL                            :: first = .true.
 INTEGER                            :: i             ! summation index
 INTEGER, PARAMETER                 :: nleg = 24     ! number of points of Gauss-Lagendre quadrature
 
-REAL(KIND=double), DIMENSION(nleg) :: xe          ! points of Gauss-Lagendre quadrature
-REAL(KIND=double), DIMENSION(nleg) :: wte         ! weights of Gauss-Lagendre quadrature
+REAL(dp), DIMENSION(nleg) :: xe          ! points of Gauss-Lagendre quadrature
+REAL(dp), DIMENSION(nleg) :: wte         ! weights of Gauss-Lagendre quadrature
 
-REAL(KIND=double)                  :: su0i          ! partial integral
-REAL(KIND=double)                  :: su0ii         ! partial integral
-REAL(KIND=double)                  :: su1i          ! partial integral
-REAL(KIND=double)                  :: su1ii         ! partial integral
+REAL(dp)                  :: su0i          ! partial integral
+REAL(dp)                  :: su0ii         ! partial integral
+REAL(dp)                  :: su1i          ! partial integral
+REAL(dp)                  :: su1ii         ! partial integral
 
-REAL(KIND=double)                  :: e_mid         ! midpoint energy
-REAL(KIND=double)                  :: e_del         ! half the energy width
-REAL(KIND=double)                  :: e_var         ! scaled integration point
+REAL(dp)                  :: e_mid         ! midpoint energy
+REAL(dp)                  :: e_del         ! half the energy width
+REAL(dp)                  :: e_var         ! scaled integration point
 
-REAL(KIND=double)                  :: h0            ! integrand variable
-REAL(KIND=double)                  :: hp            ! integrand variable
-REAL(KIND=double)                  :: ga0           ! integrand variable
-REAL(KIND=double)                  :: gp0           ! integrand variable
-REAL(KIND=double)                  :: ga1           ! integrand variable
-REAL(KIND=double)                  :: gp1           ! integrand variable
-REAL(KIND=double)                  :: res           ! integrand variable
-REAL(KIND=double)                  :: rep           ! integrand variable
-REAL(KIND=double)                  :: ffc           ! integrand variable
-REAL(KIND=double)                  :: ep            ! e + w - wp
-REAL(KIND=double)                  :: xme           ! e - eta
-REAL(KIND=double)                  :: emxd          ! eta - ep
+REAL(dp)                  :: h0            ! integrand variable
+REAL(dp)                  :: hp            ! integrand variable
+REAL(dp)                  :: ga0           ! integrand variable
+REAL(dp)                  :: gp0           ! integrand variable
+REAL(dp)                  :: ga1           ! integrand variable
+REAL(dp)                  :: gp1           ! integrand variable
+REAL(dp)                  :: res           ! integrand variable
+REAL(dp)                  :: rep           ! integrand variable
+REAL(dp)                  :: ffc           ! integrand variable
+REAL(dp)                  :: ep            ! e + w - wp
+REAL(dp)                  :: xme           ! e - eta
+REAL(dp)                  :: emxd          ! eta - ep
 
-REAL(KIND=double)                  :: fexp          ! exponential
-REAL(KIND=double)                  :: ff            ! product of fermi distributions
+REAL(dp)                  :: fexp          ! exponential
+REAL(dp)                  :: ff            ! product of fermi distributions
 
 EXTERNAL fexp
 EXTERNAL ff

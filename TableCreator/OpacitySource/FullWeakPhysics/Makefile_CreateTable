@@ -1,14 +1,34 @@
-include ../../../Build/Makefile_Build
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
 include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Fischer/Makefile_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Fischer/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Old/LS/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Old/BCK/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Old/EOSInterface/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
 
 VPATH += \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Fischer: \
+$(WEAKLIB_DIR)/TableCreator/Old/LS: \
+$(WEAKLIB_DIR)/TableCreator/Old/BCK: \
+$(WEAKLIB_DIR)/TableCreator/Old/EOSInterface: \
 ..
 
 Weaklib_TableCreator = \
-  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES) $(OPACITYFULLWEAK) $(CHIMERA)
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(WL_OPACITYSOURCE) \
+  $(SHAREDMODULES) \
+  $(OPACITYFULLWEAK) \
+  $(CHIMERA) \
+  $(EOS_MODS) \
+  $(EOS_OBJ) \
+  $(FULL_KINEMATICS)
 
 all: wlCreateOpacityTable 
 
@@ -16,7 +36,7 @@ wlCreateOpacityTable: \
 	$(Weaklib_TableCreator) wlCreateOpacityTable.o
 	$(FLINKER) $(FLAGS) -o wlCreateOpacityTable_$(MACHINE) \
 	$(Weaklib_TableCreator) wlCreateOpacityTable.o \
-	$(LIBRARIES) 
+	$(LIBRARIES)
 
 clean:
 	rm -f *.o *.mod *.ld

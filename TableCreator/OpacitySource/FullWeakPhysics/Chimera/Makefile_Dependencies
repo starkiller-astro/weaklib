@@ -1,0 +1,182 @@
+abem_module_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  polylog_module_weaklib.o
+
+abemfrnp.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+abemfrnpetanp.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+abemnc_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+abemrgn_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+abem_cal_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o
+
+abem_nuclei_Bruenn85_FFN_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+abem_nucleons_isoenergetic_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o
+
+abem_nucleons_Reddy_et_al_1998_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  abem_module_weaklib.o
+
+cc_weak_mag_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+ec_table_module.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+etaxx.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+ff.o: \
+  wlKindModule.o \
+  numerical_module.o
+
+glaquad.o: \
+  wlKindModule.o
+
+gquad.o: \
+  wlKindModule.o
+
+ion_ion_corrections_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+load_polylog_weaklib.o: \
+  polylog_module_weaklib.o
+
+nes_module.o: \
+  wlKindModule.o
+
+nc_many_body_corrections_weaklib.o: \
+  wlKindModule.o
+
+nc_weak_mag_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o
+
+numerical_module.o: \
+  wlKindModule.o
+
+paircal_weaklib.o: \
+  nes_module.o \
+  pair_module.o
+
+pair_module.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o
+
+physcnst_module.o: \
+  wlKindModule.o \
+  numerical_module.o 
+
+polylog_module_weaklib.o: \
+  wlKindModule.o
+
+PRB_CNTL_MODULE.o: \
+  wlKindModule.o
+
+pr_w_gt_wp_e_lt_wp.o: \
+  pair_module.o
+
+pr_w_gt_wp_lt_e_lt_w.o: \
+  pair_module.o
+
+pr_w_gt_wp_w_lt_e.o: \
+  pair_module.o
+
+pr_w_lt_wp_e_lt_w.o: \
+  pair_module.o
+
+pr_w_lt_wp_wp_lt_e.o: \
+  pair_module.o
+
+pr_w_lt_wp_e_lt_wp.o: \
+  pair_module.o
+
+scatergn_weaklib.o: \
+  pair_module.o
+
+scatical_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o
+
+sctlgndv_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o
+
+w_gt_wp_e_lt_wp.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o
+
+w_gt_wp_e_gt_wp.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o
+
+w_lt_wp_e_gt_wp.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o
+
+w_gt_wp_e_to_inf.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o
+
+w_lt_wp_e_lt_wp.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o
+
+w_lt_wp_e_to_inf.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  nes_module.o

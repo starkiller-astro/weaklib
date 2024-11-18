@@ -1,0 +1,20 @@
+EL_EOS_MODULE.o: \
+  wlKindModule.o \
+  numerical_module.o
+
+e_p_eos.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlExtPhysicalConstantsModule.o
+
+LattimerSwesty.o: \
+  EL_EOS_MODULE.o \
+  EOS_M4C_MODULE.o
+
+loadmx.o: \
+  EOS_M4C_MODULE.o \
+  MAXWEL_MODULE.o
+
+MAXWEL_MODULE.o: \
+  wlKindModule.o \
+  numerical_module.o

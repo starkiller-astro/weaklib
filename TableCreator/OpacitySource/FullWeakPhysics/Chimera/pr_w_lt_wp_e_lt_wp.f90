@@ -40,12 +40,12 @@ SUBROUTINE pr_w_lt_wp_e_lt_wp( xl, xu, eta, beta, j0i, j0ii, j1i, j1ii )
 !      none
 !
 !    Modules:
-!  kind_module, numerical_module
+!  wlKindModule, numerical_module
 !  nes_module
 !
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY: double
+USE wlKindModule, ONLY: dp
 USE numerical_module, ONLY: zero, half, one
 
 USE nes_module
@@ -57,19 +57,19 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(in)      :: xl            ! lower limit of integration
-REAL(KIND=double), INTENT(in)      :: xu            ! upper limit of integration
-REAL(KIND=double), INTENT(in)      :: eta           ! (electron chemical potential - mc2)/kt
-REAL(KIND=double), INTENT(in)      :: beta          ! 1/kt
+REAL(dp), INTENT(in)      :: xl            ! lower limit of integration
+REAL(dp), INTENT(in)      :: xu            ! upper limit of integration
+REAL(dp), INTENT(in)      :: eta           ! (electron chemical potential - mc2)/kt
+REAL(dp), INTENT(in)      :: beta          ! 1/kt
 
 !-----------------------------------------------------------------------
 !        Input-Output variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(inout)   :: j0i           ! partial integral contributed by this subroutine
-REAL(KIND=double), INTENT(inout)   :: j0ii          ! partial integral contributed by this subroutine
-REAL(KIND=double), INTENT(inout)   :: j1i           ! partial integral contributed by this subroutine
-REAL(KIND=double), INTENT(inout)   :: j1ii          ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: j0i           ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: j0ii          ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: j1i           ! partial integral contributed by this subroutine
+REAL(dp), INTENT(inout)   :: j1ii          ! partial integral contributed by this subroutine
 
 !-----------------------------------------------------------------------
 !        Local variables
@@ -77,25 +77,25 @@ REAL(KIND=double), INTENT(inout)   :: j1ii          ! partial integral contribut
 
 INTEGER                            :: i             ! summation index
 
-REAL(KIND=double)                  :: h0i           ! integrand of zero moment of pair function i
-REAL(KIND=double)                  :: h0ii          ! integrand of zero moment of pair function ii
+REAL(dp)                  :: h0i           ! integrand of zero moment of pair function i
+REAL(dp)                  :: h0ii          ! integrand of zero moment of pair function ii
 
-REAL(KIND=double)                  :: su0i          ! partial integral
-REAL(KIND=double)                  :: su0ii         ! partial integral
-REAL(KIND=double)                  :: su1i          ! partial integral
-REAL(KIND=double)                  :: su1ii         ! partial integral
+REAL(dp)                  :: su0i          ! partial integral
+REAL(dp)                  :: su0ii         ! partial integral
+REAL(dp)                  :: su1i          ! partial integral
+REAL(dp)                  :: su1ii         ! partial integral
 
-REAL(KIND=double)                  :: e_mid         ! midpoint energy
-REAL(KIND=double)                  :: e_del         ! half the energy width
-REAL(KIND=double)                  :: e_var         ! scaled integration point
+REAL(dp)                  :: e_mid         ! midpoint energy
+REAL(dp)                  :: e_del         ! half the energy width
+REAL(dp)                  :: e_var         ! scaled integration point
 
-REAL(KIND=double)                  :: arg1          ! argument of an exponential
-REAL(KIND=double)                  :: arg2          ! argument of an exponential
-REAL(KIND=double)                  :: exp1          ! value of an exponential
-REAL(KIND=double)                  :: exp2          ! value of an exponential
-REAL(KIND=double)                  :: eblock        ! blocking factor for neutrino-antineutrino annihilation
+REAL(dp)                  :: arg1          ! argument of an exponential
+REAL(dp)                  :: arg2          ! argument of an exponential
+REAL(dp)                  :: exp1          ! value of an exponential
+REAL(dp)                  :: exp2          ! value of an exponential
+REAL(dp)                  :: eblock        ! blocking factor for neutrino-antineutrino annihilation
 
-REAL(KIND=double)                  :: fexp          ! exponential
+REAL(dp)                  :: fexp          ! exponential
 
 EXTERNAL fexp
 

@@ -38,7 +38,7 @@ SUBROUTINE sctlgndv_weaklib &
 !
 !-----------------------------------------------------------------------
 
-USE kind_module
+USE wlKindModule
 USE numerical_module, ONLY: zero, half, one
 
 USE nes_module
@@ -49,31 +49,31 @@ IMPLICIT none
 !        Input variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(in)    :: e_in          !(in beam neutrino energy)/kt
-REAL(double), INTENT(in)    :: e_out         !(out beam neutrino energy)/kt
+REAL(dp), INTENT(in)    :: e_in          !(in beam neutrino energy)/kt
+REAL(dp), INTENT(in)    :: e_out         !(out beam neutrino energy)/kt
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(double), INTENT(out)   :: hot0i         ! zero moment of outgoing scattering function type i
-REAL(double), INTENT(out)   :: hot0ii        ! zero moment of outgoing scattering function type ii
-REAL(double), INTENT(out)   :: hot1i         ! first moment of outgoing scattering function type i
-REAL(double), INTENT(out)   :: hot1ii        ! first moment of outgoing scattering function type ii
+REAL(dp), INTENT(out)   :: hot0i         ! zero moment of outgoing scattering function type i
+REAL(dp), INTENT(out)   :: hot0ii        ! zero moment of outgoing scattering function type ii
+REAL(dp), INTENT(out)   :: hot1i         ! first moment of outgoing scattering function type i
+REAL(dp), INTENT(out)   :: hot1ii        ! first moment of outgoing scattering function type ii
 
 !-----------------------------------------------------------------------
 !        Local variables
 !-----------------------------------------------------------------------
 
-REAL(double)                :: h0i           ! partial integral
-REAL(double)                :: h0ii          ! partial integral
-REAL(double)                :: h1i           ! partial integral
-REAL(double)                :: h1ii          ! partial integral
+REAL(dp)                :: h0i           ! partial integral
+REAL(dp)                :: h0ii          ! partial integral
+REAL(dp)                :: h1i           ! partial integral
+REAL(dp)                :: h1ii          ! partial integral
 
-REAL(double)                :: eta           ! (electron chemical potential)/kT
-REAL(double)                :: etap          ! eta - w + wp
-REAL(double)                :: exd           ! in-scattering out-scattering ratio
-REAL(double), EXTERNAL      :: fexp          ! exponential
+REAL(dp)                :: eta           ! (electron chemical potential)/kT
+REAL(dp)                :: etap          ! eta - w + wp
+REAL(dp)                :: exd           ! in-scattering out-scattering ratio
+REAL(dp), EXTERNAL      :: fexp          ! exponential
 
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------

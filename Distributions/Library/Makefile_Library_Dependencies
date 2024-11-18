@@ -26,4 +26,4 @@ wlIOModuleHDF.o: \
   wlKindModule.o \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
-  wlIOModuleHDF.f90
+  wlIOModuleHDF.F90

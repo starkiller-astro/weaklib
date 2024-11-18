@@ -1,6 +1,8 @@
 SUBROUTINE abemrgn_weaklib &
        ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-         cmpe, absor, emit, ye, nez )
+         cmpe, absor, emit, ye, nez, & 
+         EmAb_np_isoenergetic, EmAb_nuclei_EC_FFN, &
+         EmAb_np_non_isoenergetic, EmAb_np_weak_magnetism )
 !--------------------------------------------------------------------
 !    Author:       R. Chu, Dept. Phys. & Astronomy
 !                  U. Tennesee, Knoxville
@@ -27,6 +29,7 @@ SUBROUTINE abemrgn_weaklib &
 !  e_in          : neutrino energy [MeV]
 !  rho           : matter density [g cm^{-3}]
 !  t             : matter temperature [K]
+!  ye            : electron fraction
 !  xneut         : free neutron mass fraction
 !  xprot         : free proton mass fraction
 !  xh            : heavy nucleus mass fraction
@@ -41,13 +44,18 @@ SUBROUTINE abemrgn_weaklib &
 !  ye            : electron fraction
 !  nez           : size of neutrino energy array e_in
 !
+!  EmAb_np_isoenergetic : Include isoenergetic EmAb on free nucleons using Bruenn85 formalism
+!  EmAb_nuclei_EC_FFN : Include EmAb on nuclei using FFN formalism
+!  EmAb_np_non_isoenergetic : Include corrections to nucleons EmAb due to Reddy98
+!  EmAb_np_weak_magnetism : Include weak magnetism corrections to EmAb on free nucleons
+!
 !    Output arguments:
 !  absor         : absorption inverse mean free path (/cm)
-!  emit          : emission inverse mean free path (/cm)! 
+!  emit          : emission inverse mean free path (/cm)!
 !--------------------------------------------------------------------
 
-USE kind_module, ONLY: &
-      double
+USE wlKindModule, ONLY: &
+      dp
 USE numerical_module, ONLY: &
       zero, one, epsilon
 USE physcnst_module, ONLY: &
@@ -64,54 +72,70 @@ IMPLICIT NONE
 INTEGER, INTENT(in)          :: n       ! neutrino flavor index
 INTEGER, INTENT(in)          :: nez     ! number of energy groups
 
-REAL(double), DIMENSION(nez), INTENT(in) :: e_in 
+REAL(dp), DIMENSION(nez), INTENT(in) :: e_in 
                       ! zone centered incoming neutrino energy [MeV]
-REAL(double), INTENT(in)    :: rho      ! density (g/cm^3)
-REAL(double), INTENT(in)    :: t        ! temperature [K]
-REAL(double), INTENT(in)    :: ye       ! electron fraction
-REAL(double), INTENT(in)    :: xneut    ! free neutron mass fraction
-REAL(double), INTENT(in)    :: xprot    ! free proton mass fraction
-REAL(double), INTENT(in)    :: xh       ! heavy nuclei mass fraction
-REAL(double), INTENT(in)    :: ah       ! heavy nuclei mass number
-REAL(double), INTENT(in)    :: zh       ! heavy nuclei charge number
-REAL(double), INTENT(in)    :: cmpn     ! neutron chemical porential
-REAL(double), INTENT(in)    :: cmpp     ! proton chemical porential
-REAL(double), INTENT(in)    :: cmpe     ! electron chemical porential
+REAL(dp), INTENT(in)    :: rho      ! density (g/cm^3)
+REAL(dp), INTENT(in)    :: t        ! temperature [K]
+REAL(dp), INTENT(in)    :: ye       ! electron fraction
+REAL(dp), INTENT(in)    :: xneut    ! free neutron mass fraction
+REAL(dp), INTENT(in)    :: xprot    ! free proton mass fraction
+REAL(dp), INTENT(in)    :: xh       ! heavy nuclei mass fraction
+REAL(dp), INTENT(in)    :: ah       ! heavy nuclei mass number
+REAL(dp), INTENT(in)    :: zh       ! heavy nuclei charge number
+REAL(dp), INTENT(in)    :: cmpn     ! neutron chemical porential
+REAL(dp), INTENT(in)    :: cmpp     ! proton chemical porential
+REAL(dp), INTENT(in)    :: cmpe     ! electron chemical porential
+
+INTEGER, INTENT(in)         :: EmAb_np_isoenergetic   ! Flag to calculate isoenergetic EmAb on free nucleons 
+                                                            ! using Bruenn85
+INTEGER, INTENT(in)         :: EmAb_nuclei_EC_FFN              ! Flag to calculate EmAb on nuclei using FFN formalism
+INTEGER, INTENT(in)         :: EmAb_np_non_isoenergetic         ! Flag to recoil, nucleon final-state blocking, 
+                                                            !and special relativity corrections
+INTEGER, INTENT(in)         :: EmAb_np_weak_magnetism ! Flag to include weak_magnetism corrections
 
 !--------------------------------------------------------------------
 !        Output variables.
 !--------------------------------------------------------------------
 
-REAL(double), DIMENSION(nez), INTENT(out) :: absor 
+REAL(dp), DIMENSION(nez), INTENT(out) :: absor 
                       ! inverse mean free path for absorption
-REAL(double), DIMENSION(nez), INTENT(out) :: emit 
+REAL(dp), DIMENSION(nez), INTENT(out) :: emit 
                       ! inverse mean free path for emission 
 
 !--------------------------------------------------------------------
 !        Local variables
 !--------------------------------------------------------------------
-REAL(double), DIMENSION(nez)  :: absrnp, absrnc, emisnp, emisnc
+REAL(dp), DIMENSION(nez)  :: ab_nucleons, ab_nuclei, em_nucleons, em_nuclei
 
 !--------------------------------------------------------------------
 !  n-neutrino - free nucleon absorption and emission inverse mean
 !   free paths (/cm)
 !--------------------------------------------------------------------
 
-  CALL abem_cal_weaklib &
-        ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
-          cmpe, absrnp, emisnp, nez )
+  IF(EmAb_np_isoenergetic .gt. 0) THEN
+
+    CALL abem_cal_weaklib &
+         ( n, e_in, rho, t, xneut, xprot, xh, ah, zh, cmpn, cmpp, &
+           cmpe, ab_nucleons, em_nucleons, nez, EmAb_np_non_isoenergetic, &
+           EmAb_np_weak_magnetism )
+
+  ENDIF
 
 !--------------------------------------------------------------------
 !  n-neutrino - nuclei absorption and emission inverse mean free
 !   paths (/cm).
 !--------------------------------------------------------------------
 
-  CALL abemnc_weaklib &
-        ( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp,  &
-          cmpe, absrnc, emisnc )
+  IF(EmAb_nuclei_EC_FFN .gt. 0) THEN
 
-  absor = absrnp + absrnc
-  emit  = emisnp + emisnc
+    CALL abemnc_weaklib &
+         ( n, nez, e_in, rho, t, xh, ah, zh, cmpn, cmpp,  &
+           cmpe, ab_nuclei, em_nuclei )
+
+  ENDIF
+
+  absor = ab_nucleons + ab_nuclei
+  emit  = em_nucleons + em_nuclei
 
 RETURN
 

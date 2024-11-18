@@ -472,9 +472,9 @@ CONTAINS
       END DO
 
     CASE( 2 )
-      DO k = 1, NYe
+      DO k = 2, NYe - 1
         DO j = 2, NT - 1 
-          DO i = 1, Nrho
+          DO i = 2, Nrho - 1
 
             IF ( ( ( Table(i, j+1, k) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j-1, k) ) ) < 0.) THEN 
@@ -489,8 +489,8 @@ CONTAINS
 
    CASE( 3 )
       DO k = 2, NYe - 1
-        DO j = 1, NT
-          DO i = 1, Nrho
+        DO j = 2, NT - 1
+          DO i = 2, Nrho - 1
 
             IF ( ( ( Table(i, j, k+1) - Table(i, j, k) ) * &
                  ( Table(i, j, k) - Table(i, j, k-1) ) ) < 0. ) &

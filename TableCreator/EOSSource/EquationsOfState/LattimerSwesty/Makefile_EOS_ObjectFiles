@@ -1,0 +1,8 @@
+EOSInit_OBJ = initferm.o loadmx.o wlExtInitializeEOS.o
+
+TABLE_MODS  = wlThermoStateModule.o wlGridModule.o wlDependentVariablesModule.o wlEquationOfStateTableModule.o wlIOModuleHDF.o wlEOSIOModuleHDF.o
+EOS_MODS  = EL_EOS_MODULE.o EOS_M4C_MODULE.o MAXWEL_MODULE.o EOS_BCK_MODULE.o
+#EOS_OBJ  = LattimerSwesty.o e_p_eos.o BCK_EoS.o glaquad.o net.o
+EOS_OBJ  = LattimerSwesty.o e_p_eos.o BCK_EoS.o net.o
+
+Interface_OBJ = wlExtEOSWrapperModule.o

@@ -138,16 +138,38 @@ test: $(Opacity_OBJ)
 #===================
 
 #---------------------------------
-glaquad.o: wlKindModule.o
-GaussianQuadrature.o: wlKindModule.o
-wlEnergyGridModule.o: wlKindModule.o
-wlGridModule.o: wlKindModule.o
-wlThermoStateModule.o: wlKindModule.o
-wlDependentVariablesModule.o: wlKindModule.o
-wlExtNumericalModule.o: wlKindModule.o
-wlExtPhysicalConstantsModule.o: wlKindModule.o wlExtNumericalModule.o
-B85.o: wlKindModule.o wlExtPhysicalConstantsModule.o fexp.o
-wlOpacityFieldsModule.o: wlKindModule.o
+glaquad.o: \
+  wlKindModule.o
+
+GaussianQuadrature.o: \
+  wlKindModule.o
+
+wlEnergyGridModule.o: \
+  wlKindModule.o
+
+wlGridModule.o: \
+  wlKindModule.o
+
+wlThermoStateModule.o: \
+  wlKindModule.o
+
+wlDependentVariablesModule.o: \
+  wlKindModule.o
+
+wlExtNumericalModule.o: \
+  wlKindModule.o
+
+wlExtPhysicalConstantsModule.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o
+
+B85.o: \
+  wlKindModule.o \
+  wlExtPhysicalConstantsModule.o \
+  fexp.o
+
+wlOpacityFieldsModule.o: \
+  wlKindModule.o
 
 $(EOS_MODS): $(BASE_MODS)
 $(Grey_MODS):$(BASE_MODS) $(PHY_MODS)

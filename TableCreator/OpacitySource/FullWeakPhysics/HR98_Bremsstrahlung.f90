@@ -5,7 +5,7 @@
 !passing rho*xn, rho*xp, and rho*SQRT( ABS( xn * xp ))
 !in separate calls and adding the contributions to the
 !overall kernel
-!calculates s_a, which is 1/2 \Phi^a_0_Brem, in subroutine bremcal_weaklib
+!calculates S_sigma(eps+eps')
 !calls two subroutines: s_brem and g_brem
 !https://iopscience.iop.org/article/10.1086/306303
 !https://wwwth.mpp.mpg.de/members/raffelt/mypapers/199804.pdf
@@ -21,21 +21,24 @@ IMPLICIT NONE
 
 CONTAINS
 
-subroutine bremcal_weaklib( nez, egrid, rho_x, t, s_a )
+subroutine bremcal_weaklib( nez, egrid, rho_x, t, S_sigma )
 
 INTEGER,                  INTENT(in) :: nez       ! number of neutrino energies
 REAL(dp), DIMENSION(nez), INTENT(in) :: egrid     ! neutrino energy grid
 
 REAL(dp), INTENT(in)       :: rho_x                 ! density [g cm^{-3}]
 REAL(dp), INTENT(in)       :: t                   ! temperature [K]
-!REAL(dp), INTENT(in)       :: xn                  ! free neutron mass fraction
-!REAL(dp), INTENT(in)       :: xp                  ! free proton mass fraction
 
 !-----------------------------------------------------------------------
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: s_a  ! differential annihilation kernel, 1/2 \Phi^a_0
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: S_sigma  ! full spin-density 
+!autocorrelation function
+!in units [1/MeV]
+!user codes will need to generate annihilation and production
+!opacity kernels for Brem from S_sigma(eps+eps') by inserting 
+!appropriate units (Phi_0_Ann is related to S_sigma(eps+eps'))
 
 !-----------------------------------------------------------------------
 !        Local variables
@@ -45,10 +48,13 @@ INTEGER               :: i                    ! index to loop over nn, pp, and n
 
 REAL(dp), PARAMETER   :: tthird   = 2.d0/3.d0
 
-REAL(dp), PARAMETER   :: C_AG_FnB = 3.79d+4/cvel             ! Raffelt constant
-REAL(dp), PARAMETER   :: conv1    = 1.d0 / ( 2.d0 * pi )**3  ! 1/(hc)**3 in natural units
-REAL(dp), PARAMETER   :: conv2    = 3.d0 * 4.d0 * pi               ! integrates ( 3 - costh ) over solid angle
-REAL(dp), PARAMETER   :: coef     = conv1 * conv2 * C_AG_FnB
+!REAL(dp), PARAMETER   :: C_AG_FnB = 3.79d+4/cvel             ! Raffelt constant
+!REAL(dp), PARAMETER   :: conv1    = 1.d0 / ( 2.d0 * pi )**3  ! 1/(hc)**3 in natural units
+!REAL(dp), PARAMETER   :: conv2    = 3.d0 * 4.d0 * pi               ! integrates ( 3 - costh ) over solid angle
+!REAL(dp), PARAMETER   :: coef     = conv1 * conv2 * C_AG_FnB
+!!We only tabluate S_sigma in the tables, the user will need to make sure 
+!!to insert numerical factors after interpolation
+REAL(dp), PARAMETER   :: coef = 1.0d0
 REAL(dp), PARAMETER   :: coef_np  = 28.d0/3.d0
 REAL(dp)              :: rho_14          ! rho/1e+14
 REAL(dp)              :: t_10            ! tmev/10
@@ -59,33 +65,8 @@ REAL(dp)              :: gamma           ! spin fluctuation rate
 REAL(dp)              :: y               ! pion mass parameter
 REAL(dp), DIMENSION(nez,nez)   :: sb     ! dimensionless fitting parameter
 REAL(dp)              :: gb              ! dimensionless fitting parameter
-!REAL(dp)              :: rho_x           ! density adjusted for the composition [g cm^{-3}]
 
 INTEGER               :: k, kb           ! neutrino(anti) loop variables
-
-!REAL(dp), DIMENSION(nez,nez) :: s_aa   ! differential absorption kernel
-
-!-----------------------------------------------------------------------
-!-----------------------------------------------------------------------
-
-!-----------------------------------------------------------------------
-!  Loop over nn, pp, and np contributions
-!-----------------------------------------------------------------------
-
-!DO i = 1, 3
-
-
-!-----------------------------------------------------------------------
-!  Adjust density to reflect composition
-!-----------------------------------------------------------------------
-
-!  IF ( i == 1 ) THEN
-!    rho_x          = rho * xn
-!  ELSE IF ( i == 2 ) THEN
-!    rho_x          = rho * xp
-!  ELSE IF ( i == 3 ) THEN
-!    rho_x          = rho * SQRT( ABS( xn * xp ) + epsilon )
-!  END IF ! i == 1
 
 !-----------------------------------------------------------------------
 !  Initialize
@@ -140,27 +121,15 @@ INTEGER               :: k, kb           ! neutrino(anti) loop variables
   CALL g_brem( y, eta_star, gb )
 
 !-----------------------------------------------------------------------
-!  Compute the differential absorption kernel, s_a
+!  Compute the differential absorption kernel, S_sigma
 !-----------------------------------------------------------------------
 
   DO kb = 1,nez
     DO k = 1,nez
-      s_a(k,kb)     = gamma/( x(k,kb)**2 + ( half * gamma * gb )**2 )         &
+      S_sigma(k,kb)     = gamma/( x(k,kb)**2 + ( half * gamma * gb )**2 )         &
 &                    * sb(k,kb)/tmev * coef * rho_14
     END DO ! k = 1,nez
   END DO ! kb = 1,nez
-
-!END DO ! i = 1, 3
-
-!-----------------------------------------------------------------------
-!  Sum the contributions
-!-----------------------------------------------------------------------
-
-!DO kb = 1,nez
-!  DO k = 1,nez
-!    s_a(k,kb)   = s_aa(k,kb,1) + s_aa(k,kb,2) + coef_np * s_aa(k,kb,3)
-!  END DO ! k = 1,nez
-!END DO ! kb = 1,nez
 
 RETURN
 
@@ -294,7 +263,7 @@ DO kb = 1,nez
 !   (Equation 45 Hannestad & Raffelt)
 !-----------------------------------------------------------------------
 
-    s_ND_num       = 2.d0 * pi1_2 * ( x + 2.d0 - exp(- y/12.d0 ) )**1.5d0 &
+    s_ND_num       = 2.d0 * pi1_2 * ( x + 2.d0 - fexp(- y/12.d0 ) )**1.5d0 &
 &                  * ( x**2 + 2.d0 * x * y + fi_third * y**2 + 1.d0 )
     s_ND_denom     = pi1_2 + ( pi1_8 + x + y )**4
     s_ND           = s_ND_num/s_ND_denom

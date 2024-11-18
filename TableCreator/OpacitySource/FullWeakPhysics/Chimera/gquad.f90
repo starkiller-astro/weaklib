@@ -24,13 +24,12 @@ SUBROUTINE gquad( nquad, x, wt, ndim )
 !  wt             : integration weights
 !
 !    Mudules used: 
-!  kind_module
+!  wlKindModule
 !-----------------------------------------------------------------------
 
-USE kind_module, ONLY : double
+USE wlKindModule, ONLY: dp
 
 IMPLICIT NONE
-SAVE
 
 !-----------------------------------------------------------------------
 !        Input variables.
@@ -43,9 +42,9 @@ INTEGER, INTENT(IN)            :: ndim         ! physical dimenisons of x and wt
 !        Output variables.
 !-----------------------------------------------------------------------
 
-REAL(KIND=double), INTENT(OUT), DIMENSION(ndim)                       &
+REAL(dp), INTENT(OUT), DIMENSION(ndim)                              &
 &                              :: x            ! quadrature points
-REAL(KIND=double), INTENT(OUT), DIMENSION(ndim)                       &
+REAL(dp), INTENT(OUT), DIMENSION(ndim)                              &
 &                              :: wt           ! quadrature weights
 
 !-----------------------------------------------------------------------
@@ -68,22 +67,6 @@ IF ( nquad == 4) THEN
       wt(2)  =  0.652145154862546d0
       wt(3)  =  0.652145154862546d0
       wt(4)  =  0.347854845137454d0
-
-ELSE IF ( nquad == 6) THEN
-
-      x(1)   = -0.932469514203d0
-      x(2)   = -0.661209386466d0
-      x(3)   = -0.238619186083d0
-      x(4)   =  0.238619186083d0
-      x(5)   =  0.661209386466d0
-      x(6)   =  0.932469514203d0
-
-      wt(1)  =  0.171324492379d0
-      wt(2)  =  0.360761573048d0
-      wt(3)  =  0.467913934573d0
-      wt(4)  =  0.467913934573d0
-      wt(5)  =  0.360761573048d0
-      wt(6)  =  0.171324492379d0
 
 ELSE IF ( nquad == 8) THEN
 

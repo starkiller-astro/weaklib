@@ -1412,7 +1412,7 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
       !$OMP PARALLEL DO SIMD COLLAPSE(2) &
-      !$OMP PRIVATE( i, j, p00, p10, p01, p11 )
+      !$OMP PRIVATE( p00, p10, p01, p11 )
       DO j = 1, SizeE
         DO i = 1, SizeE
           IF ( i <= j ) THEN
@@ -1545,7 +1545,7 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
       !$OMP PARALLEL DO SIMD COLLAPSE(2) &
-      !$OMP PRIVATE( i, j, Interp, SumInterp, &
+      !$OMP PRIVATE( Interp, SumInterp, &
       !$OMP          p00, p10, p01, p11 )
       DO j = 1, SizeE
         DO i = 1, SizeE

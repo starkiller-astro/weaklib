@@ -15,6 +15,7 @@ IMPLICIT none
 !-----------------------------------------------------------------------
 
 INTEGER                          :: ierr          ! initialization variable for MPI
+LOGICAL                          :: mpi_is_init   ! check if MPI was initialized
 INTEGER                          :: myid          ! rank of each processor (MPI)          
 INTEGER                          :: myid_g        ! rank of each processor when split into grids
 INTEGER                          :: myid_y        ! rank of each processor when split wrt k_block         

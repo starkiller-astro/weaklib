@@ -139,14 +139,14 @@ else ifeq ($(PE_ENV),PGI)
 
 else ifeq ($(PE_ENV),GNU)
     
-    FC      = ftn
+    FC      = gfortran
     CC      = cc
     CXX     = CC
-    LDR     = ftn
+    LDR     = gfortran
     FC_MPI  = ftn
     CC_MPI  = cc
     CXX_MPI = CC
-    LDR_MPI = ftn
+    LDR_MPI = gfortran
 
     ifneq ($(FC),ftn)
         ARCHOPT = -m64 -mavx

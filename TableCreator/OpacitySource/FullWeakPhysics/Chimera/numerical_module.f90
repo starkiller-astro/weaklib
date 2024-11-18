@@ -8,27 +8,27 @@
 
 module numerical_module
 
-USE kind_module
+USE wlKindModule
 
-REAL(double), PARAMETER  :: zero      = 0.0d0
-REAL(double), PARAMETER  :: half      = 0.5d0
-REAL(double), PARAMETER  :: one       = 1.0d0
-REAL(double), PARAMETER  :: epsilon   = 1.0d-100
+REAL(dp), PARAMETER  :: zero      = 0.0d0
+REAL(dp), PARAMETER  :: half      = 0.5d0
+REAL(dp), PARAMETER  :: one       = 1.0d0
+REAL(dp), PARAMETER  :: epsilon   = 1.0d-100
 
-REAL(double), PARAMETER  :: pi        = 3.1415926535897932385d0 ! pi
+REAL(dp), PARAMETER  :: pi        = 3.1415926535897932385d0 ! pi
 
 !-----------------------------------------------------------------------
 !  Derived constants
 !-----------------------------------------------------------------------
 
-REAL(double), PARAMETER  :: pi2       = pi * pi
-REAL(double), PARAMETER  :: twpi      = 2.d0 * pi
-REAL(double), PARAMETER  :: frpi      = 4.d0 * pi
-REAL(double), PARAMETER  :: third     = 1.d0/3.d0
-REAL(double), PARAMETER  :: twothd    = 2.d0 * third
-REAL(double), PARAMETER  :: fourthd   = 4.d0 * third
-REAL(double), PARAMETER  :: frpith    = third * frpi
-REAL(double), PARAMETER  :: sxtnpi    = 16.d0 * pi
+REAL(dp), PARAMETER  :: pi2       = pi * pi
+REAL(dp), PARAMETER  :: twpi      = 2.d0 * pi
+REAL(dp), PARAMETER  :: frpi      = 4.d0 * pi
+REAL(dp), PARAMETER  :: third     = 1.d0/3.d0
+REAL(dp), PARAMETER  :: twothd    = 2.d0 * third
+REAL(dp), PARAMETER  :: fourthd   = 4.d0 * third
+REAL(dp), PARAMETER  :: frpith    = third * frpi
+REAL(dp), PARAMETER  :: sxtnpi    = 16.d0 * pi
 
 !-----------------------------------------------------------------------
 !  Equation of state coefficients
@@ -36,7 +36,7 @@ REAL(double), PARAMETER  :: sxtnpi    = 16.d0 * pi
 !   kfm : [ # nucleons g^{-1} ][ cm^{3}fm^{-3} ]
 !-----------------------------------------------------------------------
 
-REAL(double)             ::  log_e
-REAL(double)             ::  ln_10
+REAL(dp)             ::  log_e
+REAL(dp)             ::  ln_10
 
 END module numerical_module
