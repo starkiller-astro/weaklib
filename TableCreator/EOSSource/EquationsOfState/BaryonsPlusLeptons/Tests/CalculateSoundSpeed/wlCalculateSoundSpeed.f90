@@ -14,7 +14,6 @@ PROGRAM wlCalculateSoundSpeed
 	USE wlHelmMuonIOModuleHDF, ONLY: &
 		ReadHelmholtzTableHDF, ReadMuonTableHDF
 	USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, cvel
-	USE wlGammaSoundSpeed
 	USE wlSoundSpeedModule
 	
 	IMPLICIT NONE

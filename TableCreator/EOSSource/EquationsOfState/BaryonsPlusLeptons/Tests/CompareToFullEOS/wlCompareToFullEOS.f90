@@ -8,7 +8,6 @@ PROGRAM wlCompareToFullEOS
 	USE wlHelmMuonIOModuleHDF
 	USE wlElectronEOS
 	USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me
-	USE wlGammaSoundSpeed
 	
 	IMPLICIT NONE
 	

@@ -10,7 +10,6 @@ PROGRAM wlWriteBaryPlusEle
 	USE wlElectronEOS
 	USE wlExtPhysicalConstantsModule, ONLY: &
 		kmev, rmu, kmev_inv, ergmev, me, cvel
-	USE wlGammaSoundSpeed
 	
 	IMPLICIT NONE
 	

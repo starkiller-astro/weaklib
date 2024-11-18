@@ -12,7 +12,7 @@ MODULE wlEOSComponentsSeparateInversionModule
   USE wlMuonEOS, ONLY: &
     MuonStateType, FullMuonEOS
   USE wlElectronEOS, ONLY: &
-    ElectronStateType, FullHelmEOS
+    ElectronStateType, FullHelmEOS, MinimalHelmEOS_rt
   USE wlLeptonEOSModule, ONLY: &
     HelmholtzEOSType, MuonEOSType
   USE wlEosConstantsModule, ONLY: &
@@ -687,7 +687,7 @@ CONTAINS
     ElectronState % t = T_a
     ElectronState % rho = D
     ElectronState % y_e = Ye
-    CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_a
@@ -716,7 +716,7 @@ CONTAINS
     ElectronState % t = T_b
     ElectronState % rho = D
     ElectronState % y_e = Ye
-    CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
     MuonState % t = T_b
@@ -749,7 +749,7 @@ CONTAINS
         ElectronState % t = T_c
         ElectronState % rho = D
         ElectronState % y_e = Ye
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         MuonState % t = T_c
@@ -796,7 +796,7 @@ CONTAINS
         ElectronState % t = T_i
         ElectronState % rho = D
         ElectronState % y_e = Ye
-        CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
         MuonState % t = T_i

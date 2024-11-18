@@ -40,5 +40,4 @@ wlCalculateSoundSpeed.o: \
   wlHelmMuonIOModuleHDF.o \
   wlElectronEOS.o \
   wlExtPhysicalConstantsModule.o \
-  wlGammaSoundSpeed.o \
   wlSoundSpeedModule.o

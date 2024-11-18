@@ -19,10 +19,6 @@ wlMuonEOS.o: \
   wlKindModule.o \
   wlInterpolationUtilitiesModule.o \
   wlLeptonEOSModule.o
-  
-wlGammaSoundSpeed.o: \
-  wlKindModule.o \
-  wlEosConstantsModule.o
 
 wlSoundSpeedModule.o: \
   wlKindModule.o \
