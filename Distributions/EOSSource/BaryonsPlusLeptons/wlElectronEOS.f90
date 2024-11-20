@@ -816,11 +816,11 @@ CONTAINS
 			END IF
 			
 			!..the temperature and density exponents (c&g 9.81 9.82)
-				!..the specific heat at constant volume (c&g 9.92)
-				!..the third adiabatic exponent (c&g 9.93)
-				!..the first adiabatic exponent (c&g 9.97)
-				!..the second adiabatic exponent (c&g 9.105)
-				!..the specific heat at constant pressure (c&g 9.98)
+			!..the specific heat at constant volume (c&g 9.92)
+			!..the third adiabatic exponent (c&g 9.93)
+			!..the first adiabatic exponent (c&g 9.97)
+			!..the second adiabatic exponent (c&g 9.105)
+			!..the specific heat at constant pressure (c&g 9.98)
 			!..and relativistic formula for the sound speed (c&g 14.29)
 			zz    = pres*deni
 			zzi   = den/pres

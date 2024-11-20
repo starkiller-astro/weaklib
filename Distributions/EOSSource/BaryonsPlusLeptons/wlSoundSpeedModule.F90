@@ -9,33 +9,35 @@ MODULE wlSoundSpeedModule
 	USE wlMuonEOS, ONLY: &
 		FullMuonEOS, MuonStateType
 	USE wlInterpolationUtilitiesModule, ONLY: &
-	GetIndexAndDelta_Lin, GetIndexAndDelta_Log, Trilinear, BiLinear, Linear
+		LinearInterpDeriv_Array_Point, &
+		GetIndexAndDelta_Lin, GetIndexAndDelta_Log
 
 	IMPLICIT NONE
 	PRIVATE
 	
-	PUBLIC :: CalculatewlSoundSpeed
+	PUBLIC :: CalculateSoundSpeed
 	
 	REAL(dp), PARAMETER :: ln10 = LOG(10.d0)
 	
 CONTAINS
 	
 	! This one also calculates derivatives, but maybe you can provide derivatives ?
-	SUBROUTINE CalculatewlSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, &
-		HelmholtzTable, MuonTable, Gamma, cs2)
+	SUBROUTINE CalculateSoundSpeed( D, T, Ye, Ym, Dbary_T, Tbary_T, Ypbary_T, Pbary_T, OS_P, Ebary_T, OS_E, &
+		HelmholtzTable, MuonTable, Gamma, cs2, SeparateContributions)
 
     REAL(DP), INTENT(IN)     :: D     , T     , Ye, Ym
-    REAL(DP), INTENT(IN)     :: D_T(1:), T_T(1:), Yp_T(1:)
-    REAL(DP), INTENT(IN)     :: P_T(1:,1:,1:), E_T(1:,1:,1:)
+    REAL(DP), INTENT(IN)     :: Dbary_T(1:), Tbary_T(1:), Ypbary_T(1:)
+    REAL(DP), INTENT(IN)     :: Pbary_T(1:,1:,1:), Ebary_T(1:,1:,1:)
 	
     REAL(DP), INTENT(IN)     :: OS_P, OS_E
+	LOGICAL, INTENT(IN) 	 :: SeparateContributions
 
 	TYPE(HelmholtzEOSType), INTENT(IN) :: HelmholtzTable
 	TYPE(MuonEOSType), INTENT(IN) :: MuonTable
 	
 	REAL(DP), INTENT(OUT)    :: Gamma, cs2
 
-	REAL(DP) :: Pbary, Ebary
+	REAL(DP) :: Pbary, Ebary, Ptot, Etot
 	REAL(DP) :: dPbarydD, dPbarydT
 	REAL(DP) :: dEbarydD, dEbarydT
 	REAL(DP) :: Pele, Eele, Sele
@@ -46,280 +48,164 @@ CONTAINS
 	REAL(DP) :: dEmudD, dEmudT
 	REAL(DP) :: dD, dT, dYp
 	REAL(DP) :: aD, aT, aYp
-	REAL(DP) :: h
+	REAL(DP) :: Yp, Ye_over_Yp, Ym_over_Yp, h
+	REAL(DP) :: P_leptons(2,2,2), E_leptons(2,2,2), &
+				Etot_T(2,2,2), Ptot_T(2,2,2)
 	
-	INTEGER :: iD, iT, iYp
+	REAL(DP) :: dPdD, dPdT, dEdD, dEdT
+	INTEGER :: iD, iT, iYp, iL_D, iL_T, iL_Yp
 
 	TYPE(ElectronStateType) :: ElectronState
 	TYPE(MuonStateType) :: MuonState
 		
-	! ELECTRON PART IS EASY -----------------------------------------------------
-	! Initialize temperature, density, yp, Zbar and Abar
-	ElectronState % t = T
-	ElectronState % rho = D
-	ElectronState % abar = 1.0d0 ! these are only used for ion contribution
-	ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
-	ElectronState % y_e = Ye
+	Yp = Ye + Ym
 
-	! calculate electron quantities
-	CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+	IF (SeparateContributions) THEN
+		! ELECTRON PART IS EASY -----------------------------------------------------
+		! Initialize temperature, density, yp, Zbar and Abar
+		ElectronState % t = T
+		ElectronState % rho = D
+		ElectronState % abar = 1.0d0 ! these are only used for ion contribution
+		ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
+		ElectronState % y_e = Ye
 
-	Eele = ElectronState % e + me / rmu * ergmev * ElectronState % y_e ! add back mass to internal energy!
-	Sele = ElectronState % s 
-	Pele = ElectronState % p
+		! calculate electron quantities
+		CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
-	dPeledD = ElectronState % dpdr
-	dPeledT = ElectronState % dpdt
+		Eele = ElectronState % e + me / rmu * ergmev * ElectronState % y_e ! add back mass to internal energy!
+		Sele = ElectronState % s 
+		Pele = ElectronState % p
 
+		dPeledD = ElectronState % dpdr
+		dPeledT = ElectronState % dpdt
 
-	! BARYONIC PART -----------------------------------------------------
-	CALL GetIndexAndDelta_Log( D, D_T, iD, dD )
-	CALL GetIndexAndDelta_Log( T, T_T, iT, dT )
-	CALL GetIndexAndDelta_Lin( Ye + Ym, Yp_T, iYp, dYp )
-	
-	aD = 1.0_dp / ( D * LOG10( D_T(iD+1) / D_T(iD) ) )
-	aT = 1.0_dp / ( T * LOG10( T_T(iT+1) / T_T(iT) ) )
-	aYp = ln10 / ( Yp_T(iYp+1) - Yp_T(iYp) )
-  
-	! is this linear or log derivative? I think it's log ??????
-	CALL LinearInterpDeriv3D_2DArray_Point &
-		   ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_P, P_T, Pbary, &
-			 dPbarydD, dPbarydT )
-	
-	! is this linear or log derivative?
-	CALL LinearInterpDeriv3D_2DArray_Point &
-		   ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_E, E_T, Ebary, &
-			 dEbarydD, dEbarydT )
+		! BARYONIC PART -----------------------------------------------------
+		CALL GetIndexAndDelta_Log( D, Dbary_T, iD, dD )
+		CALL GetIndexAndDelta_Log( T, Tbary_T, iT, dT )
+		CALL GetIndexAndDelta_Lin( Yp, Ypbary_T, iYp, dYp )
+		
+		aD = 1.0_dp / ( D * LOG10( Dbary_T(iD+1) / Dbary_T(iD) ) )
+		aT = 1.0_dp / ( T * LOG10( Tbary_T(iT+1) / Tbary_T(iT) ) )
+		aYp = ln10 / ( Ypbary_T(iYp+1) - Ypbary_T(iYp) )
+	  
+		! is this linear or log derivative? I think it's log ??????
+		CALL LinearInterpDeriv_Array_Point &
+			   ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_P, Pbary_T, Pbary, &
+				 dPbarydD, dPbarydT )
+		
+		! is this linear or log derivative?
+		CALL LinearInterpDeriv_Array_Point &
+			   ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_E, Ebary_T, Ebary, &
+				 dEbarydD, dEbarydT )
 
-	! MUON PART -----------------------------------------------------
-	IF (( D * Ym .lt. MuonTable % rhoym(1) ) .or. (T .lt. MuonTable % t(1))) THEN
-	
-	  Pmu = 0.0d0
-	  dPmudD = 0.0d0
-	  dPmudT = 0.0d0
+		! MUON PART -----------------------------------------------------
+		IF (( D * Ym .lt. MuonTable % rhoym(1) ) .or. (T .lt. MuonTable % t(1))) THEN
+		
+		  Pmu = 0.0d0
+		  dPmudD = 0.0d0
+		  dPmudT = 0.0d0
 
-	  Emu = 0.0d0
-	  dEmudD = 0.0d0
-	  dEmudT = 0.0d0
-	
+		  Emu = 0.0d0
+		  dEmudD = 0.0d0
+		  dEmudT = 0.0d0
+		
+		ELSE
+		
+		  CALL GetIndexAndDelta_Log( D * Ym, MuonTable % rhoym(:), iD, dD )
+		  CALL GetIndexAndDelta_Log( T, MuonTable % t(:), iT, dT )
+		  
+		  aD = 1.0_dp / ( D * LOG10( MuonTable % rhoym(iD+1) / MuonTable % rhoym(iD) ) )
+		  aT = 1.0_dp / ( T * LOG10( MuonTable % t(iT+1) / MuonTable % t(iT) ) )
+
+		  ! is this linear or log derivative?
+		  CALL LinearInterpDeriv_Array_Point &
+				 ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % p), Pmu, &
+				   dPmudD, dPmudT )
+		  
+		  dPmudD = dPmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
+		  
+		  CALL LinearInterpDeriv_Array_Point &
+				 ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % e), Emu, &
+				   dEmudD, dEmudT )
+				   
+		  dEmudD = dEmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
+		  Emu = Emu + mmu / rmu * ergmev * Ym ! make sure you handle rest mass correctly
+
+		ENDIF
+		
+		! Check that yu are doing this correctly, really check this like
+		! do not trust me at all. D and T in front take care of the derivative 
+		! wr2 logrho and logT. The rho multiplying the denominator in the second 
+		! one makes sure that you have erg/cm^3 instead of erg/g
+		Gamma = (D*(dPbarydD + dPeledD + dPmudD) + &
+					T*(dPbarydT + dPeledT + dPmudT)**2.0_DP / &
+					(D*(dEbarydT + dEeledT + dEmudT)) ) / &
+					(Pbary + Pele + Pmu)
+					
+		! relativistic definition with enthalpy
+		h = (1.0_dp + (Ebary + Eele + Emu)/cvel**2 + (Pbary + Pele + Pmu)/D/cvel**2)
+		
+		cs2 = Gamma * (Pbary + Pele + Pmu) / (D*h)
+
 	ELSE
-	
-	  CALL GetIndexAndDelta_Log( D * Ym, MuonTable % rhoym(:), iD, dD )
-	  CALL GetIndexAndDelta_Log( T, MuonTable % t(:), iT, dT )
-	  
-	  aD = 1.0_dp / ( D * LOG10( MuonTable % rhoym(iD+1) / MuonTable % rhoym(iD) ) )
-	  aT = 1.0_dp / ( T * LOG10( MuonTable % t(iT+1) / MuonTable % t(iT) ) )
 
-	  ! is this linear or log derivative?
-	  CALL LinearInterpDeriv2D_2DArray_Point &
-			 ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % p), Pmu, &
-			   dPmudD, dPmudT )
-	  
-	  dPmudD = dPmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
-	  
-	  CALL LinearInterpDeriv2D_2DArray_Point &
-			 ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % e), Emu, &
-			   dEmudD, dEmudT )
-			   
-	  dEmudD = dEmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
-	  Emu = Emu + mmu / rmu * ergmev * Ym ! make sure you handle rest mass correctly
-
-	ENDIF
+		Ye_over_Yp = Ye/Yp
+		Ym_over_Yp = Ym/Yp
+		
+		CALL GetIndexAndDelta_Log( D, Dbary_T, iD, dD )
+		CALL GetIndexAndDelta_Log( T, Tbary_T, iT, dT )
+		CALL GetIndexAndDelta_Lin( Yp, Ypbary_T, iYp, dYp )
+		
+		aD = 1.0_dp / ( D * LOG10( Dbary_T(iD+1) / Dbary_T(iD) ) )
+		aT = 1.0_dp / ( T * LOG10( Tbary_T(iT+1) / Tbary_T(iT) ) )
+		aYp = ln10 / ( Ypbary_T(iYp+1) - Ypbary_T(iYp) )
 	
-	! Check that yu are doing this correctly, really check this like
-	! do not trust me at all. D and T in front take care of the derivative 
-	! wr2 logrho and logT. The rho multiplying the denominator in the second 
-	! one makes sure that you have erg/cm^3 instead of erg/g
-	Gamma = (D*(dPbarydD + dPeledD + dPmudD) + &
-				T*(dPbarydT + dPeledT + dPmudT)**2.0_DP / &
-				(D*(dEbarydT + dEeledT + dEmudT)) ) / &
-				(Pbary + Pele + Pmu)
+		DO iL_T=1,2
+		  DO iL_D=1,2
+			DO iL_Yp=1,2
+			  ElectronState % t = Tbary_T(iT+iL_T-1)
+			  ElectronState % rho = Dbary_T(iD+iL_D-1)
+			  ElectronState % y_e = Ypbary_T(iYp+iL_Yp-1) * Ye_over_Yp
+			  
+			  ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
+			  CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+
+			  MuonState % t = Tbary_T(iT+iL_T-1)
+			  MuonState % rhoym = Dbary_T(iD+iL_D-1) * Ypbary_T(iYp+iL_Yp-1) * Ym_over_Yp
+			  
+			  CALL FullMuonEOS(MuonTable, MuonState)
+			  
+			  E_leptons(iL_D,iL_T,iL_Yp) = ElectronState % e + me / rmu * ergmev * ElectronState % y_e + &
+							MuonState % e + mmu / rmu * ergmev * Ypbary_T(iYp+iL_Yp-1) * Ym_over_Yp
+			  P_leptons(iL_D,iL_T,iL_Yp) = ElectronState % p + MuonState % p
+
+			END DO
+		  END DO
+		END DO
+	
+		Ptot_T = LOG10(Pbary_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + P_leptons)
+		! is this linear or log derivative? I think it's log ??????
+		CALL LinearInterpDeriv_Array_Point &
+			   ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_P, Ptot_T, Ptot, &
+				 dPdD, dPdT )
+		
+		Etot_T = LOG10(10.00**Ebary_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + E_leptons )
+		! is this linear or log derivative?
+		CALL LinearInterpDeriv_Array_Point &
+			   ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_E, Etot_T, Etot, &
+				 dEdD, dEdT )
+
+		Gamma = (D*dPdD + T*dPdT**2.0_DP / &
+				(D*dEdT) ) / Ptot
 				
-	! relativistic definition with enthalpy
-	h = (1.0_dp + (Ebary + Eele + Emu)/cvel**2 + (Pbary + Pele + Pmu)/D/cvel**2)
+		! relativistic definition with enthalpy
+		h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
+		
+		cs2 = Gamma * Ptot / (D*h)
 	
-	cs2 = Gamma * (Pbary + Pele + Pmu) / (D*h)
+	ENDIF
 
-	END SUBROUTINE CalculatewlSoundSpeed
-
-  ! This one interpolates and calculates derivatives along first and second dimension
-  SUBROUTINE LinearInterpDeriv3D_2DArray_Point &
-	( iY1, iY2, iY3, dY1, dY2, dY3, aY1, aY2, aY3, OS, Table, &
-      Interpolant, dIdY1, dIdY2 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    INTEGER,  INTENT(in)  :: iY1, iY2, iY3
-    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, aY1, aY2, aY3, OS, Table(1:,1:,1:)
-    REAL(dp), INTENT(out) :: Interpolant, dIdY1, dIdY2
-
-    REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
-
-    p000 = Table(iY1  , iY2  , iY3   )
-    p100 = Table(iY1+1, iY2  , iY3   )
-    p010 = Table(iY1  , iY2+1, iY3   )
-    p110 = Table(iY1+1, iY2+1, iY3   )
-    p001 = Table(iY1  , iY2  , iY3+1 )
-    p101 = Table(iY1+1, iY2  , iY3+1 )
-    p011 = Table(iY1  , iY2+1, iY3+1 )
-    p111 = Table(iY1+1, iY2+1, iY3+1 )
-
-    Interpolant &
-      = 10.0d0**( &
-          TriLinear &
-            ( p000, p100, p010, p110, &
-              p001, p101, p011, p111, &
-              dY1, dY2, dY3 ) ) - OS
-
-    dIdY1 &
-      = (Interpolant + OS) * aY1 &
-          * dTriLineardX1 &
-              ( p000, p100, p010, p110, &
-                p001, p101, p011, p111, &
-                dY2, dY3 )
-
-    dIdY2 &
-      = (Interpolant + OS) * aY2 &
-          * dTriLineardX2 &
-              ( p000, p100, p010, p110, &
-                p001, p101, p011, p111, &
-                dY1, dY3 )
-
-  END SUBROUTINE LinearInterpDeriv3D_2DArray_Point
-
-  SUBROUTINE LinearInterpDeriv2D_2DArray_Point &
-	  ( iY1, iY2, dY1, dY2, aY1, aY2, OS, Table, &
-      Interpolant, dIdY1, dIdY2 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    INTEGER,  INTENT(in) :: iY1, iY2
-    REAL(dp), INTENT(in) :: dY1, dY2, aY1, aY2, OS, Table(1:,1:)
-    REAL(dp) :: Interpolant, dIdY1, dIdY2
-
-    REAL(dp) :: p00, p10, p01, p11
-
-    p00 = Table(iY1  , iY2  )
-    p10 = Table(iY1+1, iY2  )
-    p01 = Table(iY1  , iY2+1)
-    p11 = Table(iY1+1, iY2+1)
-
-    Interpolant &
-      = 10.0d0**( &
-          BiLinear &
-            ( p00, p10, p01, p11, &
-              dY1, dY2) ) - OS
-
-    dIdY1 &
-      = (Interpolant + OS) * aY1 &
-          * dBiLineardX1( p00, p10, p01, p11, dY2 )
-
-    dIdY2 &
-      = (Interpolant + OS) * aY2 &
-          * dBiLineardX2( p00, p10, p01, p11, dY1 )
-
-  END SUBROUTINE LinearInterpDeriv2D_2DArray_Point
-
-! Copied over from InterpolationModule
-  REAL(dp) FUNCTION dBiLineardX1 &
-    ( p00, p10, p01, p11, dX2 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    REAL(dp), INTENT(in) :: &
-      p00, p10, p01, p11, dX2
-
-    dBiLineardX1 &
-      = Linear(p10, p11, dX2 ) &
-      - Linear(p00, p01, dX2 )
-
-    RETURN
-  END FUNCTION dBiLineardX1
-
-
-  REAL(dp) FUNCTION dBiLineardX2 &
-    ( p00, p10, p01, p11, dX1 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    REAL(dp), INTENT(in) :: &
-      p00, p10, p01, p11, dX1
-
-    dBiLineardX2 &
-      = Linear(p01, p11, dX1 ) &
-      - Linear(p00, p10, dX1 )
-
-    RETURN
-  END FUNCTION dBiLineardX2
-
-
-  REAL(dp) FUNCTION dTriLineardX1 &
-    ( p000, p100, p010, p110, p001, p101, p011, p111, dX2, dX3 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    REAL(dp), INTENT(in) :: &
-      p000, p100, p010, p110, p001, p101, p011, p111, dX2, dX3
-
-    dTrilineardX1 &
-      = Bilinear(p100, p110, p101, p111, dX2, dX3) &
-      - Bilinear(p000, p010, p001, p011, dX2, dX3)
-
-    RETURN
-  END FUNCTION dTriLineardX1
-
-
-  REAL(dp) FUNCTION dTriLineardX2 &
-    ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX3 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    REAL(dp), INTENT(in) :: &
-      p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX3
-
-    dTrilineardX2 &
-      = Bilinear(p010, p110, p011, p111, dX1, dX3) &
-      - Bilinear(p000, p100, p001, p101, dX1, dX3)
-
-    RETURN
-  END FUNCTION dTriLineardX2
-
-
-  REAL(dp) FUNCTION dTriLineardX3 &
-    ( p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX2 )
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-
-    REAL(dp), INTENT(in) :: &
-      p000, p100, p010, p110, p001, p101, p011, p111, dX1, dX2
-
-    dTrilineardX3 &
-      = Bilinear(p001, p101, p011, p111, dX1, dX2) &
-      - Bilinear(p000, p100, p010, p110, dX1, dX2)
-
-    RETURN
-  END FUNCTION dTriLineardX3
+	END SUBROUTINE CalculateSoundSpeed
 
 ! Bonus subroutines, currently unused
 	! This is taken from the stellarcollapse.org routines (Christian Ott's code)

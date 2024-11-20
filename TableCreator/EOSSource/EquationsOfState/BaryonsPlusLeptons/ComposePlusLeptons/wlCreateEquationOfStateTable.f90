@@ -36,7 +36,7 @@ PROGRAM wlCreateEquationOfStateTable
 
     ReadFullTable = .false.
     RedHDF5Table = .false.
-    ResetNegativePressure = .true.
+    ResetNegativePressure = .false.
     
     IF (ReadFullTable) THEN
         ! for two separate tables
@@ -186,8 +186,6 @@ PROGRAM wlCreateEquationOfStateTable
     
     PRINT*, "Offset negative quantities"
     
-    EOSBaryonTable % DV % Offsets(:) = 0.0_dp
-    
     IF (ResetNegativePressure) THEN
         DO iRho=1,nPointsBaryon(1)
          DO iTemp=1,nPointsBaryon(2)
@@ -200,8 +198,9 @@ PROGRAM wlCreateEquationOfStateTable
         ENDDO
     ENDIF
     
+    EOSBaryonTable % DV % Offsets(:) = 0.0_dp
     
-   DO iVars = 1, EOSBaryonTable % DV % Indices % iNeutronChemicalPotential
+    DO iVars = 2, EOSBaryonTable % DV % Indices % iNeutronChemicalPotential
        Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
        IF ( Minimum_Value .eq. 0.0_dp) THEN
            EOSBaryonTable % DV % Offsets(iVars) = 1.0d-30
@@ -220,8 +219,8 @@ PROGRAM wlCreateEquationOfStateTable
        WRITE(*,*) iVars, EOSBaryonTable % DV % Offsets(iVars), Minimum_Value
    END DO
    
-   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
-       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
+   !EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
+   !    LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values = &
        LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values)
    EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values = &

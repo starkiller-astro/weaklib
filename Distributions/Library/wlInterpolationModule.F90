@@ -103,7 +103,7 @@ MODULE wlInterpolationModule
 CONTAINS
 
 
-  INTEGER FUNCTION Index1D( x, xx, n )
+INTEGER FUNCTION Index1D( x, xx, n )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
