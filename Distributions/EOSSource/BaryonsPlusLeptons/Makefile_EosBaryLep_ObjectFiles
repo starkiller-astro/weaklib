@@ -1,4 +1,4 @@
-COMMON_MODS_OBJ  = \
+WL_EOSSOURCE_SPLIT  = \
   wlEosConstantsModule.o \
   wlLeptonEOSModule.o \
   wlHelmMuonIOModuleHDF.o \
