@@ -851,14 +851,15 @@ CONTAINS
 
   SUBROUTINE ReadOpacityTableHDF &
     ( OpacityTable, FileName_EmAb_Option, FileName_Iso_Option, &
-      FileName_NES_Option, FileName_Pair_Option, FileName_Brem_Option, &
-      EquationOfStateTableName_Option, Verbose_Option )
+      FileName_NNS_Option, FileName_NES_Option, FileName_Pair_Option, &
+      FileName_Brem_Option, EquationOfStateTableName_Option, Verbose_Option )
 
     USE MPI
  
     TYPE(OpacityTableType), INTENT(inout)          :: OpacityTable
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_EmAb_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Iso_Option
+    CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NNS_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_NES_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Pair_Option
     CHARACTER(len=*),       INTENT(in),   OPTIONAL :: FileName_Brem_Option
@@ -867,21 +868,26 @@ CONTAINS
 
     INTEGER, PARAMETER :: iEmAb = 1
     INTEGER, PARAMETER :: iIso  = 2
-    INTEGER, PARAMETER :: iNES  = 3
-    INTEGER, PARAMETER :: iPair = 4
-    INTEGER, PARAMETER :: iBrem = 5
+    INTEGER, PARAMETER :: iNNS  = 3
+    INTEGER, PARAMETER :: iNES  = 4
+    INTEGER, PARAMETER :: iPair = 5
+    INTEGER, PARAMETER :: iBrem = 6
+    INTEGER, PARAMETER :: nOp = 6
 
-    LOGICAL            :: ReadOpacity(5)
+    LOGICAL            :: ReadOpacity(nOp)
     LOGICAL            :: Verbose
-    CHARACTER(128)     :: FileName(5)
+    CHARACTER(128)     :: FileName(nOp)
     CHARACTER(128)     :: EquationOfStateTableName
     INTEGER            :: iOp
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
+    INTEGER            :: nPointsMuB
     INTEGER            :: nPointsTS(3)
     INTEGER            :: nOpac_EmAb
     INTEGER            :: nOpac_Iso
     INTEGER            :: nMom_Iso
+    INTEGER            :: nOpac_NNS
+    INTEGER            :: nMom_NNS
     INTEGER            :: nOpac_NES
     INTEGER            :: nMom_NES
     INTEGER            :: nOpac_Pair
@@ -926,6 +932,16 @@ CONTAINS
       nMom_Iso  = 0
     END IF
 
+    IF( PRESENT( FileName_NNS_Option ) &
+        .AND. ( LEN( FileName_NNS_Option ) > 1 ) )THEN
+      ReadOpacity(iNNS) = .TRUE.
+      FileName   (iNNS) = TRIM( FileName_NNS_Option )
+    ELSE
+      ReadOpacity(iNNS) = .FALSE.
+      nOpac_NNS = 0
+      nMom_NNS  = 0
+    END IF
+
     IF( PRESENT( FileName_NES_Option ) &
         .AND. ( LEN( FileName_NES_Option ) > 1 ) )THEN
       ReadOpacity(iNES) = .TRUE.
@@ -966,7 +982,7 @@ CONTAINS
       WRITE(*,*)
       WRITE(*,'(A4,A)') '', 'ReadOpacityTableHDF'
       WRITE(*,*)
-      DO iOp = 1, 4
+      DO iOp = 1, nOp
         IF( ReadOpacity(iOp) ) WRITE(*,'(A6,A)') '', TRIM( FileName(iOp) )
       END DO
       WRITE(*,*)
@@ -1127,6 +1143,31 @@ CONTAINS
 
     END DO
 
+    ! --- Get Number of MuB (baryon chemical potential) Points ---
+
+    nPointsMuB = 0
+    DO iOp = iNNS, iNNS
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "MuBGrid",    .FALSE., file_id, group_id )
+
+        CALL ReadHDF( "nPoints", buffer, group_id, datasize1d )
+
+        CALL CloseGroupHDF( group_id )
+
+        CALL CloseFileHDF( file_id )
+
+        nPointsMuB = buffer(1)
+
+        EXIT
+
+      END IF
+
+    END DO
+
     ! --- Get Number of ThermoState Points ---
 
     DO iOp = iEmAb, iBrem
@@ -1203,6 +1244,30 @@ CONTAINS
 
     END IF
 
+    IF (ReadOpacity(iNNS)) THEN
+
+      buffer(1)  = 0
+
+      CALL OpenFileHDF( FileName(iNNS), .FALSE., file_id )
+
+      CALL OpenGroupHDF( "Scat_NNS_Kernels", .FALSE., file_id, group_id )
+
+      CALL ReadHDF( "nOpacities", buffer, group_id, datasize1d )
+
+      nOpac_NNS = buffer(1)
+
+      buffer(1)  = 0
+
+      CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
+
+      nMom_NNS = buffer(1)
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+
     IF (ReadOpacity(iNES)) THEN
 
       buffer(1)  = 1 ! for old opacity table safe
@@ -1272,9 +1337,9 @@ CONTAINS
     END IF
 
     CALL AllocateOpacityTable &
-           ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, nOpac_NES, &
-             nMom_NES, nOpac_Pair, nMom_Pair, nOpac_Brem, nMom_Brem, &
-             nPointsE, nPointsEta, &
+           ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
+             nOpac_NNS, nMom_NNS, nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
+             nOpac_Brem, nMom_Brem, nPointsE, nPointsEta, nPointsMuB, &
              EquationOfStateTableName_Option = EquationOfStateTableName, &
              OpacityThermoState_Option = TS, &
              Verbose_Option = Verbose )
@@ -1331,6 +1396,28 @@ CONTAINS
         CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
 
         CALL OpenGroupHDF( "EtaGrid",    .FALSE., file_id, group_id )
+
+        CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
+
+        CALL CloseGroupHDF( group_id )
+
+        CALL CloseFileHDF( file_id )
+
+        EXIT
+
+      END IF
+
+    END DO
+
+    ! --- Read MuB (baryon chemical potential) Grid ---
+
+    DO iOp = iNNS, iNNS
+
+      IF( ReadOpacity(iOp) )THEN
+
+        CALL OpenFileHDF( FileName(iOp), .FALSE., file_id )
+
+        CALL OpenGroupHDF( "MuBGrid",    .FALSE., file_id, group_id )
 
         CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
 
