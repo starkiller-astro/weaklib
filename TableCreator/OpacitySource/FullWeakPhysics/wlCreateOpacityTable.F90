@@ -196,6 +196,10 @@ IMPLICIT NONE
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998, Bruenn et al. 2020
 
+   INTEGER, PARAMETER      :: nOpac_NNS  = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nMom_NNS   = 4  ! 4 for H1l, H2l
+                                              !   ( either 0 or 4 )
+
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
@@ -227,6 +231,13 @@ IMPLICIT NONE
    INTEGER                 :: nPointsEta = 120
    REAL(dp), PARAMETER     :: Etamin     = 1.0d-3
    REAL(dp), PARAMETER     :: Etamax     = 2.5d03
+
+!---------------------------------------------------------------------
+! Set MuB grid limits
+!---------------------------------------------------------------------
+   INTEGER                 :: nPointsMuB = 120
+   REAL(dp), PARAMETER     :: MuBmin     =  750.d0 !-- MeV including rest mass
+   REAL(dp), PARAMETER     :: MuBmax     = 1050.d0 !-- MeV including rest mass
 
    ! --- other inner variables
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, &
@@ -289,9 +300,9 @@ IMPLICIT NONE
 
    CALL AllocateOpacityTable &
             ( OpacityTable, nOpac_EmAb, nOpac_Iso, nMom_Iso, &
-              nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
+              nOpac_NNS, nMom_NNS, nOpac_NES, nMom_NES, nOpac_Pair, nMom_Pair, &
               nOpac_Brem, nMom_Brem, &
-              nPointsE, nPointsEta, &
+              nPointsE, nPointsEta, nPointsMuB, &
               EquationOfStateTableName_Option = EOSTableName )
    CALL FinalizeHDF( )
 
@@ -397,6 +408,56 @@ IMPLICIT NONE
 
 END IF
 
+! -- Set OpacityTableTypeScat NNS
+
+   IF( nOpac_NNS .gt. 0 ) THEN
+
+   if(Scat_np_isoenergetic + Scat_np_non_isoenergetic .gt. 1) then
+     write (*,*) "Must choose either Bruenn85 or Reddy et al 98 for Scat on free nucleons"
+     return
+   endif
+
+   OpacityTable % Scat_NNS_n % nOpacities   = nOpac_NNS
+   OpacityTable % Scat_NNS_p % nOpacities   = nOpac_NNS
+
+   OpacityTable % Scat_NNS_n % nMoments     = nMom_NNS
+   OpacityTable % Scat_NNS_p % nMoments     = nMom_NNS
+
+   OpacityTable % Scat_NNS_n % nPoints(1) = nPointsE
+   OpacityTable % Scat_NNS_n % nPoints(2) = nPointsE
+   OpacityTable % Scat_NNS_n % nPoints(3) = nMom_NNS
+   OpacityTable % Scat_NNS_n % nPoints(4) = OpacityTable % nPointsTS(2)
+   OpacityTable % Scat_NNS_n % nPoints(5) = nPointsMuB
+
+   OpacityTable % Scat_NNS_p % nPoints(1) = nPointsE
+   OpacityTable % Scat_NNS_p % nPoints(2) = nPointsE
+   OpacityTable % Scat_NNS_p % nPoints(3) = nMom_NNS
+   OpacityTable % Scat_NNS_p % nPoints(4) = OpacityTable % nPointsTS(2)
+   OpacityTable % Scat_NNS_p % nPoints(5) = nPointsMuB
+
+   OpacityTable % Scat_NNS_n % Names = (/'Kernels'/)
+   OpacityTable % Scat_NNS_p % Names = (/'Kernels'/)
+
+   OpacityTable % Scat_NNS_n % Units = (/'Per Centimeter Per MeV^3'/)
+   OpacityTable % Scat_NNS_p % Units = (/'Per Centimeter Per MeV^3'/)
+
+   OpacityTable % Scat_NNS_n % weak_magnetism_corrections = &
+                  Iso_weak_magnetism
+   OpacityTable % Scat_NNS_p % weak_magnetism_corrections = &
+                  Iso_weak_magnetism
+
+   OpacityTable % Scat_NNS_n % many_body_corrections = &
+                  Iso_many_body_corrections
+   OpacityTable % Scat_NNS_p % many_body_corrections = &
+                  Iso_many_body_corrections
+
+   OpacityTable % Scat_NNS_n % ga_strange = &
+                  Iso_ga_strange
+   OpacityTable % Scat_NNS_p % ga_strange = &
+                  Iso_ga_strange
+
+END IF
+
 ! -- Set OpacityTableTypeScat NES
    IF( nOpac_NES .gt. 0 ) THEN
 
@@ -419,6 +480,7 @@ END IF
    OpacityTable % Scat_NES % NPS = NPS
 
    END IF
+
 ! -- Set OpacityTableTypeScat Pair
 
    IF( nOpac_Pair .gt. 0 ) THEN
@@ -515,6 +577,28 @@ PRINT*, "Making Eta Grid ... "
             EtaGrid % nPoints, EtaGrid % Values )
 
    END ASSOCIATE ! EtaGrid
+
+!-----------------------------
+! Generate MuB grid from limits
+!-----------------------------
+PRINT*, "Making MuB Grid ... "
+
+   ASSOCIATE( MuBGrid => OpacityTable % MuBGrid )
+
+   MuBGrid % Name &
+     = 'Baryon Chemical Potential (including rest mass)'
+
+   MuBGrid % Unit &
+     = 'MeV'
+
+   MuBGrid % MinValue = MuBmin
+   MuBGrid % MaxValue = MuBmax
+
+   CALL MakeLinearGrid &
+          ( MuBGrid % MinValue, MuBGrid % MaxValue, &
+            MuBGrid % nPoints, MuBGrid % Values )
+
+   END ASSOCIATE ! MuBGrid
 
 !---------------------------------------------------------------------
 !              Fill OpacityTable
