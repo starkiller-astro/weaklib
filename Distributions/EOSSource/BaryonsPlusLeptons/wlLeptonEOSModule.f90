@@ -72,8 +72,8 @@ MODULE wlLeptonEOSModule
 		INTEGER :: nPointsDen
 		INTEGER :: nPointsTemp
 		
-		REAL(dp), DIMENSION(:), ALLOCATABLE :: t
-		REAL(dp), DIMENSION(:), ALLOCATABLE :: rhoym
+		REAL(dp), DIMENSION(:),   ALLOCATABLE :: t
+		REAL(dp), DIMENSION(:),   ALLOCATABLE :: rhoym
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: mu
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: p
 		REAL(dp), DIMENSION(:,:), ALLOCATABLE :: e
@@ -99,8 +99,8 @@ CONTAINS
 
 	SUBROUTINE AllocateHelmEOS( HelmholtzEOS, nPoints )
 		
-		TYPE(HelmholtzEOSType)      :: HelmholtzEOS 
-		INTEGER, DIMENSION(2), INTENT(IN) :: nPoints
+		TYPE(HelmholtzEOSType), INTENT(INOUT) :: HelmholtzEOS 
+		INTEGER, DIMENSION(2), INTENT(IN)     :: nPoints
 				
 		HelmholtzEOS % nPointsDen   = nPoints(1)
 		HelmholtzEOS % nPointsTemp  = nPoints(2)
@@ -108,39 +108,39 @@ CONTAINS
 		ALLOCATE( HelmholtzEOS % d( nPoints(1) ) )
 		ALLOCATE( HelmholtzEOS % t( nPoints(2) ) )
 		
-		ALLOCATE( HelmholtzEOS % f( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % fd( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % ft( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % fdd( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % ftt( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % fdt( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % fddt( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % fdtt( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % f    ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % fd   ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % ft   ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % fdd  ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % ftt  ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % fdt  ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % fddt ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % fdtt ( nPoints(1), nPoints(2) ) )
 		ALLOCATE( HelmholtzEOS % fddtt( nPoints(1), nPoints(2) ) )
 		
-		ALLOCATE( HelmholtzEOS % dpdf( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % dpdfd( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % dpdft( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % dpdf  ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % dpdfd ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % dpdft ( nPoints(1), nPoints(2) ) )
 		ALLOCATE( HelmholtzEOS % dpdfdt( nPoints(1), nPoints(2) ) )
 		
-		ALLOCATE( HelmholtzEOS % ef( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % efd( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % eft( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % ef  ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % efd ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % eft ( nPoints(1), nPoints(2) ) )
 		ALLOCATE( HelmholtzEOS % efdt( nPoints(1), nPoints(2) ) )
 		
-		ALLOCATE( HelmholtzEOS % xf( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % xfd( nPoints(1), nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % xft( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % xf  ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % xfd ( nPoints(1), nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % xft ( nPoints(1), nPoints(2) ) )
 		ALLOCATE( HelmholtzEOS % xfdt( nPoints(1), nPoints(2) ) )
 		
-		ALLOCATE( HelmholtzEOS % dt( nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % dt2( nPoints(2) ) )
-		ALLOCATE( HelmholtzEOS % dti( nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % dt  ( nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % dt2 ( nPoints(2) ) )
+		ALLOCATE( HelmholtzEOS % dti ( nPoints(2) ) )
 		ALLOCATE( HelmholtzEOS % dt2i( nPoints(2) ) )
 		
-		ALLOCATE( HelmholtzEOS % dd( nPoints(1) ) )
-		ALLOCATE( HelmholtzEOS % dd2( nPoints(1) ) )
-		ALLOCATE( HelmholtzEOS % ddi( nPoints(1) ) )
+		ALLOCATE( HelmholtzEOS % dd  ( nPoints(1) ) )
+		ALLOCATE( HelmholtzEOS % dd2 ( nPoints(1) ) )
+		ALLOCATE( HelmholtzEOS % ddi ( nPoints(1) ) )
 		ALLOCATE( HelmholtzEOS % dd2i( nPoints(1) ) )
 		
 	END SUBROUTINE AllocateHelmEOS
