@@ -59,9 +59,21 @@ CONTAINS
 		END IF
 		
 		!....convert input variables to log scale .............................
-		temp = MuonState % t
+		temp  = MuonState % t
 		rhoym = MuonState % rhoym
-		logt = log10(temp)
+
+		IF(  rhoym < MuonTable % rhoym(1) &
+		.OR. temp  < MuonTable % t(1) &
+	    .OR. rhoym > MuonTable % rhoym(ubound(MuonTable % rhoym,1)) &
+		.OR. temp  > MuonTable % t    (ubound(MuonTable % t,    1)) ) THEN
+			MuonState % p  = 0.0d0
+			MuonState % e  = 0.0d0
+			MuonState % s  = 0.0d0
+			MuonState % mu = 0.0d0
+			RETURN
+		ENDIF
+
+		logt  = log10(temp)
 		logrhoymu = log10(rhoym)
 		
 		it_max = MuonTable % nPointsTemp
