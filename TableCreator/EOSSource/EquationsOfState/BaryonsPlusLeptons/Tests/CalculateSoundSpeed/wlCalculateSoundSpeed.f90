@@ -249,7 +249,7 @@ PROGRAM wlCalculateSoundSpeed
 				Ye = Yp
 				Ym = 0.0d0
 				
-				CALL CalculatewlSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, V_T, OS_V, &
+				CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, V_T, OS_V, &
 					'Energy', HelmholtzTable, MuonTable, Gamma, cs2)
 								
 				EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2

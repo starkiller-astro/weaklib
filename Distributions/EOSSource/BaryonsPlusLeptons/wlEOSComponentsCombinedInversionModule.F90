@@ -20,7 +20,7 @@ MODULE wlEOSComponentsCombinedInversionModule
     
   IMPLICIT NONE
   PRIVATE
-	
+  
   PUBLIC :: InitializeEOSComponentsInversion
   PUBLIC :: ComputeTemperatureWith_DEYpYl
   PUBLIC :: ComputeTemperatureWith_DEYpYl_Single
@@ -47,7 +47,7 @@ MODULE wlEOSComponentsCombinedInversionModule
   PUBLIC :: ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error
   PUBLIC :: ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError
   PUBLIC :: DescribeEOSComponentsInversionError
-	
+  
   LOGICAL  :: InversionComponentsInitialized
   REAL(dp), PUBLIC :: MinD, MaxD
   REAL(dp), PUBLIC :: MinT, MaxT
@@ -55,7 +55,7 @@ MODULE wlEOSComponentsCombinedInversionModule
   REAL(dp), PUBLIC :: MinE, MaxE
   REAL(dp), PUBLIC :: MinP, MaxP
   REAL(dp), PUBLIC :: MinS, MaxS
-	
+  
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET( &
     !$OMP   InversionInitialized, MinD, MaxD, MinT, MaxT, &
@@ -171,7 +171,7 @@ CONTAINS
     CALL ReadHelmholtzTableHDF( HelmholtzTable, HelmholtzTableName )
     CALL ReadMuonTableHDF( MuonTable, MuonTableName )
     
-	! For maximum and minimum you only need to calculate 
+  ! For maximum and minimum you only need to calculate 
     ! maximum and minimum Ye and Ym
     MinD = MINVAL( Ds ); MaxD = MAXVAL( Ds )
     MinT = MINVAL( Ts ); MaxT = MAXVAL( Ts )
@@ -269,7 +269,7 @@ CONTAINS
     ErrorString(13) = 'Unable to Find Any Root'
 
     WRITE(*,*)
-    WRITE(*,*) '  wlEOSInversionModule ERROR: ' // TRIM( ErrorString(Error) )
+    WRITE(*,*) '  wlEOSSplitInversionModule ERROR: ' // TRIM( ErrorString(Error) )
     WRITE(*,*)
 
   END SUBROUTINE DescribeEOSComponentsInversionError
@@ -966,7 +966,7 @@ CONTAINS
     InputE = 1.0d0
     InputP  = 0.0d0
     InputS  = 0.0d0
-    
+
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN

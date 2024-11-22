@@ -20,7 +20,7 @@ MODULE wlEOSComponentsSeparateInversionModule
     
   IMPLICIT NONE
   PRIVATE
-	
+  
   PUBLIC :: InitializeEOSComponentsInversion
   PUBLIC :: ComputeTemperatureWith_DEYpYl
   PUBLIC :: ComputeTemperatureWith_DEYpYl_Single
@@ -47,7 +47,7 @@ MODULE wlEOSComponentsSeparateInversionModule
   PUBLIC :: ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error
   PUBLIC :: ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError
   PUBLIC :: DescribeEOSComponentsInversionError
-	
+  
   LOGICAL  :: InversionComponentsInitialized
   REAL(dp), PUBLIC :: MinD, MaxD
   REAL(dp), PUBLIC :: MinT, MaxT
@@ -55,7 +55,7 @@ MODULE wlEOSComponentsSeparateInversionModule
   REAL(dp), PUBLIC :: MinE, MaxE
   REAL(dp), PUBLIC :: MinP, MaxP
   REAL(dp), PUBLIC :: MinS, MaxS
-	
+  
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET( &
     !$OMP   InversionInitialized, MinD, MaxD, MinT, MaxT, &
@@ -169,7 +169,7 @@ CONTAINS
     CALL ReadHelmholtzTableHDF( HelmholtzTable, HelmholtzTableName )
     CALL ReadMuonTableHDF( MuonTable, MuonTableName )
     
-	! For maximum and minimum you only need to calculate 
+  ! For maximum and minimum you only need to calculate 
     ! maximum and minimum Ye and Ym
     MinD = MINVAL( Ds ); MaxD = MAXVAL( Ds )
     MinT = MINVAL( Ts ); MaxT = MAXVAL( Ts )
