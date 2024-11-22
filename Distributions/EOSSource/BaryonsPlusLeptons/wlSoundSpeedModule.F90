@@ -63,11 +63,11 @@ CONTAINS
   IF (SeparateContributions) THEN
     ! ELECTRON PART IS EASY -----------------------------------------------------
     ! Initialize temperature, density, yp, Zbar and Abar
-    ElectronState % t = T
-    ElectronState % rho = D
+    ElectronState % t    = T
+    ElectronState % rho  = D
+    ElectronState % y_e  = Ye
     ElectronState % abar = 1.0d0 ! these are only used for ion contribution
-    ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
-    ElectronState % y_e = Ye
+    ElectronState % zbar = Ye ! these are only used for ion contribution
 
     ! calculate electron quantities
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
@@ -80,13 +80,13 @@ CONTAINS
     dPeledT = ElectronState % dpdt
 
     ! BARYONIC PART -----------------------------------------------------
-    CALL GetIndexAndDelta_Log( D, Dbary_T, iD, dD )
-    CALL GetIndexAndDelta_Log( T, Tbary_T, iT, dT )
+    CALL GetIndexAndDelta_Log( D,  Dbary_T,  iD,  dD  )
+    CALL GetIndexAndDelta_Log( T,  Tbary_T,  iT,  dT  )
     CALL GetIndexAndDelta_Lin( Yp, Ypbary_T, iYp, dYp )
     
-    aD = 1.0_dp / ( D * LOG10( Dbary_T(iD+1) / Dbary_T(iD) ) )
-    aT = 1.0_dp / ( T * LOG10( Tbary_T(iT+1) / Tbary_T(iT) ) )
-    aYp = ln10 / ( Ypbary_T(iYp+1) - Ypbary_T(iYp) )
+    aD  = 1.0_dp / ( D * LOG10( Dbary_T(iD+1) / Dbary_T(iD) ) )
+    aT  = 1.0_dp / ( T * LOG10( Tbary_T(iT+1) / Tbary_T(iT) ) )
+    aYp = ln10   / ( Ypbary_T(iYp+1) - Ypbary_T(iYp) )
     
     ! is this linear or log derivative? I think it's log ??????
     CALL LinearInterpDeriv_Array_Point &
@@ -152,8 +152,8 @@ CONTAINS
     Ye_over_Yp = Ye/Yp
     Ym_over_Yp = Ym/Yp
     
-    CALL GetIndexAndDelta_Log( D, Dbary_T, iD, dD )
-    CALL GetIndexAndDelta_Log( T, Tbary_T, iT, dT )
+    CALL GetIndexAndDelta_Log( D,  Dbary_T,  iD,  dD  )
+    CALL GetIndexAndDelta_Log( T,  Tbary_T,  iT,  dT  )
     CALL GetIndexAndDelta_Lin( Yp, Ypbary_T, iYp, dYp )
     
     aD = 1.0_dp / ( D * LOG10( Dbary_T(iD+1) / Dbary_T(iD) ) )
@@ -163,9 +163,11 @@ CONTAINS
     DO iL_T=1,2
       DO iL_D=1,2
       DO iL_Yp=1,2
-        ElectronState % t = Tbary_T(iT+iL_T-1)
-        ElectronState % rho = Dbary_T(iD+iL_D-1)
-        ElectronState % y_e = Ypbary_T(iYp+iL_Yp-1) * Ye_over_Yp
+        ElectronState % t    = Tbary_T(iT+iL_T-1)
+        ElectronState % rho  = Dbary_T(iD+iL_D-1)
+        ElectronState % y_e  = Ypbary_T(iYp+iL_Yp-1) * Ye_over_Yp
+        ElectronState % abar = 1.0d0 ! these are only used for ion contribution
+        ElectronState % zbar = Ye ! these are only used for ion contribution
         
         ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
@@ -186,13 +188,13 @@ CONTAINS
     Ptot_T = LOG10(Pbary_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + P_leptons)
     ! is this linear or log derivative? I think it's log ??????
     CALL LinearInterpDeriv_Array_Point &
-         ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_P, Ptot_T, Ptot, &
+         ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_P, Ptot_T, Ptot, &
          dPdD, dPdT )
     
     Etot_T = LOG10(10.00**Ebary_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + E_leptons )
     ! is this linear or log derivative?
     CALL LinearInterpDeriv_Array_Point &
-         ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_E, Etot_T, Etot, &
+         ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_E, Etot_T, Etot, &
          dEdD, dEdT )
 
     Gamma = (D*dPdD + T*dPdT**2.0_DP / &

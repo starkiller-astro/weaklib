@@ -1064,8 +1064,8 @@ CONTAINS
     ElectronState % xne = xne_row
     ElectronState % xnp = xnp_row
     
-    ElectronState % eta = etaele_row
-    ElectronState % mu_e = etaele_row*temp_row
+    ElectronState % eta    = etaele_row
+    ElectronState % mu_e   = etaele_row*temp_row*kmev
     ElectronState % detadt = detadt_row
     
     ElectronState % cv   = cv_row
@@ -1680,6 +1680,7 @@ CONTAINS
     ElectronState % xnp = xnp_row
     
     ElectronState % eta = etaele_row
+    ElectronState % mu_e   = etaele_row*temp_row*kmev
     ElectronState % detadt = detadt_row
     
     ElectronState % cv   = cv_row
