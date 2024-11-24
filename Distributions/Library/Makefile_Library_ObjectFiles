@@ -1,5 +1,6 @@
 WL_LIBRARY = \
   wlKindModule.o \
+  wlParallelModule.o \
   wlGridModule.o \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \

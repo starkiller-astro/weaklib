@@ -1,6 +1,9 @@
 wlKindModule.o: \
   wlKindModule.f90
 
+wlParallelModule.o: \
+  wlParallelModule.f90
+
 wlGridModule.o: \
   wlKindModule.o \
   wlGridModule.f90
