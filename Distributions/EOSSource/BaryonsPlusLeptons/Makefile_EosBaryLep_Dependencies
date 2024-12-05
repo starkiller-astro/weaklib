@@ -40,8 +40,7 @@ wlEOSComponentsCombinedInversionModule.o: \
   wlHelmMuonIOModuleHDF.o \
   wlMuonEOS.o  \
   wlElectronPhotonEOS.o  \
-  wlLeptonEOSModule.o  \
-  wlEosConstantsModule.o
+  wlLeptonEOSModule.o
 
 wlEOSComponentsSeparateInversionModule.o: \
   wlKindModule.o \
@@ -50,5 +49,4 @@ wlEOSComponentsSeparateInversionModule.o: \
   wlHelmMuonIOModuleHDF.o \
   wlMuonEOS.o  \
   wlElectronPhotonEOS.o  \
-  wlLeptonEOSModule.o  \
-  wlEosConstantsModule.o
+  wlLeptonEOSModule.o

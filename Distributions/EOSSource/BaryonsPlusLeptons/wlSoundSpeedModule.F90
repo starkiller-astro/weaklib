@@ -1,7 +1,7 @@
 MODULE wlSoundSpeedModule
   
   USE wlKindModule, ONLY: dp
-  USE wlEosConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, mmu, cvel, cm3fm3
+  USE wlEosConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, cvel, cm3fm3
   USE wlLeptonEOSModule, ONLY: &
     HelmholtzTableType, MuonEOSType
   USE wlElectronPhotonEOS, ONLY: &
@@ -23,7 +23,7 @@ CONTAINS
   
   ! This one also calculates derivatives, but maybe you can provide derivatives ?
   SUBROUTINE CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, &
-    HelmholtzTable, MuonTable, Gamma, cs2, SeparateContributions)
+    HelmholtzTable, MuonTable, Gamma, Cs, SeparateContributions)
 
     REAL(DP), INTENT(IN) :: D, T, Ye, Ym
     REAL(DP), INTENT(IN) :: D_T(1:), T_T(1:), Yp_T(1:)
@@ -35,7 +35,7 @@ CONTAINS
     TYPE(HelmholtzTableType), INTENT(IN) :: HelmholtzTable
     TYPE(MuonEOSType), INTENT(IN) :: MuonTable
     
-    REAL(DP), INTENT(OUT)    :: Gamma, cs2
+    REAL(DP), INTENT(OUT)    :: Gamma, Cs
 
     REAL(DP) :: Pbary, Ebary, Ptot, Etot
     REAL(DP) :: dPbarydD, dPbarydT
@@ -70,7 +70,7 @@ CONTAINS
       ! calculate electron quantities
       CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
-      Eele = ElectronPhotonState % e + me / rmu * ergmev * ElectronPhotonState % ye ! add back mass to internal energy!
+      Eele = ElectronPhotonState % e
       Sele = ElectronPhotonState % s 
       Pele = ElectronPhotonState % p
 
@@ -124,7 +124,7 @@ CONTAINS
             dEmudD, dEmudT )
             
         dEmudD = dEmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
-        Emu = Emu + mmu / rmu * ergmev * Ym ! make sure you handle rest mass correctly
+        Emu = Emu
 
       ENDIF
       
@@ -140,13 +140,13 @@ CONTAINS
       ! relativistic definition with enthalpy
       h = (1.0_dp + (Ebary + Eele + Emu)/cvel**2 + (Pbary + Pele + Pmu)/D/cvel**2)
       
-      cs2 = Gamma * (Pbary + Pele + Pmu) / (D*h)
+      Cs = SQRT(Gamma * (Pbary + Pele + Pmu) / (D*h))
 
     ELSE
 
       Ye_over_Yp = Ye/Yp
       Ym_over_Yp = Ym/Yp
-      
+
       CALL GetIndexAndDelta_Log( D,  D_T,  iD,  dD  )
       CALL GetIndexAndDelta_Log( T,  T_T,  iT,  dT  )
       CALL GetIndexAndDelta_Lin( Yp, Yp_T, iYp, dYp )
@@ -161,16 +161,13 @@ CONTAINS
             ElectronPhotonState % t   = T_T(iT+iL_T-1)
             ElectronPhotonState % rho = D_T(iD+iL_D-1)
             ElectronPhotonState % ye  = Yp_T(iYp+iL_Yp-1) * Ye_over_Yp
-
             CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
             MuonState % t = T_T(iT+iL_T-1)
             MuonState % rhoym = D_T(iD+iL_D-1) * Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
-            
             CALL FullMuonEOS(MuonTable, MuonState)
             
-            E_leptons(iL_D,iL_T,iL_Yp) = ElectronPhotonState % e + me / rmu * ergmev * ElectronPhotonState % ye + &
-                    MuonState % e + mmu / rmu * ergmev * Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
+            E_leptons(iL_D,iL_T,iL_Yp) = ElectronPhotonState % e + MuonState % e 
             P_leptons(iL_D,iL_T,iL_Yp) = ElectronPhotonState % p + MuonState % p
 
           END DO
@@ -192,7 +189,7 @@ CONTAINS
           
       ! relativistic definition with enthalpy
       h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
-      cs2 = Gamma * Ptot / (D*h)
+      Cs = SQRT(Gamma * Ptot / (D*h))
     
     ENDIF
 

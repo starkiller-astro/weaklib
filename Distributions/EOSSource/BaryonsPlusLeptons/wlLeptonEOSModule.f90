@@ -2,8 +2,7 @@ MODULE wlLeptonEOSModule
   
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
-    cvel, ergmev, cm3fm3, kmev, kmev_inv, &
-    rmu, mn, me, mp
+    ergmev, cm3fm3, kmev, kmev_inv, rmu
 
   IMPLICIT NONE
   PRIVATE

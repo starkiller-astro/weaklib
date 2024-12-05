@@ -4,18 +4,16 @@ include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
-include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep/Makefile_EosBaryLep_ObjectFiles
-include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep/Makefile_EosBaryLep_Dependencies
 
 VPATH += \
-$(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep: \
 $(WEAKLIB_DIR)/TableCreator/SharedModules: \
 ..
 
 wlInversion = \
   $(WL_LIBRARY) \
   $(WL_EOSSOURCE) \
-  $(SHAREDMODULES) \
+  $(WL_EOSSOURCE_SPLIT) \
+	$(SHAREDMODULES) \
   $(COMMON_MODS_OBJ)
   
 all: wlEOSComposeInversionTest
