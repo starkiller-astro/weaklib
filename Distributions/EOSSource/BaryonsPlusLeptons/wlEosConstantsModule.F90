@@ -47,4 +47,6 @@ REAL(dp), PARAMETER  :: qe        = 4.8032042712d-10 ! electron charge [statcoul
 
 REAL(dp), PARAMETER  :: sigma_sb  = 5.670374419d-5 ! Stefan Bolzmann constant in csg [erg cm^{−2} s^{−1} K^{−4}]
 
+REAL(dp), PARAMETER  :: asol      = 4.0d0 * sigma_sb / cvel
+
 END MODULE wlEosConstantsModule

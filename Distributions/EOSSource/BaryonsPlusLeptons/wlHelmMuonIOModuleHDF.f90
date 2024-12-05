@@ -2,8 +2,8 @@ MODULE wlHelmMuonIOModuleHDF
     
     USE wlKindModule, ONLY: dp
     USE wlLeptonEOSModule, ONLY: &
-        HelmholtzEOSType, &
-        AllocateHelmEOS, DeAllocateHelmEOS, &
+        HelmholtzTableType, &
+        AllocateHelmholtzTable, DeallocateHelmholtzTable, &
         MuonEOSType, &
         AllocateMuonEOS, DeAllocateMuonEOS
     USE wlIOModuleHDF
@@ -24,7 +24,7 @@ CONTAINS
     
     SUBROUTINE WriteHelmholtzTableHDF( HelmholtzTable, FileName, NewFile )
         
-        TYPE(HelmholtzEOSType), INTENT(INOUT)  :: HelmholtzTable
+        TYPE(HelmholtzTableType), INTENT(INOUT)  :: HelmholtzTable
         CHARACTER(len=*), INTENT(IN) :: FileName
         LOGICAL, INTENT(IN) :: NewFile
         
@@ -121,7 +121,7 @@ CONTAINS
     
     SUBROUTINE ReadHelmholtzTableHDF( HelmholtzTable, FileName )
     
-    TYPE(HelmholtzEOSType), INTENT(INOUT)  :: HelmholtzTable
+    TYPE(HelmholtzTableType), INTENT(INOUT)  :: HelmholtzTable
     CHARACTER(len=*), INTENT(IN) :: FileName
     
     INTEGER(HID_T) :: file_id
@@ -140,7 +140,7 @@ CONTAINS
     CALL CloseGroupHDF( group_id )
     
     ! Allocate Helmholtz EOS
-    CALL AllocateHelmEOS( HelmholtzTable, nPoints )
+    CALL AllocateHelmholtzTable( HelmholtzTable, nPoints )
 
     CALL OpenGroupHDF( "HelmholtzTable", .false., file_id, group_id )
     datasize1d = HelmholtzTable % nPointsDen

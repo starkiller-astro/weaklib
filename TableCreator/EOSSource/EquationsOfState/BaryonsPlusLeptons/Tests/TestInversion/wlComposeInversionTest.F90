@@ -25,9 +25,9 @@ PROGRAM wlComposeInversionTest
     ComputeTemperatureWith_DPY_Single_NoGuess, &
     DescribeEOSInversionError
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzEOSType, MuonEOSType
-  USE wlElectronEOS, ONLY: &
-    FullHelmEOS, MinimalHelmEOS_rt, ElectronStateType
+    HelmholtzTableType, MuonEOSType
+  USE wlElectronPhotonEOS, ONLY: &
+    FullHelmEOS, MinimalHelmEOS_rt, ElectronPhotonStateType
   USE wlMuonEOS, ONLY: &
     FullMuonEOS, MuonStateType
   USE wlHelmMuonIOModuleHDF, ONLY: &
@@ -67,8 +67,8 @@ PROGRAM wlComposeInversionTest
     Error
   TYPE(EquationOfStateTableType) :: &
     EOSBaryonTable
-  TYPE(HelmholtzEOSType) :: HelmholtzTable
-  TYPE(ElectronStateType) :: ElectronState
+  TYPE(HelmholtzTableType) :: HelmholtzTable
+  TYPE(ElectronPhotonStateType) :: ElectronState
   TYPE(MuonEOSType) :: MuonTable
   TYPE(MuonStateType) :: MuonState
   REAL(DP), DIMENSION(:), ALLOCATABLE :: &
@@ -168,13 +168,13 @@ PROGRAM wlComposeInversionTest
           ElectronState % rho = Ds_T(iRho)
           ElectronState % abar = 1.0d0 ! these are only used for ion contribution
           ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
-          ElectronState % y_e = Ys_T(iYp) - Ym
+          ElectronState % ye = Ys_T(iYp) - Ym
           
           ! calculate electron quantities
           CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
           CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
-          Es_T_helm = ElectronState % e + me / rmu * ergmev * ElectronState % y_e ! add back mass to internal energy!
+          Es_T_helm = ElectronState % e + me / rmu * ergmev * ElectronState % ye ! add back mass to internal energy!
           Ps_T_helm = ElectronState % p
           Ss_T_helm = ElectronState % s
 

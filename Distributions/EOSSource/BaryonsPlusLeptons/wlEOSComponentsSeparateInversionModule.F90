@@ -11,10 +11,10 @@ MODULE wlEOSComponentsSeparateInversionModule
     ReadHelmholtzTableHDF, ReadMuonTableHDF
   USE wlMuonEOS, ONLY: &
     MuonStateType, FullMuonEOS
-  USE wlElectronEOS, ONLY: &
-    ElectronStateType, FullHelmEOS, MinimalHelmEOS_rt
+  USE wlElectronPhotonEOS, ONLY: &
+    ElectronPhotonStateType, ElectronPhotonEOS
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzEOSType, MuonEOSType
+    HelmholtzTableType, MuonEOSType
   USE wlEosConstantsModule, ONLY: &
     kmev, rmu, kmev_inv, ergmev, me, mmu, cvel
     
@@ -138,7 +138,7 @@ MODULE wlEOSComponentsSeparateInversionModule
     MODULE PROCEDURE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError
   END INTERFACE ComputeTemperatureWith_DSYpYl_Single_NoGuess
 
-  TYPE(HelmholtzEOSType) :: HelmholtzTable 
+  TYPE(HelmholtzTableType) :: HelmholtzTable 
   TYPE(MuonEOSType) :: MuonTable
   
 CONTAINS
@@ -327,15 +327,10 @@ CONTAINS
     REAL(dp) :: Is_this_P, Is_this_E, Is_this_S
     
     ! Electron and Muon quantities
-    TYPE(ElectronStateType) :: ElectronState
+    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
     Yp = Ye + Ym
-    
-    ! -------------------------------------------------------------------
-    ! Initialize ElectronState
-    ElectronState % abar = 1.0d0 ! these are only used for ion contribution
-    ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
     
     T = 0.0_dp
     Error = 0
@@ -368,11 +363,10 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     ! Calculate electron and muon contribution
-    ElectronState % t = T_a
-    ElectronState % rho = D
-    ElectronState % y_e = Ye
-    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+    ElectronPhotonState % t = T_a
+    ElectronPhotonState % rho = D
+    ElectronPhotonState % ye = Ye
+    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
     ! CALL CPU_TIME( tBegin )
     MuonState % t = T_a
@@ -380,10 +374,10 @@ CONTAINS
     
     CALL FullMuonEOS(MuonTable, MuonState)
  
-    E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+    E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                               MuonState % e + mmu / rmu * ergmev * Ym
-    P_leptons = ElectronState % p + MuonState % p
-    S_leptons = ElectronState % s + MuonState % s
+    P_leptons = ElectronPhotonState % p + MuonState % p
+    S_leptons = ElectronPhotonState % s + MuonState % s
     
     X_a = Xb_a + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -398,21 +392,20 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     ! Calculate electron and muon contribution
-    ElectronState % t = T_b
-    ElectronState % rho = D
-    ElectronState % y_e = Ye
-    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+    ElectronPhotonState % t = T_b
+    ElectronPhotonState % rho = D
+    ElectronPhotonState % ye = Ye
+    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
     MuonState % t = T_b
     MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
-    E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+    E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                               MuonState % e + mmu / rmu * ergmev * Ym
-    P_leptons = ElectronState % p + MuonState % p
-    S_leptons = ElectronState % s + MuonState % s
+    P_leptons = ElectronPhotonState % p + MuonState % p
+    S_leptons = ElectronPhotonState % s + MuonState % s
     
     X_b = Xb_b + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -434,21 +427,20 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     ! Calculate electron and muon contribution
-    ElectronState % t = T_a
-    ElectronState % rho = D
-    ElectronState % y_e = Ye
-    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+    ElectronPhotonState % t = T_a
+    ElectronPhotonState % rho = D
+    ElectronPhotonState % ye = Ye
+    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
     MuonState % t = T_a
     MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
-    E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+    E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                               MuonState % e + mmu / rmu * ergmev * Ym
-    P_leptons = ElectronState % p + MuonState % p
-    S_leptons = ElectronState % s + MuonState % s
+    P_leptons = ElectronPhotonState % p + MuonState % p
+    S_leptons = ElectronPhotonState % s + MuonState % s
     
     X_a = Xb_a + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -463,21 +455,20 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     ! Calculate electron and muon contribution
-    ElectronState % t = T_b
-    ElectronState % rho = D
-    ElectronState % y_e = Ye
-    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+    ElectronPhotonState % t = T_b
+    ElectronPhotonState % rho = D
+    ElectronPhotonState % ye = Ye
+    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
     MuonState % t = T_b
     MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
 
-    E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+    E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                               MuonState % e + mmu / rmu * ergmev * Ym
-    P_leptons = ElectronState % p + MuonState % p
-    S_leptons = ElectronState % s + MuonState % s
+    P_leptons = ElectronPhotonState % p + MuonState % p
+    S_leptons = ElectronPhotonState % s + MuonState % s
     
     X_b = Xb_b + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -504,21 +495,20 @@ CONTAINS
 
         ! CALL CPU_TIME( tBegin )
         ! Calculate electron and muon contribution
-        ElectronState % t = T_c
-        ElectronState % rho = D
-        ElectronState % y_e = Ye
-        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+        ElectronPhotonState % t = T_c
+        ElectronPhotonState % rho = D
+        ElectronPhotonState % ye = Ye
+        CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
         MuonState % t = T_c
         MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
    
-        E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+        E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                                   MuonState % e + mmu / rmu * ergmev * Ym
-        P_leptons = ElectronState % p + MuonState % p
-        S_leptons = ElectronState % s + MuonState % s
+        P_leptons = ElectronPhotonState % p + MuonState % p
+        S_leptons = ElectronPhotonState % s + MuonState % s
         
         X_c = Xb_c + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -557,21 +547,20 @@ CONTAINS
 
         ! CALL CPU_TIME( tBegin )
         ! Calculate electron and muon contribution
-        ElectronState % t = T_i
-        ElectronState % rho = D
-        ElectronState % y_e = Ye
-        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+        ElectronPhotonState % t = T_i
+        ElectronPhotonState % rho = D
+        ElectronPhotonState % ye = Ye
+        CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
         MuonState % t = T_i
         MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
-        E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+        E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                                   MuonState % e + mmu / rmu * ergmev * Ym
-        P_leptons = ElectronState % p + MuonState % p
-        S_leptons = ElectronState % s + MuonState % s
+        P_leptons = ElectronPhotonState % p + MuonState % p
+        S_leptons = ElectronPhotonState % s + MuonState % s
         
         X_i = Xb_i + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -645,17 +634,11 @@ CONTAINS
     REAL(dp) :: E_leptons, P_leptons, S_leptons
     
     ! Electron and Muon quantities
-    TYPE(ElectronStateType) :: ElectronState
+    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
     Yp = Ye + Ym
 
-    ! -------------------------------------------------------------------
-    ! Initialize ElectronState
-    ElectronState % abar = 1.0d0 ! these are only used for ion contribution
-    ElectronState % zbar = 1.0d0 ! these are only used for ion contribution
-
-    ! -------------------------------------------------------------------
     Error = 0
 
     LogD = LOG10( D )
@@ -684,21 +667,20 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     ! Calculate electron and muon contribution
-    ElectronState % t = T_a
-    ElectronState % rho = D
-    ElectronState % y_e = Ye
-    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+    ElectronPhotonState % t = T_a
+    ElectronPhotonState % rho = D
+    ElectronPhotonState % ye = Ye
+    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
     MuonState % t = T_a
     MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
    
-    E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+    E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                               MuonState % e + mmu / rmu * ergmev * Ym
-    P_leptons = ElectronState % p + MuonState % p
-    S_leptons = ElectronState % s + MuonState % s
+    P_leptons = ElectronPhotonState % p + MuonState % p
+    S_leptons = ElectronPhotonState % s + MuonState % s
     
     X_a = Xb_a + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -713,21 +695,20 @@ CONTAINS
 
     ! CALL CPU_TIME( tBegin )
     ! Calculate electron and muon contribution
-    ElectronState % t = T_b
-    ElectronState % rho = D
-    ElectronState % y_e = Ye
-    ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-    CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+    ElectronPhotonState % t = T_b
+    ElectronPhotonState % rho = D
+    ElectronPhotonState % ye = Ye
+    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
     MuonState % t = T_b
     MuonState % rhoym = D * Ym
     
     CALL FullMuonEOS(MuonTable, MuonState)
   
-    E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+    E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                               MuonState % e + mmu / rmu * ergmev * Ym
-    P_leptons = ElectronState % p + MuonState % p
-    S_leptons = ElectronState % s + MuonState % s
+    P_leptons = ElectronPhotonState % p + MuonState % p
+    S_leptons = ElectronPhotonState % s + MuonState % s
     
     X_b = Xb_b + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -746,21 +727,20 @@ CONTAINS
 
         ! CALL CPU_TIME( tBegin )
         ! Calculate electron and muon contribution
-        ElectronState % t = T_c
-        ElectronState % rho = D
-        ElectronState % y_e = Ye
-        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+        ElectronPhotonState % t = T_c
+        ElectronPhotonState % rho = D
+        ElectronPhotonState % ye = Ye
+        CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
         MuonState % t = T_c
         MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
  
-        E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+        E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                                   MuonState % e + mmu / rmu * ergmev * Ym
-        P_leptons = ElectronState % p + MuonState % p
-        S_leptons = ElectronState % s + MuonState % s
+        P_leptons = ElectronPhotonState % p + MuonState % p
+        S_leptons = ElectronPhotonState % s + MuonState % s
         
         X_c = Xb_c + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 
@@ -793,21 +773,20 @@ CONTAINS
 
         ! CALL CPU_TIME( tBegin )
         ! Calculate electron and muon contribution
-        ElectronState % t = T_i
-        ElectronState % rho = D
-        ElectronState % y_e = Ye
-        ! CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
-        CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
+        ElectronPhotonState % t = T_i
+        ElectronPhotonState % rho = D
+        ElectronPhotonState % ye = Ye
+        CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
         MuonState % t = T_i
         MuonState % rhoym = D * Ym
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
-        E_leptons = ElectronState % e + me / rmu * ergmev * Ye + &
+        E_leptons = ElectronPhotonState % e + me / rmu * ergmev * Ye + &
                                   MuonState % e + mmu / rmu * ergmev * Ym
-        P_leptons = ElectronState % p + MuonState % p
-        S_leptons = ElectronState % s + MuonState % s
+        P_leptons = ElectronPhotonState % p + MuonState % p
+        S_leptons = ElectronPhotonState % s + MuonState % s
         
         X_i = Xb_i + InputE*E_leptons + InputP*P_leptons + InputS*S_leptons
 

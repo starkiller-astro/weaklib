@@ -25,9 +25,9 @@ PROGRAM wlComposeNewInversionTest
     ComputeTemperatureWith_DPYpYl_Single_NoGuess, &
     DescribeEOSComponentsInversionError
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzEOSType, MuonEOSType
-  USE wlElectronEOS, ONLY: &
-    FullHelmEOS, MinimalHelmEOS_rt, ElectronStateType
+    HelmholtzTableType, MuonEOSType
+  USE wlElectronPhotonEOS, ONLY: &
+    FullHelmEOS, MinimalHelmEOS_rt, ElectronPhotonStateType
   USE wlMuonEOS, ONLY: &
     FullMuonEOS, MuonStateType
   USE wlHelmMuonIOModuleHDF, ONLY: &
@@ -68,8 +68,8 @@ PROGRAM wlComposeNewInversionTest
     Error
   TYPE(EquationOfStateTableType) :: &
     EOSBaryonTable
-  TYPE(HelmholtzEOSType) :: HelmholtzTable
-  TYPE(ElectronStateType) :: ElectronState
+  TYPE(HelmholtzTableType) :: HelmholtzTable
+  TYPE(ElectronPhotonStateType) :: ElectronState
   TYPE(MuonEOSType) :: MuonTable
   TYPE(MuonStateType) :: MuonState
   REAL(DP), DIMENSION(:), ALLOCATABLE :: &
@@ -187,13 +187,13 @@ PROGRAM wlComposeNewInversionTest
         ElectronState % rho = Ds_bary(iRho)
         ElectronState % abar = 1.0d0 ! these are ONLY used for ion contribution
         ElectronState % zbar = 1.0d0 ! these are ONLY used for ion contribution
-        ElectronState % Y_e = Yps_bary(iYp) - Ymu_temp
+        ElectronState % ye = Yps_bary(iYp) - Ymu_temp
         
         ! calculate electron quantities
         CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
         CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
-        Es_helm = ElectronState % e + me / rmu * ergmev * ElectronState % Y_e ! add back mass to internal Energy!
+        Es_helm = ElectronState % e + me / rmu * ergmev * ElectronState % ye ! add back mass to internal Energy!
         Ps_helm = ElectronState % p
         Ss_helm = ElectronState % s
 
@@ -338,13 +338,13 @@ PROGRAM wlComposeNewInversionTest
     ElectronState % rho = D(iP)
     ElectronState % abar = 1.0d0 ! these are ONLY used for ion contribution
     ElectronState % zbar = 1.0d0 ! these are ONLY used for ion contribution
-    ElectronState % Y_e = Ye(iP)
+    ElectronState % ye = Ye(iP)
     
     ! calculate electron quantities
     CALL FullHelmEOS(1, HelmholtzTable, ElectronState, .false., .false.)
     CALL MinimalHelmEOS_rt(HelmholtzTable, ElectronState)
 
-    Es_helm = ElectronState % e + me / rmu * ergmev * ElectronState % Y_e ! add back mass to internal Energy!
+    Es_helm = ElectronState % e + me / rmu * ergmev * ElectronState % ye ! add back mass to internal Energy!
     Ps_helm = ElectronState % p
     Ss_helm = ElectronState % s
 

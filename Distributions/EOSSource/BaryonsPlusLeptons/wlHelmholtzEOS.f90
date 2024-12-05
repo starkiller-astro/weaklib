@@ -1,8 +1,8 @@
-MODULE wlElectronEOS
+MODULE wlHelmholtzEOS
   
   USE wlKindModule, ONLY: dp
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzEOSType
+    HelmholtzTableType
   USE wlEosConstantsModule, ONLY: &
     pi, rmu, kerg, h_cgs, avn, cvel, qe, &
     kmev, ergmev, sigma_sb
@@ -59,7 +59,7 @@ MODULE wlElectronEOS
   REAL(dp), PARAMETER :: onethird = 1.0d0/3.0d0
   REAL(dp), PARAMETER :: esqu = qe * qe
   
-  TYPE, PUBLIC :: ElectronStateType
+  TYPE, PUBLIC :: HelmholtzStateType
     
     REAL(dp) :: rho
     REAL(dp) :: T
@@ -87,8 +87,8 @@ MODULE wlElectronEOS
     REAL(dp) :: detadt
     REAL(dp) :: pele
     REAL(dp) :: ppos
-    REAL(dp) :: mu_e
-    REAL(dp) :: y_e
+    REAL(dp) :: mue
+    REAL(dp) :: ye
     REAL(dp) :: gam1
     REAL(dp) :: cs
     
@@ -97,19 +97,18 @@ MODULE wlElectronEOS
     
     REAL(dp) :: conductivity
     
-  END TYPE ElectronStateType
-  
-  PUBLIC :: FullHelmEOS, MinimalHelmEOS_rt
+  END TYPE HelmholtzStateType
+
+  PUBLIC :: FullHelmEOS
   
 CONTAINS
 
-  SUBROUTINE FullHelmEOS(input, HelmTable, ElectronState, include_ion_contribution, do_coulomb)
+  SUBROUTINE FullHelmEOS(input, HelmTable, HelmholtzState)
     
     !..input arguments
     INTEGER, INTENT(IN) :: input
-    LOGICAL, INTENT(IN) :: include_ion_contribution, do_coulomb
-    TYPE(HelmholtzEOSType), INTENT(IN) :: HelmTable
-    TYPE (ElectronStateType), INTENT(INOUT) :: ElectronState
+    TYPE(HelmholtzTableType), INTENT(IN) :: HelmTable
+    TYPE (HelmholtzStateType), INTENT(INOUT) :: HelmholtzState
     
     !..rows to store EOS data
     REAL(dp) :: temp_row, &
@@ -201,11 +200,11 @@ CONTAINS
     tstpi = 1.0_dp / tstp
     dstpi = 1.0_dp / dstp
     
-    temp_row = ElectronState % T
-    den_row  = ElectronState % rho
-    abar_row = ElectronState % abar
-    zbar_row = ElectronState % zbar
-    ye_row   = ElectronState % y_e
+    temp_row = HelmholtzState % T
+    den_row  = HelmholtzState % rho
+    abar_row = HelmholtzState % abar
+    zbar_row = HelmholtzState % zbar
+    ye_row   = HelmholtzState % ye
     
     ! Initial setup for iterations
     
@@ -219,51 +218,51 @@ CONTAINS
     ELSEIF (input .eq. eos_input_rh) THEN
       
       single_iter = .true.
-      v_want = ElectronState % h
+      v_want = HelmholtzState % h
       var  = ienth
       dvar = itemp
     
     ELSEIF (input .eq. eos_input_tp) THEN
       
       single_iter = .true.
-      v_want = ElectronState % p
+      v_want = HelmholtzState % p
       var  = ipres
       dvar = idens
     
     ELSEIF (input .eq. eos_input_rp) THEN
       
       single_iter = .true.
-      v_want = ElectronState % p
+      v_want = HelmholtzState % p
       var  = ipres
       dvar = itemp
     
     ELSEIF (input .eq. eos_input_re) THEN
       
       single_iter = .true.
-      v_want = ElectronState % e
+      v_want = HelmholtzState % e
       var  = iener
       dvar = itemp
     
     ELSEIF (input .eq. eos_input_ps) THEN
       
       double_iter = .true.
-      v1_want = ElectronState % p
-      v2_want = ElectronState % s
+      v1_want = HelmholtzState % p
+      v2_want = HelmholtzState % s
       var1 = ipres
       var2 = ientr
     
     ELSEIF (input .eq. eos_input_ph) THEN
       
       double_iter = .true.
-      v1_want = ElectronState % p
-      v2_want = ElectronState % h
+      v1_want = HelmholtzState % p
+      v2_want = HelmholtzState % h
       var1 = ipres
       var2 = ienth
     
     ELSEIF (input .eq. eos_input_th) THEN
       
       single_iter = .true.
-      v_want = ElectronState % h
+      v_want = HelmholtzState % h
       var  = ienth
       dvar = idens
       
@@ -363,20 +362,6 @@ CONTAINS
       (pion*deni + eion) * tempi*tempi  &
       + 1.5d0 * kergavo * tempi*ytot1
       x       = avn*kerg/abar
-      
-      ! IF (.NOT. include_ion_contribution) THEN
-        ! pion = 0.0_dp
-        ! eion = 0.0_dp
-        ! sion = 0.0_dp
-
-        ! dpiondd = 0.0_dp
-        ! dpiondt = 0.0_dp
-        ! deiondd = 0.0_dp
-        ! deiondt = 0.0_dp
-
-        ! dsiondd = 0.0_dp
-        ! dsiondt = 0.0_dp
-      ! END IF
         
       !..electron-positron section:
       !..assume complete ionization
@@ -700,70 +685,63 @@ CONTAINS
       plasgdt  = -plasg*ktinv * kerg
       plasgdz  = 2.0d0 * plasg/zbar
       
-      ! TURN ON/OFF COULOMB
-      IF ( do_coulomb ) THEN
-        !...yakovlev & shalybkov 1989 equations 82, 85, 86, 87
-        IF (plasg .ge. 1.0D0) THEN
-          x        = plasg**(0.25d0)
-          y        = avn * ytot1 * kerg
-          ecoul    = y * temp * (a1*plasg + b1*x + c1/x + d1)
-          pcoul    = onethird * den * ecoul
-          scoul    = -y * (3.0d0*b1*x - 5.0d0*c1/x &
-          + d1 * (LOG(plasg) - 1.0d0) - e1)
-          
-          y        = avn*ytot1*kt*(a1 + 0.25d0/plasg*(b1*x - c1/x))
-          decouldd = y * plasgdd
-          decouldt = y * plasgdt + ecoul/temp
-          decoulda = y * plasgda - ecoul/abar
-          decouldz = y * plasgdz
-          
-          y        = onethird * den
-          dpcouldd = onethird * ecoul + y*decouldd
-          dpcouldt = y * decouldt
-          dpcoulda = y * decoulda
-          dpcouldz = y * decouldz
-          
-          y        = -avn*kerg/(abar*plasg)* &
-          (0.75d0*b1*x+1.25d0*c1/x+d1)
-          dscouldd = y * plasgdd
-          dscouldt = y * plasgdt
-          dscoulda = y * plasgda - scoul/abar
-          dscouldz = y * plasgdz
-          
-        !...yakovlev & shalybkov 1989 equations 102, 103, 104
-        ELSE IF (plasg .lt. 1.0D0) THEN
-          x        = plasg*SQRT(plasg)
-          y        = plasg**b2
-          z        = c2 * x - onethird * a2 * y
-          pcoul    = -pion * z
-          ecoul    = 3.0d0 * pcoul/den
-          scoul    = -avn/abar*kerg*(c2*x -a2*(b2-1.0d0)/b2*y)
-          
-          s        = 1.5d0*c2*x/plasg - onethird*a2*b2*y/plasg
-          dpcouldd = -dpiondd*z - pion*s*plasgdd
-          dpcouldt = -dpiondt*z - pion*s*plasgdt
-          
-          s        = 3.0d0/den
-          decouldd = s * dpcouldd - ecoul/den
-          decouldt = s * dpcouldt
-          decoulda = s * dpcoulda
-          decouldz = s * dpcouldz
-          
-          s        = -avn*kerg/(abar*plasg)* &
-          (1.5d0*c2*x-a2*(b2-1.0d0)*y)
-          dscouldd = s * plasgdd
-          dscouldt = s * plasgdt
-          dscoulda = s * plasgda - scoul/abar
-          dscouldz = s * plasgdz
-        END IF
+      !...yakovlev & shalybkov 1989 equations 82, 85, 86, 87
+      IF (plasg .ge. 1.0D0) THEN
+        x        = plasg**(0.25d0)
+        y        = avn * ytot1 * kerg
+        ecoul    = y * temp * (a1*plasg + b1*x + c1/x + d1)
+        pcoul    = onethird * den * ecoul
+        scoul    = -y * (3.0d0*b1*x - 5.0d0*c1/x &
+        + d1 * (LOG(plasg) - 1.0d0) - e1)
         
-        IF (include_ion_contribution) THEN
-          p_temp = prad + pion + pele + pcoul
-          e_temp = erad + eion + eele + ecoul
-        ELSE
-          p_temp = prad + pele + pcoul
-          e_temp = erad + eele + ecoul
-        END IF
+        y        = avn*ytot1*kt*(a1 + 0.25d0/plasg*(b1*x - c1/x))
+        decouldd = y * plasgdd
+        decouldt = y * plasgdt + ecoul/temp
+        decoulda = y * plasgda - ecoul/abar
+        decouldz = y * plasgdz
+        
+        y        = onethird * den
+        dpcouldd = onethird * ecoul + y*decouldd
+        dpcouldt = y * decouldt
+        dpcoulda = y * decoulda
+        dpcouldz = y * decouldz
+        
+        y        = -avn*kerg/(abar*plasg)* &
+        (0.75d0*b1*x+1.25d0*c1/x+d1)
+        dscouldd = y * plasgdd
+        dscouldt = y * plasgdt
+        dscoulda = y * plasgda - scoul/abar
+        dscouldz = y * plasgdz
+        
+      !...yakovlev & shalybkov 1989 equations 102, 103, 104
+      ELSE IF (plasg .lt. 1.0D0) THEN
+        x        = plasg*SQRT(plasg)
+        y        = plasg**b2
+        z        = c2 * x - onethird * a2 * y
+        pcoul    = -pion * z
+        ecoul    = 3.0d0 * pcoul/den
+        scoul    = -avn/abar*kerg*(c2*x -a2*(b2-1.0d0)/b2*y)
+        
+        s        = 1.5d0*c2*x/plasg - onethird*a2*b2*y/plasg
+        dpcouldd = -dpiondd*z - pion*s*plasgdd
+        dpcouldt = -dpiondt*z - pion*s*plasgdt
+        
+        s        = 3.0d0/den
+        decouldd = s * dpcouldd - ecoul/den
+        decouldt = s * dpcouldt
+        decoulda = s * dpcoulda
+        decouldz = s * dpcouldz
+        
+        s        = -avn*kerg/(abar*plasg)* &
+        (1.5d0*c2*x-a2*(b2-1.0d0)*y)
+        dscouldd = s * plasgdd
+        dscouldt = s * plasgdt
+        dscoulda = s * plasgda - scoul/abar
+        dscouldz = s * plasgdz
+      
+        p_temp = prad + pion + pele + pcoul
+        e_temp = erad + eion + eele + ecoul
+
         
         ! Disable Coulomb corrections IF they cause
         ! the energy or pressure to go negative.        
@@ -789,31 +767,17 @@ CONTAINS
       END IF
       
       !..sum all the components
-      IF (include_ion_contribution) THEN
-        pres    = prad + pion + pele + pcoul
-        ener    = erad + eion + eele + ecoul
-        entr    = srad + sion + sele + scoul
-        
-        dpresdd = dpraddd + dpiondd + dpepdd + dpcouldd
-        dpresdt = dpraddt + dpiondt + dpepdt + dpcouldt
-        denerdd = deraddd + deiondd + deepdd + decouldd
-        denerdt = deraddt + deiondt + deepdt + decouldt
-        
-        dentrdd = dsraddd + dsiondd + dsepdd + dscouldd
-        dentrdt = dsraddt + dsiondt + dsepdt + dscouldt
-      ELSE
-        pres    = prad + pele + pcoul
-        ener    = erad + eele + ecoul
-        entr    = srad + sele + scoul
-        
-        dpresdd = dpraddd + dpepdd + dpcouldd
-        dpresdt = dpraddt + dpepdt + dpcouldt
-        denerdd = deraddd + deepdd + decouldd
-        denerdt = deraddt + deepdt + decouldt
-        
-        dentrdd = dsraddd + dsepdd + dscouldd
-        dentrdt = dsraddt + dsepdt + dscouldt
-      END IF
+      pres    = prad + pion + pele + pcoul
+      ener    = erad + eion + eele + ecoul
+      entr    = srad + sion + sele + scoul
+      
+      dpresdd = dpraddd + dpiondd + dpepdd + dpcouldd
+      dpresdt = dpraddt + dpiondt + dpepdt + dpcouldt
+      denerdd = deraddd + deiondd + deepdd + decouldd
+      denerdt = deraddt + deiondt + deepdt + decouldt
+      
+      dentrdd = dsraddd + dsiondd + dsepdd + dscouldd
+      dentrdt = dsraddt + dsiondt + dsepdt + dscouldt
       
       !..the temperature and density exponents (c&g 9.81 9.82)
       !..the specific heat at constant volume (c&g 9.92)
@@ -1036,669 +1000,92 @@ CONTAINS
       
     ENDDO
     
-    ElectronState % T    = temp_row
-    ElectronState % rho  = den_row
+    HelmholtzState % T    = temp_row
+    HelmholtzState % rho  = den_row
     
-    ElectronState % p    = ptot_row
-    ElectronState % dpdT = dpt_row
-    ElectronState % dpdr = dpd_row
+    HelmholtzState % p    = ptot_row
+    HelmholtzState % dpdT = dpt_row
+    HelmholtzState % dpdr = dpd_row
     
-    ElectronState % dpde = dpe_row
-    ElectronState % dpdr_e = dpdr_e_row
+    HelmholtzState % dpde = dpe_row
+    HelmholtzState % dpdr_e = dpdr_e_row
     
-    ElectronState % e    = etot_row
-    ElectronState % dedT = det_row
-    ElectronState % dedr = ded_row
+    HelmholtzState % e    = etot_row
+    HelmholtzState % dedT = det_row
+    HelmholtzState % dedr = ded_row
     
-    ElectronState % s    = stot_row / (kmev * ergmev / rmu)
-    ElectronState % dsdT = dst_row / (kmev * ergmev / rmu)
-    ElectronState % dsdr = dsd_row / (kmev * ergmev / rmu)
+    HelmholtzState % s    = stot_row / (kmev * ergmev / rmu)
+    HelmholtzState % dsdT = dst_row / (kmev * ergmev / rmu)
+    HelmholtzState % dsdr = dsd_row / (kmev * ergmev / rmu)
     
-    ElectronState % h    = htot_row
-    ElectronState % dhdR = dhd_row
-    ElectronState % dhdT = dht_row
+    HelmholtzState % h    = htot_row
+    HelmholtzState % dhdR = dhd_row
+    HelmholtzState % dhdT = dht_row
     
-    ElectronState % pele = pele_row
-    ElectronState % ppos = ppos_row
+    HelmholtzState % pele = pele_row
+    HelmholtzState % ppos = ppos_row
     
-    ElectronState % xne = xne_row
-    ElectronState % xnp = xnp_row
+    HelmholtzState % xne = xne_row
+    HelmholtzState % xnp = xnp_row
     
-    ElectronState % eta    = etaele_row
-    ElectronState % mu_e   = etaele_row*temp_row*kmev
-    ElectronState % detadt = detadt_row
+    HelmholtzState % eta    = etaele_row
+    HelmholtzState % mue   = etaele_row*temp_row*kmev
+    HelmholtzState % detadt = detadt_row
     
-    ElectronState % cv   = cv_row
-    ElectronState % cp   = cp_row
-    ElectronState % gam1 = gam1_row
-    ElectronState % cs   = cs_row
+    HelmholtzState % cv   = cv_row
+    HelmholtzState % cp   = cp_row
+    HelmholtzState % gam1 = gam1_row
+    HelmholtzState % cs   = cs_row
     
     ! Take care of final housekeeping.
     
     ! Count the positron contribution in the electron quantities.
     
-    ElectronState % xne  = ElectronState % xne  + ElectronState % xnp
-    ElectronState % pele = ElectronState % pele + ElectronState % ppos
+    HelmholtzState % xne  = HelmholtzState % xne  + HelmholtzState % xnp
+    HelmholtzState % pele = HelmholtzState % pele + HelmholtzState % ppos
     
     ! Use the non-relativistic version of the sound speed, cs = SQRT(gam_1 * P / rho).
     ! This replaces the relativistic version that comes out of helmeos.
     
-    ! ElectronState % cs = SQRT(ElectronState % gam1 * ElectronState % p / ElectronState % rho)
+    ! HelmholtzState % cs = SQRT(HelmholtzState % gam1 * HelmholtzState % p / HelmholtzState % rho)
     
     IF (input_is_constant) THEN
       
       IF (input .eq. eos_input_rh) THEN
         
-        ElectronState % h = v_want
+        HelmholtzState % h = v_want
       
       ELSEIF (input .eq. eos_input_tp) THEN
         
-        ElectronState % p = v_want
+        HelmholtzState % p = v_want
       
       ELSEIF (input .eq. eos_input_rp) THEN
         
-        ElectronState % p = v_want
+        HelmholtzState % p = v_want
       
       ELSEIF (input .eq. eos_input_re) THEN
         
-        ElectronState % e = v_want
+        HelmholtzState % e = v_want
       
       ELSEIF (input .eq. eos_input_ps) THEN
         
-        ElectronState % p = v1_want
-        ElectronState % s = v2_want / (kmev * ergmev / rmu)
+        HelmholtzState % p = v1_want
+        HelmholtzState % s = v2_want / (kmev * ergmev / rmu)
       
       ELSEIF (input .eq. eos_input_ph) THEN
         
-        ElectronState % p = v1_want
-        ElectronState % h = v2_want
+        HelmholtzState % p = v1_want
+        HelmholtzState % h = v2_want
       
       ELSEIF (input .eq. eos_input_th) THEN
         
-        ElectronState % h = v_want
+        HelmholtzState % h = v_want
         
       ENDIF
       
     ENDIF
     
   END SUBROUTINE FullHelmEOS
-  
-   SUBROUTINE MinimalHelmEOS_rt(HelmTable, ElectronState)
-     
-        !..input arguments
-        TYPE(HelmholtzEOSType), INTENT(IN) :: HelmTable
-        TYPE (ElectronStateType), INTENT(INOUT) :: ElectronState
-    
-        !..rows to store EOS data
-        REAL(dp) :: temp_row, &
-    den_row, &
-    abar_row, &
-    zbar_row, &
-    ye_row, &
-    etot_row, &
-    ptot_row, &
-    cv_row, &
-    cp_row,  &
-    xne_row, &
-    xnp_row, &
-    etaele_row, &
-    detadt_row, &
-    pele_row, &
-    ppos_row, &
-    dpd_row,  &
-    dpt_row, &
-    dpa_row, &
-    dpz_row,  &
-    ded_row, &
-    det_row, &
-    dea_row,  &
-    dez_row,  &
-    stot_row, &
-    dsd_row, &
-    dst_row, &
-    htot_row, &
-    dhd_row, &
-    dht_row, &
-    dpe_row, &
-    dpdr_e_row, &
-    gam1_row, &
-    cs_row
-    
-    !..declare local variables
-    
-    REAL(dp) :: x,y,z,zz,zzi,deni,tempi,xni,dxnidd,dxnida, &
-    dpepdt,dpepdd,deepdt,deepdd,dsepdd,dsepdt, &
-    dpraddd,dpraddt,deraddd,deraddt,dpiondd,dpiondt, &
-    deiondd,deiondt,dsraddd,dsraddt,dsiondd,dsiondt, &
-    dse,dpe,dsp,kt,ktinv,prad,erad,srad,pion,eion, &
-    sion,xnem,pele,eele,sele,pres,ener,entr,dpresdd, &
-    dpresdt,denerdd,denerdt,dentrdd,dentrdt,cv,cp, &
-    gam1,gam2,gam3,chit,chid,nabad,sound,etaele, &
-    detadt,detadd,xnefer,dxnedt,dxnedd,s, &
-    temp,den,abar,zbar,ytot1,ye,din
-    
-    !..for the interpolations
-    INTEGER  :: iat,jat
-    REAL(dp) :: free,df_d,df_t,df_tt,df_dt
-    REAL(dp) :: xt,xd,mxt,mxd,fi(36), &
-    si0t,si1t,si2t,si0mt,si1mt,si2mt, &
-    si0d,si1d,si2d,si0md,si1md,si2md, &
-    dsi0t,dsi1t,dsi2t,dsi0mt,dsi1mt,dsi2mt, &
-    dsi0d,dsi1d,dsi2d,dsi0md,dsi1md,dsi2md, &
-    ddsi0t,ddsi1t,ddsi2t,ddsi0mt,ddsi1mt,ddsi2mt
-
-    ! extra variables I added that were previously allocated
-    REAL(dp) :: smallt, smalld, hight, highd
-    REAL(dp) :: tstp, dstp, dstpi, tstpi
-    
-    smallt = HelmTable % mintemp
-    smalld = HelmTable % mindens
-    hight = HelmTable % maxtemp
-    highd = HelmTable % maxdens
-        
-    tstp  = (LOG10(hight) - LOG10(smallt))/float(HelmTable % nPointsTemp -1)
-    dstp  = (LOG10(highd) - LOG10(smalld))/float(HelmTable % nPointsDen -1)
-    
-    tstpi = 1.0_dp / tstp
-    dstpi = 1.0_dp / dstp
-    
-    temp_row = ElectronState % T
-    den_row  = ElectronState % rho
-    abar_row = ElectronState % abar
-    zbar_row = ElectronState % zbar
-    ye_row   = ElectronState % y_e
-    
-    ptot_row = 0.0d0
-    dpt_row = 0.0d0
-    dpd_row = 0.0d0
-    dpa_row = 0.0d0
-    dpz_row = 0.0d0
-    dpe_row = 0.0d0
-    dpdr_e_row = 0.0d0
-    
-    etot_row = 0.0d0
-    det_row = 0.0d0
-    ded_row = 0.0d0
-    dea_row = 0.0d0
-    dez_row = 0.0d0
-    
-    stot_row = 0.0d0
-    dst_row = 0.0d0
-    dsd_row = 0.0d0
-    
-    htot_row = 0.0d0
-    dhd_row = 0.0d0
-    dht_row = 0.0d0
-    
-    pele_row = 0.0d0
-    ppos_row = 0.0d0
-    
-    xne_row = 0.0d0
-    xnp_row = 0.0d0
-    
-    etaele_row = 0.0d0
-    detadt_row = 0.0d0
-    
-    cv_row = 0.0d0
-    cp_row = 0.0d0
-    cs_row = 0.0d0
-    gam1_row = 0.0d0
-                
-    temp  = temp_row
-    den   =  den_row
-    abar  = abar_row
-    zbar  = zbar_row
-    
-    ytot1 = 1.0d0 / abar
-    ye    = ye_row
-    din   = ye * den
-    
-    !..initialize
-    deni    = 1.0d0/den
-    tempi   = 1.0d0/temp
-    kt      = kerg * temp
-    ktinv   = 1.0d0/kt
-    
-    !..radiation section:
-    prad    = asoli3 * temp * temp * temp * temp
-    dpraddd = 0.0d0
-    dpraddt = 4.0d0 * prad*tempi
-    
-    erad    = 3.0d0 * prad*deni
-    deraddd = -erad*deni
-    deraddt = 3.0d0 * dpraddt*deni
-    
-    srad    = (prad*deni + erad)*tempi
-    dsraddd = (dpraddd*deni - prad*deni*deni + deraddd)*tempi
-    dsraddt = (dpraddt*deni + deraddt - srad)*tempi
-    
-    !..ion section:
-    xni     = avn * ytot1 * den
-    dxnidd  = avn * ytot1
-    dxnida  = -xni * ytot1
-    
-    pion    = xni * kt
-    dpiondd = dxnidd * kt
-    dpiondt = xni * kerg
-    
-    eion    = 1.5d0 * pion*deni
-    deiondd = (1.5d0 * dpiondd - eion)*deni
-    deiondt = 1.5d0 * dpiondt*deni
-    
-    x       = abar*abar*SQRT(abar) * deni/avn
-    s       = sioncon * temp
-    z       = x * s * SQRT(s)
-    y       = LOG(z)
-    sion    = (pion*deni + eion)*tempi + kergavo * ytot1 * y
-    dsiondd = (dpiondd*deni - pion*deni*deni + deiondd)*tempi &
-    - kergavo * deni * ytot1
-    dsiondt = (dpiondt*deni + deiondt)*tempi -  &
-    (pion*deni + eion) * tempi*tempi  &
-    + 1.5d0 * kergavo * tempi*ytot1
-    x       = avn*kerg/abar
-      
-    !..electron-positron section:
-    !..assume complete ionization
-    xnem    = xni * zbar
-    
-    !..enter the table with ye*den
-    din = ye*den
-          
-    !..hash locate this temperature and density
-    jat = int((log10(temp) - LOG10(smallt))*tstpi) + 1
-    jat = MAX(1,MIN(jat,HelmTable % nPointsTemp-1))
-    iat = int((log10(din) - LOG10(smalld))*dstpi) + 1
-    iat = MAX(1,MIN(iat,HelmTable % nPointsDen-1))
-          
-    fi(:) = 0.0d0
-    !..access the table locations only once
-    fi(1)  = HelmTable % f(iat,jat)
-    fi(2)  = HelmTable % f(iat+1,jat)
-    fi(3)  = HelmTable % f(iat,jat+1)
-    fi(4)  = HelmTable % f(iat+1,jat+1)
-    fi(5)  = HelmTable % ft(iat,jat)
-    fi(6)  = HelmTable % ft(iat+1,jat)
-    fi(7)  = HelmTable % ft(iat,jat+1)
-    fi(8)  = HelmTable % ft(iat+1,jat+1)
-    fi(9)  = HelmTable % ftt(iat,jat)
-    fi(10) = HelmTable % ftt(iat+1,jat)
-    fi(11) = HelmTable % ftt(iat,jat+1)
-    fi(12) = HelmTable % ftt(iat+1,jat+1)
-    fi(13) = HelmTable % fd(iat,jat)
-    fi(14) = HelmTable % fd(iat+1,jat)
-    fi(15) = HelmTable % fd(iat,jat+1)
-    fi(16) = HelmTable % fd(iat+1,jat+1)
-    fi(17) = HelmTable % fdd(iat,jat)
-    fi(18) = HelmTable % fdd(iat+1,jat)
-    fi(19) = HelmTable % fdd(iat,jat+1)
-    fi(20) = HelmTable % fdd(iat+1,jat+1)
-    fi(21) = HelmTable % fdt(iat,jat)
-    fi(22) = HelmTable % fdt(iat+1,jat)
-    fi(23) = HelmTable % fdt(iat,jat+1)
-    fi(24) = HelmTable % fdt(iat+1,jat+1)
-    fi(25) = HelmTable % fddt(iat,jat)
-    fi(26) = HelmTable % fddt(iat+1,jat)
-    fi(27) = HelmTable % fddt(iat,jat+1)
-    fi(28) = HelmTable % fddt(iat+1,jat+1)
-    fi(29) = HelmTable % fdtt(iat,jat)
-    fi(30) = HelmTable % fdtt(iat+1,jat)
-    fi(31) = HelmTable % fdtt(iat,jat+1)
-    fi(32) = HelmTable % fdtt(iat+1,jat+1)
-    fi(33) = HelmTable % fddtt(iat,jat)
-    fi(34) = HelmTable % fddtt(iat+1,jat)
-    fi(35) = HelmTable % fddtt(iat,jat+1)
-    fi(36) = HelmTable % fddtt(iat+1,jat+1)
-    
-    !..various differences
-    xt  = MAX( (temp - HelmTable % t(jat))*HelmTable % dti(jat), 0.0_dp)
-    xd  = MAX( (din - HelmTable % d(iat))*HelmTable % ddi(iat), 0.0_dp)
-    mxt = 1.0d0 - xt
-    mxd = 1.0d0 - xd
-          
-    !..the six density and six temperature basis functions
-    si0t =   psi0(xt)
-    si1t =   psi1(xt)*HelmTable % dt(jat)
-    si2t =   psi2(xt)*HelmTable % dt2(jat)
-    
-    si0mt =  psi0(mxt)
-    si1mt = -psi1(mxt)*HelmTable % dt(jat)
-    si2mt =  psi2(mxt)*HelmTable % dt2(jat)
-    
-    si0d =   psi0(xd)
-    si1d =   psi1(xd)*HelmTable % dd(iat)
-    si2d =   psi2(xd)*HelmTable % dd2(iat)
-    
-    si0md =  psi0(mxd)
-    si1md = -psi1(mxd)*HelmTable % dd(iat)
-    si2md =  psi2(mxd)*HelmTable % dd2(iat)
-    
-    !..derivatives of the weight functions
-    dsi0t =   dpsi0(xt)*HelmTable % dti(jat)
-    dsi1t =   dpsi1(xt)
-    dsi2t =   dpsi2(xt)*HelmTable % dt(jat)
-    
-    dsi0mt = -dpsi0(mxt)*HelmTable % dti(jat)
-    dsi1mt =  dpsi1(mxt)
-    dsi2mt = -dpsi2(mxt)*HelmTable % dt(jat)
-    
-    dsi0d =   dpsi0(xd)*HelmTable % ddi(iat)
-    dsi1d =   dpsi1(xd)
-    dsi2d =   dpsi2(xd)*HelmTable % dd(iat)
-    
-    dsi0md = -dpsi0(mxd)*HelmTable % ddi(iat)
-    dsi1md =  dpsi1(mxd)
-    dsi2md = -dpsi2(mxd)*HelmTable % dd(iat)
-    
-    !..second derivatives of the weight functions
-    ddsi0t =   ddpsi0(xt)*HelmTable % dt2i(jat)
-    ddsi1t =   ddpsi1(xt)*HelmTable % dti(jat)
-    ddsi2t =   ddpsi2(xt)
-    
-    ddsi0mt =  ddpsi0(mxt)*HelmTable % dt2i(jat)
-    ddsi1mt = -ddpsi1(mxt)*HelmTable % dti(jat)
-    ddsi2mt =  ddpsi2(mxt)
-    
-    !     ddsi0d =   ddpsi0(xd)*dd2i(iat)
-    !     ddsi1d =   ddpsi1(xd)*HelmTable % ddi(iat)
-    !     ddsi2d =   ddpsi2(xd)
-    
-    !     ddsi0md =  ddpsi0(mxd)*dd2i(iat)
-    !     ddsi1md = -ddpsi1(mxd)*HelmTable % ddi(iat)
-    !     ddsi2md =  ddpsi2(mxd)
-    
-    !..the free energy
-    free  = h5( fi, &
-      si0t,   si1t,   si2t,   si0mt,   si1mt,   si2mt, &
-      si0d,   si1d,   si2d,   si0md,   si1md,   si2md)
-
-    !..derivative with respect to density
-    df_d  = h5( fi, &
-      si0t,   si1t,   si2t,   si0mt,   si1mt,   si2mt, &
-      dsi0d,  dsi1d,  dsi2d,  dsi0md,  dsi1md,  dsi2md)
-
-    !..derivative with respect to temperature
-    df_t = h5( fi, &
-      dsi0t,  dsi1t,  dsi2t,  dsi0mt,  dsi1mt,  dsi2mt, &
-      si0d,   si1d,   si2d,   si0md,   si1md,   si2md)
-
-    !..derivative with respect to density**2
-    !     df_dd = h5( &
-    !               si0t,   si1t,   si2t,   si0mt,   si1mt,   si2mt, &
-    !               ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md)
-
-    !..derivative with respect to temperature**2
-    df_tt = h5( fi, &
-      ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, &
-      si0d,   si1d,   si2d,   si0md,   si1md,   si2md)
-
-    !..derivative with respect to temperature and density
-    df_dt = h5( fi, &
-      dsi0t,  dsi1t,  dsi2t,  dsi0mt,  dsi1mt,  dsi2mt, &
-      dsi0d,  dsi1d,  dsi2d,  dsi0md,  dsi1md,  dsi2md)
-    
-    !..now get the pressure derivative with density, chemical potential, and
-    !..electron positron number densities
-    !..get the interpolation weight functions
-    si0t   =  xpsi0(xt)
-    si1t   =  xpsi1(xt)*HelmTable % dt(jat)
-    
-    si0mt  =  xpsi0(mxt)
-    si1mt  =  -xpsi1(mxt)*HelmTable % dt(jat)
-    
-    si0d   =  xpsi0(xd)
-    si1d   =  xpsi1(xd)*HelmTable % dd(iat)
-    
-    si0md  =  xpsi0(mxd)
-    si1md  =  -xpsi1(mxd)*HelmTable % dd(iat)
-    
-    !..derivatives of weight functions
-    dsi0t  = xdpsi0(xt)*HelmTable % dti(jat)
-    dsi1t  = xdpsi1(xt)
-    
-    dsi0mt = -xdpsi0(mxt)*HelmTable % dti(jat)
-    dsi1mt = xdpsi1(mxt)
-    
-    dsi0d  = xdpsi0(xd)*HelmTable % ddi(iat)
-    dsi1d  = xdpsi1(xd)
-    
-    dsi0md = -xdpsi0(mxd)*HelmTable % ddi(iat)
-    dsi1md = xdpsi1(mxd)
-    
-    !..look in the pressure derivative only once
-    fi(1)  = HelmTable % dpdf(iat,jat)
-    fi(2)  = HelmTable % dpdf(iat+1,jat)
-    fi(3)  = HelmTable % dpdf(iat,jat+1)
-    fi(4)  = HelmTable % dpdf(iat+1,jat+1)
-    fi(5)  = HelmTable % dpdft(iat,jat)
-    fi(6)  = HelmTable % dpdft(iat+1,jat)
-    fi(7)  = HelmTable % dpdft(iat,jat+1)
-    fi(8)  = HelmTable % dpdft(iat+1,jat+1)
-    fi(9)  = HelmTable % dpdfd(iat,jat)
-    fi(10) = HelmTable % dpdfd(iat+1,jat)
-    fi(11) = HelmTable % dpdfd(iat,jat+1)
-    fi(12) = HelmTable % dpdfd(iat+1,jat+1)
-    fi(13) = HelmTable % dpdfdt(iat,jat)
-    fi(14) = HelmTable % dpdfdt(iat+1,jat)
-    fi(15) = HelmTable % dpdfdt(iat,jat+1)
-    fi(16) = HelmTable % dpdfdt(iat+1,jat+1)
-    
-    !..pressure derivative with density
-    dpepdd  = h3(   fi, &
-    si0t,   si1t,   si0mt,   si1mt, &
-    si0d,   si1d,   si0md,   si1md)
-    dpepdd  = MAX(ye * dpepdd,0.0_dp)
-    
-    !..look in the electron chemical potential table only once
-    fi(1)  = HelmTable % ef(iat,jat)
-    fi(2)  = HelmTable % ef(iat+1,jat)
-    fi(3)  = HelmTable % ef(iat,jat+1)
-    fi(4)  = HelmTable % ef(iat+1,jat+1)
-    fi(5)  = HelmTable % eft(iat,jat)
-    fi(6)  = HelmTable % eft(iat+1,jat)
-    fi(7)  = HelmTable % eft(iat,jat+1)
-    fi(8)  = HelmTable % eft(iat+1,jat+1)
-    fi(9)  = HelmTable % efd(iat,jat)
-    fi(10) = HelmTable % efd(iat+1,jat)
-    fi(11) = HelmTable % efd(iat,jat+1)
-    fi(12) = HelmTable % efd(iat+1,jat+1)
-    fi(13) = HelmTable % efdt(iat,jat)
-    fi(14) = HelmTable % efdt(iat+1,jat)
-    fi(15) = HelmTable % efdt(iat,jat+1)
-    fi(16) = HelmTable % efdt(iat+1,jat+1)
-    
-    !..electron chemical potential etaele
-    etaele  = h3( fi, &
-    si0t,   si1t,   si0mt,   si1mt, &
-    si0d,   si1d,   si0md,   si1md)
-    
-    !..derivative with respect to density
-    x       = h3( fi, &
-    si0t,   si1t,   si0mt,   si1mt, &
-    dsi0d,  dsi1d,  dsi0md,  dsi1md)
-    detadd  = ye * x
-    
-    !..derivative with respect to temperature
-    detadt  = h3( fi, &
-    dsi0t,  dsi1t,  dsi0mt,  dsi1mt, &
-    si0d,   si1d,   si0md,   si1md)
-    
-    
-    !..look in the number density table only once
-    fi(1)  = HelmTable % xf(iat,jat)
-    fi(2)  = HelmTable % xf(iat+1,jat)
-    fi(3)  = HelmTable % xf(iat,jat+1)
-    fi(4)  = HelmTable % xf(iat+1,jat+1)
-    fi(5)  = HelmTable % xft(iat,jat)
-    fi(6)  = HelmTable % xft(iat+1,jat)
-    fi(7)  = HelmTable % xft(iat,jat+1)
-    fi(8)  = HelmTable % xft(iat+1,jat+1)
-    fi(9)  = HelmTable % xfd(iat,jat)
-    fi(10) = HelmTable % xfd(iat+1,jat)
-    fi(11) = HelmTable % xfd(iat,jat+1)
-    fi(12) = HelmTable % xfd(iat+1,jat+1)
-    fi(13) = HelmTable % xfdt(iat,jat)
-    fi(14) = HelmTable % xfdt(iat+1,jat)
-    fi(15) = HelmTable % xfdt(iat,jat+1)
-    fi(16) = HelmTable % xfdt(iat+1,jat+1)
-    
-    !..electron + positron number densities
-    xnefer   = h3( fi, &
-    si0t,   si1t,   si0mt,   si1mt, &
-    si0d,   si1d,   si0md,   si1md)
-    
-    !..derivative with respect to density
-    x        = h3( fi, &
-    si0t,   si1t,   si0mt,   si1mt, &
-    dsi0d,  dsi1d,  dsi0md,  dsi1md)
-    x = MAX(x,0.0_dp)
-    dxnedd   = ye * x
-    
-    !..derivative with respect to temperature
-    dxnedt   = h3( fi, &
-    dsi0t,  dsi1t,  dsi0mt,  dsi1mt, &
-    si0d,   si1d,   si0md,   si1md)
-    
-    !..the desired electron-positron thermodynamic quantities
-    
-    !..dpepdd at high temperatures and low densities is below the
-    !..floating point limit of the subtraction of two large terms.
-    !..since dpresdd doesn't enter the maxwell relations at all, use the
-    !..bicubic interpolation done above instead of this one
-    x       = din * din
-    pele    = x * df_d
-    dpepdt  = x * df_dt
-    !     dpepdd  = ye * (x * df_dd + 2.0d0 * din * df_d)
-    s       = dpepdd/ye - 2.0d0 * din * df_d
-    
-    x       = ye * ye
-    sele    = -df_t * ye
-    dsepdt  = -df_tt * ye
-    dsepdd  = -df_dt * x
-    
-    eele    = ye*free + temp * sele
-    deepdt  = temp * dsepdt
-    deepdd  = x * df_d + temp * dsepdd
-
-    pres    = prad + pele
-    ener    = erad + eele
-    entr    = srad + sele
-    
-    dpresdd = dpraddd + dpepdd
-    dpresdt = dpraddt + dpepdt
-    denerdd = deraddd + deepdd
-    denerdt = deraddt + deepdt
-    
-    dentrdd = dsraddd + dsepdd
-    dentrdt = dsraddt + dsepdt
-  
-    !..the temperature and density exponents (c&g 9.81 9.82)
-      !..the specific heat at constant volume (c&g 9.92)
-      !..the third adiabatic exponent (c&g 9.93)
-      !..the first adiabatic exponent (c&g 9.97)
-      !..the second adiabatic exponent (c&g 9.105)
-      !..the specific heat at constant pressure (c&g 9.98)
-    !..and relativistic formula for the sound speed (c&g 14.29)
-    zz    = pres*deni
-    zzi   = den/pres
-    chit  = temp/pres * dpresdt
-    chid  = dpresdd*zzi
-    cv    = denerdt
-    x     = zz * chit/(temp * cv)
-    gam3  = x + 1.0d0
-    gam1  = chit*x + chid
-    nabad = x/gam1
-    gam2  = 1.0d0/(1.0d0 - nabad)
-    cp    = cv * gam1/chid
-    z     = 1.0d0 + (ener + light2)*zzi
-    sound = cvel * SQRT(gam1/z)
-    
-    !..maxwell relations; each is 0.0_dp IF the consistency is perfect
-    x   = den * den
-    dse = temp*dentrdt/denerdt - 1.0d0
-    dpe = (denerdd*x + temp*dpresdt)/pres - 1.0d0
-    dsp = -dentrdd*x/dpresdt - 1.0d0
-    
-    ptot_row = pres
-    dpt_row = dpresdt
-    dpd_row = dpresdd
-    dpe_row = dpresdt / denerdt
-    dpdr_e_row = dpresdd - dpresdt * denerdd / denerdt
-    
-    etot_row = ener
-    det_row = denerdt
-    ded_row = denerdd
-    
-    stot_row = entr
-    dst_row = dentrdt
-    dsd_row = dentrdd
-    
-    htot_row = ener + pres / den
-    dhd_row = denerdd + dpresdd / den - pres / den**2
-    dht_row = denerdt + dpresdt / den
-    
-    pele_row = pele
-    ppos_row = 0.0d0
-    
-    xne_row = xnefer
-    xnp_row = 0.0d0
-    
-    etaele_row = etaele
-    detadt_row = detadt
-    
-    cv_row = cv
-    cp_row = cp
-    cs_row = sound
-    gam1_row = gam1
-          
-    ElectronState % T    = temp_row
-    ElectronState % rho  = den_row
-    
-    ElectronState % p    = ptot_row
-    ElectronState % dpdT = dpt_row
-    ElectronState % dpdr = dpd_row
-    
-    
-    ElectronState % dpde = dpe_row
-    ElectronState % dpdr_e = dpdr_e_row
-    
-    ElectronState % e    = etot_row
-    ElectronState % dedT = det_row
-    ElectronState % dedr = ded_row
-    
-    ElectronState % s    = stot_row / (kmev * ergmev / rmu)
-    ElectronState % dsdT = dst_row / (kmev * ergmev / rmu)
-    ElectronState % dsdr = dsd_row / (kmev * ergmev / rmu)
-    
-    ElectronState % h    = htot_row
-    ElectronState % dhdR = dhd_row
-    ElectronState % dhdT = dht_row
-    
-    ElectronState % pele = pele_row
-    ElectronState % ppos = ppos_row
-    
-    ElectronState % xne = xne_row
-    ElectronState % xnp = xnp_row
-    
-    ElectronState % eta = etaele_row
-    ElectronState % mu_e   = etaele_row*temp_row*kmev
-    ElectronState % detadt = detadt_row
-    
-    ElectronState % cv   = cv_row
-    ElectronState % cp   = cp_row
-    ElectronState % gam1 = gam1_row
-    ElectronState % cs   = cs_row
-    
-    ! Take care of final housekeeping.
-    
-    ! Count the positron contribution in the electron quantities.
-    
-    ElectronState % xne  = ElectronState % xne  + ElectronState % xnp
-    ElectronState % pele = ElectronState % pele + ElectronState % ppos
-    
-    ! ElectronState % cs = SQRT(ElectronState % gam1 * ElectronState % p / ElectronState % rho)
-    
-  END SUBROUTINE MinimalHelmEOS_rt
-  
   
   ! These are all the functions used fro the interpolation
   ! provided by Timmes
@@ -1830,4 +1217,4 @@ CONTAINS
     + dfi(15) *w1d*w1mt  +  dfi(16) *w1md*w1mt
   END FUNCTION h3
   
-END MODULE wlElectronEOS
+END MODULE wlHelmholtzEOS

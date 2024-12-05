@@ -7,14 +7,14 @@ PROGRAM wlWriteBaryPlusEle
 	USE wlEOSIOModuleHDF
 	USE wlLeptonEOSModule
 	USE wlHelmMuonIOModuleHDF
-	USE wlElectronEOS
+	USE wlElectronPhotonEOS
 	USE wlExtPhysicalConstantsModule, ONLY: &
 		kmev, rmu, kmev_inv, ergmev, me, cvel
 	
 	IMPLICIT NONE
 	
-	TYPE(ElectronStateType) :: ElectronState
-	TYPE(HelmholtzEOSType) :: HelmholtzTable
+	TYPE(ElectronPhotonStateType) :: ElectronState
+	TYPE(HelmholtzTableType) :: HelmholtzTable
     TYPE(EquationOfStateTableType) :: EOSBaryonTable, EOSBaryonPlusEleTable, EOSFullTable
 	
 	INTEGER :: nRho, nTemp, nYp, iAbar, iZbar, iPressure, iRho, iTemp, iYp, iXa, iXn, iXh, &
@@ -168,7 +168,7 @@ PROGRAM wlWriteBaryPlusEle
 				ElectronState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
 				ElectronState % abar = abar_total
 				ElectronState % zbar = zbar_total
-				ElectronState % y_e = EOSBaryonTable % TS % States(3) % Values(iYp)
+				ElectronState % ye = EOSBaryonTable % TS % States(3) % Values(iYp)
 				
 				! calculate electron quantities
 				CALL FullHelmEOS(1, HelmholtzTable, ElectronState, include_ion_contribution, do_coulomb)
@@ -183,7 +183,7 @@ PROGRAM wlWriteBaryPlusEle
 				
 				eps_baryons = EOSBaryonTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp) - &
 				EOSBaryonTable % DV % Offsets(iEnergy)
-				eps_electrons = ElectronState % e - 0.511 / rmu * ergmev * ElectronState % y_e
+				eps_electrons = ElectronState % e - 0.511 / rmu * ergmev * ElectronState % ye
 
 				mue_electrons = ElectronState % eta * ElectronState % t*kmev + 0.511d0
 				mup_baryons = EOSBaryonTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &

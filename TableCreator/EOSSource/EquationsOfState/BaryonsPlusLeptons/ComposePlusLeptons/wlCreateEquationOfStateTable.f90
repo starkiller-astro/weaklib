@@ -9,11 +9,11 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
         ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
     USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
-    USE wlLeptonEOSModule, ONLY: HelmholtzEOSType, MuonEOSType, &
+    USE wlLeptonEOSModule, ONLY: HelmholtzTableType, MuonEOSType, &
         iTempMax, iDenMax, &
         nTempMuon, nDenMuon, &
         ReadHelmEOSdat, ReadMuonEOSdat, &
-        AllocateHelmEOS, DeAllocateHelmEOS, &
+        AllocateHelmholtzTable, DeallocateHelmholtzTable, &
         AllocateMuonEOS, DeAllocateMuonEOS 
 
     IMPLICIT NONE
@@ -22,8 +22,8 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER, DIMENSION(3)          :: nPointsBaryon
     INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsDenon
     INTEGER                        :: nVariables
-    TYPE(EquationOfStateTableType) :: EOSBaryonTable
-    TYPE(HelmholtzEOSType) :: HelmEOSTable
+    TYPE(EquationOfStateTableType) :: EOSTable
+    TYPE(HelmholtzTableType) :: HelmEOSTable
     TYPE(MuonEOSType) :: MuonEOSTable
     
     CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &
@@ -41,8 +41,8 @@ PROGRAM wlCreateEquationOfStateTable
     IF (ReadFullTable) THEN
         ! for two separate tables
         ! path of the original compose table (.thermo and .compo for now, will add hdf5 option later)
-        CompOSEFilePath = '../../../../../../../Compare_different_tables/SFHo/'
-        CompOSEFHDF5Path = '../../../../../../../Compare_different_tables/SFHo/eoscompose.h5'
+        CompOSEFilePath = 'SFHo/'
+        CompOSEFHDF5Path = 'SFHo/eoscompose.h5'
         IF (RedHDF5Table) THEN
             BaryonEOSTableName = 'FullEOS_interpolated.h5'
         ELSE
@@ -54,8 +54,8 @@ PROGRAM wlCreateEquationOfStateTable
     ELSE 
         ! for one big table
         ! path of the original compose table (.thermo and .compo for now, will add hdf5 option later)
-        CompOSEFilePath = '../../../../../../../Compare_different_tables/SFHo_no_ele/'
-        CompOSEFHDF5Path = '../../../../../../../Compare_different_tables/SFHo_no_ele/eoscompose.h5'
+        CompOSEFilePath = 'SFHo_no_ele/'
+        CompOSEFHDF5Path = 'SFHo_no_ele/eoscompose.h5'
         IF (RedHDF5Table) THEN
             BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
         ELSE
@@ -81,31 +81,31 @@ PROGRAM wlCreateEquationOfStateTable
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
     WRITE(*,*) nPointsBaryon
-    CALL AllocateEquationOfStateTable( EOSBaryonTable, nPointsBaryon , nVariables )
+    CALL AllocateEquationOfStateTable( EOSTable, nPointsBaryon , nVariables )
     
-    EOSBaryonTable % TS % Names(1:3) = (/'Density                         ',&
+    EOSTable % TS % Names(1:3) = (/'Density                         ',&
     'Temperature                     ',&
     'Proton Fraction                 '/)
     
-    EOSBaryonTable % TS % Indices % iRho = 1
-    EOSBaryonTable % TS % Indices % iT   = 2
-    EOSBaryonTable % TS % Indices % iYe  = 3
+    EOSTable % TS % Indices % iRho = 1
+    EOSTable % TS % Indices % iT   = 2
+    EOSTable % TS % Indices % iYe  = 3
     
     PRINT*, "Allocate Independent Variable Units " 
     
-    EOSBaryonTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
+    EOSTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
     'K                               ', &
     '                                '/) 
     
     ! DO WE NEED THIS?
-    EOSBaryonTable % TS % minValues(1:3) =  (/MINVAL(RhoCompOSE), MINVAL(TempCompOSE), MINVAL(YpCompOSE)/)
-    EOSBaryonTable % TS % maxValues(1:3) =  (/MAXVAL(RhoCompOSE), MAXVAL(TempCompOSE), MAXVAL(YpCompOSE)/)
+    EOSTable % TS % minValues(1:3) =  (/MINVAL(RhoCompOSE), MINVAL(TempCompOSE), MINVAL(YpCompOSE)/)
+    EOSTable % TS % maxValues(1:3) =  (/MAXVAL(RhoCompOSE), MAXVAL(TempCompOSE), MAXVAL(YpCompOSE)/)
     
     PRINT*, "Label Grid Type"
-    EOSBaryonTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
+    EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
     
     PRINT*, "Allocate Names " 
-    EOSBaryonTable % DV % Names(1:15) = (/'Pressure                        ', &
+    EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
     'Entropy Per Baryon              ', &
     'Internal Energy Density         ', &
     'Electron Chemical Potential     ', &
@@ -123,24 +123,24 @@ PROGRAM wlCreateEquationOfStateTable
     
     PRINT*, "Set Dependent Variable Identifier Indicies "
     
-    EOSBaryonTable % DV % Indices % iPressure = 1
-    EOSBaryonTable % DV % Indices % iEntropyPerBaryon = 2
-    EOSBaryonTable % DV % Indices % iInternalEnergyDensity = 3
-    EOSBaryonTable % DV % Indices % iElectronChemicalPotential = 4
-    EOSBaryonTable % DV % Indices % iProtonChemicalPotential = 5
-    EOSBaryonTable % DV % Indices % iNeutronChemicalPotential = 6
-    EOSBaryonTable % DV % Indices % iProtonMassFraction = 7
-    EOSBaryonTable % DV % Indices % iNeutronMassFraction = 8
-    EOSBaryonTable % DV % Indices % iAlphaMassFraction = 9
-    EOSBaryonTable % DV % Indices % iHeavyMassFraction = 10
-    EOSBaryonTable % DV % Indices % iHeavyChargeNumber = 11
-    EOSBaryonTable % DV % Indices % iHeavyMassNumber = 12
-    EOSBaryonTable % DV % Indices % iHeavyBindingEnergy = 13
-    EOSBaryonTable % DV % Indices % iThermalEnergy = 14
-    EOSBaryonTable % DV % Indices % iGamma1 = 15
+    EOSTable % DV % Indices % iPressure = 1
+    EOSTable % DV % Indices % iEntropyPerBaryon = 2
+    EOSTable % DV % Indices % iInternalEnergyDensity = 3
+    EOSTable % DV % Indices % iElectronChemicalPotential = 4
+    EOSTable % DV % Indices % iProtonChemicalPotential = 5
+    EOSTable % DV % Indices % iNeutronChemicalPotential = 6
+    EOSTable % DV % Indices % iProtonMassFraction = 7
+    EOSTable % DV % Indices % iNeutronMassFraction = 8
+    EOSTable % DV % Indices % iAlphaMassFraction = 9
+    EOSTable % DV % Indices % iHeavyMassFraction = 10
+    EOSTable % DV % Indices % iHeavyChargeNumber = 11
+    EOSTable % DV % Indices % iHeavyMassNumber = 12
+    EOSTable % DV % Indices % iHeavyBindingEnergy = 13
+    EOSTable % DV % Indices % iThermalEnergy = 14
+    EOSTable % DV % Indices % iGamma1 = 15
     
     PRINT*, "Allocate Dependent Variable Units " 
-    EOSBaryonTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
+    EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
     'k_b per baryon                  ', &
     'erg per gram                    ', &
     'MeV                             ', &
@@ -156,28 +156,28 @@ PROGRAM wlCreateEquationOfStateTable
     'cm per s                        ', &
     '                                '/)
     
-    PRINT*, "Begin Populating EOSBaryonTable" 
+    PRINT*, "Begin Populating EOSTable" 
     ! FROM HERE ON YOU HAVE TO CONVERT THE COMPOSE EOS TO WEAKLIB
-    EOSBaryonTable % TS % States(1) % Values = RhoCompOSE
-    EOSBaryonTable % TS % States(2) % Values = TempCompOSE
-    EOSBaryonTable % TS % States(3) % Values = YpCompOSE
+    EOSTable % TS % States(1) % Values = RhoCompOSE
+    EOSTable % TS % States(2) % Values = TempCompOSE
+    EOSTable % TS % States(3) % Values = YpCompOSE
     
     ! thermo and compo state
-    EOSBaryonTable % DV % Variables(1) % Values(:,:,:) = EOSCompOSE(:,:,:,1)
-    EOSBaryonTable % DV % Variables(2) % Values(:,:,:) = EOSCompOSE(:,:,:,2)
-    EOSBaryonTable % DV % Variables(3) % Values(:,:,:) = EOSCompOSE(:,:,:,3)
-    EOSBaryonTable % DV % Variables(4) % Values(:,:,:) = EOSCompOSE(:,:,:,4)
-    EOSBaryonTable % DV % Variables(5) % Values(:,:,:) = EOSCompOSE(:,:,:,5)
-    EOSBaryonTable % DV % Variables(6) % Values(:,:,:) = EOSCompOSE(:,:,:,6)
-    EOSBaryonTable % DV % Variables(7) % Values(:,:,:) = EOSCompOSE(:,:,:,7)
-    EOSBaryonTable % DV % Variables(8) % Values(:,:,:) = EOSCompOSE(:,:,:,8)
-    EOSBaryonTable % DV % Variables(9) % Values(:,:,:) = EOSCompOSE(:,:,:,9)
-    EOSBaryonTable % DV % Variables(10) % Values(:,:,:) = EOSCompOSE(:,:,:,10)
-    EOSBaryonTable % DV % Variables(11) % Values(:,:,:) = EOSCompOSE(:,:,:,11)
-    EOSBaryonTable % DV % Variables(12) % Values(:,:,:) = EOSCompOSE(:,:,:,12)
-    EOSBaryonTable % DV % Variables(13) % Values(:,:,:) = EOSCompOSE(:,:,:,13)
-    EOSBaryonTable % DV % Variables(14) % Values(:,:,:) = EOSCompOSE(:,:,:,14)
-    EOSBaryonTable % DV % Variables(15) % Values(:,:,:) = EOSCompOSE(:,:,:,15)
+    EOSTable % DV % Variables(1) % Values(:,:,:) = EOSCompOSE(:,:,:,1)
+    EOSTable % DV % Variables(2) % Values(:,:,:) = EOSCompOSE(:,:,:,2)
+    EOSTable % DV % Variables(3) % Values(:,:,:) = EOSCompOSE(:,:,:,3)
+    EOSTable % DV % Variables(4) % Values(:,:,:) = EOSCompOSE(:,:,:,4)
+    EOSTable % DV % Variables(5) % Values(:,:,:) = EOSCompOSE(:,:,:,5)
+    EOSTable % DV % Variables(6) % Values(:,:,:) = EOSCompOSE(:,:,:,6)
+    EOSTable % DV % Variables(7) % Values(:,:,:) = EOSCompOSE(:,:,:,7)
+    EOSTable % DV % Variables(8) % Values(:,:,:) = EOSCompOSE(:,:,:,8)
+    EOSTable % DV % Variables(9) % Values(:,:,:) = EOSCompOSE(:,:,:,9)
+    EOSTable % DV % Variables(10) % Values(:,:,:) = EOSCompOSE(:,:,:,10)
+    EOSTable % DV % Variables(11) % Values(:,:,:) = EOSCompOSE(:,:,:,11)
+    EOSTable % DV % Variables(12) % Values(:,:,:) = EOSCompOSE(:,:,:,12)
+    EOSTable % DV % Variables(13) % Values(:,:,:) = EOSCompOSE(:,:,:,13)
+    EOSTable % DV % Variables(14) % Values(:,:,:) = EOSCompOSE(:,:,:,14)
+    EOSTable % DV % Variables(15) % Values(:,:,:) = EOSCompOSE(:,:,:,15)
     
     DEALLOCATE(RhoCompOSE)
     DEALLOCATE(TempCompOSE)
@@ -190,51 +190,51 @@ PROGRAM wlCreateEquationOfStateTable
         DO iRho=1,nPointsBaryon(1)
          DO iTemp=1,nPointsBaryon(2)
           DO iYe=1,nPointsBaryon(3)
-            IF (EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) .lt. 0.0d0) THEN
-                EOSBaryonTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = 1.0d0
+            IF (EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe) .lt. 0.0d0) THEN
+                EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = 1.0d0
             ENDIF
           ENDDO
          ENDDO
         ENDDO
     ENDIF
     
-    EOSBaryonTable % DV % Offsets(:) = 0.0_dp
+    EOSTable % DV % Offsets(:) = 0.0_dp
     
-    DO iVars = 2, EOSBaryonTable % DV % Indices % iNeutronChemicalPotential
-       Minimum_Value = MINVAL(EOSBaryonTable % DV % Variables(iVars) % Values)
+    DO iVars = 2, EOSTable % DV % Indices % iNeutronChemicalPotential
+       Minimum_Value = MINVAL(EOSTable % DV % Variables(iVars) % Values)
        IF ( Minimum_Value .eq. 0.0_dp) THEN
-           EOSBaryonTable % DV % Offsets(iVars) = 1.0d-30
-           EOSBaryonTable % DV % Variables(iVars) % Values =  &
-               EOSBaryonTable % DV % Variables(iVars) % Values + & 
-               EOSBaryonTable % DV % Offsets(iVars)
+           EOSTable % DV % Offsets(iVars) = 1.0d-100
+           EOSTable % DV % Variables(iVars) % Values =  &
+               EOSTable % DV % Variables(iVars) % Values + & 
+               EOSTable % DV % Offsets(iVars)
        ELSE IF ( Minimum_Value .lt. 0.0_dp) THEN
-           EOSBaryonTable % DV % Offsets(iVars) = -1.1_dp * Minimum_Value
-           EOSBaryonTable % DV % Variables(iVars) % Values =  &
-               EOSBaryonTable % DV % Variables(iVars) % Values + & 
-               EOSBaryonTable % DV % Offsets(iVars)
+           EOSTable % DV % Offsets(iVars) = -1.1_dp * Minimum_Value
+           EOSTable % DV % Variables(iVars) % Values =  &
+               EOSTable % DV % Variables(iVars) % Values + & 
+               EOSTable % DV % Offsets(iVars)
        ELSE
-           EOSBaryonTable % DV % Offsets(iVars) = 0.0_dp
+           EOSTable % DV % Offsets(iVars) = 0.0_dp
        END IF
        
-       WRITE(*,*) iVars, EOSBaryonTable % DV % Offsets(iVars), Minimum_Value
+       WRITE(*,*) iVars, EOSTable % DV % Offsets(iVars), Minimum_Value
    END DO
    
-   !EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values = &
-   !    LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iPressure) % Values)
-   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values = &
-       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iEntropyPerBaryon) % Values)
-   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values = &
-       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iInternalEnergyDensity) % Values)
+   !EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values = &
+   !    LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values)
+   EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values = &
+       LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values)
+   EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values = &
+       LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values)
        
-   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iProtonChemicalPotential) % Values = &
-       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iProtonChemicalPotential) % Values)
-   EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iNeutronChemicalPotential) % Values = &
-       LOG10(EOSBaryonTable % DV % Variables(EOSBaryonTable % DV % Indices % iNeutronChemicalPotential) % Values)
+   EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values = &
+       LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values)
+   EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values = &
+       LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values)
                 
     ! ------------- NOW DO ELECTRON EOS ------------------ !
     nPointsHelm = (/ iTempMax, iDenMax /)
     PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmEOS( HelmEOSTable, nPointsHelm )
+    CALL AllocateHelmholtzTable( HelmEOSTable, nPointsHelm )
     
     HelmDatFilePath = '../helm_table.dat'
     CALL ReadHelmEOSdat( HelmDatFilePath, HelmEOSTable )
@@ -250,7 +250,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"
-    CALL WriteEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
+    CALL WriteEquationOfStateTableHDF( EOSTable, BaryonEOSTableName )
     CALL FinalizeHDF( )
     
     ! NOW ADD Helmholtz EOS TO PREVIOUSLY CREATED H5 FILE
@@ -267,8 +267,8 @@ PROGRAM wlCreateEquationOfStateTable
     
     WRITE (*,*) "HDF write successful"
     
-    CALL DeAllocateEquationOfStateTable( EOSBaryonTable )
-    CALL DeAllocateHelmEOS( HelmEOSTable )
+    CALL DeAllocateEquationOfStateTable( EOSTable )
+    CALL DeallocateHelmholtzTable( HelmEOSTable )
     CALL DeAllocateMuonEOS( MuonEOSTable )
 
     ! Now Create Electron EOS

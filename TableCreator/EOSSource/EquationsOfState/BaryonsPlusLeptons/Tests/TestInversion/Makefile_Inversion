@@ -40,7 +40,7 @@ wlComposeInversionTest.o: \
   wlInterpolationModule.o \
   wlEOSInversionModule.o \
   wlLeptonEOSModule.o \
-  wlElectronEOS.o \
+  wlElectronPhotonEOS.o \
   wlMuonEOS.o \
   wlHelmMuonIOModuleHDF.o \
   wlExtPhysicalConstantsModule.o \

@@ -6,5 +6,5 @@ wlCompareToFullEOS.o: \
   wlEOSIOModuleHDF.o \
   wlLeptonEOSModule.o \
   wlHelmMuonIOModuleHDF.o \
-  wlElectronEOS.o \
+  wlElectronPhotonEOS.o \
   wlExtPhysicalConstantsModule.o
