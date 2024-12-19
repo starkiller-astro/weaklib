@@ -270,7 +270,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEY_Single_Guess &
            ( D(iP), E(iP), Y(iP), Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E(iP), T_Guess, &
-             Error_Option = Error_E(iP) )
+             Error_E(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -359,7 +359,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEY_Single_Guess &
            ( D(iP), E(iP), Y(iP), Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E(iP), T_Guess, &
-             Error_Option = Error_E(iP) )
+             Error_E(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -434,7 +434,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEY_Single_NoGuess &
            ( D(iP), E(iP), Y(iP), Ds_T, Ts_T, Ys_T, Es_T, OS_E, T_E(iP), &
-             Error_Option = Error_E(iP) )
+             Error_E(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -547,7 +547,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSY_Single_Guess &
            ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S(iP), T_Guess, &
-             Error_Option = Error_S(iP) )
+             Error_S(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -632,7 +632,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSY_Single_Guess &
            ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S(iP), T_Guess, &
-             Error_Option = Error_S(iP) )
+             Error_S(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -707,7 +707,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSY_Single_NoGuess &
            ( D(iP), S(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ss_T, OS_S, T_S(iP), &
-             Error_Option = Error_S(iP) )
+             Error_S(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -796,7 +796,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPY_Single_Guess &
            ( D(iP), P(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P(iP), T_Guess, &
-             Error_Option = Error_P(iP) )
+             Error_P(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -881,7 +881,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPY_Single_Guess &
            ( D(iP), P(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P(iP), T_Guess, &
-             Error_Option = Error_P(iP) )
+             Error_P(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -956,7 +956,7 @@ PROGRAM wlEosInversionTest
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPY_Single_NoGuess &
            ( D(iP), P(iP), Y(iP), Ds_T, Ts_T, Ys_T, Ps_T, OS_P, T_P(iP), &
-             Error_Option = Error_P(iP) )
+             Error_P(iP) )
   END DO
 
   CALL CPU_TIME( tEnd )

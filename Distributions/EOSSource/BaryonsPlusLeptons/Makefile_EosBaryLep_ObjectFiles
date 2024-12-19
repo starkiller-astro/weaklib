@@ -6,6 +6,7 @@ WL_EOSSOURCE_SPLIT  = \
   wlElectronPhotonEOS.o \
   wlMuonEOS.o \
   wlSoundSpeedModule.o \
+  wlEosTemperatureCombinedInversionModule.o \
+  wlEosTemperatureSeparateInversionModule.o \
   wlEOSComponentsCombinedInversionModule.o \
-  wlEOSComponentsSeparateInversionModule.o
-  
+  wlEOSComponentsSeparateInversionModule.o  

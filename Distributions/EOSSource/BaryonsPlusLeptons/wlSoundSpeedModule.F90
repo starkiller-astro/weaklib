@@ -22,14 +22,15 @@ MODULE wlSoundSpeedModule
 CONTAINS
   
   ! This one also calculates derivatives, but maybe you can provide derivatives ?
-  SUBROUTINE CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, &
+  SUBROUTINE CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, &
+    P_T, OS_P, E_T, OS_E, S_T, OS_S, &
     HelmholtzTable, MuonTable, Gamma, Cs, SeparateContributions)
 
     REAL(DP), INTENT(IN) :: D, T, Ye, Ym
     REAL(DP), INTENT(IN) :: D_T(1:), T_T(1:), Yp_T(1:)
-    REAL(DP), INTENT(IN) :: P_T(1:,1:,1:), E_T(1:,1:,1:)
+    REAL(DP), INTENT(IN) :: P_T(1:,1:,1:), E_T(1:,1:,1:), S_T(1:,1:,1:)
   
-    REAL(DP), INTENT(IN) :: OS_P, OS_E
+    REAL(DP), INTENT(IN) :: OS_P, OS_E, OS_S
     LOGICAL, INTENT(IN)  :: SeparateContributions
 
     TYPE(HelmholtzTableType), INTENT(IN) :: HelmholtzTable
@@ -37,23 +38,31 @@ CONTAINS
     
     REAL(DP), INTENT(OUT)    :: Gamma, Cs
 
-    REAL(DP) :: Pbary, Ebary, Ptot, Etot
+    REAL(DP) :: Pbary, Ebary, Sbary 
+    REAL(DP) :: Pele , Eele , Sele
+    REAL(DP) :: Pmu  , Emu  , Smu
+    REAL(DP) :: Ptot , Etot , Stot
+
     REAL(DP) :: dPbarydD, dPbarydT
     REAL(DP) :: dEbarydD, dEbarydT
-    REAL(DP) :: Pele, Eele, Sele
-    REAL(DP) :: dPeledD, dPeledT
-    REAL(DP) :: dEeledD, dEeledT
-    REAL(DP) :: Pmu, Emu
-    REAL(DP) :: dPmudD, dPmudT
-    REAL(DP) :: dEmudD, dEmudT
+    REAL(DP) :: dSbarydD, dSbarydT
+    REAL(DP) :: dPeledD , dPeledT
+    REAL(DP) :: dEeledD , dEeledT
+    REAL(DP) :: dSeledD , dSeledT
+    REAL(DP) :: dPmudD  , dPmudT
+    REAL(DP) :: dEmudD  , dEmudT
+    REAL(DP) :: dSmudD  , dSmudT
+
     REAL(DP) :: dD, dT, dYp
     REAL(DP) :: aD, aT, aYp
     REAL(DP) :: Yp, Ye_over_Yp, Ym_over_Yp, h
-    REAL(DP) :: P_leptons(2,2,2), E_leptons(2,2,2), &
-          Etot_T(2,2,2), Ptot_T(2,2,2)
-    
-    REAL(DP) :: dPdD, dPdT, dEdD, dEdT
-    INTEGER :: iD, iT, iYp, iL_D, iL_T, iL_Yp
+    REAL(DP) :: P_PhotLep(2,2,2), E_PhotLep(2,2,2), S_PhotLep(2,2,2)
+    REAL(DP) :: Ptot_T   (2,2,2), Etot_T(2,2,2)   , Stot_T(2,2,2)
+
+    REAL(DP) :: dPdD, dPdT, dEdD, dEdT, dSdD, dSdT
+    INTEGER  :: iD, iT, iYp, iL_D, iL_T, iL_Yp
+
+    REAL(DP) :: LocalOffset
 
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
@@ -70,12 +79,18 @@ CONTAINS
       ! calculate electron quantities
       CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
+      Pele = ElectronPhotonState % p
       Eele = ElectronPhotonState % e
       Sele = ElectronPhotonState % s 
-      Pele = ElectronPhotonState % p
 
       dPeledD = ElectronPhotonState % dpdr
       dPeledT = ElectronPhotonState % dpdt
+
+      dEeledD = ElectronPhotonState % dedr
+      dEeledT = ElectronPhotonState % dedt
+
+      dSeledD = ElectronPhotonState % dsdr
+      dSeledT = ElectronPhotonState % dsdt
 
       ! BARYONIC PART -----------------------------------------------------
       CALL GetIndexAndDelta_Log( D,  D_T,  iD,  dD  )
@@ -86,25 +101,41 @@ CONTAINS
       aT  = 1.0_dp / ( T * LOG10( T_T(iT+1) / T_T(iT) ) )
       aYp = ln10   / ( Yp_T(iYp+1) - Yp_T(iYp) )
       
+      LocalOffset = MINVAL( P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) )
+      IF (LocalOffset .lt. 0.0_dp) THEN
+          LocalOffset = -1.1d0*LocalOffset
+      ELSE
+          LocalOffset = 0.0_dp
+      ENDIF
+      
       CALL LinearInterpDeriv_Array_Point &
-          ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_P, P_T, Pbary, &
+          ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, LocalOffset, &
+          LOG10( P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + LocalOffset ), Pbary, &
           dPbarydD, dPbarydT )
       
       CALL LinearInterpDeriv_Array_Point &
           ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_E, E_T, Ebary, &
           dEbarydD, dEbarydT )
 
+      CALL LinearInterpDeriv_Array_Point &
+          ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_S, S_T, Sbary, &
+          dSbarydD, dSbarydT )
+
       ! MUON PART -----------------------------------------------------
       IF (( D * Ym .lt. MuonTable % rhoym(1) ) .or. (T .lt. MuonTable % t(1))) THEN
       
-        Pmu = 0.0d0
+        Pmu    = 0.0d0
         dPmudD = 0.0d0
         dPmudT = 0.0d0
 
-        Emu = 0.0d0
+        Emu    = 0.0d0
         dEmudD = 0.0d0
         dEmudT = 0.0d0
-      
+
+        Smu    = 0.0d0
+        dSmudD = 0.0d0
+        dSmudT = 0.0d0
+
       ELSE
       
         CALL GetIndexAndDelta_Log( D * Ym, MuonTable % rhoym(:), iD, dD )
@@ -124,23 +155,35 @@ CONTAINS
             dEmudD, dEmudT )
             
         dEmudD = dEmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
-        Emu = Emu
+
+        CALL LinearInterpDeriv_Array_Point &
+          ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % s), Smu, &
+            dSmudD, dSmudT )
+          
+        dSmudD = dSmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
 
       ENDIF
-      
-      ! Check that yu are doing this correctly, really check this like
-      ! do not trust me at all. D and T in front take care of the derivative 
+
+      ! D and T in front take care of the derivative 
       ! wr2 logrho and logT. The rho multiplying the denominator in the second 
       ! one makes sure that you have erg/cm^3 instead of erg/g
       Gamma = (D*(dPbarydD + dPeledD + dPmudD) + &
             T*(dPbarydT + dPeledT + dPmudT)**2.0_DP / &
             (D*(dEbarydT + dEeledT + dEmudT)) ) / &
             (Pbary + Pele + Pmu)
-            
+      
+      ! Another way of doing it
+      Gamma = D*( (dPbarydD + dPeledD + dPmudD)   &
+            -     (dSbarydD + dSeledD + dSmudD)   &
+            *     (dPbarydT + dPeledT + dPmudT)   &
+            /     (dSbarydT + dSeledT + dSmudT) ) &
+            /     (Pbary + Pele + Pmu)
+
       ! relativistic definition with enthalpy
       h = (1.0_dp + (Ebary + Eele + Emu)/cvel**2 + (Pbary + Pele + Pmu)/D/cvel**2)
       
       Cs = SQRT(Gamma * (Pbary + Pele + Pmu) / (D*h))
+      Cs = SQRT(Gamma * (Pbary + Pele + Pmu) / (D))
 
     ELSE
 
@@ -167,29 +210,39 @@ CONTAINS
             MuonState % rhoym = D_T(iD+iL_D-1) * Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
             
-            E_leptons(iL_D,iL_T,iL_Yp) = ElectronPhotonState % e + MuonState % e 
-            P_leptons(iL_D,iL_T,iL_Yp) = ElectronPhotonState % p + MuonState % p
+            P_PhotLep(iL_D,iL_T,iL_Yp) = ElectronPhotonState % p + MuonState % p
+            E_PhotLep(iL_D,iL_T,iL_Yp) = ElectronPhotonState % e + MuonState % e 
+            S_PhotLep(iL_D,iL_T,iL_Yp) = ElectronPhotonState % s + MuonState % s
 
           END DO
         END DO
       END DO
     
-      Ptot_T = LOG10(P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + P_leptons)
+      Ptot_T = LOG10(P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + P_PhotLep)
       CALL LinearInterpDeriv_Array_Point &
           ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_P, Ptot_T, Ptot, &
           dPdD, dPdT )
       
-      Etot_T = LOG10(10.00**E_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + E_leptons )
+      Etot_T = LOG10(10.00**E_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + E_PhotLep )
       CALL LinearInterpDeriv_Array_Point &
           ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_E, Etot_T, Etot, &
           dEdD, dEdT )
 
+      Stot_T = LOG10(10.00**S_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + S_PhotLep )
+      CALL LinearInterpDeriv_Array_Point &
+          ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_S, Stot_T, Stot, &
+          dSdD, dSdT )
+
       Gamma = (D*dPdD + T*dPdT**2.0_DP / &
           (D*dEdT) ) / Ptot
           
+      ! Another way of doing it
+      Gamma = D/Ptot * ( dPdD - (dSdD*dPdT/dSdT) )
+
       ! relativistic definition with enthalpy
       h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
       Cs = SQRT(Gamma * Ptot / (D*h))
+      Cs = SQRT(Gamma * Ptot / (D))
     
     ENDIF
 

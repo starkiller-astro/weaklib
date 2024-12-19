@@ -8,6 +8,6 @@ USE_CUDA   ?= FALSE
 USE_HIP    ?= FALSE
 USE_OMP_OL ?= FALSE
 USE_OACC   ?= FALSE
-USE_OMP    ?= FALSE
+USE_OMP    ?= TRUE
 
 include ../Makefile_Inversion

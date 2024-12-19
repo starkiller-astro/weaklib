@@ -32,11 +32,28 @@ wlSoundSpeedModule.o: \
   wlElectronPhotonEOS.o \
   wlMuonEOS.o \
   wlInterpolationUtilitiesModule.o
-  
+
+wlEosTemperatureCombinedInversionModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlMuonEOS.o  \
+  wlElectronPhotonEOS.o  \
+  wlLeptonEOSModule.o
+
+wlEosTemperatureSeparateInversionModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlMuonEOS.o  \
+  wlElectronPhotonEOS.o  \
+  wlLeptonEOSModule.o
+
 wlEOSComponentsCombinedInversionModule.o: \
   wlKindModule.o \
-  wlInterpolationModule.o  \
-  wlInterpolationUtilitiesModule.o  \
+  wlEosTemperatureCombinedInversionModule.o \
   wlHelmMuonIOModuleHDF.o \
   wlMuonEOS.o  \
   wlElectronPhotonEOS.o  \
@@ -44,8 +61,7 @@ wlEOSComponentsCombinedInversionModule.o: \
 
 wlEOSComponentsSeparateInversionModule.o: \
   wlKindModule.o \
-  wlInterpolationModule.o  \
-  wlInterpolationUtilitiesModule.o  \
+  wlEosTemperatureSeparateInversionModule.o \
   wlHelmMuonIOModuleHDF.o \
   wlMuonEOS.o  \
   wlElectronPhotonEOS.o  \

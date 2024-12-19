@@ -38,7 +38,7 @@ PROGRAM wlCalculateSoundSpeed
     REAL(dp), ALLOCATABLE :: eos_table(:,:,:,:), Pe(:,:,:), Ee(:,:,:), &
         P_T(:,:,:), V_T(:,:,:), D_T(:), T_T(:), Yp_T(:)
     
-    LOGICAL :: RedHDF5Table
+    LOGICAL :: RedHDF5Table, SeparateContributions
     INTEGER :: igamma = 3
     INTEGER :: iP_bary, iS_bary, iE_bary
     
@@ -47,6 +47,7 @@ PROGRAM wlCalculateSoundSpeed
     CHARACTER(len=128) :: BaryonEOSTableName, FullEOSTableName, BaryonPlusEleName
 
     RedHDF5Table = .false.
+    SeparateContributions = .TRUE.
     
     IF (RedHDF5Table) THEN
         FullEOSTableName = 'FullEOS_interpolated.h5'
@@ -237,7 +238,7 @@ PROGRAM wlCalculateSoundSpeed
                 Ym = 0.0d0
                 
                 CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, V_T, OS_V, &
-                    HelmholtzTable, MuonTable, Gamma, cs2, .true.)
+                    HelmholtzTable, MuonTable, Gamma, cs2, SeparateContributions)
 
                 EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2
                 EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = Gamma			
