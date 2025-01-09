@@ -92,8 +92,7 @@ MODULE wlOpacityTableModule
     TYPE(OpacityTypeScatIso)       :: &
       Scat_Iso   ! -- Isoenergenic Scattering
     TYPE(OpacityTypeScatNNS)       :: &
-      Scat_NNS_n, &  ! -- Inelastic Neutrino-Neutron Scattering
-      Scat_NNS_p     ! -- Inelastic Neutrino-Proton  Scattering
+      Scat_NNS  ! -- Inelastic Neutrino-Nucleon Scattering
     TYPE(OpacityTypeScatNES)       :: &
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
@@ -201,10 +200,7 @@ CONTAINS
     nPointsTemp(1:5) = &
            [ nPointsE, nPointsE, nMom_NNS, nPoints(iT), OpTab % nPointsMuB ]
     CALL AllocateOpacity &
-           ( OpTab % Scat_NNS_n % OpacityTypeScat, nPointsTemp(1:5), &
-             nMoments = nMom_NNS, nOpacities = nOpac_NNS )
-    CALL AllocateOpacity &
-           ( OpTab % Scat_NNS_p % OpacityTypeScat, nPointsTemp(1:5), &
+           ( OpTab % Scat_NNS % OpacityTypeScat, nPointsTemp(1:5), &
              nMoments = nMom_NNS, nOpacities = nOpac_NNS )
 
     nPointsTemp(1:5) = &
@@ -249,8 +245,7 @@ CONTAINS
 
     CALL DeAllocateOpacity( OpTab % EmAb ) 
     CALL DeAllocateOpacity( OpTab % Scat_Iso % OpacityTypeScat )
-    CALL DeAllocateOpacity( OpTab % Scat_NNS_n % OpacityTypeScat )
-    CALL DeAllocateOpacity( OpTab % Scat_NNS_p % OpacityTypeScat )
+    CALL DeAllocateOpacity( OpTab % Scat_NNS % OpacityTypeScat )
     CALL DeAllocateOpacity( OpTab % Scat_NES % OpacityTypeScat )
     CALL DeAllocateOpacity( OpTab % Scat_Pair )
     CALL DeAllocateOpacity( OpTab % Scat_Brem )
@@ -310,8 +305,7 @@ CONTAINS
       CALL DescribeGrid( OpTab % EtaGrid )
     end if
 
-    if(OpTab % Scat_NNS_n % nOpacities .gt. 0 .or. &
-       OpTab % Scat_NNS_p % nOpacities .gt. 0) then
+    if(OpTab % Scat_NNS % nOpacities .gt. 0) then
       CALL DescribeGrid( OpTab % MuBGrid )
     end if
 
@@ -323,12 +317,8 @@ CONTAINS
       CALL DescribeOpacity( OpTab % Scat_Iso % OpacityTypeScat )
     end if
 
-    if(OpTab % Scat_NNS_n % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_NNS_n % OpacityTypeScat )
-    end if
-
-    if(OpTab % Scat_NNS_p % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_NNS_p % OpacityTypeScat )
+    if(OpTab % Scat_NNS % nOpacities .gt. 0) then
+      CALL DescribeOpacity( OpTab % Scat_NNS % OpacityTypeScat )
     end if
 
     if(OpTab % Scat_NES % nOpacities .gt. 0) then
