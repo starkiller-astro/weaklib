@@ -57,4 +57,5 @@ ChimeraAB = \
   ec_table_module.o
 
 ChimeraNNS = \
-  scat_n_module_weaklib.o
+  scat_n_module_weaklib.o \
+  scatncal_weaklib.o

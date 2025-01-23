@@ -196,9 +196,8 @@ IMPLICIT NONE
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998, Bruenn et al. 2020
 
-   INTEGER, PARAMETER      :: nOpac_NNS  = 0  ! 1 ( either 0 or 1 )
-   INTEGER, PARAMETER      :: nMom_NNS   = 4  ! 4 for H1l, H2l
-                                              !   ( either 0 or 4 )
+   INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
+   INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
@@ -241,10 +240,11 @@ IMPLICIT NONE
 
    ! --- other inner variables
    INTEGER                 :: i_r, i_rb, i_e, j_rho, k_t, l_ye, &
-                              t_m, i_eta, i_ep, stringlength, stringlengthBrem
+                              t_m, i_MuB, i_eta, i_ep, &
+                              stringlength, stringlengthBrem
    REAL(dp)                :: rho, T, TMeV, ye, Z, A, &
                               chem_e, chem_n, chem_p, xheavy, xn, &
-                              xp, xhe, bb, eta, minvar
+                              xp, xhe, bb, MuB, eta, minvar
 
    REAL(dp), DIMENSION(nPointsE,2) :: cok
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
@@ -417,43 +417,27 @@ END IF
      return
    endif
 
-   OpacityTable % Scat_NNS_n % nOpacities   = nOpac_NNS
-   OpacityTable % Scat_NNS_p % nOpacities   = nOpac_NNS
+   OpacityTable % Scat_NNS % nOpacities   = nOpac_NNS
 
-   OpacityTable % Scat_NNS_n % nMoments     = nMom_NNS
-   OpacityTable % Scat_NNS_p % nMoments     = nMom_NNS
+   OpacityTable % Scat_NNS % nMoments     = nMom_NNS
 
-   OpacityTable % Scat_NNS_n % nPoints(1) = nPointsE
-   OpacityTable % Scat_NNS_n % nPoints(2) = nPointsE
-   OpacityTable % Scat_NNS_n % nPoints(3) = nMom_NNS
-   OpacityTable % Scat_NNS_n % nPoints(4) = OpacityTable % nPointsTS(2)
-   OpacityTable % Scat_NNS_n % nPoints(5) = nPointsMuB
+   OpacityTable % Scat_NNS % nPoints(1) = nPointsE
+   OpacityTable % Scat_NNS % nPoints(2) = nPointsE
+   OpacityTable % Scat_NNS % nPoints(3) = nMom_NNS
+   OpacityTable % Scat_NNS % nPoints(4) = OpacityTable % nPointsTS(2)
+   OpacityTable % Scat_NNS % nPoints(5) = nPointsMuB
 
-   OpacityTable % Scat_NNS_p % nPoints(1) = nPointsE
-   OpacityTable % Scat_NNS_p % nPoints(2) = nPointsE
-   OpacityTable % Scat_NNS_p % nPoints(3) = nMom_NNS
-   OpacityTable % Scat_NNS_p % nPoints(4) = OpacityTable % nPointsTS(2)
-   OpacityTable % Scat_NNS_p % nPoints(5) = nPointsMuB
+   OpacityTable % Scat_NNS % Names = (/'LegendreCoefficients'/)
 
-   OpacityTable % Scat_NNS_n % Names = (/'Kernels'/)
-   OpacityTable % Scat_NNS_p % Names = (/'Kernels'/)
+   OpacityTable % Scat_NNS % Units = (/'Per Centimeter Per MeV^3'/)
 
-   OpacityTable % Scat_NNS_n % Units = (/'Per Centimeter Per MeV^3'/)
-   OpacityTable % Scat_NNS_p % Units = (/'Per Centimeter Per MeV^3'/)
-
-   OpacityTable % Scat_NNS_n % weak_magnetism_corrections = &
-                  Iso_weak_magnetism
-   OpacityTable % Scat_NNS_p % weak_magnetism_corrections = &
+   OpacityTable % Scat_NNS % weak_magnetism_corrections = &
                   Iso_weak_magnetism
 
-   OpacityTable % Scat_NNS_n % many_body_corrections = &
-                  Iso_many_body_corrections
-   OpacityTable % Scat_NNS_p % many_body_corrections = &
+   OpacityTable % Scat_NNS % many_body_corrections = &
                   Iso_many_body_corrections
 
-   OpacityTable % Scat_NNS_n % ga_strange = &
-                  Iso_ga_strange
-   OpacityTable % Scat_NNS_p % ga_strange = &
+   OpacityTable % Scat_NNS % ga_strange = &
                   Iso_ga_strange
 
 END IF
@@ -1207,9 +1191,24 @@ PRINT*, 'Filling OpacityTable ...'
 
 !----------------  Scat_NNS -----------------------
    IF(Scat_np_non_isoenergetic == 1) THEN
+   PRINT*, 'Calculating Scat_NES Kernel ... '
 
-     CALL init_quad_scat_n
-     CALL load_polylog_weaklib
+      CALL init_quad_scat_n
+      CALL load_polylog_weaklib
+
+      DO i_MuB = 1, nPointsMuB
+
+        MuB = OpacityTable % MuBGrid % Values(i_MuB)
+
+        DO k_t = 1, OpacityTable % nPointsTS(iT)
+
+          T = OpacityTable % TS % States (iT) % Values (k_t)
+          TMeV = T * kMeV
+
+
+        END DO  !k_t
+
+      END DO !iMuB
 
    END IF
 

@@ -150,6 +150,12 @@ scatical_weaklib.o: \
   physcnst_module.o \
   prb_cntl_module.o
 
+scatncal_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  scat_n_module_weaklib.o
+
 sctlgndv_weaklib.o: \
   wlKindModule.o \
   numerical_module.o \
