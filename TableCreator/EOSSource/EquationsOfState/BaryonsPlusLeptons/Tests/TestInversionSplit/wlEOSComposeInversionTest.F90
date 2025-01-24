@@ -87,13 +87,14 @@ PROGRAM wlComposeNewInversionTest
     
   CALL MPI_INIT( ierr )
 
-#if defined(WEAKLIB_OMP_OL)
-#elif defined(WEAKLIB_OACC)
-  !!$ACC INIT
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+! #elif defined(WEAKLIB_OACC)
+!   !!$ACC INIT
+! #endif
   
   BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
-  !BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+  BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+  ! BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS_shifted.h5'
   Yp_over_Ymu = 0.0d0
   
   CALL InitializeHDF( )
@@ -198,11 +199,6 @@ PROGRAM wlComposeNewInversionTest
           STOP
         ENDIF
 
-        IF (10.0d0**( Ps_full(iD,iT,iYp) ) - OS_P .NE. 10.0d0**( Ps_full(iD,iT,iYp)) - OS_P) THEN
-          WRITE(*,*) '10**P', iD,iT,iYp, Ps_bary(iD,iT,iYp), Ps_helm, Ps_muon
-          STOP
-        ENDIF
-
         IF (Ss_full(iD,iT,iYp) .NE. Ss_full(iD,iT,iYp)) THEN
           WRITE(*,*) 'S', iD,iT,iYp, Ss_bary(iD,iT,iYp), Ss_helm, Ss_muon
           STOP
@@ -221,15 +217,15 @@ PROGRAM wlComposeNewInversionTest
            BaryonPlusHelmTableName, &
            Verbose_Option = .TRUE. )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET ENTER DATA &
-  !$OMP MAP( to: Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S ) &
-  !$OMP MAP( alloc: D, T, Yp, P, E, S, T_P, T_E, T_S, Error_P, Error_E, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC ENTER DATA &
-  !$ACC COPYIN( Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S ) &
-  !$ACC CREATE( D, T, Yp, P, E, S, T_P, T_E, T_S, Error_P, Error_E, Error_S )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET ENTER DATA &
+!   !$OMP MAP( to: Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S ) &
+!   !$OMP MAP( alloc: D, T, Yp, P, E, S, T_P, T_E, T_S, Error_P, Error_E, Error_S )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC ENTER DATA &
+!   !$ACC COPYIN( Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S ) &
+!   !$ACC CREATE( D, T, Yp, P, E, S, T_P, T_E, T_S, Error_P, Error_E, Error_S )
+! #endif
 
   WRITE(*,*)
   WRITE(*,'(A4,A10,I10.10)') '', 'nPoints = ', nPoints
@@ -247,7 +243,8 @@ PROGRAM wlComposeNewInversionTest
     ( minD => EOSBaryonTable % TS % MinValues(iD_bary), &
       maxD => EOSBaryonTable % TS % MaxValues(iD_bary) )
   
-  D(:) = 10.0d0**( LOG10(minD) + ( LOG10(maxD) - LOG10(minD) ) * rndm_D )
+      D(:) = 10.0d0**( LOG10(minD) + ( LOG10(maxD) - LOG10(minD) ) * rndm_D )
+      D(:) = 10.0d0**( LOG10(minD) + ( LOG10(1.0d12) - LOG10(minD) ) * rndm_D )
 
   PRINT*, "Min/Max D =  ", MINVAL( D ), MAXVAL( D )
   PRINT*, "             ", minD, maxD
@@ -263,7 +260,7 @@ PROGRAM wlComposeNewInversionTest
     ( minT => EOSBaryonTable % TS % MinValues(iT_bary), &
       maxT => EOSBaryonTable % TS % MaxValues(iT_bary) )
 
-  T(:) = 10.0d0**( LOG10(minT) + ( LOG10(maxT) - LOG10(minT) ) * rndm_T )
+      T(:) = 10.0d0**( LOG10(minT) + ( LOG10(maxT) - LOG10(minT) ) * rndm_T )
 
   PRINT*, "Min/Max T  = ", MINVAL( T ), MAXVAL( T )
   PRINT*, "             ", minT, maxT
@@ -279,7 +276,7 @@ PROGRAM wlComposeNewInversionTest
     ( minYp => EOSBaryonTable % TS % MinValues(iYp_bary), &
       maxYp => EOSBaryonTable % TS % MaxValues(iYp_bary) )
   
-  Yp(:) = minYp + ( maxYp - minYp ) * rndm_Yp
+      Yp(:) = minYp + ( maxYp - minYp ) * rndm_Yp
 
   PRINT*, "Min/Max Yp = ", MINVAL( Yp ), MAXVAL( Yp )
   PRINT*, "             ", minYp, maxYp
@@ -411,17 +408,17 @@ PROGRAM wlComposeNewInversionTest
   ! !$ACC UPDATE DEVICE( T_E, Error_E )
 ! #endif
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, E, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E, Error_E )
-#elif defined (WEAKLIB_OMP)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, E, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E, Error_E )
+! #elif defined (WEAKLIB_OMP)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
@@ -437,11 +434,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DEYp (Good Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_E, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_E, Error_E )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_E, Error_E )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_E, Error_E )
+! #endif
   DO iP = 1, nPoints
     IF( Error_E(iP) .NE. 0 ) THEN 
       WRITE(*,*) iP, D(iP), E(iP), T(iP), Ye(iP), Ym(iP)
@@ -478,18 +475,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, E, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E, Error_E )
-#elif defined (WEAKLIB_OMP)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, E, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E, Error_E )
+! #elif defined (WEAKLIB_OMP)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
@@ -505,11 +501,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DEYp (Bad Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_E, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_E, Error_E )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_E, Error_E )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_E, Error_E )
+! #endif
   DO iP = 1, nPoints
     IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
   END DO
@@ -528,17 +524,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, E, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E, Error_E )
-#elif defined (WEAKLIB_OMP)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, E, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E, Error_E )
+! #elif defined (WEAKLIB_OMP)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_E(iP)
     CALL ComputeTemperatureWith_DEYpYl_Single_NoGuess &
@@ -547,7 +543,6 @@ PROGRAM wlComposeNewInversionTest
              Error_E(iP) )
   END DO
 
-
   CALL CPU_TIME( tEnd )
   tCPU = tEnd - tBegin
 
@@ -555,11 +550,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DEYp (No Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_E, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_E, Error_E )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_E, Error_E )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_E, Error_E )
+! #endif
   DO iP = 1, nPoints
     IF( Error_E(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_E(iP) )
   END DO
@@ -592,17 +587,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
-#elif defined(WEAKLIB_OMP_OL)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
+! #elif defined(WEAKLIB_OMP_OL)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
@@ -619,11 +614,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DSYp (Good Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_S, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_S, Error_S )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_S, Error_S )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_S, Error_S )
+! #endif
   DO iP = 1, nPoints
     IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
   END DO
@@ -655,17 +650,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, S, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
-#elif defined (WEAKLIB_OMP)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, S, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
+! #elif defined (WEAKLIB_OMP)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
@@ -681,11 +676,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DSYp (Bad Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_S, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_S, Error_S )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_S, Error_S )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_S, Error_S )
+! #endif
   DO iP = 1, nPoints
     IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
   END DO
@@ -705,17 +700,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, S, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
-#elif defined (WEAKLIB_OMP)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, S, Yp, Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S, Error_S )
+! #elif defined (WEAKLIB_OMP)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_S(iP)
     CALL ComputeTemperatureWith_DSYpYl_Single_NoGuess &
@@ -731,11 +726,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DSYp (No Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_S, Error_S )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_S, Error_S )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_S, Error_S )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_S, Error_S )
+! #endif
   DO iP = 1, nPoints
     IF( Error_S(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_S(iP) )
   END DO
@@ -774,17 +769,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P, Error_P )
-#elif defined(WEAKLIB_OMP_OL)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P, Error_P )
+! #elif defined(WEAKLIB_OMP_OL)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
@@ -801,11 +796,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DPYp (Good Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_P, Error_P )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_P, Error_P )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_P, Error_P )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_P, Error_P )
+! #endif
   DO iP = 1, nPoints
     IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
   END DO
@@ -839,17 +834,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P, Error_P )
-#elif defined(WEAKLIB_OMP_OL)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P, Error_P )
+! #elif defined(WEAKLIB_OMP_OL)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
@@ -865,11 +860,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DPYp (Bad Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_P, Error_P )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_P, Error_P )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_P, Error_P )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_P, Error_P )
+! #endif
   DO iP = 1, nPoints
     IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
   END DO
@@ -889,17 +884,17 @@ PROGRAM wlComposeNewInversionTest
 
   CALL CPU_TIME( tBegin )
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP PRIVATE( T_Guess )
-#elif defined (WEAKLIB_OACC)
-  !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC PRIVATE( T_Guess ) &
-  !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P, Error_P )
-#elif defined (WEAKLIB_OMP)
-  !$OMP PARALLEL DO &
-  !$OMP PRIVATE( T_Guess )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+!   !$OMP PRIVATE( T_Guess )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC PARALLEL LOOP GANG VECTOR &
+!   !$ACC PRIVATE( T_Guess ) &
+!   !$ACC PRESENT( D, P, Yp, Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P, Error_P )
+! #elif defined (WEAKLIB_OMP)
+!   !$OMP PARALLEL DO &
+!   !$OMP PRIVATE( T_Guess )
+! #endif
   DO iP = 1, nPoints
     T_Guess = T_P(iP)
     CALL ComputeTemperatureWith_DPYpYl_Single_NoGuess &
@@ -915,11 +910,11 @@ PROGRAM wlComposeNewInversionTest
   PRINT*, "ComputeTemperatureWith_DPYp (No Guess):"
   PRINT*, "CPU_TIME = ", tCPU
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE FROM( T_P, Error_P )
-#elif defined (WEAKLIB_OACC)
-  !$ACC UPDATE HOST( T_P, Error_P )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET UPDATE FROM( T_P, Error_P )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC UPDATE HOST( T_P, Error_P )
+! #endif
   DO iP = 1, nPoints
     IF( Error_P(iP) .NE. 0 ) CALL DescribeEOSComponentsInversionError( Error_P(iP) )
   END DO
@@ -934,21 +929,21 @@ PROGRAM wlComposeNewInversionTest
 
   ! -------------------------------------------------------------------
 
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET EXIT DATA &
-  !$OMP MAP( release: D, E, P, S, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S, T_S, Error_E )
-#elif defined (WEAKLIB_OACC)
-  !$ACC EXIT DATA &
-  !$ACC DELETE( D, E, P, S, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S, T_S, Error_E )
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+!   !$OMP TARGET EXIT DATA &
+!   !$OMP MAP( release: D, E, P, S, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S, T_S, Error_E )
+! #elif defined (WEAKLIB_OACC)
+!   !$ACC EXIT DATA &
+!   !$ACC DELETE( D, E, P, S, Yp, Ds_bary, Ts_bary, Yps_bary, Es_bary, Ps_bary, Ss_bary, OS_E, OS_P, OS_S, T_S, Error_E )
+! #endif
 
   DEALLOCATE( Ds_bary, Ts_bary, Yps_bary, Ps_bary, Ss_bary, Es_bary )
   DEALLOCATE( Ds_full, Ts_full, Yps_full, Ps_full, Ss_full, Es_full )
 
-#if defined(WEAKLIB_OMP_OL)
-#elif defined(WEAKLIB_OACC)
-  !$ACC SHUTDOWN
-#endif
+! #if defined(WEAKLIB_OMP_OL)
+! #elif defined(WEAKLIB_OACC)
+!   !$ACC SHUTDOWN
+! #endif
 
   CALL MPI_FINALIZE( ierr )
 

@@ -31,7 +31,8 @@ wlSoundSpeedModule.o: \
   wlLeptonEOSModule.o \
   wlElectronPhotonEOS.o \
   wlMuonEOS.o \
-  wlInterpolationUtilitiesModule.o
+  wlInterpolationUtilitiesModule.o \
+  wlInterpolationModule.o
 
 wlEosTemperatureCombinedInversionModule.o: \
   wlKindModule.o \

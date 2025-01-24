@@ -41,18 +41,18 @@ CONTAINS
 
   END SUBROUTINE InitializeLeptonTables
 
-  REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, Yp, OS )
+  REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, y, OS )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in) :: x_a, x_b, y_a, y_b, Yp, OS
+    REAL(dp), INTENT(in) :: x_a, x_b, y_a, y_b, y, OS
 
     InverseLogInterp &
       = 10.0_dp**( LOG10( x_a ) + LOG10( x_b/x_a ) &
-                 * LOG10( (Yp+OS)/(y_a+OS) ) / LOG10( (y_b+OS)/(y_a+OS) ) )
+                 * LOG10( (y+OS)/(y_a+OS) ) / LOG10( (y_b+OS)/(y_a+OS) ) )
 
     RETURN
   END FUNCTION InverseLogInterp

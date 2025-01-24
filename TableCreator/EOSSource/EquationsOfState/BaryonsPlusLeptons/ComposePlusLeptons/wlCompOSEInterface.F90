@@ -14,48 +14,50 @@ MODULE wlCompOSEInterface
     
     INTEGER(KIND=4) :: h5err !< hdf5 error code                                                                                                    
     ! output baryon density (fm^-3), temperature (kelvin), and proton (or charge) fraction	
-    REAL(dp), DIMENSION(:), ALLOCATABLE :: nbCompOSE
+    REAL(dp),         DIMENSION(:), ALLOCATABLE :: nbCompOSE
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: RhoCompOSE
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: TempCompOSE
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: YpCompOSE
     
-    INTEGER, PARAMETER :: nVariablesCompOSE = 15
-    INTEGER, PARAMETER :: iPressCompOSE = 1
-    INTEGER, PARAMETER :: iEntropyCompOSE = 2
+    INTEGER, PARAMETER :: nVariablesCompOSE             = 17
+    INTEGER, PARAMETER :: iPressCompOSE                 = 1
+    INTEGER, PARAMETER :: iEntropyCompOSE               = 2
     INTEGER, PARAMETER :: iInternalEnergyDensityCompOSE = 3
-    INTEGER, PARAMETER :: iElectronChemPotCompOSE = 4
-    INTEGER, PARAMETER :: iProtonChemPotCompOSE = 5
-    INTEGER, PARAMETER :: iNeutronChemPotCompOSE = 6
-    INTEGER, PARAMETER :: iProtonMassFractionCompOSE = 7
-    INTEGER, PARAMETER :: iNeutronMassFractionCompOSE = 8
-    INTEGER, PARAMETER :: iAlphaMassFractionCompOSE = 9
-    INTEGER, PARAMETER :: iHeavyMassFractionCompOSE = 10
-    INTEGER, PARAMETER :: iHeavyChargeNumberCompOSE = 11
-    INTEGER, PARAMETER :: iHeavyMassNumberCompOSE = 12
-    INTEGER, PARAMETER :: iHeavyBindingEnergyCompOSE = 13
-    INTEGER, PARAMETER :: iThermalEnergyCompOSE = 14
-    INTEGER, PARAMETER :: iGamma1CompOSE = 15
+    INTEGER, PARAMETER :: iElectronChemPotCompOSE       = 4
+    INTEGER, PARAMETER :: iProtonChemPotCompOSE         = 5
+    INTEGER, PARAMETER :: iNeutronChemPotCompOSE        = 6
+    INTEGER, PARAMETER :: iProtonMassFractionCompOSE    = 7
+    INTEGER, PARAMETER :: iNeutronMassFractionCompOSE   = 8
+    INTEGER, PARAMETER :: iAlphaMassFractionCompOSE     = 9
+    INTEGER, PARAMETER :: iHeavyMassFractionCompOSE     = 10
+    INTEGER, PARAMETER :: iHeavyChargeNumberCompOSE     = 11
+    INTEGER, PARAMETER :: iHeavyMassNumberCompOSE       = 12
+    INTEGER, PARAMETER :: iHeavyBindingEnergyCompOSE    = 13
+    INTEGER, PARAMETER :: iThermalEnergyCompOSE         = 14
+    INTEGER, PARAMETER :: iGammaCompose                 = 15
+    INTEGER, PARAMETER :: iProtonSelfEnergyCompOSE      = 16
+    INTEGER, PARAMETER :: iNeutronSelfEnergyCompOSE     = 17
     
     ! These are used for the HDF5 thermo table (i.e. Table 7.1 from Compose manual v. 3.0)
     INTEGER, PARAMETER :: iThermoPressure = 1
-    INTEGER, PARAMETER :: iThermoEntropy = 2
-    INTEGER, PARAMETER :: iThermoMub = 3
-    INTEGER, PARAMETER :: iThermoMuq = 4
-    INTEGER, PARAMETER :: iThermoMul = 5
-    INTEGER, PARAMETER :: iThermoFreeene = 6
-    INTEGER, PARAMETER :: iThermoEps = 7
-    INTEGER, PARAMETER :: iThermoEnth = 8
+    INTEGER, PARAMETER :: iThermoEntropy  = 2
+    INTEGER, PARAMETER :: iThermoMub      = 3
+    INTEGER, PARAMETER :: iThermoMuq      = 4
+    INTEGER, PARAMETER :: iThermoMul      = 5
+    INTEGER, PARAMETER :: iThermoFreeene  = 6
+    INTEGER, PARAMETER :: iThermoEps      = 7
+    INTEGER, PARAMETER :: iThermoEnth     = 8
     INTEGER, PARAMETER :: iThermoFreeenth = 9
-    INTEGER, PARAMETER :: iThermoDpdnb = 10
-    INTEGER, PARAMETER :: iThermoDpdeps = 11
-    INTEGER, PARAMETER :: iThermoCs2 = 12
-    INTEGER, PARAMETER :: iThermoCv = 13
-    INTEGER, PARAMETER :: iThermoCp = 14
-    INTEGER, PARAMETER :: iThermoGamma = 15
-    INTEGER, PARAMETER :: iThermoAlphaP = 16
-    INTEGER, PARAMETER :: iThermoBetaV = 17
-    INTEGER, PARAMETER :: iThermoKappaT = 18
-    INTEGER, PARAMETER :: iThermoKappaS = 19
+    INTEGER, PARAMETER :: iThermoDpdnb    = 10
+    INTEGER, PARAMETER :: iThermoDpdeps   = 11
+    INTEGER, PARAMETER :: iThermoCs2      = 12
+    INTEGER, PARAMETER :: iThermoCv       = 13
+    INTEGER, PARAMETER :: iThermoCp       = 14
+    INTEGER, PARAMETER :: iThermoGamma    = 15
+    INTEGER, PARAMETER :: iThermoAlphaP   = 16
+    INTEGER, PARAMETER :: iThermoBetaV    = 17
+    INTEGER, PARAMETER :: iThermoKappaT   = 18
+    INTEGER, PARAMETER :: iThermoKappaS   = 19
     
     ! These are indices for the specific EOS at hand. Might have to be changed depending on the EOS you are 
     ! reading. This is for the SFHo. Notice that technically CompOSE provides a recipe to assign indices,
@@ -68,7 +70,9 @@ MODULE wlCompOSEInterface
     INTEGER, PARAMETER :: iCompoH3 = 3001
     INTEGER, PARAMETER :: iCompoH2 = 2001
     INTEGER, PARAMETER :: iCompoHeavy = 999
-        
+    INTEGER, PARAMETER :: iMicroNeutSelfEnergy = 10051
+    INTEGER, PARAMETER :: iMicroProtSelfEnergy = 11051
+
     CONTAINS
     
     SUBROUTINE ReadnPointsFromCompOSE( CompOSEFilePath, nRho, nTemp, nYp )
@@ -105,20 +109,30 @@ MODULE wlCompOSEInterface
         
     END SUBROUTINE ReadnPointsFromCompOSE
     
-    SUBROUTINE ReadCompOSETable( CompOSEFilePath, nRho, nTemp, nYp )
+    SUBROUTINE ReadCompOSETable( CompOSEFilePath, nRho, nTemp, nYp, &
+          AllocateEOS_Optional )
         
         ! input path of the directory with the CompOSE output
-      CHARACTER(len=128), INTENT(IN) :: CompOSEFilePath
+        CHARACTER(len=128), INTENT(IN) :: CompOSEFilePath
         
         ! output number of points in the table
         INTEGER, INTENT(IN) :: nRho, nTemp, nYp
         
+        LOGICAL, INTENT(IN), OPTIONAL :: AllocateEOS_Optional
+
         ! Local Variables
-        INTEGER :: iLepton, iRho, iT, iYp, i_tot
+        LOGICAL  :: AllocateEOS
+        INTEGER  :: iLepton, iRho, iT, iYp, i_tot
         REAL(dp) :: NeutronMass, ProtonMass
         REAL(dp) :: Q1, Q2, Q3, Q4, Q5, Q6, Q7, TotalInternalEnergy
-        REAL(dp) :: Xp, Xn, Xa, Xh, Abar, Zbar
+        REAL(dp) :: Xp, Xn, Xa, Xh, Abar, Zbar, neut_self_ene, prot_self_ene
         
+        IF ( PRESENT(AllocateEOS_Optional) ) THEN
+          AllocateEOS = AllocateEOS_Optional
+        ELSE
+          AllocateEOS = .TRUE.
+        END IF
+
         ! Get proton and neutron mass
         OPEN(123, FILE=TRIM(ADJUSTL(CompOSEFilePath))//'/eos.thermo', & 
         FORM = "formatted", ACTION = 'read')
@@ -134,8 +148,10 @@ MODULE wlCompOSEInterface
         
         ! Get density. DECIDE HOW TO CALCULATE THE MASS DENSITY SINCE IT IS NOT OBVIOUS,
         ! Here we use the a.m.u.
-        ALLOCATE( nbCompOSE( nRho ) )
-        ALLOCATE( RhoCompOSE( nRho ) )
+        IF (AllocateEOS) THEN
+          ALLOCATE( nbCompOSE( nRho ) )
+          ALLOCATE( RhoCompOSE( nRho ) )
+        ENDIF
         
         OPEN(123, FILE=TRIM(ADJUSTL(CompOSEFilePath))//'/eos.nb', & 
         FORM = "formatted", ACTION = 'read')
@@ -154,7 +170,9 @@ MODULE wlCompOSEInterface
         READ(123,*)
         READ(123,*)
         
-        ALLOCATE( TempCompOSE( nTemp ) )
+        IF (AllocateEOS) THEN
+          ALLOCATE( TempCompOSE( nTemp ) )
+        ENDIF
         
         DO iT=1,nTemp
             READ(123,*) TempCompOSE(iT)
@@ -170,8 +188,10 @@ MODULE wlCompOSEInterface
         READ(123,*)
         READ(123,*)
         
-        ALLOCATE( YpCompOSE( nYp ) )
-        
+        IF (AllocateEOS) THEN
+          ALLOCATE( YpCompOSE( nYp ) )
+        ENDIF
+
         DO iYp=1,nYp
             READ(123,*) YpCompOSE(iYp)
         END DO
@@ -179,7 +199,9 @@ MODULE wlCompOSEInterface
         CLOSE(123)
         
         ! Allocate table
-        ALLOCATE( EOSCompOSE(nRho,nTemp,nYp,nVariablesCompOSE) )
+        IF (AllocateEOS) THEN
+          ALLOCATE( EOSCompOSE(nRho,nTemp,nYp,nVariablesCompOSE) )
+        ENDIF
         
         ! get thermal state
         OPEN(123, FILE=TRIM(ADJUSTL(CompOSEFilePath))//'/eos.thermo', & 
@@ -196,54 +218,61 @@ MODULE wlCompOSEInterface
             
             EOSCompOSE(iRho,iT,iYp,iPressCompOSE) = Q1 * nbCompOSE(iRho) * ergmev / cm3fm3
             EOSCompOSE(iRho,iT,iYp,iEntropyCompOSE) = Q2
-            TotalInternalEnergy = (1.0_dp + Q7) * NeutronMass
-            EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
-            TotalInternalEnergy*nbCompOSE(iRho)/cm3fm3 * ergmev / RhoCompOSE(iRho) - cvel**2.0d0
+            ! This is how I used to do it
+            ! TotalInternalEnergy = (1.0_dp + Q7) * NeutronMass
+            ! EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
+            ! TotalInternalEnergy*nbCompOSE(iRho)/cm3fm3 * ergmev / RhoCompOSE(iRho) - cvel**2.0d0
             
+            ! This is how it should be done I think
+            !EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = Q7 * ergmev / rmu
+            EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
+              (Q7 + 1.0_dp) * NeutronMass * ergmev / rmu - cvel**2.0_dp
+
             ! now handle the chemical potentials. This is the relativistic expression including the 
             ! nucleon mass. Be careful because some opacities need the NR version, or shifted to a reference
             ! mass, e.g. both mup and mun use the neutron mass...
-            EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass
-            EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) + Q4*NeutronMass
-            IF (Q4 == -0.0d0) THEN
+            EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass + NeutronMass
+            EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass + Q4*NeutronMass + ProtonMass
+
+            IF (Q4 == 0.0d0) THEN
                 WRITE(*,*) iT, iRho, iYp
             ENDIF
-            IF (iLepton .eq. 0) THEN
-                EOSCompOSE(iRho,iT,iYp,iElectronChemPotCompOSE) = 0.0d0
-            ELSE
-                EOSCompOSE(iRho,iT,iYp,iElectronChemPotCompOSE) = Q5*NeutronMass - Q4*NeutronMass
-            END IF
             
         END DO
         
         CLOSE(123)
         
-        ! get composition from custom made table (see python script to convert eos.compo into eos.compo.WL
-        OPEN(123, FILE=TRIM(ADJUSTL(CompOSEFilePath))//'/eos.compo.wl', & 
+        ! get composition and microscopic quantities from custom made table 
+        ! (see python script to convert eos.compo into eos.compomicro.wl
+        OPEN(123, FILE=TRIM(ADJUSTL(CompOSEFilePath))//'/eos.compomicro.wl', & 
         FORM = "formatted", ACTION = 'read')
         
-        ! Read the composition, you need to decide what to DO with the light nuclei
+        ! Here you prrobably need to decide what to DO with the light nuclei
         DO i_tot=1,nTemp*nRho*nYp
             
-            READ(123,*) iT, iRho, iYp, Xp, Xn, Xa, Xh, Abar, Zbar
+            READ(123,*) iT, iRho, iYp, Xp, Xn, Xa, Xh, Abar, Zbar, neut_self_ene, prot_self_ene
             
-            EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE) = Xp
+            EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE)  = Xp
             EOSCompOSE(iRho,iT,iYp,iNeutronMassFractionCompOSE) = Xn
-            EOSCompOSE(iRho,iT,iYp,iAlphaMassFractionCompOSE) = Xa
-            EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE) = Xh
-            EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE) = Abar
-            EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE) = Zbar
+            EOSCompOSE(iRho,iT,iYp,iAlphaMassFractionCompOSE)   = Xa
+            EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE)   = Xh
+            EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE)     = Abar
+            EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE)   = Zbar
+            EOSCompOSE(iRho,iT,iYp,iNeutronSelfEnergyCompOSE)   = neut_self_ene
+            EOSCompOSE(iRho,iT,iYp,iProtonSelfEnergyCompOSE)    = prot_self_ene
             
             ! Finally set other things to zero for now, CompOSE does not tell you what they are
             EOSCompOSE(iRho,iT,iYp,iHeavyBindingEnergyCompOSE) = 0.0_dp
-            EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE) = 0.0_dp
-            EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = 0.0_dp
+            EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE)      = 0.0_dp
             
         END DO
         
+        CLOSE(123)
+
     END SUBROUTINE ReadCompOSETable
     
-    SUBROUTINE ReadCompOSEHDFTable( FileName, nRho, nTemp, nYp, iLepton )
+    SUBROUTINE ReadCompOSEHDFTable( FileName, nRho, nTemp, nYp, iLepton, &
+          AllocateEOS_Optional )
         
         ! HDF5 variables
         INTEGER(HID_T) :: file_id
@@ -257,27 +286,37 @@ MODULE wlCompOSEInterface
         CHARACTER(len=128), INTENT(IN) :: FileName
         
         ! output number of points in the table
-        INTEGER, INTENT(IN) :: iLepton 
+        INTEGER, INTENT(IN)    :: iLepton 
         INTEGER, INTENT(INOUT) :: nRho, nTemp, nYp
+
+        LOGICAL, INTENT(IN), OPTIONAL :: AllocateEOS_Optional
         
         ! Local Variables
-        INTEGER :: nThermo, nPairs, nQuads
-        INTEGER :: iThermo, iCompo, iRho, iT, iYp
+        LOGICAL  :: AllocateEOS
+        INTEGER  :: nThermo, nPairs, nQuads, nMicro
+        INTEGER  :: iThermo, iCompo, iMicro, iRho, iT, iYp
         REAL(dp) :: NeutronMass, ProtonMass
         REAL(dp) :: TotalInternalEnergy
-        REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: ThermoTable, CompoTable, &
-        ZbarTable, AbarTable, YhTable
-        INTEGER, ALLOCATABLE, DIMENSION(:) :: ThermoIndices, CompoIndices
+        REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: ThermoTable, CompoTable, MicroTable
+        REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: ZbarTable, AbarTable, YhTable
+
+        INTEGER, ALLOCATABLE, DIMENSION(:) :: ThermoIndices, CompoIndices, MicroIndices
         
-        INTEGER :: iPress_in_Table, iEntr_in_Table, iEps_in_Table, iMub_in_Table, &
-        iMuq_in_Table, iMul_in_Table, iGamma_in_Table, ics2_in_Table, &
-        iXp_in_Table, iXn_in_Table, iXa_in_Table
+        INTEGER :: iPress_in_Table, iEntr_in_Table, iEps_in_Table, iMub_in_Table, iMuq_in_Table, &
+                   iXp_in_Table, iXn_in_Table, iXa_in_Table, &
+                   iNeutSelfEnergy_in_Table, iProtSelfEnergy_in_Table
         
         LOGICAL :: fix_composition
         
         REAL(DP) :: NewAbarNumerator, NewZbarNumerator, NewHeavyDenominator, NewFracHeavy, &
             Light_Abar, Light_Zbar
         
+        IF ( PRESENT(AllocateEOS_Optional) ) THEN
+          AllocateEOS = AllocateEOS_Optional
+        ELSE
+          AllocateEOS = .TRUE.
+        END IF
+
         NeutronMass = mn
         ProtonMass = mp
         
@@ -289,9 +328,11 @@ MODULE wlCompOSEInterface
         CALL hdf5_read_int4_attr0D(group_id, "pointsyq", nYp)
         
         ALLOCATE( nbCompOSE(nRho) )
-        ALLOCATE( RhoCompOSE(nRho) )
-        ALLOCATE( TempCompOSE(nTemp) )
-        ALLOCATE( YpCompOSE(nYp) )
+        IF (AllocateEOS) THEN
+          ALLOCATE( RhoCompOSE(nRho) )
+          ALLOCATE( TempCompOSE(nTemp) )
+          ALLOCATE( YpCompOSE(nYp) )
+        ENDIF
         
         datasize1d = nRho
         CALL ReadHDF( "nb", nbCompOSE(:), group_id, datasize1d )
@@ -342,26 +383,37 @@ MODULE wlCompOSEInterface
         CALL ReadHDF( "aav", AbarTable, group_id, datasize4d )
         CALL ReadHDF( "zav", ZbarTable, group_id, datasize4d )
         CALL CloseGroupHDF( group_id )
-        CALL CloseFileHDF( file_id )
         
         IF (nQuads .gt. 1) THEN
             WRITE(*,*) 'Cannot handle more than one quadruple, i.e. the average heavy nucleus'
         END IF
         
+        ! Read microscopic quantities
+        CALL OpenGroupHDF( "Micro_qty", .false., file_id, group_id )
+        datasize1d(1) = 1
+        CALL hdf5_read_int4_attr0D(group_id, "pointsmicro", nMicro)
+        
+        ALLOCATE( MicroTable(nRho, nTemp, nYp, nMicro) )
+        ALLOCATE( MicroIndices(nMicro) )
+        
+        datasize4d = (/ nRho, nTemp, nYp, nMicro /)
+        CALL ReadHDF( "micro", MicroTable, group_id, datasize4d )
+        datasize1d = nMicro
+        CALL ReadHDF( "index_micro", MicroIndices(:), group_id, datasize1d )
+        CALL CloseGroupHDF( group_id )
+        CALL CloseFileHDF( file_id )
+
         ! Convert to grams per cm^3
         RhoCompOSE(:) = nbCompOSE(:)*rmu/cm3fm3
         ! Convert to kelvin
         TempCompOSE(:) = TempCompOSE(:)*kmev_inv
         
-        ! initialize indices
+        ! Find thermal quantities you need
         iPress_in_Table = 0
         iEntr_in_Table = 0
         iEps_in_Table = 0
         iMub_in_Table = 0
         iMuq_in_Table = 0
-        iMul_in_Table = 0
-        iGamma_in_Table = 0
-        ics2_in_Table = 0
         
         ! Find the indices you want in the table
         DO iThermo=1,nThermo
@@ -375,62 +427,80 @@ MODULE wlCompOSEInterface
                 iMub_in_Table = iThermo
             ELSE IF (ThermoIndices(iThermo) == iThermoMuq) THEN
                 iMuq_in_Table = iThermo
-            ELSE IF (ThermoIndices(iThermo) == iThermoMul) THEN
-                iMul_in_Table = iThermo
-            ELSE IF (ThermoIndices(iThermo) == iThermoGamma) THEN
-                iGamma_in_Table = iThermo
-            ELSE IF (ThermoIndices(iThermo) == iThermoCs2) THEN
-                ics2_in_Table = iThermo
             END IF
         END DO		
         
         ! Handle exceptions
         IF ( (iPress_in_Table == 0) .OR. (iEntr_in_Table == 0) .OR. (iEps_in_Table == 0) &
-        .OR. (iMub_in_Table == 0) .OR. (iMuq_in_Table == 0) .OR. (iMul_in_Table == 0) ) THEN
+        .OR. (iMub_in_Table == 0) .OR. (iMuq_in_Table == 0) ) THEN
             WRITE(*,*) 'Not enough quantities in the CompOSE table', iPress_in_Table, iEntr_in_Table, &
-            iEps_in_Table, iMub_in_Table, iMuq_in_Table, iMul_in_Table
+            iEps_in_Table, iMub_in_Table, iMuq_in_Table
         ENDIF
         
-        IF ( iGamma_in_Table == 0 ) THEN
-            WRITE(*,*) 'No Gamma in Table, will be set to zero!!!'
+        ! Find microscopic quantities you need
+        iNeutSelfEnergy_in_Table = 0
+        iProtSelfEnergy_in_Table = 0
+        ! Find the indices you want in the table
+        DO iMicro=1,nMicro
+          WRITE(*,*) iMicro, MicroIndices(iMicro), iMicroNeutSelfEnergy
+            IF (MicroIndices(iMicro) == iMicroNeutSelfEnergy) THEN
+              iNeutSelfEnergy_in_Table = iMicro
+            ELSE IF (MicroIndices(iMicro) == iMicroProtSelfEnergy) THEN
+              iProtSelfEnergy_in_Table = iMicro
+            END IF
+        END DO		
+
+        IF ( iNeutSelfEnergy_in_Table == 0 ) THEN
+          WRITE(*,*) 'No Vector self energy for Neutrons in Table, will be set to zero!!!'
         END IF
-        IF ( ics2_in_Table == 0 ) THEN
-            WRITE(*,*) 'No cs2 in Table, will be set to zero!!!'
-        END IF
-        
-        ALLOCATE( EOSCompOSE(nRho,nTemp,nYp,nVariablesCompOSE) )
-        
+        IF ( iProtSelfEnergy_in_Table == 0 ) THEN
+          WRITE(*,*) 'No Proton self energy for Neutrons in Table, will be set to zero!!!'
+        END IF      
+
+        IF (AllocateEOS) THEN
+          ALLOCATE( EOSCompOSE(nRho,nTemp,nYp,nVariablesCompOSE) )
+        ENDIF
+
         ! Now copy into Compose array
         DO iRho=1,nRho
             DO iT=1,nTemp
                 DO iYp=1,nYp
                     EOSCompOSE(iRho,iT,iYp,iPressCompOSE) = ThermoTable(iRho,iT,iYp,iPress_in_Table) * ergmev / cm3fm3
                     EOSCompOSE(iRho,iT,iYp,iEntropyCompOSE) = ThermoTable(iRho,iT,iYp,iEntr_in_Table)
-                    TotalInternalEnergy = (1.0_dp + ThermoTable(iRho,iT,iYp,iEps_in_Table)) * NeutronMass
-                    EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
-                        TotalInternalEnergy*nbCompOSE(iRho)/cm3fm3 * ergmev / RhoCompOSE(iRho) - cvel**2.0d0
+                    ! This is how I used to do it
+                    ! TotalInternalEnergy = (1.0_dp + ThermoTable(iRho,iT,iYp,iEps_in_Table)) * NeutronMass
+                    ! EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
+                    !     TotalInternalEnergy*nbCompOSE(iRho)/cm3fm3 * ergmev / RhoCompOSE(iRho) - cvel**2.0d0
                     
+                    ! This is how it should be done I think
+                    !EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
+                    !    ThermoTable(iRho,iT,iYp,iEps_in_Table) * ergmev / rmu
+                    EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
+                        (ThermoTable(iRho,iT,iYp,iEps_in_Table) + 1.0_dp) * &
+                         NeutronMass * ergmev / rmu - cvel**2.0_dp
+          
                     ! now handle the chemical potentials. These include rest mass already.
                     EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = ThermoTable(iRho,iT,iYp,iMub_in_Table) + NeutronMass
                     EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = &
-                        ThermoTable(iRho,iT,iYp,iMuq_in_Table) + EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE)
+                        ThermoTable(iRho,iT,iYp,iMuq_in_Table) + ThermoTable(iRho,iT,iYp,iMub_in_Table) + ProtonMass
                     
-                    IF (iGamma_in_Table > 0 ) THEN
-                        EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = ThermoTable(iRho,iT,iYp,iGamma_in_Table)
+                    ! Take care of microscopic quantities
+                    IF (iNeutSelfEnergy_in_Table > 0 ) THEN
+                        EOSCompOSE(iRho,iT,iYp,iNeutronSelfEnergyCompOSE) = &
+                            MicroTable(iRho,iT,iYp,iNeutSelfEnergy_in_Table)
                     ELSE
-                        EOSCompOSE(iRho,iT,iYp,iGamma1CompOSE) = 0.0_dp
+                        EOSCompOSE(iRho,iT,iYp,iNeutronSelfEnergyCompOSE) = 0.0_dp
                     ENDIF
-                    
-                    IF (iLepton .eq. 0) THEN
-                        EOSCompOSE(iRho,iT,iYp,iElectronChemPotCompOSE) = 0.0d0
+                    IF (iProtSelfEnergy_in_Table > 0 ) THEN
+                      EOSCompOSE(iRho,iT,iYp,iProtonSelfEnergyCompOSE) = &
+                          MicroTable(iRho,iT,iYp,iProtSelfEnergy_in_Table)
                     ELSE
-                        EOSCompOSE(iRho,iT,iYp,iElectronChemPotCompOSE) = (ThermoTable(iRho,iT,iYp,iMul_in_Table) - &
-                        ThermoTable(iRho,iT,iYp,iMuq_in_Table))
-                    END IF	
-                    
+                        EOSCompOSE(iRho,iT,iYp,iProtonSelfEnergyCompOSE) = 0.0_dp
+                    ENDIF
+
                     ! Finally set other things to zero for now, CompOSE does not tell you what they are
                     EOSCompOSE(iRho,iT,iYp,iHeavyBindingEnergyCompOSE) = 0.0_dp
-                    EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE) = ThermoTable(iRho,iT,iYp,ics2_in_Table) * cvel**2
+                    EOSCompOSE(iRho,iT,iYp,iThermalEnergyCompOSE)      = 0.0_dp
                 END DO
             END DO
         END DO
@@ -460,9 +530,12 @@ MODULE wlCompOSEInterface
         DO iRho=1,nRho
             DO iT=1,nTemp
                 DO iYp=1,nYp
-                    EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE) = CompoTable(iRho,iT,iYp,iXp_in_Table)
-                    EOSCompOSE(iRho,iT,iYp,iNeutronMassFractionCompOSE) = CompoTable(iRho,iT,iYp,iXn_in_Table)
-                    EOSCompOSE(iRho,iT,iYp,iAlphaMassFractionCompOSE) = CompoTable(iRho,iT,iYp,iXa_in_Table) * 4.0d0
+                    EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE)  = &
+                        CompoTable(iRho,iT,iYp,iXp_in_Table)
+                    EOSCompOSE(iRho,iT,iYp,iNeutronMassFractionCompOSE) = &
+                        CompoTable(iRho,iT,iYp,iXn_in_Table)
+                    EOSCompOSE(iRho,iT,iYp,iAlphaMassFractionCompOSE)   = &
+                        CompoTable(iRho,iT,iYp,iXa_in_Table) * 4.0d0
                 
                     IF (fix_composition) THEN
                         NewAbarNumerator = YhTable(iRho,iT,iYp,1) * AbarTable(iRho,iT,iYp,1)
@@ -507,22 +580,6 @@ MODULE wlCompOSEInterface
                         EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE) = ZbarTable(iRho,iT,iYp,1)
                     ENDIF
                     
-                    ! IF (ABS(EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE) + &
-                            ! EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE) + &
-                            ! EOSCompOSE(iRho,iT,iYp,iNeutronMassFractionCompOSE) + &
-                            ! EOSCompOSE(iRho,iT,iYp,iAlphaMassFractionCompOSE) - 1) .gt. 1.0d-2) THEN
-                        ! WRITE(*,*) iRho,iT,iYp
-                        ! WRITE(*,*) EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE) + &
-                            ! EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE) + &
-                            ! EOSCompOSE(iRho,iT,iYp,iNeutronMassFractionCompOSE) + &
-                            ! EOSCompOSE(iRho,iT,iYp,iAlphaMassFractionCompOSE), CompoTable(iRho,iT,iYp,5:)
-                        ! WRITE(*,*) EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE), &
-                            ! EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE), &
-                            ! EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE), &
-                            ! YhTable(iRho,iT,iYp,1) * AbarTable(iRho,iT,iYp,1), AbarTable(iRho,iT,iYp,1), &
-                            ! ZbarTable(iRho,iT,iYp,1)
-                            
-                    ! ENDIF
                 END DO
             END DO
         END DO
@@ -545,7 +602,7 @@ MODULE wlCompOSEInterface
         DEALLOCATE( nbCompOSE )
         DEALLOCATE( ThermoTable )
         DEALLOCATE( CompoTable )
-        DEALLOCATE( ThermoIndices)
+        DEALLOCATE( ThermoIndices )
         DEALLOCATE( CompoIndices )
         DEALLOCATE( ZbarTable )
         DEALLOCATE( AbarTable )

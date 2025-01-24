@@ -9,25 +9,25 @@ MODULE wlDependentVariablesModule
   TYPE, PUBLIC :: ValueTypeDV
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: Values
   END TYPE
-
-  TYPE, PUBLIC :: DVIDType
-    INTEGER :: iPressure
-    INTEGER :: iEntropyPerBaryon
-    INTEGER :: iInternalEnergyDensity
-    INTEGER :: iElectronChemicalPotential
-    INTEGER :: iProtonChemicalPotential
-    INTEGER :: iNeutronChemicalPotential
-    INTEGER :: iProtonMassFraction
-    INTEGER :: iNeutronMassFraction
-    INTEGER :: iAlphaMassFraction
-    INTEGER :: iHeavyMassFraction
-    INTEGER :: iHeavyChargeNumber
-    INTEGER :: iHeavyMassNumber
-    INTEGER :: iHeavyBindingEnergy
-    INTEGER :: iThermalEnergy
-    INTEGER :: iGamma1
-  END TYPE
-
+TYPE, PUBLIC :: DVIDType
+  INTEGER :: iPressure
+  INTEGER :: iEntropyPerBaryon
+  INTEGER :: iInternalEnergyDensity
+  INTEGER :: iElectronChemicalPotential
+  INTEGER :: iProtonChemicalPotential
+  INTEGER :: iNeutronChemicalPotential
+  INTEGER :: iProtonMassFraction
+  INTEGER :: iNeutronMassFraction
+  INTEGER :: iAlphaMassFraction
+  INTEGER :: iHeavyMassFraction
+  INTEGER :: iHeavyChargeNumber
+  INTEGER :: iHeavyMassNumber
+  INTEGER :: iHeavyBindingEnergy
+  INTEGER :: iThermalEnergy
+  INTEGER :: iGamma1
+  INTEGER :: iProtonSelfEnergy
+  INTEGER :: iNeutronSelfEnergy
+END TYPE
 
   TYPE, PUBLIC :: DependentVariablesType
     INTEGER :: nVariables
@@ -38,7 +38,7 @@ MODULE wlDependentVariablesModule
     INTEGER, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired
     REAL(dp), DIMENSION(:), ALLOCATABLE :: minValues
     REAL(dp), DIMENSION(:), ALLOCATABLE :: maxValues
-    TYPE(ValueTypeDV), DIMENSION(:), ALLOCATABLE :: Variables 
+    TYPE(ValueTypeDV), DIMENSION(:), ALLOCATABLE :: Variables
     TYPE(DVIDType) :: Indices
   END TYPE
 

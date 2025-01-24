@@ -16,14 +16,20 @@ MODULE wlElectronPhotonEOS
     REAL(dp) :: ye
 
     REAL(dp) :: p
+    REAL(dp) :: pele
+    REAL(dp) :: prad
     REAL(dp) :: dpdT
     REAL(dp) :: dpdr
 
     REAL(dp) :: e
+    REAL(dp) :: eele
+    REAL(dp) :: erad
     REAL(dp) :: dedT
     REAL(dp) :: dedr
     
     REAL(dp) :: s
+    REAL(dp) :: sele
+    REAL(dp) :: srad
     REAL(dp) :: dsdT
     REAL(dp) :: dsdr
   
@@ -314,15 +320,50 @@ CONTAINS
   etaele  = h3( fi, &
   si0t,   si1t,   si0mt,   si1mt, &
   si0d,   si1d,   si0md,   si1md)
-
+  
   !..derivative with respect to density
   x       = h3( fi, &
   si0t,   si1t,   si0mt,   si1mt, &
   dsi0d,  dsi1d,  dsi0md,  dsi1md)
   detadd  = ye * x
-
+  
   !..derivative with respect to temperature
   detadt  = h3( fi, &
+  dsi0t,  dsi1t,  dsi0mt,  dsi1mt, &
+  si0d,   si1d,   si0md,   si1md)
+
+  !..look in the number density table only once
+  fi(1)  = HelmTable % xf(iat,jat)
+  fi(2)  = HelmTable % xf(iat+1,jat)
+  fi(3)  = HelmTable % xf(iat,jat+1)
+  fi(4)  = HelmTable % xf(iat+1,jat+1)
+  fi(5)  = HelmTable % xft(iat,jat)
+  fi(6)  = HelmTable % xft(iat+1,jat)
+  fi(7)  = HelmTable % xft(iat,jat+1)
+  fi(8)  = HelmTable % xft(iat+1,jat+1)
+  fi(9)  = HelmTable % xfd(iat,jat)
+  fi(10) = HelmTable % xfd(iat+1,jat)
+  fi(11) = HelmTable % xfd(iat,jat+1)
+  fi(12) = HelmTable % xfd(iat+1,jat+1)
+  fi(13) = HelmTable % xfdt(iat,jat)
+  fi(14) = HelmTable % xfdt(iat+1,jat)
+  fi(15) = HelmTable % xfdt(iat,jat+1)
+  fi(16) = HelmTable % xfdt(iat+1,jat+1)
+
+  !..electron + positron number densities
+  xnefer   = h3( fi, &
+  si0t,   si1t,   si0mt,   si1mt, &
+  si0d,   si1d,   si0md,   si1md)
+  
+  !..derivative with respect to density
+  x        = h3( fi, &
+  si0t,   si1t,   si0mt,   si1mt, &
+  dsi0d,  dsi1d,  dsi0md,  dsi1md)
+  x = MAX(x,0.0_dp)
+  dxnedd   = ye * x
+  
+  !..derivative with respect to temperature
+  dxnedt   = h3( fi, &
   dsi0t,  dsi1t,  dsi0mt,  dsi1mt, &
   si0d,   si1d,   si0md,   si1md)
 
@@ -359,24 +400,30 @@ CONTAINS
   dentrdt = dsraddt + dsepdt
 
   !..maxwell relations; each is 0.0_dp IF the consistency is perfect
-  x   = den * den
-  dse = temp*dentrdt/denerdt - 1.0d0
-  dpe = (denerdd*x + temp*dpresdt)/pres - 1.0d0
-  dsp = -dentrdd*x/dpresdt - 1.0d0
+  ! x   = den * den
+  ! dse = temp*dentrdt/denerdt - 1.0d0
+  ! dpe = (denerdd*x + temp*dpresdt)/pres - 1.0d0
+  ! dsp = -dentrdd*x/dpresdt - 1.0d0
 
   ElectronPhotonState % T    = temp
   ElectronPhotonState % rho  = den
-  ElectronPhotonState % ye  = ye
+  ElectronPhotonState % ye   = ye
 
   ElectronPhotonState % p    = pres
+  ElectronPhotonState % pele = pele
+  ElectronPhotonState % prad = prad
   ElectronPhotonState % dpdT = dpresdt
   ElectronPhotonState % dpdr = dpresdd
 
-  ElectronPhotonState % e    = ener
+  ElectronPhotonState % e    = ener + me / rmu * ergmev * ye
+  ElectronPhotonState % eele = eele + me / rmu * ergmev * ye
+  ElectronPhotonState % erad = erad
   ElectronPhotonState % dedT = denerdt
   ElectronPhotonState % dedr = denerdd
 
-  ElectronPhotonState % s    = entr / (kmev * ergmev / rmu)
+  ElectronPhotonState % s    = entr    / (kmev * ergmev / rmu)
+  ElectronPhotonState % sele = sele    / (kmev * ergmev / rmu)
+  ElectronPhotonState % srad = srad    / (kmev * ergmev / rmu)
   ElectronPhotonState % dsdT = dentrdt / (kmev * ergmev / rmu)
   ElectronPhotonState % dsdr = dentrdd / (kmev * ergmev / rmu)
 

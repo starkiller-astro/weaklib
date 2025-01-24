@@ -102,9 +102,13 @@ CONTAINS
       EOSTable % DV % Names( IndexBuffer ) = NameBuffer
       EOSTable % DV % Units( IndexBuffer ) = UnitBuffer
 
-
-      CALL IndexMatch( TargetBuffer, IndexBuffer, &
-                       EOSTable % DV % Indices )
+#if EOSMODE_TABLE_COMBINED
+      CALL IndexMatch     ( TargetBuffer, IndexBuffer, &
+                    EOSTable % DV % Indices )
+#elif EOSMODE_TABLE_SPLIT
+      CALL IndexMatchSplit( TargetBuffer, IndexBuffer, &
+                    EOSTable % DV % Indices )
+#endif              
 
   END SUBROUTINE SwapDependentVariables
 
@@ -148,5 +152,44 @@ CONTAINS
 
   END SUBROUTINE IndexMatch
 
+  SUBROUTINE IndexMatchSplit( TargetBuffer, IndexBuffer, Indices )
+
+    INTEGER, INTENT(in)        :: TargetBuffer
+    INTEGER, INTENT(in)        :: IndexBuffer
+    TYPE(DVIDType), INTENT(inout) :: Indices  
+
+      IF ( TargetBuffer == 1) THEN 
+      Indices % iPressure = IndexBuffer 
+      ELSE IF ( TargetBuffer == 2) THEN 
+      Indices % iEntropyPerBaryon = IndexBuffer 
+      ELSE IF ( TargetBuffer == 3) THEN 
+      Indices % iInternalEnergyDensity = IndexBuffer 
+      ELSE IF ( TargetBuffer == 4) THEN 
+      Indices % iProtonChemicalPotential = IndexBuffer 
+      ELSE IF ( TargetBuffer == 5) THEN 
+      Indices % iNeutronChemicalPotential = IndexBuffer 
+      ELSE IF ( TargetBuffer == 6) THEN 
+      Indices % iProtonMassFraction = IndexBuffer 
+      ELSE IF ( TargetBuffer == 7) THEN 
+      Indices % iNeutronMassFraction = IndexBuffer 
+      ELSE IF ( TargetBuffer == 8) THEN 
+      Indices % iAlphaMassFraction = IndexBuffer 
+      ELSE IF ( TargetBuffer == 9) THEN 
+      Indices % iHeavyMassFraction = IndexBuffer 
+      ELSE IF (TargetBuffer == 10) THEN 
+      Indices % iHeavyChargeNumber = IndexBuffer 
+      ELSE IF (TargetBuffer == 11) THEN 
+      Indices % iHeavyMassNumber = IndexBuffer 
+      ELSE IF (TargetBuffer == 12) THEN 
+      Indices % iHeavyBindingEnergy = IndexBuffer 
+      ELSE IF (TargetBuffer == 13) THEN 
+      Indices % iThermalEnergy = IndexBuffer 
+      ELSE IF (TargetBuffer == 14) THEN 
+      Indices % iProtonSelfEnergy = IndexBuffer 
+      ELSE IF (TargetBuffer == 15) THEN 
+      Indices % iNeutronSelfEnergy = IndexBuffer 
+      END IF
+
+  END SUBROUTINE IndexMatchSplit
 
 END MODULE wlEquationOfStateTableModule

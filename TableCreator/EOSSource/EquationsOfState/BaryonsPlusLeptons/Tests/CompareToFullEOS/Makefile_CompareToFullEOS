@@ -1,21 +1,45 @@
-include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
-include ../Makefile_CompareToFullEOS_Dependencies
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
-include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep/Makefile_EosBaryLep_ObjectFiles
-include $(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep/Makefile_EosBaryLep_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Old/LS/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Old/BCK/Makefile_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Old/EOSInterface/Makefile_Dependencies
 
+INTERPOLATION_SPLIT_TABLE = COMBINED
+DEFINES   += $(MDEFS)$(PP)INTERPOLATION_SPLIT_TABLE_$(INTERPOLATION_SPLIT_TABLE)
 
 VPATH += \
-$(WEAKLIB_DIR)/TableCreator/EOSSource/EquationsOfState/BaryonsPlusLeptons/EosBaryLep: \
 $(WEAKLIB_DIR)/TableCreator/SharedModules: \
+$(WEAKLIB_DIR)/TableCreator/Old/LS: \
+$(WEAKLIB_DIR)/TableCreator/Old/BCK: \
+$(WEAKLIB_DIR)/TableCreator/Old/EOSInterface: \
 ..
+
+Interface_OBJ = \
+	wlExtPhysicalConstantsModule.o \
+	initferm.o \
+	loadmx.o \
+	wlExtInitializeEOS.o \
+	EL_EOS_MODULE.o \
+	EOS_M4C_MODULE.o \
+	MAXWEL_MODULE.o \
+	EOS_BCK_MODULE.o \
+	LattimerSwesty.o \
+	e_p_eos.o \
+	BCK_EoS.o \
+	net.o \
+	wlExtEOSWrapperModule.o
 
 wlComparison = \
   $(WL_LIBRARY) \
   $(WL_EOSSOURCE) \
-  $(SHAREDMODULES) \
-  $(COMMON_MODS_OBJ)
+  $(WL_EOSSOURCE_SPLIT) \
+	$(SHAREDMODULES) \
+  $(COMMON_MODS_OBJ) \
+	$(Interface_OBJ)
 
 all: wlCompareToFullEOS
 
@@ -30,3 +54,15 @@ clean:
 
 clobber: clean
 	rm wlCompareToFullEOS$(MACHINE)
+
+wlCompareToFullEOS.o: \
+  wlKindModule.o \
+  wlExtNumericalModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlElectronPhotonEOS.o \
+  wlExtPhysicalConstantsModule.o \
+  wlExtEOSWrapperModule.o

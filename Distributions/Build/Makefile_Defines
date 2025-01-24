@@ -1,5 +1,5 @@
-MDEFS ?=
-PP ?= -D
+MDEFS 	?=
+PP 			?= -D
 
 ifeq ($(USE_GPU),TRUE)
    DEFINES      += $(MDEFS)$(PP)WEAKLIB_GPU

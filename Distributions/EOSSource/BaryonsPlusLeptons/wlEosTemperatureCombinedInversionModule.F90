@@ -41,18 +41,18 @@ CONTAINS
 
   END SUBROUTINE InitializeLeptonTables
 
-  REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, Yp, OS )
+  REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, y, OS )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
 
-    REAL(dp), INTENT(in) :: x_a, x_b, y_a, y_b, Yp, OS
+    REAL(dp), INTENT(in) :: x_a, x_b, y_a, y_b, y, OS
 
     InverseLogInterp &
       = 10.0_dp**( LOG10( x_a ) + LOG10( x_b/x_a ) &
-                 * LOG10( (Yp+OS)/(y_a+OS) ) / LOG10( (y_b+OS)/(y_a+OS) ) )
+                 * LOG10( (y+OS)/(y_a+OS) ) / LOG10( (y_b+OS)/(y_a+OS) ) )
 
     RETURN
   END FUNCTION InverseLogInterp
@@ -127,7 +127,7 @@ CONTAINS
 
     i_a = iT
     T_a = Ts(i_a)
-    Xs_a = 10.0d0**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
+    Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -135,7 +135,7 @@ CONTAINS
         ElectronPhotonState % t   = T_a
         ElectronPhotonState % rho = Ds (iD +iL_D-1)
         ElectronPhotonState % ye  = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        
+
         CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
         MuonState % t     = T_a
@@ -157,7 +157,7 @@ CONTAINS
     
     i_b = i_a + 1
     T_b = Ts(i_b)
-    Xs_b = 10.0d0**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
+    Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
     DO iL_D=1,2
       DO iL_Y=1,2
@@ -194,7 +194,7 @@ CONTAINS
 
     i_a = 1
     T_a = Ts(i_a)
-    Xs_a = 10.0d0**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
+    Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -223,7 +223,7 @@ CONTAINS
     
     i_b = SizeTs
     T_b = Ts(i_b)
-    Xs_b = 10.0d0**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
+    Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -256,7 +256,7 @@ CONTAINS
       DO WHILE ( i_b > i_a + 1 )
 
         T_c = Ts(i_c)
-        Xs_c = 10.0d0**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
+        Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
 
         ! Calculate electron and muon contribution
         DO iL_D=1,2
@@ -309,7 +309,7 @@ CONTAINS
       DO i = 2, SizeTs - 1
 
         T_i  = Ts(i)
-        Xs_i = 10.0d0**Xs(iD:iD+1,i,iYp:iYp+1) - OS
+        Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
         DO iL_D=1,2
           DO iL_Y=1,2
@@ -405,7 +405,7 @@ CONTAINS
     
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
-    
+
     Yp = Ye + Ym
 
     Ye_over_Yp = Ye/Yp
@@ -433,7 +433,7 @@ CONTAINS
 
     i_a = 1
     T_a = Ts(i_a)
-    Xs_a = 10.0d0**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
+    Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
     
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -462,7 +462,7 @@ CONTAINS
 
     i_b = SizeTs
     T_b = Ts(i_b)
-    Xs_b = 10.0d0**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
+    Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
     DO iL_D=1,2
       DO iL_Y=1,2
@@ -494,7 +494,7 @@ CONTAINS
 
         i_c = MAX( i_a + 1, ( i_a + i_b ) / 2 )
         T_c = Ts(i_c)
-        Xs_c = 10.0d0**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
+        Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
         DO iL_D=1,2
           DO iL_Y=1,2
@@ -540,7 +540,7 @@ CONTAINS
       DO i = SizeTs - 1, 2, -1
 
         T_i = Ts(i)
-        Xs_i = 10.0d0**Xs(iD:iD+1,i,iYp:iYp+1) - OS
+        Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
         DO iL_D=1,2
           DO iL_Y=1,2
@@ -586,7 +586,7 @@ CONTAINS
       IF ( f_a * f_b > 0.0_dp ) Error = 13
 
     END IF
-
+    
     IF( Error .NE. 0 )THEN
       T = 0.0_dp
     ELSE
@@ -1179,7 +1179,7 @@ CONTAINS
 
     i_a = iT
     T_a = Ts(i_a)
-    Xs_a = 10.0d0**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
+    Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -1210,7 +1210,7 @@ CONTAINS
     
     i_b = i_a + 1
     T_b = Ts(i_b)
-    Xs_b = 10.0d0**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
+    Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
     DO iL_D=1,2
       DO iL_Y=1,2
@@ -1247,7 +1247,7 @@ CONTAINS
 
     i_a = 1
     T_a = Ts(i_a)
-    Xs_a = 10.0d0**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
+    Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -1276,7 +1276,7 @@ CONTAINS
     
     i_b = SizeTs
     T_b = Ts(i_b)
-    Xs_b = 10.0d0**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
+    Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -1309,7 +1309,7 @@ CONTAINS
       DO WHILE ( i_b > i_a + 1 )
 
         T_c = Ts(i_c)
-        Xs_c = 10.0d0**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
+        Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
 
         ! Calculate electron and muon contribution
         DO iL_D=1,2
@@ -1362,7 +1362,7 @@ CONTAINS
       DO i = 2, SizeTs - 1
 
         T_i  = Ts(i)
-        Xs_i = 10.0d0**Xs(iD:iD+1,i,iYp:iYp+1) - OS
+        Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
         DO iL_D=1,2
           DO iL_Y=1,2
@@ -1484,7 +1484,7 @@ CONTAINS
 
     i_a = 1
     T_a = Ts(i_a)
-    Xs_a = 10.0d0**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
+    Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
     
     ! Calculate electron and muon contribution
     DO iL_D=1,2
@@ -1513,7 +1513,7 @@ CONTAINS
 
     i_b = SizeTs
     T_b = Ts(i_b)
-    Xs_b = 10.0d0**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
+    Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
     DO iL_D=1,2
       DO iL_Y=1,2
@@ -1545,7 +1545,7 @@ CONTAINS
 
         i_c = MAX( i_a + 1, ( i_a + i_b ) / 2 )
         T_c = Ts(i_c)
-        Xs_c = 10.0d0**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
+        Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
         DO iL_D=1,2
           DO iL_Y=1,2
@@ -1591,7 +1591,7 @@ CONTAINS
       DO i = SizeTs - 1, 2, -1
 
         T_i = Ts(i)
-        Xs_i = 10.0d0**Xs(iD:iD+1,i,iYp:iYp+1) - OS
+        Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
         DO iL_D=1,2
           DO iL_Y=1,2

@@ -2,4 +2,7 @@ wlExtEOSWrapperModule.o: \
   wlKindModule.o \
   wlExtNumericalModule.o \
   wlExtPhysicalConstantsModule.o \
-  e_p_eos.o
+  e_p_eos.o \
+  EL_EOS_MODULE.o \
+  EOS_M4C_MODULE.o \
+  EOS_BCK_MODULE.o

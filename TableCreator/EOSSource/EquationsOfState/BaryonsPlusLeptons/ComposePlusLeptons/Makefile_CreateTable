@@ -27,8 +27,9 @@ wlCreateEquationOfStateTable.o: \
   wlEOSIOModuleHDF.o \
   wlCompOSEInterface.o \
   wlHelmMuonIOModuleHDF.o \
-  wlLeptonEOSModule.o
-  
+  wlLeptonEOSModule.o \
+	wlEosConstantsModule.o
+
 clean:
 	rm -f *.o *.mod *.ld
 

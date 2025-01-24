@@ -1,6 +1,8 @@
 EL_EOS_MODULE.o: \
-  wlKindModule.o \
-  numerical_module.o
+  wlKindModule.o 
+
+EOS_M4C_MODULE.o: \
+  wlKindModule.o 
 
 e_p_eos.o: \
   wlKindModule.o \
@@ -16,5 +18,4 @@ loadmx.o: \
   MAXWEL_MODULE.o
 
 MAXWEL_MODULE.o: \
-  wlKindModule.o \
-  numerical_module.o
+  wlKindModule.o
