@@ -239,20 +239,20 @@ IMPLICIT NONE
    10000 format ( ' Date ', i2.2, '/', i2.2, '/', i4.4, '; Time ',&
      &         i2.2, ':', i2.2, ':', i2.2 )
 
-#if defined(GIT_HASH)
-        write(*,*) 'Git version: ', GIT_HASH
+#ifdef WL_GIT_HASH
+        write(*,*) 'Git version: ', WL_GIT_HASH
 #else
         write(*,*) 'Git version: unknown'
 #endif
 
-#if defined(GIT_BRANCH)
-        write(*,*) 'Git branch: ', GIT_BRANCH
+#ifdef WL_GIT_BRANCH
+        write(*,*) 'Git branch: ', WL_GIT_BRANCH
 #else
         write(*,*) 'Git branch: unknown'
 #endif
 
-#if defined(GIT_DATE)
-        write(*,*) 'Git date: ', GIT_DATE
+#ifdef WL_GIT_DATE
+        write(*,*) 'Git date: ', WL_GIT_DATE
 #else
         write(*,*) 'Git date: unknown'
 #endif
@@ -1356,8 +1356,8 @@ PRINT*, 'Filling OpacityTable ...'
   WRITE ( *, 10000 )  today(2), today(1), today(3), now
 
 !warn the user if they have uncommited changes to the code when building tables.
-#if defined(GIT_HASH)
-        IF(index(GIT_HASH,"dirty") .gt. 0) THEN
+#ifdef WL_GIT_HASH
+        IF(index(WL_GIT_HASH,"dirty") .gt. 0) THEN
           write(*,*) 'WARNING: There are uncommited changes in the repo; &
                       consider commiting your latest changes if you are &
                       building production opacity tables in order to store &
