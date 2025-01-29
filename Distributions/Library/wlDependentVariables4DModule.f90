@@ -36,11 +36,11 @@ MODULE wlDependentVariables4DModule
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Names
     CHARACTER(LEN=32), DIMENSION(:), ALLOCATABLE :: Units
     REAL(dp), DIMENSION(:), ALLOCATABLE :: Offsets
-    INTEGER, DIMENSION(:,:,:), ALLOCATABLE   :: Repaired
+    INTEGER, DIMENSION(:,:,:,:), ALLOCATABLE  :: Repaired
     REAL(dp), DIMENSION(:), ALLOCATABLE :: minValues
     REAL(dp), DIMENSION(:), ALLOCATABLE :: maxValues
-    TYPE(ValueTypeDV), DIMENSION(:), ALLOCATABLE :: Variables
-    TYPE(DVIDType) :: Indices
+    TYPE(ValueTypeDV4D), DIMENSION(:), ALLOCATABLE :: Variables
+    TYPE(DVIDType4D) :: Indices
   END TYPE
 
   PUBLIC AllocateDependentVariables4D
@@ -51,7 +51,7 @@ CONTAINS
 
   SUBROUTINE AllocateDependentVariables4D( DV, nPoints, nVariables )
    
-    TYPE(DependentVariablesType)      :: DV 
+    TYPE(DependentVariables4DType)      :: DV 
     INTEGER,               INTENT(in) :: nVariables
     INTEGER, DIMENSION(4), INTENT(in) :: nPoints
 
@@ -75,12 +75,12 @@ CONTAINS
              % Values(1:nPoints(1), 1:nPoints(2), 1:nPoints(3), 1:nPoints(4)) )
     END DO
 
-  END SUBROUTINE AllocateDependentVariables
+  END SUBROUTINE AllocateDependentVariables4D
 
 
   SUBROUTINE DeAllocateDependentVariables4D( DV )
   
-    TYPE(DependentVariablesType) :: DV
+    TYPE(DependentVariables4DType) :: DV
 
     INTEGER :: i
 
@@ -97,8 +97,8 @@ CONTAINS
     DEALLOCATE( DV % minValues )
     DEALLOCATE( DV % maxValues )
 
-  END SUBROUTINE DeAllocateDependentVariables
+  END SUBROUTINE DeAllocateDependentVariables4D
 
 
-END MODULE wlDependentVariablesModule
+END MODULE wlDependentVariables4DModule
 

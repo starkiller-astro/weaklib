@@ -32,8 +32,8 @@ MODULE wlEquationOfStateTableModule
   TYPE, PUBLIC :: EquationOfState4DTableType
     INTEGER                        :: nVariables
     INTEGER, DIMENSION(4)          :: nPoints
-    TYPE(ThermoStateType4D)        :: TS
-    TYPE(DependentVariablesType4D) :: DV
+    TYPE(ThermoState4DType)        :: TS
+    TYPE(DependentVariables4DType) :: DV
     TYPE(MetadataType)             :: MD
   END TYPE
 

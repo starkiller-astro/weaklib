@@ -13,6 +13,14 @@ wlDependentVariablesModule.o: \
   wlKindModule.o \
   wlDependentVariablesModule.f90
 
+wlThermoState4DModule.o: \
+  wlKindModule.o \
+  wlThermoState4DModule.f90
+
+wlDependentVariables4DModule.o: \
+  wlKindModule.o \
+  wlDependentVariables4DModule.f90
+
 wlInterpolationUtilitiesModule.o: \
   wlKindModule.o \
   wlInterpolationUtilitiesModule.F90

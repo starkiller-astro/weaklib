@@ -62,7 +62,7 @@ CONTAINS
 
   SUBROUTINE CopyThermoState4D( TS_target, TS_source )
     
-    TYPE(ThermoStateType) :: TS_target, TS_source
+    TYPE(ThermoState4DType) :: TS_target, TS_source
 
     INTEGER :: i
 
