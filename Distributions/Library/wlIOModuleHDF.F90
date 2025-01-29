@@ -711,10 +711,19 @@ CONTAINS
     INTEGER(HID_T), INTENT(IN) :: group_id
     !!$CHARACTER(LEN=100), DIMENSION(4) :: tmpstring
 
-    !!$tmpstring(1) = "Git hash:                "//GIT_HASH
-    !!$tmpstring(2) = "Git branch:              "//GIT_BRANCH
-    !!$tmpstring(3) = "Git date of last commit: "//GIT_DATE
-    !!$tmpstring(4) = "Git URL:                 "//GIT_URL
+    tmpstring(:) = "UNDEFINED"
+#ifdef WL_GIT_HASH
+    tmpstring(1) = "Git hash:                "//WL_GIT_HASH
+#endif
+#ifdef WL_GIT_BRANCH
+    tmpstring(2) = "Git branch:              "//WL_GIT_BRANCH
+#endif
+#ifdef WL_GIT_DATE
+    tmpstring(3) = "Git date of last commit: "//WL_GIT_DATE
+#endif
+#ifdef WL_GIT_URL
+    tmpstring(4) = "Git URL:                 "//WL_GIT_URL
+#endif
 
     !!$CALL WriteGroupAttributeHDF_string("Version", tmpstring, group_id)
 
