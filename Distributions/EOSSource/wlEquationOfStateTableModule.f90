@@ -3,6 +3,8 @@ MODULE wlEquationOfStateTableModule
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
+  USE wlThermoState4DModule
+  USE wlDependentVariables4DModule
 
   USE HDF5
 
@@ -27,11 +29,22 @@ MODULE wlEquationOfStateTableModule
     TYPE(MetadataType)           :: MD
   END TYPE
 
+  TYPE, PUBLIC :: EquationOfState4DTableType
+    INTEGER                        :: nVariables
+    INTEGER, DIMENSION(4)          :: nPoints
+    TYPE(ThermoStateType4D)        :: TS
+    TYPE(DependentVariablesType4D) :: DV
+    TYPE(MetadataType)             :: MD
+  END TYPE
+
   PUBLIC :: AllocateEquationOfStateTable
   PUBLIC :: DeAllocateEquationOfStateTable
   PUBLIC :: TableLimitFail
   PUBLIC :: SwapDependentVariables
   PUBLIC :: IndexMatch
+
+  PUBLIC :: AllocateEquationOfState4DTable
+  PUBLIC :: DeAllocateEquationOfState4DTable
 
 CONTAINS
 
@@ -191,5 +204,30 @@ CONTAINS
       END IF
 
   END SUBROUTINE IndexMatchSplit
+
+  SUBROUTINE AllocateEquationOfState4DTable( EOSTable, nPoints, nVariables )
+
+    TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
+    INTEGER, INTENT(in)                           :: nVariables
+    INTEGER, DIMENSION(4), INTENT(in)             :: nPoints
+
+    EOSTable % nPoints(1:3) = nPoints(1:3)
+    EOSTable % nVariables = nVariables
+
+    CALL AllocateThermoState4D( EOSTable % TS, EOSTable % nPoints )
+    CALL AllocateDependentVariables4D &
+           ( EOSTable % DV, EOSTable % nPoints, EOSTable % nVariables )
+
+  END SUBROUTINE AllocateEquationOfState4DTable
+
+
+  SUBROUTINE DeAllocateEquationOfState4DTable( EOSTable )
+
+    TYPE(EquationOfStateTableType) :: EOSTable
+
+    CALL DeAllocateThermoState( EOSTable % TS )
+    CALL DeAllocateDependentVariables( EOSTable % DV )
+
+  END SUBROUTINE DeAllocateEquationOfState4DTable
 
 END MODULE wlEquationOfStateTableModule

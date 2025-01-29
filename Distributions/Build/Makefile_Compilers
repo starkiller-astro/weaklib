@@ -28,6 +28,7 @@ OPENMP_OL_birch_gcc  = -fopenmp
 OPENMP_OL_spock_cce  = -fopenmp
 OPENMP_OL_spock_gcc  = -fopenmp
 OPENMP_vass          = -fopenmp 
+OPENMP_savio         = -fopenmp 
 ifeq ($(USE_OMP),TRUE)
     OPENMP               = $(OPENMP_$(MACHINE))
 else ifeq ($(USE_OMP_OL),TRUE)
@@ -55,6 +56,7 @@ FORTRAN_sn1987b      = mpif90 -cpp
 FORTRAN_ranchu       = mpif90 -cpp
 FORTRAN_ranchuair    = mpif90 -cpp
 FORTRAN_vass         = mpif90 -cpp
+FORTRAN_savio        = mpiifort -cpp
 FORTRAN_sjdunham     = mpif90 -cpp
 FORTRAN_frommste     = h5pfc -cpp
 FORTRAN_titan_gnu    = ftn -cpp
@@ -85,6 +87,7 @@ FORTRAN              = $(FORTRAN_$(MACHINE)) $(VERSION_FLAGS)
 SUFFIX_f90_sn1987b      =
 SUFFIX_f90_ranchu       =
 SUFFIX_f90_vass         =
+SUFFIX_f90_savio        =
 SUFFIX_f90_sjdunham     =
 SUFFIX_f90_frommste     =
 SUFFIX_f90_titan_gnu    =
@@ -108,6 +111,7 @@ FLINKER_sn1987b      = mpif90
 FLINKER_ranchu       = mpif90
 FLINKER_ranchuair    = mpif90
 FLINKER_vass         = mpif90
+FLINKER_savio        = mpiifort -cpp
 FLINKER_sjdunham     = mpif90
 FLINKER_frommste     = h5pfc
 FLINKER_titan_gnu    = ftn
@@ -140,6 +144,7 @@ DEBUG_sn1987b      = -g -framework Accelerate -fbacktrace -ffpe-trap=invalid,zer
 DEBUG_ranchu       = -g -fbacktrace -fbounds-check
 DEBUG_ranchuair    = -g -fbacktrace -fbounds-check
 DEBUG_vass         = -g -framework Accelerate -fbacktrace -ffpe-trap=invalid,zero -ffpe-summary=invalid,zero -fbounds-check
+DEBUG_savio        = -g -Og -ggdb -ftrapv -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -fbacktrace
 DEBUG_sjdunham     = -g -framework Accelerate -fbacktrace -ffpe-trap=invalid,zero -ffpe-summary=invalid,zero -fbounds-check
 DEBUG_frommste     = -g -framework Accelerate -fbacktrace -ffpe-trap=invalid,zero -ffpe-summary=invalid,zero -fbounds-check
 DEBUG_titan_gnu    = -g -Og -ffpe-trap=invalid,zero -fcheck=bounds
@@ -172,6 +177,7 @@ OPTIMIZE_sn1987b      = -O2 -framework Accelerate
 OPTIMIZE_ranchu       = -O2
 OPTIMIZE_ranchuair    = -O2
 OPTIMIZE_vass         = -O3 -framework Accelerate -march=native
+OPTIMIZE_savio        = -O2
 OPTIMIZE_sjdunham     = -O2
 OPTIMIZE_frommste     = -O3 -framework Accelerate -march=native
 OPTIMIZE_titan_gnu    = -O3 -march=bdver1
@@ -203,6 +209,7 @@ INCLUDE_HDF5_sn1987b      = -I/usr/local/Cellar/hdf5/1.10.5/include
 INCLUDE_HDF5_ranchu       = -I/usr/local/hdf5/include
 INCLUDE_HDF5_ranchuair    = -I/usr/local/Cellar/hdf5/1.12.0/include
 INCLUDE_HDF5_vass         = -I/usr/local/Cellar/hdf5/1.14.4.3/include
+INCLUDE_HDF5_savio        = -I$(HDF5DIR)/include
 INCLUDE_HDF5_sjdunham     =
 INCLUDE_HDF5_frommste     =
 INCLUDE_HDF5_titan_gnu    = # Use Module Load
@@ -258,6 +265,7 @@ LIBRARIES_HDF5_ranchu       = -L/usr/local/hdf5/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_ranchuair    = -L/usr/local/Cellar/hdf5/1.12.0/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_vass         = -L/usr/local/Cellar/hdf5/1.14.4.3/lib -lhdf5_fortran -lhdf5
 LIBRARIES_HDF5_sjdunham     =
+LIBRARIES_HDF5_savio        = -L$(HDF5DIR)/lib
 LIBRARIES_HDF5_frommste     =
 LIBRARIES_HDF5_titan_gnu    = # Use Module Load
 LIBRARIES_HDF5_titan_cray   = # Use Module Load
@@ -310,6 +318,7 @@ LIBRARIES                   = $(LIBRARIES_HDF5)
 PP_sn1987b           = -D
 PP_ranchu            = -D
 PP_vass              = -D
+PP_savio             = -D
 PP_ranchuair         = -D
 PP_sjdunham          = -D
 PP_frommste          = -D
@@ -341,6 +350,7 @@ PP                   = $(PP_$(MACHINE))
 MDEFS_sn1987b        =
 MDEFS_ranchu         =
 MDEFS_vass           =
+MDEFS_savio          =
 MDEFS_ranchuair      =
 MDEFS_sjdunham       =
 MDEFS_frommste       =

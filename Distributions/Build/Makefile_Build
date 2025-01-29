@@ -1,3 +1,4 @@
+$(info    VAR is $(VAR))
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_GPU
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles

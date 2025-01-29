@@ -1,7 +1,9 @@
 wlEquationOfStateTableModule.o: \
   wlKindModule.o \
   wlThermoStateModule.o \
-  wlDependentVariablesModule.o
+  wlDependentVariablesModule.o \
+  wlThermoState4DModule.o \
+  wlDependentVariables4DModule.o
  
 wlEOSIOModuleHDF.o: \
   wlKindModule.o \
