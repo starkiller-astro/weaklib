@@ -709,7 +709,7 @@ CONTAINS
   SUBROUTINE WriteVersionAttribute(group_id)
 
     INTEGER(HID_T), INTENT(IN) :: group_id
-    !!$CHARACTER(LEN=100), DIMENSION(4) :: tmpstring
+    CHARACTER(LEN=100), DIMENSION(4) :: tmpstring
 
     tmpstring(:) = "UNDEFINED"
 #ifdef WL_GIT_HASH
