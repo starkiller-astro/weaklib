@@ -58,4 +58,5 @@ ChimeraAB = \
 
 ChimeraNNS = \
   scat_n_module_weaklib.o \
-  scatncal_weaklib.o
+  scatncal_weaklib.o \
+  scatnrgn_weaklib.o
