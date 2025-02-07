@@ -35,6 +35,8 @@ MODULE wlInterpolationModule
   PUBLIC :: LogInterpolateSingleVariable_3D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_4D_Custom
   PUBLIC :: LogInterpolateSingleVariable_4D_Custom_Point
+  PUBLIC :: LogInterpolateSingleVariable_4DEOS_Custom
+  PUBLIC :: LogInterpolateSingleVariable_4DEOS_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom
   PUBLIC :: LogInterpolateSingleVariable_1D3D_Custom_Point
   PUBLIC :: LogInterpolateSingleVariable_2D2D_Custom
@@ -1778,6 +1780,76 @@ INTEGER FUNCTION Index1D( x, xx, n )
 
   END SUBROUTINE LogInterpolateSingleVariable_4D_Custom_Point
 
+  SUBROUTINE LogInterpolateSingleVariable_4DEOS_Custom &
+    ( LogD, LogT, Ye, LogYm, LogDs, LogTs, Yes, LogYms, &
+      OS, Table, Interpolant, Error_Option )
+
+  REAL(dp), INTENT(in)  :: LogD (1:), LogT (1:),  Ye(1:), LogYm(1:)
+  REAL(dp), INTENT(in)  :: LogDs(1:), LogTs(1:), Yes(1:), LogYms(1:)
+  REAL(dp), INTENT(in)  :: OS
+  REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+  REAL(dp), INTENT(out) :: Interpolant(1:)
+  INTEGER,  INTENT(out), OPTIONAL :: Error_Option
+
+  INTEGER :: iP, Error
+
+  Error = 0
+  IF( .NOT. ALL( [ SIZE(LogD), SIZE(LogT), SIZE(Ye) ] == SIZE(LogYms) ) )THEN
+    Error = 1
+    IF( PRESENT( Error_Option ) ) Error_Option = Error
+    RETURN
+  END IF
+
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
+  !$OMP MAP( to: LogD, LogDs, LogT, LogTs, Ye, Yes, Ym, Yms, OS, Table ) &
+  !$OMP MAP( from: Interpolant )
+#elif defined(WEAKLIB_OACC)
+  !$ACC PARALLEL LOOP GANG VECTOR &
+  !$ACC COPYIN( to: LogD, LogDs, LogT, LogTs, Ye, Yes, Ym, Yms, OS, Table ) &
+  !$ACC COPYOUT( Interpolant )
+#elif defined(WEAKLIB_OMP)
+  !$OMP PARALLEL DO
+#endif
+  DO iP = 1, SIZE( LogYm )
+
+    CALL LogInterpolateSingleVariable_4DEOS_Custom_Point &
+           ( LogD(iP), LogT(iP), Ye(iP), LogYm(iP), &
+             LogDs, LogTs, Yes, LogYms, OS, Table, Interpolant(iP) )
+
+  END DO
+
+  IF( PRESENT( Error_Option ) ) Error_Option = Error
+
+END SUBROUTINE LogInterpolateSingleVariable_4DEOS_Custom
+
+
+SUBROUTINE LogInterpolateSingleVariable_4DEOS_Custom_Point &
+  ( LogD, LogT, Ye, LogYm, LogDs, LogTs, Yes, LogYms, OS, Table, Interpolant )
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+  !$ACC ROUTINE SEQ
+#endif
+
+  REAL(dp), INTENT(in)  :: LogD     , LogT     , Ye     , LogYm
+  REAL(dp), INTENT(in)  :: LogDs(1:), LogTs(1:), Yes(1:), LogYms(1:)
+  REAL(dp), INTENT(in)  :: OS
+  REAL(dp), INTENT(in)  :: Table(1:,1:,1:,1:)
+  REAL(dp), INTENT(out) :: Interpolant
+
+  INTEGER  :: iD, iT, iYe, iYm
+  REAL(dp) :: dD, dT, dYe, dYm
+
+  CALL GetIndexAndDelta_Lin(  LogD,  LogDs,  iD, dD  )
+  CALL GetIndexAndDelta_Lin(  LogT,  LogTs,  iT, dT  )
+  CALL GetIndexAndDelta_Lin(    Ye,    Yes, iYe, dYe )
+  CALL GetIndexAndDelta_Lin( LogYm, LogYms, iYm, dYm )
+
+  CALL LinearInterp4D_4DArray_Point &
+         ( iD, iT, iYe, iYm, dD, dT, dYe, dYm, OS, Table, Interpolant )
+
+END SUBROUTINE LogInterpolateSingleVariable_4DEOS_Custom_Point
 
   SUBROUTINE LogInterpolateDifferentiateSingleVariable_3D_Custom &
     ( D, T, Y, Ds, Ts, Ys, OS, Table, Interpolant, Derivative )
