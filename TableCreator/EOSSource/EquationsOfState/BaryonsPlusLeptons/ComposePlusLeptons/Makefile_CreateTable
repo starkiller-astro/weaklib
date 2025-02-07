@@ -4,14 +4,21 @@ Weaklib_EOSTableCreator = \
   $(WL_LIBRARY) \
   $(WL_EOSSOURCE) \
   wlCompOSEInterface.o \
-  $(WL_EOSSOURCE_SPLIT)
+  $(WL_EOSSOURCE_SPLIT) \
+	$(WL_EOSSOURCE_4D)
   
-all: wlCreateEOSTable
-
+all: wlCreateEOSTable wlCreate4DEOSTable
+ 
 wlCreateEOSTable: \
 	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o
 	$(FLINKER) $(FLAGS) -o wlCreateEOSTable_$(MACHINE) \
 	$(Weaklib_EOSTableCreator) wlCreateEquationOfStateTable.o \
+	$(LIBRARIES)
+
+wlCreate4DEOSTable: \
+	$(Weaklib_EOSTableCreator) wlCreate4DEquationOfStateTable.o
+	$(FLINKER) $(FLAGS) -o wlCreate4DEOSTable_$(MACHINE) \
+	$(Weaklib_EOSTableCreator) wlCreate4DEquationOfStateTable.o \
 	$(LIBRARIES)
 
 wlCompOSEInterface.o: \
@@ -29,6 +36,17 @@ wlCreateEquationOfStateTable.o: \
   wlHelmMuonIOModuleHDF.o \
   wlLeptonEOSModule.o \
 	wlEosConstantsModule.o
+
+wlCreate4DEquationOfStateTable.o: \
+  wlKindModule.o \
+  wlGridModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlCompOSEInterface.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlEosConstantsModule.o
 
 clean:
 	rm -f *.o *.mod *.ld

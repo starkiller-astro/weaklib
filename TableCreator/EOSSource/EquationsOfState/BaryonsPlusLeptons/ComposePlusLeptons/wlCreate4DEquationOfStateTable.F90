@@ -36,11 +36,12 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER  :: iLepton, iRho, iTemp, iYe
 
     ReadFullTable = .false.
-    RedHDF5Table = .false.
+    RedHDF5Table = .true.
     ResetNegativePressure = .false.
+    
     Add_to_energy = 8.9d0*ergmev/rmu
     Add_to_energy = 2.0d0*ergmev/rmu
-    Add_to_energy = + cvel**2 - ergmev * mn / rmu !+ 8.9d0 * ergmev / rmu
+    Add_to_energy = + cvel**2 - ergmev * mn / rmu + 8.9d0 * ergmev / rmu
 
     IF (ReadFullTable) THEN
         ! for two separate tables

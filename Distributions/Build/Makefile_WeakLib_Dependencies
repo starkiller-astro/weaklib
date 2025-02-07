@@ -1,4 +1,5 @@
 include $(WEAKLIB_DIR)/Distributions/Library/Makefile_Library_Dependencies
 include $(WEAKLIB_DIR)/Distributions/EOSSource/Makefile_EOSSource_Dependencies
 include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBaryLep_Dependencies
+include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/4DTable/Makefile_4DEOS_Dependencies
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_Dependencies

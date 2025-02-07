@@ -1,7 +1,8 @@
 include $(WEAKLIB_DIR)/Distributions/Library/Makefile_Library_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/Makefile_EOSSource_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBaryLep_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/4DTable/Makefile_4DEOS_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_ObjectFiles
 
 weaklib = \
-  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(WL_EOSSOURCE_SPLIT)
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(WL_EOSSOURCE_SPLIT) $(WL_EOSSOURCE_4D)
