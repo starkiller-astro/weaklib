@@ -154,7 +154,7 @@ CONTAINS
     MinD = MINVAL( Ds ); MaxD = MAXVAL( Ds )
     MinT = MINVAL( Ts ); MaxT = MAXVAL( Ts )
     MinYe = MINVAL( Yes ); MaxYe = MAXVAL( Yes )
-    MinYm = MINVAL( Yms ); MaxYe = MAXVAL( Yms )
+    MinYm = MINVAL( Yms ); MaxYm = MAXVAL( Yms )
     MinE = MINVAL( Es ); MaxE = MAXVAL( Es )
     MinP = MINVAL( Ps ); MaxP = MAXVAL( Ps )
     MinS = MINVAL( Ss ); MaxS = MAXVAL( Ss )
@@ -301,17 +301,13 @@ CONTAINS
     REAL(dp) :: T_a, T_b, T_c, T_i
     REAL(dp) :: X_a, X_b, X_c, X_i
     REAL(dp) :: f_a, f_b, f_c
-    REAL(dp) :: LogD, LogYm
-    REAL(dp) :: LogDs_i(2), Yes_i(2), LogYms_i(2)
+    REAL(dp) :: Ds_i(2), Yes_i(2), Yms_i(2)
     REAL(dp) :: Xs_a(2,2,2), Xs_b(2,2,2), Xs_c(2,2,2), Xs_i(2,2,2)
 
     ! -------------------------------------------------------------------
 
     T = 0.0_dp
     Error = 0
-
-    LogD = LOG10( D )
-    LogYm = LOG10( Ym )
 
     SizeDs = SIZE( Ds )
     SizeTs = SIZE( Ts )
@@ -328,8 +324,8 @@ CONTAINS
     iYe = MIN( MAX( 1, iYe ), SizeYes - 1 )
     iYm = MIN( MAX( 1, iYm ), SizeYms - 1 )
 
-    LogDs_i = LOG10( Ds(iD:iD+1) )
-    LogYms_i = LOG10( Yms(iYm:iYm+1) )
+    Ds_i = Ds(iD:iD+1)
+    Ds_i = Yms(iYm:iYm+1)
     Yes_i = Yes(iYe:iYe+1)
 
     ! -------------------------------------------------------------------
@@ -345,7 +341,7 @@ CONTAINS
     Xs_a(:,2,2) = Xs(iD:iD+1,i_a,iYe+1,iYm+1)
 
     CALL LogInterpolateSingleVariable_3D_custom_Point &
-          ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_a, X_a )
+          ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
 
@@ -358,7 +354,7 @@ CONTAINS
     Xs_b(:,2,2) = Xs(iD:iD+1,i_b,iYe+1,iYm+1)
 
     CALL LogInterpolateSingleVariable_3D_custom_Point &
-          ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_b, X_b )
+          ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
 
@@ -378,7 +374,7 @@ CONTAINS
     Xs_a(:,2,2) = Xs(iD:iD+1,i_a,iYe+1,iYm+1)
 
     CALL LogInterpolateSingleVariable_3D_custom_Point &
-          ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_a, X_a )
+          ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
 
@@ -391,7 +387,7 @@ CONTAINS
     Xs_b(:,2,2) = Xs(iD:iD+1,i_b,iYe+1,iYm+1)
 
     CALL LogInterpolateSingleVariable_3D_custom_Point &
-          ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_b, X_b )
+          ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
 
@@ -408,7 +404,7 @@ CONTAINS
         Xs_c(:,2,2) = Xs(iD:iD+1,i_c,iYe+1,iYm+1)
 
         CALL LogInterpolateSingleVariable_3D_custom_Point &
-              ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_c, X_c )
+              ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
 
@@ -445,7 +441,7 @@ CONTAINS
         Xs_i(:,2,2) = Xs(iD:iD+1,i,iYe+1,iYm+1)
 
         CALL LogInterpolateSingleVariable_3D_custom_Point &
-              ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_i, X_i )
+              ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_i, X_i )
               
         f_c = X - X_c
         f_b = X - X_i
@@ -501,15 +497,11 @@ CONTAINS
     REAL(dp) :: T_a, T_b, T_c, T_i
     REAL(dp) :: X_a, X_b, X_c, X_i
     REAL(dp) :: f_a, f_b, f_c
-    REAL(dp) :: LogD, LogYm
-    REAL(dp) :: LogDs_i(2), Yes_i(2), LogYms_i(2)
+    REAL(dp) :: Ds_i(2), Yes_i(2), Yms_i(2)
     REAL(dp) :: Xs_a(2,2,2), Xs_b(2,2,2), Xs_c(2,2,2), Xs_i(2,2,2)
 
     ! -------------------------------------------------------------------
     Error = 0
-
-    LogD = LOG10( D )
-    LogYm = LOG10( Ym )
 
     SizeDs = SIZE( Ds )
     SizeTs = SIZE( Ts )
@@ -524,8 +516,8 @@ CONTAINS
     iYe = MIN( MAX( 1, iYe ), SizeYes - 1 )
     iYm = MIN( MAX( 1, iYm ), SizeYms - 1 )
 
-    LogDs_i = LOG10( Ds(iD:iD+1) )
-    LogYms_i = LOG10( Yms(iYm:iYm+1) )
+    Ds_i = Ds(iD:iD+1)
+    Ds_i = Yms(iYm:iYm+1)
     Yes_i = Yes(iYe:iYe+1)
 
     ! -------------------------------------------------------------------
@@ -539,7 +531,7 @@ CONTAINS
     Xs_a(:,2,2) = Xs(iD:iD+1,i_a,iYe+1,iYm+1)
 
     CALL LogInterpolateSingleVariable_3D_custom_Point &
-          ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_a, X_a )
+          ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
 
@@ -552,7 +544,7 @@ CONTAINS
     Xs_b(:,2,2) = Xs(iD:iD+1,i_b,iYe+1,iYm+1)
 
     CALL LogInterpolateSingleVariable_3D_custom_Point &
-          ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_b, X_b )
+          ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
 
@@ -569,7 +561,7 @@ CONTAINS
         Xs_c(:,2,2) = Xs(iD:iD+1,i_c,iYe+1,iYm+1)
 
         CALL LogInterpolateSingleVariable_3D_custom_Point &
-              ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_c, X_c )
+              ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_c, X_c )
               
         f_c = X - X_c
 
@@ -600,7 +592,7 @@ CONTAINS
         Xs_i(:,2,2) = Xs(iD:iD+1,i,iYe+1,iYm+1)
 
         CALL LogInterpolateSingleVariable_3D_custom_Point &
-              ( LogD, LogYm, Ye, LogDs_i, LogYms_i, Yes_i, OS, Xs_i, X_i )
+              ( D, Ym, Ye, Ds_i, Yms_i, Yes_i, OS, Xs_i, X_i )
 
         f_a = X - X_i
         f_b = X - X_b
