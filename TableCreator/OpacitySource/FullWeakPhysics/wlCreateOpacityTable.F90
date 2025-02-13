@@ -60,6 +60,8 @@ PROGRAM wlCreateOpacityTable
   USE wlIOModuleHDF, ONLY: &
       InitializeHDF,       &
       FinalizeHDF
+  USE wlOpacityFieldsModule, ONLY: &
+      iNeutron_NNS, iProton_NNS
   USE wlOpacityTableModule, ONLY: &
       OpacityTableType,     &
       AllocateOpacityTable, &
@@ -67,7 +69,7 @@ PROGRAM wlCreateOpacityTable
       DeAllocateOpacityTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
       WriteOpacityTableHDF
-  USE wlExtPhysicalConstantsModule, ONLY: kMeV
+  USE wlExtPhysicalConstantsModule, ONLY: kMeV, dmnp, mn_wl => mn, mp_wl => mp
   USE wlExtNumericalModule, ONLY: epsilon
   USE HR98_Bremsstrahlung
   USE prb_cntl_module, ONLY: &
@@ -196,7 +198,7 @@ IMPLICIT NONE
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998, Bruenn et al. 2020
 
-   INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
+   INTEGER, PARAMETER      :: nOpac_NNS  = 2  ! 2 (separate targets n and p )
    INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
@@ -247,6 +249,7 @@ IMPLICIT NONE
                               xp, xhe, bb, MuB, eta, minvar
 
    REAL(dp), DIMENSION(nPointsE,2) :: cok
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_n, phi0_p, phi1_n, phi1_p
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
    REAL(dp)                                :: j0i, j0ii, j1i, j1ii
 
@@ -1191,7 +1194,7 @@ PRINT*, 'Filling OpacityTable ...'
 
 !----------------  Scat_NNS -----------------------
    IF(Scat_np_non_isoenergetic == 1) THEN
-   PRINT*, 'Calculating Scat_NES Kernel ... '
+   PRINT*, 'Calculating Scat_NNS Kernel ... '
 
       CALL init_quad_scat_n
       CALL load_polylog_weaklib
@@ -1200,16 +1203,53 @@ PRINT*, 'Filling OpacityTable ...'
 
         MuB = OpacityTable % MuBGrid % Values(i_MuB)
 
+        !-- convert absolute chemical potential to Chimera convention
+        chem_n  =  MuB - dmnp - mn_wl
+        chem_p  =  MuB - dmnp - mp_wl
+
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
           T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
 
+          CALL scatnrgn_weaklib &
+               ( nPointsE, &
+                 OpacityTable % EnergyGrid % Values, &
+                 OpacityTable % EnergyGrid % Edge, &
+                 TMev, chem_n, chem_p, Iso_ga_strange, &
+                 phi0_n, phi1_n, phi0_p, phi1_p )
+
+          OpacityTable % Scat_NNS % Kernel(iNeutron_NNS) % Values &
+               ( :, :, 1, k_t, i_MuB )       &
+          = 0.5_DP * TRANSPOSE(phi0_n(:,:))  ! phi0_n was saved as phi0_n(e,ep)
+
+          OpacityTable % Scat_NNS % Kernel(iProton_NNS) % Values &
+               ( :, :, 1, k_t, i_MuB )       &
+          = 0.5_DP * TRANSPOSE(phi0_p(:,:))  ! phi0_p was saved as phi0_p(e,ep)
+
+          OpacityTable % Scat_NNS % Kernel(iNeutron_NNS) % Values &
+               ( :, :, 2, k_t, i_MuB )       &
+          = 1.5_DP * TRANSPOSE(phi1_n(:,:))  ! phi1_n was saved as phi1_n(e,ep)
+
+          OpacityTable % Scat_NNS % Kernel(iProton_NNS) % Values &
+               ( :, :, 2, k_t, i_MuB )       &
+          = 1.5_DP * TRANSPOSE(phi1_p(:,:))  ! phi1_p was saved as phi1_p(e,ep)
 
         END DO  !k_t
 
       END DO !iMuB
 
+!------- Scat_NNS % Offsets
+   DO i_rb = 1, nOpac_NNS
+     DO t_m = 1, nMom_NNS
+
+       minvar = MINVAL( OpacityTable % Scat_NNS % Kernel(i_rb) &
+                       % Values(:,:,t_m,:,: ) )
+       OpacityTable % Scat_NNS % Offsets(i_rb, t_m) =          &
+                      -2.d0 * MIN( 0.d0, minvar )
+
+     END DO ! t_m
+   END DO ! i_rb
    END IF
 
 !----------------  Scat_NES -----------------------
@@ -1380,6 +1420,14 @@ PRINT*, 'Filling OpacityTable ...'
                 + OpacityTable % Scat_Iso % Offsets(i_rb,t_m) + epsilon )
     END DO ! t_m
   END DO ! i_rb
+
+  DO i_rb = 1, nOpac_NNS
+    DO t_m = 1, nMom_NNS
+      OpacityTable % Scat_NNS % Kernel(i_rb) % Values(:,:,t_m,:,:) &
+      = LOG10 ( OpacityTable % Scat_NNS % Kernel(i_rb) % Values(:,:,t_m,:,:) &
+                + OpacityTable % Scat_NNS % Offsets(i_rb, t_m) + epsilon )
+    END DO
+  END DO !i_rb
 
   DO i_rb = 1, nOpac_NES
     DO t_m = 1, nMom_NES

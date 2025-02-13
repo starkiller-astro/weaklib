@@ -13,12 +13,10 @@ MODULE wlOpacityFieldsModule
   INTEGER, PUBLIC, PARAMETER :: iNu_x_bar = 4
   INTEGER, PUBLIC, PARAMETER :: nSpecies  = 4
 
-  ! --- NNS Scattering Kernels ( indices of Phi ( :, : ) => Kernel ( : ) )---
+  ! --- NNS Scattering Kernels ---
 
-  INTEGER, PUBLIC, PARAMETER :: iNu      = 1
-  INTEGER, PUBLIC, PARAMETER :: iNuBar   = 2
-  INTEGER, PUBLIC, PARAMETER :: iNeutron = 1
-  INTEGER, PUBLIC, PARAMETER :: iProton  = 2  
+  INTEGER, PUBLIC, PARAMETER :: iNeutron_NNS = 1
+  INTEGER, PUBLIC, PARAMETER :: iProton_NNS  = 2  
 
   ! --- NES Scattering Kernels ---
 
@@ -133,14 +131,6 @@ MODULE wlOpacityFieldsModule
 !     T:   Temperature
 !     Ye:  Electron Fraction
 !
-! OpacityTypeScat (Inelastic Neutrino-Electron Scattering)
-!   Dependency ( E', E, l, T, Eta )
-!     E':  Neutrino Energy
-!     E:   Neutrino Energy
-!     l:   Legendre Moment
-!     T:   Temperature
-!     Eta: Electron Chemical Pot. / Temperature
-!
 ! OpacityTypeScat (Inelastic Neutrino-Nucleon Scattering)
 !   Dependency ( E', E, l, T, MuB )
 !     E':  Neutrino Energy
@@ -148,6 +138,14 @@ MODULE wlOpacityFieldsModule
 !     l:   Legendre Moment
 !     T:   Temperature
 !     MuB: Baryon Chemical Potential
+!
+! OpacityTypeScat (Inelastic Neutrino-Electron Scattering)
+!   Dependency ( E', E, l, T, Eta )
+!     E':  Neutrino Energy
+!     E:   Neutrino Energy
+!     l:   Legendre Moment
+!     T:   Temperature
+!     Eta: Electron Chemical Pot. / Temperature
 !
 !---------------------------------------------
 
@@ -182,10 +180,6 @@ MODULE wlOpacityFieldsModule
     INTEGER  :: weak_magnetism_corrections !Horowitz 2002
     INTEGER  :: many_body_corrections      !Horowith et al 2017
     REAL(DP) :: ga_strange                 !strange quark contributions
-    TYPE(ValueType_5D), POINTER :: Phi(:,:) => null ( )
-       !-- remapping of Kernel(:) to index nu/nub and n/p
-  CONTAINS
-    FINAL :: Finalize_NNS
   END TYPE OpacityTypeScatNNS
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
@@ -396,11 +390,6 @@ CONTAINS
 
     END DO
 
-    SELECT TYPE ( Opacity )
-    TYPE IS ( OpacityTypeScatNNS )
-      Opacity % Phi ( 1:2, 1:2 )  =>  Opacity % Kernel ( 1:4 )
-    END SELECT
-
   END SUBROUTINE AllocateOpacityTypeScat
 
 
@@ -512,16 +501,6 @@ CONTAINS
     END IF
 
   END SUBROUTINE DescribeOpacityTypeScat
-
-
-  SUBROUTINE Finalize_NNS ( Opacity )
-
-    type ( OpacityTypeScatNNS ), intent ( inout ) :: &
-      Opacity
-
-    NULLIFY ( Opacity % Phi )
-
-  END SUBROUTINE Finalize_NNS
 
 
 END MODULE wlOpacityFieldsModule
