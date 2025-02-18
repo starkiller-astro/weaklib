@@ -20,8 +20,8 @@ PROGRAM wlCreateEquationOfStateTable
     IMPLICIT NONE
     
     INTEGER                          :: iVars
+    INTEGER, DIMENSION(3)            :: nPointsCompose
     INTEGER, DIMENSION(4)            :: nPoints
-    INTEGER, DIMENSION(2)            :: nPointsHelm, nPointsDenon
     INTEGER                          :: nVariables
     TYPE(EquationOfState4DTableType) :: EOSTable
     TYPE(HelmholtzTableType)         :: HelmEOSTable
@@ -35,6 +35,8 @@ PROGRAM wlCreateEquationOfStateTable
     LOGICAL  :: RedHDF5Table, ResetNegativePressure
     INTEGER  :: iLepton, iRho, iTemp, iYe
 
+    REAL(DP), allocatable, DIMENSION(1) :: YmGrid
+
     RedHDF5Table = .true.
     ResetNegativePressure = .false.
     
@@ -42,7 +44,7 @@ PROGRAM wlCreateEquationOfStateTable
     Add_to_energy = 2.0d0*ergmev/rmu
     Add_to_energy = + cvel**2 - ergmev * mn / rmu + 8.9d0 * ergmev / rmu
 
-    ! path of the original compose table (.thermo and .compo for now, will add hdf5 option later)
+    ! path of the original compose table
     CompOSEFilePath = 'SFHo_no_ele/'
     CompOSEFHDF5Path = 'SFHo_no_ele/eoscompose.h5'
     IF (RedHDF5Table) THEN
@@ -50,50 +52,81 @@ PROGRAM wlCreateEquationOfStateTable
     ELSE
         BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
     ENDIF
-    HelmEOSTableName = BaryonEOSTableName
-    MuonEOSTableName = BaryonEOSTableName
     iLepton = 0
     
     nVariables = 17
 
     IF (RedHDF5Table) THEN
         ! This is to read the HDF5 file
-        CALL ReadCompOSEHDFTable( CompOSEFHDF5Path, nPoints(1), nPoints(2), nPoints(3), iLepton )
+        CALL ReadCompOSEHDFTable( CompOSEFHDF5Path, nPointsCompose(1), &
+            nPointsCompose(2), nPointsCompose(3), iLepton )
     ELSE 
         ! This is to read the text .thermo and .compo files
-        CALL ReadnPointsFromCompOSE(CompOSEFilePath, nPoints(1), nPoints(2), nPoints(3))    
+        CALL ReadnPointsFromCompOSE(CompOSEFilePath, nPointsCompose(1), &
+            nPointsCompose(2), nPointsCompose(3))    
         ! Fill the rho, temperature, ye, and compose EOS table arrays
-        CALL ReadCompOSETable( CompOSEFilePath, nPoints(1), nPoints(2), nPoints(3) )
-    ENDIF 
+        CALL ReadCompOSETable( CompOSEFilePath, nPointsCompose(1), &
+            nPointsCompose(2), nPointsCompose(3) )
+    ENDIF
 
-    ! Set up Muon grid
+    ! At this point you have filled the Compose EOS, now read in the Helmholtz and Muon EOS
+    ! ------------- NOW DO ELECTRON EOS ------------------ !
+    nPointsHelm = (/ iTempMax, iDenMax /)
+    PRINT*, "Allocate Helmholtz EOS"
+    CALL AllocateHelmholtzTable( HelmEOSTable, nPointsHelm )
+    
+    HelmDatFilePath = '../helm_table.dat'
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmEOSTable )
+    
+    ! ------------- NOW DO MUON EOS ------------------ !
+    nPointsDenon = (/ nTempMuon, nDenMuon /)
+    PRINT*, "Allocate Muon EOS"
+    CALL AllocateMuonEOS( MuonEOSTable, nPointsDenon )
+    
+    MuonDatFilePath = '../muons_fixedrho.dat'
+    CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
+
+    ! Set up desired grid
+    nPoints(1) = nPointsCompose(1)
+    nPoints(2) = nPointsCompose(2)
+    nPoints(3) = nPointsCompose(3)
     nPoints(4) = 30
+
+    ALLOCATE( YmGrid(nPoints(4)) )
+
+    ! Set up logarithmic grid, we will see exactly how
+    YmGrid = 0.0
 
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
     WRITE(*,*) nPoints
     CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
     
-    EOSTable % TS % Names(1:3) = (/'Density                         ',&
-    'Temperature                     ',&
-    'Proton Fraction                 '/)
+    EOSTable % TS % Names(1:4) = (/'Density            ',&
+                                   'Temperature        ',&
+                                   'Electron Fraction  ',&
+                                   'Muon Fraction      '/)
     
     EOSTable % TS % Indices % iRho = 1
     EOSTable % TS % Indices % iT   = 2
     EOSTable % TS % Indices % iYe  = 3
+    EOSTable % TS % Indices % iYm  = 4
     
     PRINT*, "Allocate Independent Variable Units " 
     
-    EOSTable % TS % Units(1:3) = (/'Grams per cm^3                  ', &
+    EOSTable % TS % Units(1:4) = (/'Grams per cm^3                  ', &
     'K                               ', &
+    '                                ',&
     '                                '/) 
     
     ! DO WE NEED THIS?
-    EOSTable % TS % minValues(1:3) =  (/MINVAL(RhoCompOSE), MINVAL(TempCompOSE), MINVAL(YpCompOSE)/)
-    EOSTable % TS % maxValues(1:3) =  (/MAXVAL(RhoCompOSE), MAXVAL(TempCompOSE), MAXVAL(YpCompOSE)/)
+    EOSTable % TS % minValues(1:4) =  &
+        (/MINVAL(RhoCompOSE), MINVAL(TempCompOSE), MINVAL(YpCompOSE), MINVAL(YmGrid)/)
+    EOSTable % TS % maxValues(1:4) =  &
+        (/MAXVAL(RhoCompOSE), MAXVAL(TempCompOSE), MAXVAL(YpCompOSE), MAXVAL(YmGrid)/)
     
     PRINT*, "Label Grid Type"
-    EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
+    EOSTable % TS % LogInterp(1:4) =  (/1, 1, 0, 1/)
     
     PRINT*, "Allocate Names " 
     EOSTable % DV % Names(1:17) = (/'Pressure                        ', &
@@ -154,24 +187,22 @@ PROGRAM wlCreateEquationOfStateTable
     'MeV                             '/)
     
     PRINT*, "Begin Populating EOSTable" 
-
-    ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPointsHelm = (/ iTempMax, iDenMax /)
-    PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmEOSTable, nPointsHelm )
-    
-    HelmDatFilePath = '../helm_table.dat'
-    CALL ReadHelmEOSdat( HelmDatFilePath, HelmEOSTable )
-    
-    ! ------------- NOW DO MUON EOS ------------------ !
-    nPointsDenon = (/ nTempMuon, nDenMuon /)
-    PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonEOS( MuonEOSTable, nPointsDenon )
-    
-    MuonDatFilePath = '../muons_fixedrho.dat'
-    CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
     
     ! Now the real stuff
+    ! This will look like 4 loops where you have to interpolate the Compose table onto the new grid
+    ! By now having Ye + Ym = Yp. You only need to do 1D interpolations though (along Yp). 
+    ! A more sophisticated interpolation scheme might be desirable. You will encounter issues 
+    ! Where MAX(Ye) + MAX(Ym) will be above the Compose table. We should decide how to handle this.
+    ! A straightforward way would be to do somthing like 
+    ! IF (Yp > MAXVAL(YpCompOSE)) THEN
+    !   Yp = Ye
+    ! ELSE
+    !   Yp = Ye + Ym
+    ! ENDIF
+    ! This is reasonable since MAX(Ym) ~ 0.1 and you only have muons inside the PNS where Ye < 0.4
+    ! and typically MAXVAL(YpCompOSE) ~ 0.55 so you should be quite safe.
+
+
 
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )

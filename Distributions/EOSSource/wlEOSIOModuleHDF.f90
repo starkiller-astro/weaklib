@@ -6,6 +6,9 @@ MODULE wlEOSIOModuleHDF
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
 
+  USE wlThermoState4DModule
+  USE wlDependentVariables4DModule
+
   USE HDF5 
 
   IMPLICIT NONE
@@ -22,6 +25,9 @@ MODULE wlEOSIOModuleHDF
   PUBLIC EOSVertexQuery
   PUBLIC ReadEOSMetadataHDF
   PUBLIC WriteEOSMetadataHDF
+
+  PUBLIC Write4DEquationOfStateTableHDF
+  PUBLIC Read4DEquationOfStateTableHDF
 
 CONTAINS
 
@@ -496,6 +502,72 @@ CONTAINS
     END DO
 
   END SUBROUTINE EOSVertexQuery
+
+  
+  SUBROUTINE Write4DEquationOfStateTableHDF( EOSTable, EOSTableName_Option )
+
+    TYPE(EquationOfState4DTableType), INTENT(inout)        :: EOSTable
+    CHARACTER(len=*),                 INTENT(in), OPTIONAL :: EOSTableName_Option
+    
+    INTEGER(HID_T) :: file_id
+    INTEGER(HID_T) :: group_id
+    CHARACTER(256) :: EOSTableName
+ 
+    IF( PRESENT( EOSTableName_Option ) )THEN
+       EOSTableName = TRIM( EOSTableName_Option )
+    ELSE
+       EOSTableName = 'EquationOfStateTable.h5'
+    END IF
+ 
+    CALL OpenFileHDF( EOSTableName, .true., file_id )
+
+    CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
+    CALL WriteThermoStateHDF( EOSTable % TS, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
+    CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
+    CALL WriteEOSMetadataHDF( EOSTable % MD, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL CloseFileHDF( file_id )
+
+  END SUBROUTINE Write4DEquationOfStateTableHDF
+
+  SUBROUTINE ReadEquationOfState4DTableHDF( EOSTable, FileName )
+
+    TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
+    CHARACTER(len=*), INTENT(in)                    :: FileName
+
+    INTEGER, DIMENSION(4)                           :: nPoints
+    INTEGER                                         :: nVariables
+    INTEGER(HID_T)                                  :: file_id
+    INTEGER(HID_T)                                  :: group_id
+
+    CALL OpenFileHDF( FileName, .false., file_id )
+
+    CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+
+    CALL ReadDimensionsHDF( nPoints, group_id )
+    CALL ReadNumberVariablesHDF( nVariables, group_id )
+    CALL CloseGroupHDF( group_id )
+
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+
+    CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+
+    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
+
+    CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
+
+!    CALL DescribeEquationOfStateTable( EOSTable )
+
+    CALL CloseFileHDF( file_id )
+
+  END SUBROUTINE ReadEquationOfState4DTableHDF
 
 
 END MODULE wlEOSIOModuleHDF
