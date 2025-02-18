@@ -325,7 +325,7 @@ CONTAINS
     iYm = MIN( MAX( 1, iYm ), SizeYms - 1 )
 
     Ds_i = Ds(iD:iD+1)
-    Ds_i = Yms(iYm:iYm+1)
+    Yms_i = Yms(iYm:iYm+1)
     Yes_i = Yes(iYe:iYe+1)
 
     ! -------------------------------------------------------------------
