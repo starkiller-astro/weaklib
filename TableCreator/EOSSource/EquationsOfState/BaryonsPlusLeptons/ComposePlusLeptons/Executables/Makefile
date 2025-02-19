@@ -1,6 +1,6 @@
 MACHINE = $(WEAKLIB_MACHINE)
 
-OPT_LEVEL = DEBUG
-FLAGS     = $(FLAGS_$(OPT_LEVEL))
+OPT_LEVEL = OPTIMIZE
+FLAGS     = $(FLAGS_$(OPT_LEVEL)) #-fopenmp
 
 include ../Makefile_CreateTable

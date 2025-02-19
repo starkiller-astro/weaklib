@@ -211,7 +211,7 @@ CONTAINS
     INTEGER, INTENT(in)                           :: nVariables
     INTEGER, DIMENSION(4), INTENT(in)             :: nPoints
 
-    EOSTable % nPoints(1:3) = nPoints(1:3)
+    EOSTable % nPoints(1:4) = nPoints(1:4)
     EOSTable % nVariables = nVariables
 
     CALL AllocateThermoState4D( EOSTable % TS, EOSTable % nPoints )
@@ -223,10 +223,10 @@ CONTAINS
 
   SUBROUTINE DeAllocateEquationOfState4DTable( EOSTable )
 
-    TYPE(EquationOfStateTableType) :: EOSTable
+    TYPE(EquationOfState4DTableType) :: EOSTable
 
-    CALL DeAllocateThermoState( EOSTable % TS )
-    CALL DeAllocateDependentVariables( EOSTable % DV )
+    CALL DeAllocateThermoState4D( EOSTable % TS )
+    CALL DeAllocateDependentVariables4D( EOSTable % DV )
 
   END SUBROUTINE DeAllocateEquationOfState4DTable
 

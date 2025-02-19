@@ -26,8 +26,8 @@ MODULE wlEOSIOModuleHDF
   PUBLIC ReadEOSMetadataHDF
   PUBLIC WriteEOSMetadataHDF
 
-  PUBLIC Write4DEquationOfStateTableHDF
-  PUBLIC Read4DEquationOfStateTableHDF
+  PUBLIC WriteEquationOfState4DTableHDF
+  PUBLIC ReadEquationOfState4DTableHDF
 
 CONTAINS
 
@@ -504,7 +504,7 @@ CONTAINS
   END SUBROUTINE EOSVertexQuery
 
   
-  SUBROUTINE Write4DEquationOfStateTableHDF( EOSTable, EOSTableName_Option )
+  SUBROUTINE WriteEquationOfState4DTableHDF( EOSTable, EOSTableName_Option )
 
     TYPE(EquationOfState4DTableType), INTENT(inout)        :: EOSTable
     CHARACTER(len=*),                 INTENT(in), OPTIONAL :: EOSTableName_Option
@@ -522,11 +522,11 @@ CONTAINS
     CALL OpenFileHDF( EOSTableName, .true., file_id )
 
     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-    CALL WriteThermoStateHDF( EOSTable % TS, group_id )
+    CALL WriteThermoState4DHDF( EOSTable % TS, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-    CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
+    CALL WriteDependentVariables4DHDF( EOSTable % DV, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
@@ -535,7 +535,7 @@ CONTAINS
 
     CALL CloseFileHDF( file_id )
 
-  END SUBROUTINE Write4DEquationOfStateTableHDF
+  END SUBROUTINE WriteEquationOfState4DTableHDF
 
   SUBROUTINE ReadEquationOfState4DTableHDF( EOSTable, FileName )
 
@@ -555,11 +555,11 @@ CONTAINS
     CALL ReadNumberVariablesHDF( nVariables, group_id )
     CALL CloseGroupHDF( group_id )
 
-    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+    CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
 
-    CALL ReadThermoStateHDF( EOSTable % TS, file_id )
+    CALL ReadThermoState4DHDF( EOSTable % TS, file_id )
 
-    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
+    CALL ReadDependentVariables4DHDF( EOSTable % DV, file_id )
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
@@ -568,7 +568,6 @@ CONTAINS
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadEquationOfState4DTableHDF
-
 
 END MODULE wlEOSIOModuleHDF
 

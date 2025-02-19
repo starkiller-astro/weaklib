@@ -3,6 +3,8 @@ MODULE wlIOModuleHDF
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
+  USE wlThermoState4DModule
+  USE wlDependentVariables4DModule
 
   USE HDF5 
 
@@ -35,6 +37,10 @@ MODULE wlIOModuleHDF
   PUBLIC WriteGroupAttributeHDF_string
   PUBLIC WriteVersionAttribute
 
+  PUBLIC WriteThermoState4DHDF
+  PUBLIC WriteDependentVariables4DHDF
+  PUBLIC ReadThermoState4DHDF
+  PUBLIC ReadDependentVariables4DHDF
   INTERFACE ReadHDF
     MODULE PROCEDURE Read1dHDF_double
     MODULE PROCEDURE Read2dHDF_double
@@ -1063,5 +1069,312 @@ CONTAINS
 
   END SUBROUTINE ReadNumberVariablesHDF
 
+! 4D -----------------------------------
+  SUBROUTINE WriteThermoState4DHDF( TS, group_id )
+
+    TYPE(ThermoState4DType), INTENT(in)           :: TS
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    datasize1d(1) = 3
+    CALL WriteHDF &
+           ( "Dimensions", TS % nPoints(:), group_id, datasize1d )
+    
+    CALL WriteHDF &
+           ( "LogInterp", TS % LogInterp(:), group_id, datasize1d )
+    
+    CALL WriteHDF &
+           ( "Names", TS % Names(:), group_id, datasize1d )
+
+    CALL WriteHDF &
+           ( "Units", TS % Units(:), group_id, datasize1d )
+
+    CALL WriteHDF &
+           ( "minValues", TS % minValues(:), group_id, datasize1d )
+
+    CALL WriteHDF &
+           ( "maxValues", TS % maxValues(:), group_id, datasize1d )
+
+    DO i = 1, 3
+      datasize1d(1) = TS % nPoints(i)
+      CALL WriteHDF &
+             ( TS % Names(i), TS % States(i) % Values(:), group_id, datasize1d )
+    END DO
+ 
+    datasize1d = 1
+    buffer(1) = TS % Indices % iRho
+    CALL WriteHDF( "iRho", buffer, group_id, datasize1d )
+    
+    buffer(1) = TS % Indices % iT
+    CALL WriteHDF( "iT",   buffer, group_id, datasize1d )
+
+    buffer(1) = TS % Indices % iYe
+    CALL WriteHDF( "iYe",  buffer, group_id, datasize1d )
+
+  END SUBROUTINE WriteThermoState4DHDF
+
+  SUBROUTINE WriteDependentVariables4DHDF( DV, group_id )
+
+    TYPE(DependentVariables4DType), INTENT(in)  :: DV
+    INTEGER(HID_T), INTENT(in)                  :: group_id
+    
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    datasize1d = SIZE( DV % Names )
+    CALL WriteHDF( "Names", DV % Names(:), &
+                             group_id, datasize1d )
+
+    CALL WriteHDF( "Units", DV % Units(:), &
+                             group_id, datasize1d )
+
+    CALL WriteHDF( "minValues", DV % minValues(:), &
+                              group_id, datasize1d )
+
+    CALL WriteHDF( "maxValues", DV % maxValues(:), &
+                              group_id, datasize1d )
+    datasize1d = 4
+    CALL WriteHDF( "Dimensions", DV % nPoints(:), &
+                             group_id, datasize1d )
+    datasize1d = 1 
+    CALL WriteHDF( "nVariables", (/DV % nVariables/), &
+                             group_id, datasize1d )
+    datasize1d = DV % nVariables 
+    CALL WriteHDF( "Offsets", (/DV % Offsets/), &
+                             group_id, datasize1d )
+    DO i = 1, SIZE( DV % Names ) 
+      datasize4d = SHAPE( DV % Variables(i) % Values ) 
+      CALL WriteHDF( DV % Names(i), DV % Variables(i) % Values(:,:,:,:), &
+                              group_id, datasize4d )
+    END DO
+
+    ! datasize4d = SHAPE( DV % Repaired )
+    ! CALL WriteHDF( "Repaired", DV % Repaired(:,:,:,:), &
+    !                           group_id, datasize4d )
+
+    datasize1d = 1
+    buffer(1) = DV % Indices % iPressure 
+    CALL WriteHDF( "iPressure", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iEntropyPerBaryon 
+    CALL WriteHDF( "iEntropyPerBaryon", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iInternalEnergyDensity 
+    CALL WriteHDF( "iInternalEnergyDensity", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iElectronChemicalPotential 
+    CALL WriteHDF( "iElectronChemicalPotential", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iProtonChemicalPotential 
+    CALL WriteHDF( "iProtonChemicalPotential", buffer, & 
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iNeutronChemicalPotential 
+    CALL WriteHDF( "iNeutronChemicalPotential", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iProtonMassFraction 
+    CALL WriteHDF( "iProtonMassFraction", buffer, & 
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iNeutronMassFraction 
+    CALL WriteHDF( "iNeutronMassFraction", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iAlphaMassFraction 
+    CALL WriteHDF( "iAlphaMassFraction", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iHeavyMassFraction 
+    CALL WriteHDF( "iHeavyMassFraction", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iHeavyChargeNumber 
+    CALL WriteHDF( "iHeavyChargeNumber", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iHeavyMassNumber 
+    CALL WriteHDF( "iHeavyMassNumber", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iHeavyBindingEnergy 
+    CALL WriteHDF( "iHeavyBindingEnergy", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iThermalEnergy 
+    CALL WriteHDF( "iThermalEnergy", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iGamma1 
+    CALL WriteHDF( "iGamma1", buffer, &
+                             group_id, datasize1d )
+
+  END SUBROUTINE WriteDependentVariables4DHDF
+
+  SUBROUTINE ReadThermoState4DHDF( TS, file_id )
+
+    TYPE(ThermoState4DType), INTENT(inout)        :: TS
+    INTEGER(HID_T), INTENT(in)                  :: file_id
+
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer 
+    
+    CALL OpenGroupHDF( "ThermoState", .false., file_id, group_id )
+
+    CALL ReadHDF( "Names", TS % Names(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "Units", TS % Units(:), &
+                              group_id, datasize1d )
+
+    DO i = 1, 3
+      datasize1d(1) = TS % nPoints(i)
+      CALL ReadHDF( TS % Names(i), TS % States(i) % Values(:), &
+                              group_id, datasize1d )
+      TS % minValues(i) = MINVAL( TS % States(i) % Values(:) )                     
+      TS % maxValues(i) = MAXVAL( TS % States(i) % Values(:) )                     
+    END DO
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "iRho", buffer, group_id, datasize1d )
+    TS % Indices % iRho = buffer(1)
+
+    CALL ReadHDF( "iT", buffer, group_id, datasize1d )
+    TS % Indices % iT = buffer(1)
+
+    CALL ReadHDF( "iYe", buffer, group_id, datasize1d )
+    TS % Indices % iYe = buffer(1)
+
+    datasize1d(1) = SIZE( TS % LogInterp )
+    CALL ReadHDF( "LogInterp", TS % LogInterp(:), group_id, datasize1d )
+
+    CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE ReadThermoState4DHDF
+
+  SUBROUTINE ReadDependentVariables4DHDF( DV, file_id )
+
+    TYPE(DependentVariables4DType), INTENT(inout) :: DV
+    INTEGER(HID_T), INTENT(in)                  :: file_id
+
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
+    INTEGER(HSIZE_T), DIMENSION(4)              :: datasize4d
+    INTEGER                                     :: i
+    INTEGER, DIMENSION(1)                       :: buffer
+
+    CALL OpenGroupHDF( "DependentVariables", .false., file_id, group_id )
+
+    datasize1d = SIZE( DV % Names )
+    CALL ReadHDF( "Names", DV % Names(:), &
+                              group_id, datasize1d )
+
+    CALL ReadHDF( "Units", DV % Units(:), &
+                              group_id, datasize1d )
+
+    DO i = 1, SIZE( DV % Names ) 
+      datasize4d = SHAPE( DV % Variables(i) % Values ) 
+      CALL ReadHDF( DV % Names(i), DV % Variables(i) % Values(:,:,:,:), &
+                              group_id, datasize4d )
+    END DO
+
+    DO i = 1, SIZE( DV % Names ) 
+      datasize1d = SIZE( DV % Names )
+      CALL ReadHDF( "Offsets", DV % Offsets(:), &
+                              group_id, datasize1d )
+    END DO
+
+    !DO i = 1, SIZE( DV % Names )
+    !  datasize1d = SIZE( DV % Names )
+    !  CALL ReadHDF( "minValues", DV % minValues(:), &
+    !                          group_id, datasize1d )
+    !END DO
+
+    !DO i = 1, SIZE( DV % Names )
+    !  datasize1d = SIZE( DV % Names )
+    !  CALL ReadHDF( "maxValues", DV % maxValues(:), &
+    !                          group_id, datasize1d )
+    !END DO
+
+    ! datasize4d = SHAPE( DV % Repaired )
+    ! CALL ReadHDF( "Repaired", DV % Repaired(:,:,:,:), &
+    !                           group_id, datasize4d )
+
+    datasize1d(1) = 1
+    CALL ReadHDF( "iPressure", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iPressure = buffer(1)
+
+    CALL ReadHDF( "iEntropyPerBaryon", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iEntropyPerBaryon = buffer(1)
+
+    CALL ReadHDF( "iInternalEnergyDensity", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iInternalEnergyDensity = buffer(1)
+
+    CALL ReadHDF( "iElectronChemicalPotential", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iElectronChemicalPotential = buffer(1)
+
+    CALL ReadHDF( "iProtonChemicalPotential", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iProtonChemicalPotential = buffer(1)
+
+    CALL ReadHDF( "iNeutronChemicalPotential", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iNeutronChemicalPotential = buffer(1)
+
+    CALL ReadHDF( "iProtonMassFraction", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iProtonMassFraction = buffer(1)
+
+    CALL ReadHDF( "iNeutronMassFraction", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iNeutronMassFraction = buffer(1)
+
+    CALL ReadHDF( "iAlphaMassFraction", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iAlphaMassFraction = buffer(1)
+
+    CALL ReadHDF( "iHeavyMassFraction", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iHeavyMassFraction = buffer(1)
+
+    CALL ReadHDF( "iHeavyChargeNumber", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iHeavyChargeNumber = buffer(1)
+
+    CALL ReadHDF( "iHeavyMassNumber", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iHeavyMassNumber = buffer(1)
+
+    CALL ReadHDF( "iHeavyBindingEnergy", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iHeavyBindingEnergy = buffer(1)
+
+    CALL ReadHDF( "iThermalEnergy", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iThermalEnergy = buffer(1)
+
+    CALL ReadHDF( "iGamma1", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iGamma1 = buffer(1)
+
+    CALL CloseGroupHDF( group_id )
+
+  END SUBROUTINE ReadDependentVariables4DHDF
+  
 END MODULE wlIOModuleHDF
 

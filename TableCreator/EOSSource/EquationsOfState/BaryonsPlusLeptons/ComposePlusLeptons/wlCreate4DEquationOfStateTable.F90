@@ -6,6 +6,8 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlEquationOfStateTableModule
     USE wlIOModuleHDF
     USE wlEOSIOModuleHDF
+    USE wlInterpolationUtilitiesModule, ONLY: &
+    LinearInterp_Array_Point
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
         ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
     USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
@@ -15,30 +17,40 @@ PROGRAM wlCreateEquationOfStateTable
         ReadHelmEOSdat, ReadMuonEOSdat, &
         AllocateHelmholtzTable, DeallocateHelmholtzTable, &
         AllocateMuonEOS, DeAllocateMuonEOS 
+    USE wlElectronPhotonEOS, ONLY: &
+      ElectronPhotonEOS, ElectronPhotonStateType
+    USE wlMuonEOS, ONLY: &
+      FullMuonEOS, MuonStateType
     USE wlEosConstantsModule, ONLY: cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp
+    USE wlSoundSpeedModule
 
     IMPLICIT NONE
     
     INTEGER                          :: iVars
+    INTEGER, DIMENSION(2)            :: nPoints2D
     INTEGER, DIMENSION(3)            :: nPointsCompose
     INTEGER, DIMENSION(4)            :: nPoints
     INTEGER                          :: nVariables
     TYPE(EquationOfState4DTableType) :: EOSTable
-    TYPE(HelmholtzTableType)         :: HelmEOSTable
-    TYPE(MuonEOSType)                :: MuonEOSTable
+    TYPE(HelmholtzTableType)         :: HelmholtzTable
+    TYPE(MuonEOSType)                :: MuonTable
+    TYPE(ElectronPhotonStateType)    :: ElectronPhotonState
+    TYPE(MuonStateType)              :: MuonState
     
     CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &
         HelmDatFilePath, MuonDatFilePath, &
-        BaryonEOSTableName, HelmEOSTableName, MuonEOSTableName
+        BaryonEOSTableName
     
     REAL(dp) :: Minimum_Value, Add_to_energy
-    LOGICAL  :: RedHDF5Table, ResetNegativePressure
-    INTEGER  :: iLepton, iRho, iTemp, iYe
+    LOGICAL  :: RedHDF5Table
+    INTEGER  :: iLepton, iRho, iTemp, iYe, iYm, iCount
 
-    REAL(DP), allocatable, DIMENSION(1) :: YmGrid
+    REAL(DP), ALLOCATABLE, DIMENSION(:) :: YmGrid
 
-    RedHDF5Table = .true.
-    ResetNegativePressure = .false.
+    REAL(DP) :: D, T, Yp, Ye, Ym
+    REAL(DP) :: Xbary, dYp, OS_P, OS_E, OS_S, LocalOffset, Gamma, Cs
+
+    RedHDF5Table = .false.
     
     Add_to_energy = 8.9d0*ergmev/rmu
     Add_to_energy = 2.0d0*ergmev/rmu
@@ -71,20 +83,20 @@ PROGRAM wlCreateEquationOfStateTable
 
     ! At this point you have filled the Compose EOS, now read in the Helmholtz and Muon EOS
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPointsHelm = (/ iTempMax, iDenMax /)
+    nPoints2D = (/ iTempMax, iDenMax /)
     PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmEOSTable, nPointsHelm )
+    CALL AllocateHelmholtzTable( HelmholtzTable, nPoints2D )
     
     HelmDatFilePath = '../helm_table.dat'
-    CALL ReadHelmEOSdat( HelmDatFilePath, HelmEOSTable )
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmholtzTable )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPointsDenon = (/ nTempMuon, nDenMuon /)
+    nPoints2D = (/ nTempMuon, nDenMuon /)
     PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonEOS( MuonEOSTable, nPointsDenon )
+    CALL AllocateMuonEOS( MuonTable, nPoints2D )
     
     MuonDatFilePath = '../muons_fixedrho.dat'
-    CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
+    CALL ReadMuonEOSdat( MuonDatFilePath, MuonTable )
 
     ! Set up desired grid
     nPoints(1) = nPointsCompose(1)
@@ -95,13 +107,17 @@ PROGRAM wlCreateEquationOfStateTable
     ALLOCATE( YmGrid(nPoints(4)) )
 
     ! Set up logarithmic grid, we will see exactly how
-    YmGrid = 0.0
+     CALL MakeLogGrid( 1.0d-5, 0.1_dp, nPoints(4), YmGrid )
 
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
-    WRITE(*,*) nPoints
     CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
-    
+             
+    EOSTable % TS % States(1) % Values = RhoCompOSE
+    EOSTable % TS % States(2) % Values = TempCompOSE
+    EOSTable % TS % States(3) % Values = YpCompOSE ! This will actually become Ye!!!!
+    EOSTable % TS % States(4) % Values = YmGrid
+
     EOSTable % TS % Names(1:4) = (/'Density            ',&
                                    'Temperature        ',&
                                    'Electron Fraction  ',&
@@ -202,19 +218,409 @@ PROGRAM wlCreateEquationOfStateTable
     ! This is reasonable since MAX(Ym) ~ 0.1 and you only have muons inside the PNS where Ye < 0.4
     ! and typically MAXVAL(YpCompOSE) ~ 0.55 so you should be quite safe.
 
+    iCount = 0
+    !$OMP PARALLEL DO PRIVATE(ElectronPhotonState, MuonState, D, T, Ye, Ym, Yp, dYp, LocalOffset, Xbary)
+    DO iRho=1,nPoints(1)
+      DO iTemp=1,nPoints(2)
+        WRITE(*,*) DBLE(iCount) / DBLE(nPoints(1)*nPoints(2)*(nPoints(3)-1)*nPoints(4)) * 100.0d0
+        DO iYe=1,nPoints(3)-1
+          DO iYm=1,nPoints(4)
 
+            iCount = iCount + 1
+            
+            D  = EOSTable % TS % States(1) % Values(iRho)
+            T  = EOSTable % TS % States(2) % Values(iTemp)
+            Ye = EOSTable % TS % States(3) % Values(iYe)
+            Ym = EOSTable % TS % States(4) % Values(iYm)
+            Yp = Ye + Ym
+            IF (Yp > YpCompOSE(nPoints(3))) THEN
+              Yp = Ye
+            ENDIF
+            dYp = Yp - Ye
+
+            ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
+            ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
+            ElectronPhotonState % ye  = EOSTable % TS % States(3) % Values(iYe)
+            CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+
+            MuonState % t     = EOSTable % TS % States(2) % Values(iTemp)
+            MuonState % rhoym = EOSTable % TS % States(1) % Values(iRho) * &
+                                EOSTable % TS % States(4) % Values(iYm)
+            CALL FullMuonEOS(MuonTable, MuonState)
+
+            ! PRESSURE
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,1) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,1) + LocalOffset), Xbary )
+          
+            EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe,iYm) = &
+            Xbary + MuonState % p + ElectronPhotonState % p
+
+            ! ENTROPY
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,2) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,2) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(2) % Values(iRho,iTemp,iYe,iYm) = &
+              Xbary + MuonState % s + ElectronPhotonState % s
+
+            ! ENERGY
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,3) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,3) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(3) % Values(iRho,iTemp,iYe,iYm) = &
+              Xbary + MuonState % e + ElectronPhotonState % e + Add_to_energy
+
+            ! ELECTRON CHEMICAL POTENTIAL
+            EOSTable % DV % Variables(4) % Values(iRho,iTemp,iYe,iYm) = &
+              ElectronPhotonState % mue
+
+            ! PROTON CHEMICAL POTENTIAL
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,5) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,5) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(5) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! NEUTRON CHEMICAL POTENTIAL
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,6) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,6) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(6) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! PROTON MASS FRACTION
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,7) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,7) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(7) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! NEUTRON MASS FRACTION
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,8) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,8) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(8) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! ALPHA MASS FRACTION
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,9) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,9) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(9) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! HEAVY MASS FRACTION
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,10) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,10) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(10) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! HEAVY CHARGE NUMBER
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,11) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,11) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(11) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! HEAVY MASS NUMBER
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,12) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,12) + LocalOffset), Xbary )
+            
+            EOSTable % DV % Variables(12) % Values(iRho,iTemp,iYe,iYm) = Xbary
+            ! HEAVY BINDING ENERGY
+            EOSTable % DV % Variables(13) % Values(iRho,iTemp,iYe,iYm) = Xbary
+            ! THERMAL ENERGY
+            EOSTable % DV % Variables(14) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! PROTON SELF ENERGY
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,16) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,16) + LocalOffset), Xbary )
+
+            EOSTable % DV % Variables(16) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+            ! NEUTRON SELF ENERGY
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,17) )
+            IF (LocalOffset .lt. 0.0_dp) THEN
+                LocalOffset = -1.1d0*LocalOffset
+            ELSE IF (LocalOffset .eq. 0.0_dp) THEN
+                LocalOffset = 1.0d-10
+            ELSE
+                LocalOffset = 0.0_dp
+            ENDIF
+
+            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,17) + LocalOffset), Xbary )
+
+            EOSTable % DV % Variables(17) % Values(iRho,iTemp,iYe,iYm) = Xbary
+
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
+
+    ! HANDLE LAST POINT AD HOC
+    DO iRho=1,nPoints(1)
+      DO iTemp=1,nPoints(2)
+        DO iYm=1,nPoints(4)
+
+          D  = EOSTable % TS % States(1) % Values(iRho)
+          T  = EOSTable % TS % States(2) % Values(iTemp)
+          Ye = EOSTable % TS % States(3) % Values(iYe)
+          Ym = EOSTable % TS % States(4) % Values(iYm)
+          Yp = Ye + Ym
+          dYp = Yp - Ye
+
+          IF (Yp > YpCompOSE(nPoints(3))) THEN
+            Yp = Ye
+          ENDIF
+
+          ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
+          ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
+          ElectronPhotonState % ye  = EOSTable % TS % States(3) % Values(iYe)
+          CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+
+          EOSTable % DV % Variables(1) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),1) + ElectronPhotonState % p
+          EOSTable % DV % Variables(2) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),2) + ElectronPhotonState % s
+          EOSTable % DV % Variables(3) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),3) + ElectronPhotonState % e
+          EOSTable % DV % Variables(4) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            ElectronPhotonState % mue
+          EOSTable % DV % Variables(5) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),5)
+          EOSTable % DV % Variables(6) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),6)
+          EOSTable % DV % Variables(7) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),7)
+          EOSTable % DV % Variables(8) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),8)
+          EOSTable % DV % Variables(9) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),9)
+          EOSTable % DV % Variables(10) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),10)
+          EOSTable % DV % Variables(11) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),11)
+          EOSTable % DV % Variables(12) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),12)
+          EOSTable % DV % Variables(13) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),13)
+          EOSTable % DV % Variables(14) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),14)
+          EOSTable % DV % Variables(15) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),15)
+          EOSTable % DV % Variables(16) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),16)
+          EOSTable % DV % Variables(17) % Values(iRho,iTemp,nPoints(3),iYm) = &
+            EOSCompOSE(iRho,iTemp,nPoints(3),17)
+        ENDDO
+      ENDDO
+    ENDDO
+
+    ! GAMMA
+    OS_P = 0.0_dp
+
+    OS_S = MINVAL( EOSCompOSE(:,:,:,2) )
+    IF (OS_S .lt. 0.0_dp) THEN
+      OS_S = -1.1d0*OS_S
+    ELSE IF (OS_S .eq. 0.0_dp) THEN
+      OS_S = 1.0d-10
+    ELSE
+      OS_S = 0.0_dp
+    ENDIF
+
+    OS_E = MINVAL( EOSCompOSE(:,:,:,3) )
+    IF (OS_E .lt. 0.0_dp) THEN
+      OS_E = -1.1d0*OS_E
+    ELSE IF (OS_E .eq. 0.0_dp) THEN
+      OS_E = 1.0d-10
+    ELSE
+      OS_E = 0.0_dp
+    ENDIF
+
+    ! WRITE THE ROUTINE TO DO THIS!
+    ! This is one way of doing it, maybe not exactly correct
+    iCount = 0
+    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp)
+    DO iYm=1,nPoints(4)
+      DO iRho=1,nPoints(1)
+        WRITE(*,*) DBLE(iCount) / DBLE(nPoints(1)*nPoints(2)*nPoints(4)) * 100.0d0
+        DO iTemp=1,nPoints(2)
+          DO iYe=1,nPoints(3)-1
+
+            iCount = iCount + 1
+
+            D  = EOSTable % TS % States(1) % Values(iRho)
+            T  = EOSTable % TS % States(2) % Values(iTemp)
+            Ye = EOSTable % TS % States(3) % Values(iYe)
+            Ym = EOSTable % TS % States(4) % Values(iYm)
+            Yp = Ye + Ym
+            
+            CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE, TempCompOSE, YpCompOSE, &
+                  EOSCompOSE(:,:,:,1), OS_P, &
+                  LOG10(EOSCompOSE(:,:,:,3) + OS_E), OS_E, &
+                  LOG10(EOSCompOSE(:,:,:,2) + OS_S), OS_S, &
+                    HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
+
+            EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
+
+    ! FINAL HOUSEKEEPING
+    DEALLOCATE(RhoCompOSE)
+    DEALLOCATE(TempCompOSE)
+    DEALLOCATE(YpCompOSE)
+    DEALLOCATE(EOSCompOSE)
+    
+    PRINT*, "Offset negative quantities"
+    
+    EOSTable % DV % Offsets(:) = 0.0_dp
+    
+    WRITE(*,*) 'These are the offsets'
+    DO iVars = 1, nVariables
+        Minimum_Value = MINVAL(EOSTable % DV % Variables(iVars) % Values)
+        IF ( Minimum_Value .lt. 0.0_dp) THEN
+            EOSTable % DV % Offsets(iVars) = -1.1_dp * Minimum_Value
+            EOSTable % DV % Variables(iVars) % Values =  &
+                EOSTable % DV % Variables(iVars) % Values + & 
+                EOSTable % DV % Offsets(iVars)
+        ELSE IF ( Minimum_Value .gt. 0.0_dp) THEN
+            EOSTable % DV % Offsets(iVars) = 0.0_dp
+        ELSE
+          WRITE(*,*) 'Minimum is zero', iVars, Minimum_Value
+        ENDIF
+
+        WRITE(*,*) iVars, EOSTable % DV % Offsets(iVars), Minimum_Value
+
+    END DO
+   
+    EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values = &
+        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values)
+    EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values = &
+        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values)
+    EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values = &
+        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values)
+
+      EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values = &
+        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values)
+    EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values = &
+        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values)
+    EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values = &
+        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values)
 
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"
-    CALL WriteEquationOfStateTableHDF( EOSTable, BaryonEOSTableName )
+    CALL WriteEquationOfState4DTableHDF( EOSTable, BaryonEOSTableName )
     CALL FinalizeHDF( )
 
     WRITE (*,*) "HDF write successful"
     
-    CALL DeAllocateEquationOfStateTable( EOSTable )
-    CALL DeallocateHelmholtzTable( HelmEOSTable )
-    CALL DeAllocateMuonEOS( MuonEOSTable )
+    CALL DeAllocateEquationOfState4DTable( EOSTable )
+    CALL DeallocateHelmholtzTable( HelmholtzTable )
+    CALL DeAllocateMuonEOS( MuonTable )
 
     ! Now Create Electron EOS
 

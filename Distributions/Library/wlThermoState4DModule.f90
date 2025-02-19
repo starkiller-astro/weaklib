@@ -13,7 +13,7 @@ MODULE wlThermoState4DModule
     INTEGER :: iRho
     INTEGER :: iT
     INTEGER :: iYe
-    INTEGER :: iYmu
+    INTEGER :: iYm
   END TYPE
   
   TYPE, PUBLIC :: ThermoState4DType
