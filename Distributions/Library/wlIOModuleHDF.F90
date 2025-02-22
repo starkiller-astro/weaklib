@@ -50,6 +50,7 @@ MODULE wlIOModuleHDF
     MODULE PROCEDURE Read1dHDF_integer
     MODULE PROCEDURE Read1dHDF_integer_debug
     MODULE PROCEDURE Read3dHDF_integer
+    MODULE PROCEDURE Read4dHDF_integer
     MODULE PROCEDURE Read1dHDF_string
   END INTERFACE ReadHDF
 
@@ -61,6 +62,7 @@ MODULE wlIOModuleHDF
     MODULE PROCEDURE Write5dHDF_double
     MODULE PROCEDURE Write1dHDF_integer
     MODULE PROCEDURE Write3dHDF_integer
+    MODULE PROCEDURE Write4dHDF_integer
     MODULE PROCEDURE Write1dHDF_string
   END INTERFACE WriteHDF
 
@@ -392,6 +394,55 @@ CONTAINS
     CALL h5dclose_f( dataset_id, hdferr )
 
   END SUBROUTINE Read3dHDF_integer
+
+
+  SUBROUTINE Write4dHDF_integer( name, values, group_id, datasize, &
+    desc_option, unit_option)
+
+    CHARACTER(*), INTENT(in)                    :: name
+    CHARACTER(*), INTENT(in), OPTIONAL          :: unit_option
+    CHARACTER(*), INTENT(in), OPTIONAL          :: desc_option
+    INTEGER(HID_T)                              :: group_id
+    INTEGER(HSIZE_T), DIMENSION(4), INTENT(in)  :: datasize
+    INTEGER, DIMENSION(:,:,:,:), INTENT(in)     :: values
+
+    INTEGER(HID_T)                              :: dataset_id
+    INTEGER(HID_T)                              :: dataspace_id
+    INTEGER(HID_T)                              :: atype_id
+    INTEGER(HID_T)                              :: attr_id
+    INTEGER(SIZE_T)                             :: attr_len
+    INTEGER(HSIZE_T), DIMENSION(1)              :: adims = (/1/)
+
+
+    CALL h5screate_simple_f( 4, datasize, dataspace_id, hdferr )
+
+    CALL h5dcreate_f( group_id, name, H5T_NATIVE_INTEGER, &
+    dataspace_id, dataset_id, hdferr )
+
+    CALL h5dwrite_f( dataset_id, H5T_NATIVE_INTEGER, &
+    values, datasize, hdferr )
+
+    CALL h5sclose_f( dataspace_id, hdferr ) 
+
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Write4dHDF_integer
+
+  SUBROUTINE Read4dHDF_integer( name, values, group_id, datasize )
+
+    CHARACTER(*), INTENT(in)                     :: name
+    INTEGER(HID_T)                               :: group_id
+    INTEGER(HSIZE_T), DIMENSION(4), INTENT(in)   :: datasize
+    INTEGER, DIMENSION(:,:,:,:), INTENT(out)     :: values
+    
+    INTEGER(HID_T)                               :: dataset_id
+  
+    CALL OpenDsetHDF( group_id, name, dataset_id, hdferr )
+    CALL h5dread_f( dataset_id, H5T_NATIVE_INTEGER, &
+                   values, datasize, hdferr )
+    CALL h5dclose_f( dataset_id, hdferr )
+
+  END SUBROUTINE Read4dHDF_integer
 
   SUBROUTINE Write4dHDF_double &
               ( name, values, group_id, datasize, desc_option, unit_option )
@@ -1153,9 +1204,9 @@ CONTAINS
                               group_id, datasize4d )
     END DO
 
-    ! datasize4d = SHAPE( DV % Repaired )
-    ! CALL WriteHDF( "Repaired", DV % Repaired(:,:,:,:), &
-    !                           group_id, datasize4d )
+    datasize4d = SHAPE( DV % Repaired )
+    CALL WriteHDF( "Repaired", DV % Repaired(:,:,:,:), &
+                              group_id, datasize4d )
 
     datasize1d = 1
     buffer(1) = DV % Indices % iPressure 
@@ -1306,10 +1357,10 @@ CONTAINS
     !  CALL ReadHDF( "maxValues", DV % maxValues(:), &
     !                          group_id, datasize1d )
     !END DO
-
-    ! datasize4d = SHAPE( DV % Repaired )
-    ! CALL ReadHDF( "Repaired", DV % Repaired(:,:,:,:), &
-    !                           group_id, datasize4d )
+          
+    datasize4d = SHAPE( DV % Repaired )
+    CALL ReadHDF( "Repaired", DV % Repaired(:,:,:,:), &
+                              group_id, datasize4d )
 
     datasize1d(1) = 1
     CALL ReadHDF( "iPressure", buffer, &

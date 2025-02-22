@@ -28,6 +28,9 @@ MODULE wlEOSIOModuleHDF
 
   PUBLIC WriteEquationOfState4DTableHDF
   PUBLIC ReadEquationOfState4DTableHDF
+  PUBLIC DescribeEquationOfState4DTable
+  PUBLIC BroadcastEquationOfState4DTableParallel
+  PUBLIC Match4DTableStructure
 
 CONTAINS
 
@@ -568,6 +571,324 @@ CONTAINS
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadEquationOfState4DTableHDF
+
+
+  SUBROUTINE DescribeEquationOfState4DTable( EOSTable )
+
+    TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
+
+    INTEGER :: i
+
+    ASSOCIATE( TS => EOSTable % TS )
+
+    WRITE(*,*)
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
+    DO i = 1, 3
+
+      WRITE(*,*)
+      WRITE(*,'(A5,A21,I1.1,A3,A32)') &
+        '', 'Independent Variable ', i, ' = ', TRIM( TS % Names(i) )
+      WRITE(*,'(A7,A7,A20)') &
+        '', 'Units: ', TRIM( TS % Units(i) )
+      WRITE(*,'(A7,A12,ES12.4E2)') &
+        '', 'Min Value = ', TS % minValues(i)
+      WRITE(*,'(A7,A12,ES12.4E2)') &
+        '', 'Max Value = ', TS % maxValues(i)
+      WRITE(*,'(A7,A12,I4.4)') &
+        '', 'nPoints   = ', TS % nPoints(i)
+
+      IF ( TS % LogInterp(i) == 1 ) THEN
+        WRITE (*,'(A7,A27)') &
+          '', 'Grid Logarithmically Spaced'
+      ELSE
+        WRITE (*,'(A7,A20)') &
+          '', 'Grid Linearly Spaced'
+      END IF
+
+    END DO
+
+    END ASSOCIATE ! TS
+
+    ASSOCIATE( DV => EOSTable % DV )
+
+    WRITE(*,*)
+    DO i = 1, EOSTable % nVariables
+
+      WRITE (*,'(A5,A19,I3.3,A3,A32,A9,A20)') &
+        '', 'Dependent Variable ', i, ' = ', TRIM( DV % Names(i) ), &
+        '  Units: ', TRIM( DV % Units(i) )
+    END DO
+    WRITE(*,*)
+
+    END ASSOCIATE ! DV
+
+  END SUBROUTINE DescribeEquationOfState4DTable
+
+
+  SUBROUTINE Match4DTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
+
+    TYPE(EquationOfState4DTableType), INTENT(in)    :: EOSTableIn
+    TYPE(EquationOfState4DTableType), INTENT(out)   :: EOSTableOut
+    TYPE(DVIDType4D), INTENT(in)                    :: NewDVID
+    INTEGER, INTENT(in)                             :: NewnVariables
+
+    CALL AllocateEquationOfState4DTable( EOSTableOut, EOSTableIn % nPoints, &
+                                     NewnVariables )
+
+    EOSTableOut % DV % Indices = NewDVID
+    EOSTableOut % DV % Repaired(:,:,:,:) = EOSTableIn % DV % Repaired(:,:,:,:)
+
+    EOSTableOut % TS = EOSTableIn % TS
+    EOSTableOut % MD = EOSTableIn % MD
+
+    ASSOCIATE( &
+
+    NewiPressure => NewDVID % iPressure, &
+    NewiEntropy => NewDVID % iEntropyPerBaryon, &
+    NewiIntEnergy => NewDVID % iInternalEnergyDensity, &
+    NewiEChemPot => NewDVID % iElectronChemicalPotential, &
+    NewiPChemPot => NewDVID % iProtonChemicalPotential, &
+    NewiNChemPot => NewDVID % iNeutronChemicalPotential, &
+    NewiPMassFrac => NewDVID % iProtonMassFraction, &
+    NewiNMassFrac => NewDVID % iNeutronMassFraction, &
+    NewiAMassFrac => NewDVID % iAlphaMassFraction, &
+    NewiHMassFrac => NewDVID % iHeavyMassFraction, &
+    NewiHCharNum => NewDVID % iHeavyChargeNumber, &
+    NewiHMassNum => NewDVID % iHeavyMassNumber, &
+    NewiHeavyBE => NewDVID % iHeavyBindingEnergy, &
+    NewiThermEnergy => NewDVID % iThermalEnergy, &
+    NewiGamma1 => NewDVID % iGamma1, &
+
+    OldiPressure => EOSTableIn % DV % Indices % iPressure , &
+    OldiEntropy => EOSTableIn % DV % Indices % iEntropyPerBaryon, &
+    OldiIntEnergy => EOSTableIn % DV % Indices % iInternalEnergyDensity, &
+    OldiEChemPot => EOSTableIn % DV % Indices % iElectronChemicalPotential, &
+    OldiPChemPot => EOSTableIn % DV % Indices % iProtonChemicalPotential, &
+    OldiNChemPot => EOSTableIn % DV % Indices % iNeutronChemicalPotential, &
+    OldiPMassFrac => EOSTableIn % DV % Indices % iProtonMassFraction, &
+    OldiNMassFrac => EOSTableIn % DV % Indices % iNeutronMassFraction, &
+    OldiAMassFrac => EOSTableIn % DV % Indices % iAlphaMassFraction, &
+    OldiHMassFrac => EOSTableIn % DV % Indices % iHeavyMassFraction, &
+    OldiHCharNum => EOSTableIn % DV % Indices % iHeavyChargeNumber, &
+    OldiHMassNum => EOSTableIn % DV % Indices % iHeavyMassNumber, &
+    OldiHeavyBE => EOSTableIn % DV % Indices % iHeavyBindingEnergy, &
+    OldiThermEnergy => EOSTableIn % DV % Indices % iThermalEnergy, &
+    OldiGamma1 => EOSTableIn % DV % Indices % iGamma1 )
+
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiPressure, OldiPressure )
+    EOSTableOut % DV % Indices % iPressure = NewiPressure
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiEntropy, OldiEntropy )
+    EOSTableOut % DV % Indices % iEntropyPerBaryon = NewiEntropy
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiIntEnergy, OldiIntEnergy )
+    EOSTableOut % DV % Indices % iInternalEnergyDensity = NewiIntEnergy
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiEChemPot, OldiEChemPot )
+    EOSTableOut % DV % Indices % iElectronChemicalPotential = NewiEChemPot
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiPChemPot, OldiPChemPot )
+    EOSTableOut % DV % Indices % iProtonChemicalPotential = NewiPChemPot
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiNChemPot, OldiNChemPot )
+    EOSTableOut % DV % Indices % iNeutronChemicalPotential = NewiNChemPot
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiPMassFrac, OldiPMassFrac )
+    EOSTableOut % DV % Indices % iProtonMassFraction = NewiPMassFrac
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiNMassFrac, OldiNMassFrac )
+    EOSTableOut % DV % Indices % iNeutronMassFraction = NewiNMassFrac
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiAMassFrac, OldiAMassFrac )
+    EOSTableOut % DV % Indices % iAlphaMassFraction = NewiAMassFrac
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiHMassFrac, OldiHMassFrac )
+    EOSTableOut % DV % Indices % iHeavyMassFraction = NewiHMassFrac
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiHCharNum, OldiHCharNum )
+    EOSTableOut % DV % Indices % iHeavyChargeNumber = NewiHCharNum
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiHMassNum, OldiHMassNum )
+    EOSTableOut % DV % Indices % iHeavyMassNumber = NewiHMassNum
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiHeavyBE, OldiHeavyBE )
+    EOSTableOut % DV % Indices % iHeavyBindingEnergy = NewiHeavyBE
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiThermEnergy, OldiThermEnergy )
+    EOSTableOut % DV % Indices % iThermalEnergy = NewiThermEnergy
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiGamma1, OldiGamma1 )
+    EOSTableOut % DV % Indices % iGamma1 = NewiGamma1
+
+    END ASSOCIATE
+
+  END SUBROUTINE Match4DTableStructure
+
+  SUBROUTINE Transfer4DDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
+
+    TYPE(DependentVariables4DType), INTENT(in)     :: OldDV
+    TYPE(DependentVariables4DType), INTENT(inout)  :: NewDV
+    INTEGER, INTENT(in)                            :: OldLocation
+    INTEGER, INTENT(in)                            :: NewLocation
+
+     IF ( NewLocation == 0 ) THEN
+       WRITE (*,*) "Dependent Variable  ", OldDV % Names( OldLocation ), &
+                   "omitted"
+       RETURN
+     END IF
+
+     NewDV % Variables( NewLocation ) % Values(:,:,:,:) &
+               = OldDV % Variables( OldLocation ) % Values(:,:,:,:)
+     NewDV % Names( NewLocation ) = OldDV % Names( OldLocation )
+     NewDV % Units( NewLocation ) = OldDV % Units( OldLocation )
+     NewDV % Offsets( NewLocation ) = OldDV % OffSets( OldLocation )
+
+  END SUBROUTINE Transfer4DDependentVariables
+
+
+  SUBROUTINE BroadcastEquationOfState4DTableParallel &
+    ( EOSTable, rootproc, myid, ierr,  COMMUNICATOR )
+
+    USE MPI
+
+    implicit none
+
+    INTEGER, INTENT(in)                             :: rootproc
+    INTEGER, INTENT(in)                             :: COMMUNICATOR
+    INTEGER, INTENT(out)                            :: ierr !initialization variable for MPI
+    INTEGER, INTENT(in)                             :: myid ! rank of each processor (MPI)   
+    TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
+    INTEGER, DIMENSION(4)                           :: nPoints
+    INTEGER, DIMENSION(23)                          :: buffer
+    INTEGER                                         :: nStates, nVariables, i
+    INTEGER                                         :: i_count
+    INTEGER                                         :: charlen
+    CHARACTER(LEN=120), DIMENSION(7)                :: sendstring
+
+    IF ( myid == rootproc ) THEN
+
+    buffer( 1) = EOSTable % nPoints(1)
+    buffer( 2) = EOSTable % nPoints(2)
+    buffer( 3) = EOSTable % nPoints(3)
+    buffer( 4) = EOSTable % nPoints(4)
+    buffer( 5) = EOSTable % nVariables
+    buffer( 6) = EOSTable % DV % Indices % iPressure
+    buffer( 7) = EOSTable % DV % Indices % iEntropyPerBaryon
+    buffer( 8) = EOSTable % DV % Indices % iInternalEnergyDensity
+    buffer( 9) = EOSTable % DV % Indices % iElectronChemicalPotential
+    buffer(10) = EOSTable % DV % Indices % iProtonChemicalPotential
+    buffer(11) = EOSTable % DV % Indices % iNeutronChemicalPotential
+    buffer(12) = EOSTable % DV % Indices % iProtonMassFraction
+    buffer(13) = EOSTable % DV % Indices % iNeutronMassFraction
+    buffer(14) = EOSTable % DV % Indices % iAlphaMassFraction
+    buffer(15) = EOSTable % DV % Indices % iHeavyMassFraction
+    buffer(16) = EOSTable % DV % Indices % iHeavyChargeNumber
+    buffer(17) = EOSTable % DV % Indices % iHeavyMassNumber
+    buffer(18) = EOSTable % DV % Indices % iHeavyBindingEnergy
+    buffer(19) = EOSTable % DV % Indices % iThermalEnergy
+    buffer(20) = EOSTable % DV % Indices % iGamma1
+    buffer(21) = EOSTable % TS % Indices % iRho
+    buffer(22) = EOSTable % TS % Indices % iT
+    buffer(23) = EOSTable % TS % Indices % iYe
+
+    END IF
+
+    i_count = SIZE(buffer) 
+
+    CALL MPI_BCAST( buffer, i_count, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
+    IF ( myid /= rootproc ) THEN
+
+    nPoints(1) = buffer(1)
+    nPoints(2) = buffer(2)
+    nPoints(3) = buffer(3)
+    nPoints(3) = buffer(4)
+    nVariables = buffer(5) 
+
+    CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
+
+    EOSTable % DV % Indices % iPressure                  = buffer( 6)
+    EOSTable % DV % Indices % iEntropyPerBaryon          = buffer( 7)
+    EOSTable % DV % Indices % iInternalEnergyDensity     = buffer( 8)
+    EOSTable % DV % Indices % iElectronChemicalPotential = buffer( 9)
+    EOSTable % DV % Indices % iProtonChemicalPotential   = buffer(10)
+    EOSTable % DV % Indices % iNeutronChemicalPotential  = buffer(11)
+    EOSTable % DV % Indices % iProtonMassFraction        = buffer(12)
+    EOSTable % DV % Indices % iNeutronMassFraction       = buffer(13)
+    EOSTable % DV % Indices % iAlphaMassFraction         = buffer(14)
+    EOSTable % DV % Indices % iHeavyMassFraction         = buffer(15)
+    EOSTable % DV % Indices % iHeavyChargeNumber         = buffer(16)
+    EOSTable % DV % Indices % iHeavyMassNumber           = buffer(17)
+    EOSTable % DV % Indices % iHeavyBindingEnergy        = buffer(18)
+    EOSTable % DV % Indices % iThermalEnergy             = buffer(19)
+    EOSTable % DV % Indices % iGamma1                    = buffer(20)
+    EOSTable % TS % Indices % iRho                       = buffer(21)
+    EOSTable % TS % Indices % iT                         = buffer(22)
+    EOSTable % TS % Indices % iYe                        = buffer(23)
+
+    END IF
+
+    i_count = PRODUCT(EOSTable % nPoints) 
+
+    nStates = 4
+
+    DO i= 1, nStates
+    CALL MPI_BCAST(EOSTable % TS % States(i) % Values(:), EOSTable % nPoints(i), &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    END DO
+
+    CALL MPI_BCAST(EOSTable % TS % Names(:), nStates*32,                       &
+              MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % Units(:), nStates*32,                       &
+              MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % minValues(:), nStates,                      &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % maxValues(:), nStates,                      &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % TS % LogInterp(:), nStates,                      &
+              MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
+
+    DO i= 1, EOSTable % nVariables  
+    CALL MPI_BCAST(EOSTable % DV % Variables(i) % Values(:,:,:,:), i_count,    &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    END DO
+
+    CALL MPI_BCAST(EOSTable % DV % Names(:), EOSTable % nVariables*32,         &
+              MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Units(:), EOSTable % nVariables*32,         &
+              MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Offsets(:), EOSTable % nVariables,          &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % minValues(:), EOSTable % nVariables,        &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % maxValues(:), EOSTable % nVariables,        &
+              MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST(EOSTable % DV % Repaired(:,:,:,:), i_count,                   &
+            MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
+    sendstring(1) = EOSTable % MD % IDTag(1)
+    sendstring(2) = EOSTable % MD % TableResolution(1)
+    sendstring(3) = EOSTable % MD % NucEOSLink(1)
+    sendstring(4) = EOSTable % MD % LeptonEOSLink(1)
+    sendstring(5) = EOSTable % MD % SourceLink(1)
+    sendstring(6) = EOSTable % MD % WLRevision(1)
+    sendstring(7) = EOSTable % MD % TableLink(1)
+    charlen       = 7 * 120
+
+    CALL MPI_BCAST( sendstring, charlen, &
+              MPI_CHARACTER, rootproc, COMMUNICATOR, ierr )
+
+    EOSTable % MD % IDTag(1)           = sendstring(1)
+    EOSTable % MD % TableResolution(1) = sendstring(2)
+    EOSTable % MD % NucEOSLink(1)      = sendstring(3) 
+    EOSTable % MD % LeptonEOSLink(1)   = sendstring(4) 
+    EOSTable % MD % SourceLink(1)      = sendstring(5) 
+    EOSTable % MD % WLRevision(1)      = sendstring(6) 
+    EOSTable % MD % TableLink(1)       = sendstring(7) 
+
+  END SUBROUTINE BroadcastEquationOfState4DTableParallel
 
 END MODULE wlEOSIOModuleHDF
 

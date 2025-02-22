@@ -540,7 +540,8 @@ PROGRAM wlCreateEquationOfStateTable
     ! WRITE THE ROUTINE TO DO THIS!
     ! This is one way of doing it, maybe not exactly correct
     iCount = 0
-    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp)
+    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp, Gamma, Cs) &
+    !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, OS_P, OS_E, OS_S, HelmholtzTable, MuonTable) 
     DO iYm=1,nPoints(4)
       DO iRho=1,nPoints(1)
         WRITE(*,*) DBLE(iCount) / DBLE(nPoints(1)*nPoints(2)*nPoints(4)) * 100.0d0
