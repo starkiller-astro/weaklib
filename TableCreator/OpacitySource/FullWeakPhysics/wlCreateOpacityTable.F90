@@ -61,6 +61,7 @@ PROGRAM wlCreateOpacityTable
       InitializeHDF,       &
       FinalizeHDF
   USE wlOpacityFieldsModule, ONLY: &
+      iNu_NNS, iNuBar_NNS, &
       iNeutron_NNS, iProton_NNS
   USE wlOpacityTableModule, ONLY: &
       OpacityTableType,     &
@@ -198,7 +199,7 @@ IMPLICIT NONE
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998, Bruenn et al. 2020
 
-   INTEGER, PARAMETER      :: nOpac_NNS  = 2  ! 2 (separate targets n and p )
+   INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
    INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
    INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
@@ -249,7 +250,10 @@ IMPLICIT NONE
                               xp, xhe, bb, MuB, eta, minvar
 
    REAL(dp), DIMENSION(nPointsE,2) :: cok
-   REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_n, phi0_p, phi1_n, phi1_p
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_nu_n,  phi1_nu_n, &
+                                              phi0_nub_n, phi1_nub_n, &
+                                              phi0_nu_p,  phi1_nu_p, &
+                                              phi0_nub_p, phi1_nub_p
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
    REAL(dp)                                :: j0i, j0ii, j1i, j1ii
 
@@ -1217,23 +1221,56 @@ PRINT*, 'Filling OpacityTable ...'
                  OpacityTable % EnergyGrid % Values, &
                  OpacityTable % EnergyGrid % Edge, &
                  TMev, chem_n, chem_p, Iso_ga_strange, &
-                 phi0_n, phi1_n, phi0_p, phi1_p )
+                 phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+                 phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
 
-          OpacityTable % Scat_NNS % Kernel(iNeutron_NNS) % Values &
+          !-- nu on n
+
+          OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
                ( :, :, 1, k_t, i_MuB )       &
-          = 0.5_DP * TRANSPOSE(phi0_n(:,:))  ! phi0_n was saved as phi0_n(e,ep)
+          = 0.5_DP * TRANSPOSE(phi0_nu_n(:,:))  
+            ! phi0_nu_n was saved as phi0_nu_n(e,ep)
 
-          OpacityTable % Scat_NNS % Kernel(iProton_NNS) % Values &
+          OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+               ( :, :, 2, k_t, i_MuB )       &
+          = 1.5_DP * TRANSPOSE(phi1_nu_n(:,:))  
+            ! phi1_nu_n was saved as phi1_nu_n(e,ep)
+
+          !-- nub on n
+
+          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
                ( :, :, 1, k_t, i_MuB )       &
-          = 0.5_DP * TRANSPOSE(phi0_p(:,:))  ! phi0_p was saved as phi0_p(e,ep)
+          = 0.5_DP * TRANSPOSE(phi0_nub_n(:,:))  
+            ! phi0_nub_n was saved as phi0_nub_n(e,ep)
 
-          OpacityTable % Scat_NNS % Kernel(iNeutron_NNS) % Values &
+          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
                ( :, :, 2, k_t, i_MuB )       &
-          = 1.5_DP * TRANSPOSE(phi1_n(:,:))  ! phi1_n was saved as phi1_n(e,ep)
+          = 1.5_DP * TRANSPOSE(phi1_nub_n(:,:))  
+            ! phi1_nub_n was saved as phi1_nub_n(e,ep)
 
-          OpacityTable % Scat_NNS % Kernel(iProton_NNS) % Values &
+          !-- nu on p
+
+          OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
+               ( :, :, 1, k_t, i_MuB )       &
+          = 0.5_DP * TRANSPOSE(phi0_nu_p(:,:))  
+            ! phi0_nu_p was saved as phi0_nu_p(e,ep)
+
+          OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
                ( :, :, 2, k_t, i_MuB )       &
-          = 1.5_DP * TRANSPOSE(phi1_p(:,:))  ! phi1_p was saved as phi1_p(e,ep)
+          = 1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
+            ! phi1_nu_p was saved as phi1_nu_p(e,ep)
+
+          !-- nub on n
+
+          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+               ( :, :, 1, k_t, i_MuB )       &
+          = 0.5_DP * TRANSPOSE(phi0_nub_p(:,:))  
+            ! phi0_nub_n was saved as phi0_nub_p(e,ep)
+
+          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+               ( :, :, 2, k_t, i_MuB )       &
+          = 1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
+            ! phi1_nub_p was saved as phi1_nub_p(e,ep)
 
         END DO  !k_t
 

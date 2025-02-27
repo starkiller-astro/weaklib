@@ -1,6 +1,8 @@
 SUBROUTINE scatnrgn_weaklib &
            ( nez, egrid_c, egrid_e, tmev, chem_n, chem_p, g_strange, &
-             phi0_n, phi1_n, phi0_p, phi1_p )
+             phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+             phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+
 !-----------------------------------------------------------------------
 !
 !    Author:       S. W. Bruenn, Dept of Physics, FAU,
@@ -93,11 +95,15 @@ SUBROUTINE scatnrgn_weaklib &
 !   chem_p    : proton chemical potential, Chimera
 !   g_strange : strange quark contributions
 !
-!    Output arguments (all without weak magnetism or many-body corrections):
-!   phi0_n : 0th Legendre coefficient for inelastic scattering from neutrons
-!   phi1_n : 1st Legendre coefficient for inelastic scattering from neutrons
-!   phi0_p : 0th Legendre coefficient for inelastic scattering from protons
-!   phi1_p : 1st Legendre coefficient for inelastic scattering from protons
+!    Output arguments (without many-body corrections):
+!   phi0_nu_n  : 0th Legendre coefficient for nu scattering from neutrons
+!   phi1_nu_n  : 1st Legendre coefficient for nu scattering from neutrons
+!   phi0_nub_n : 0th Legendre coefficient for nuBar scattering from neutrons
+!   phi1_nub_n : 1st Legendre coefficient for nuBar scattering from neutrons
+!   phi0_nu_p  : 0th Legendre coefficient for nu scattering from protons
+!   phi1_nu_p  : 1st Legendre coefficient for nu scattering from protons
+!   phi0_nub_p : 0th Legendre coefficient for nuBar scattering from protons
+!   phi1_nub_p : 1st Legendre coefficient for nuBar scattering from protons
 !
 !-----------------------------------------------------------------------
 
@@ -123,10 +129,14 @@ REAL(DP), INTENT(in)     :: g_strange
 !        Output variables
 !-------------------------------------------------------------------
 
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_n
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_n
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_p
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_p
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nu_n
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nu_n
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nub_n
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nub_n
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nu_p
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nu_p
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nub_p
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nub_p
 
 !-----------------------------------------------------------------------
 !        Local variables
@@ -163,10 +173,10 @@ REAL(dp)                 :: sct1_n  ! first momemt of the neutrino-neutron sct f
 REAL(dp)                 :: sct0_p  ! zero momemt of the neutrino-proton sct function
 REAL(dp)                 :: sct1_p  ! first momemt of the neutrino-neutron sct function
 
-! REAL(dp), DIMENSION(nez+nezext)   :: xi_p_wm    ! weak magnetism correction for neutrino-proton scattering
-! REAL(dp), DIMENSION(nez+nezext)   :: xi_n_wm    ! weak magnetism correction for neutrino-neutron scattering
-! REAL(dp), DIMENSION(nez+nezext)   :: xib_p_wm   ! weak magnetism correction for antineutrino-proton scattering
-! REAL(dp), DIMENSION(nez+nezext)   :: xib_n_wm   ! weak magnetism correction for antineutrino-neutron scattering
+REAL(dp), DIMENSION(nez)   :: xi_p_wm    ! weak magnetism correction for neutrino-proton scattering
+REAL(dp), DIMENSION(nez)   :: xi_n_wm    ! weak magnetism correction for neutrino-neutron scattering
+REAL(dp), DIMENSION(nez)   :: xib_p_wm   ! weak magnetism correction for antineutrino-proton scattering
+REAL(dp), DIMENSION(nez)   :: xib_n_wm   ! weak magnetism correction for antineutrino-neutron scattering
 ! REAL(dp)                          :: S_tot      ! many-body modification to nu_N scattering
 
 ! REAL(dp), DIMENSION(nez+nezext)   :: unu_local  ! local copy of energy group centers
@@ -219,10 +229,10 @@ END IF ! first
   mu_p             = chem_p + dmnp + mp
   mu_n             = chem_n + dmnp + mn
 
-! !-----------------------------------------------------------------------
-! !  Weak magnetism corrections for neutrino and antineutrino neutron and
-! !   proton scattering.
-! !-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!  Weak magnetism corrections for neutrino and antineutrino neutron and
+!   proton scattering.
+!-----------------------------------------------------------------------
 
 ! DO i = 1, igen
 
@@ -231,8 +241,8 @@ END IF ! first
 !   mu_p             = chem_p(i) + dmnp + mp
 !   mu_n             = chem_n(i) + dmnp + mn
 
-!   CALL nc_weak_mag( unu_local(:), xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, &
-! &                   nez+nezext )
+  CALL nc_weak_mag_weaklib &
+         ( egrid_c, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
 
 ! !-----------------------------------------------------------------------
 ! !  Many body corrections for neutrino-nucleon neutral current
@@ -314,15 +324,46 @@ END IF ! first
 !       sctmpb(kp,k) = sctmpb(k,kp)
 
       !-- Follow scatergn_weaklib.f90 in applying detailed balance here
-      phi0_n(k,kp) = sct0_n
-      phi0_p(k,kp) = sct0_p
-      phi0_n(kp,k) = phi0_n(k,kp) * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi0_p(kp,k) = phi0_p(k,kp) * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
 
-      phi1_n(k,kp) = sct1_n
-      phi1_p(k,kp) = sct1_p
-      phi1_n(kp,k) = phi1_n(k,kp) * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_p(kp,k) = phi1_p(k,kp) * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      !-- nu on n
+
+      phi0_nu_n(k,kp) = sct0_n * xi_n_wm(k)
+      phi1_nu_n(k,kp) = sct1_n * xi_n_wm(k)
+
+      phi0_nu_n(kp,k) = phi0_nu_n(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      phi1_nu_n(kp,k) = phi1_nu_n(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      !-- nub on n
+
+      phi0_nub_n(k,kp) = sct0_n * xib_n_wm(k)
+      phi1_nub_n(k,kp) = sct1_n * xib_n_wm(k)
+
+      phi0_nub_n(kp,k) = phi0_nub_n(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      phi1_nub_n(kp,k) = phi1_nub_n(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      !-- nu on p
+
+      phi0_nu_p(k,kp) = sct0_p * xi_p_wm(k)
+      phi1_nu_p(k,kp) = sct1_p * xi_p_wm(k)
+
+      phi0_nu_p(kp,k) = phi0_nu_p(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      phi1_nu_p(kp,k) = phi1_nu_p(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      !-- nub on p
+
+      phi0_nub_p(k,kp) = sct0_p * xib_p_wm(k)
+      phi1_nub_p(k,kp) = sct1_p * xib_p_wm(k)
+
+      phi0_nub_p(kp,k) = phi0_nub_p(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      phi1_nub_p(kp,k) = phi1_nub_p(k,kp) &
+                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
 
     END DO ! kp = 1,k
   END DO ! k = nez, 1, -1
