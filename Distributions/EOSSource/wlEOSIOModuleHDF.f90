@@ -120,6 +120,57 @@ CONTAINS
 
   END SUBROUTINE DescribeEquationOfStateTable
 
+  SUBROUTINE DescribeEquationOfState4DTable( EOSTable )
+
+    TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
+
+    INTEGER :: i
+
+    ASSOCIATE( TS => EOSTable % TS )
+
+    WRITE(*,*)
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
+    DO i = 1, 4
+
+      WRITE(*,*)
+      WRITE(*,'(A5,A21,I1.1,A3,A32)') &
+        '', 'Independent Variable ', i, ' = ', TRIM( TS % Names(i) )
+      WRITE(*,'(A7,A7,A20)') &
+        '', 'Units: ', TRIM( TS % Units(i) )
+      WRITE(*,'(A7,A12,ES12.4E2)') &
+        '', 'Min Value = ', TS % minValues(i)
+      WRITE(*,'(A7,A12,ES12.4E2)') &
+        '', 'Max Value = ', TS % maxValues(i)
+      WRITE(*,'(A7,A12,I4.4)') &
+        '', 'nPoints   = ', TS % nPoints(i)
+
+      IF ( TS % LogInterp(i) == 1 ) THEN
+        WRITE (*,'(A7,A27)') &
+          '', 'Grid Logarithmically Spaced'
+      ELSE
+        WRITE (*,'(A7,A20)') &
+          '', 'Grid Linearly Spaced'
+      END IF
+
+    END DO
+
+    END ASSOCIATE ! TS
+
+    ASSOCIATE( DV => EOSTable % DV )
+
+    WRITE(*,*)
+    DO i = 1, EOSTable % nVariables
+
+      WRITE (*,'(A5,A19,I3.3,A3,A32,A9,A20)') &
+        '', 'Dependent Variable ', i, ' = ', TRIM( DV % Names(i) ), &
+        '  Units: ', TRIM( DV % Units(i) )
+    END DO
+    WRITE(*,*)
+
+    END ASSOCIATE ! DV
+
+  END SUBROUTINE DescribeEquationOfState4DTable
+
   SUBROUTINE ReadEOSMetadataHDF( MD, file_id )
 
     TYPE(MetadataType), INTENT(inout)           :: MD
@@ -215,7 +266,7 @@ CONTAINS
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
-!    CALL DescribeEquationOfStateTable( EOSTable )
+    CALL DescribeEquationOfStateTable( EOSTable )
 
     CALL CloseFileHDF( file_id )
 
@@ -566,64 +617,11 @@ CONTAINS
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
-!    CALL DescribeEquationOfStateTable( EOSTable )
+    CALL DescribeEquationOfState4DTable( EOSTable )
 
     CALL CloseFileHDF( file_id )
 
   END SUBROUTINE ReadEquationOfState4DTableHDF
-
-
-  SUBROUTINE DescribeEquationOfState4DTable( EOSTable )
-
-    TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
-
-    INTEGER :: i
-
-    ASSOCIATE( TS => EOSTable % TS )
-
-    WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
-    DO i = 1, 3
-
-      WRITE(*,*)
-      WRITE(*,'(A5,A21,I1.1,A3,A32)') &
-        '', 'Independent Variable ', i, ' = ', TRIM( TS % Names(i) )
-      WRITE(*,'(A7,A7,A20)') &
-        '', 'Units: ', TRIM( TS % Units(i) )
-      WRITE(*,'(A7,A12,ES12.4E2)') &
-        '', 'Min Value = ', TS % minValues(i)
-      WRITE(*,'(A7,A12,ES12.4E2)') &
-        '', 'Max Value = ', TS % maxValues(i)
-      WRITE(*,'(A7,A12,I4.4)') &
-        '', 'nPoints   = ', TS % nPoints(i)
-
-      IF ( TS % LogInterp(i) == 1 ) THEN
-        WRITE (*,'(A7,A27)') &
-          '', 'Grid Logarithmically Spaced'
-      ELSE
-        WRITE (*,'(A7,A20)') &
-          '', 'Grid Linearly Spaced'
-      END IF
-
-    END DO
-
-    END ASSOCIATE ! TS
-
-    ASSOCIATE( DV => EOSTable % DV )
-
-    WRITE(*,*)
-    DO i = 1, EOSTable % nVariables
-
-      WRITE (*,'(A5,A19,I3.3,A3,A32,A9,A20)') &
-        '', 'Dependent Variable ', i, ' = ', TRIM( DV % Names(i) ), &
-        '  Units: ', TRIM( DV % Units(i) )
-    END DO
-    WRITE(*,*)
-
-    END ASSOCIATE ! DV
-
-  END SUBROUTINE DescribeEquationOfState4DTable
-
 
   SUBROUTINE Match4DTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
 
@@ -760,7 +758,7 @@ CONTAINS
     INTEGER, INTENT(in)                             :: myid ! rank of each processor (MPI)   
     TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(4)                           :: nPoints
-    INTEGER, DIMENSION(23)                          :: buffer
+    INTEGER, DIMENSION(24)                          :: buffer
     INTEGER                                         :: nStates, nVariables, i
     INTEGER                                         :: i_count
     INTEGER                                         :: charlen
@@ -791,6 +789,7 @@ CONTAINS
     buffer(21) = EOSTable % TS % Indices % iRho
     buffer(22) = EOSTable % TS % Indices % iT
     buffer(23) = EOSTable % TS % Indices % iYe
+    buffer(24) = EOSTable % TS % Indices % iYm
 
     END IF
 
@@ -803,7 +802,7 @@ CONTAINS
     nPoints(1) = buffer(1)
     nPoints(2) = buffer(2)
     nPoints(3) = buffer(3)
-    nPoints(3) = buffer(4)
+    nPoints(4) = buffer(4)
     nVariables = buffer(5) 
 
     CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
@@ -826,6 +825,7 @@ CONTAINS
     EOSTable % TS % Indices % iRho                       = buffer(21)
     EOSTable % TS % Indices % iT                         = buffer(22)
     EOSTable % TS % Indices % iYe                        = buffer(23)
+    EOSTable % TS % Indices % iYm                        = buffer(24)
 
     END IF
 

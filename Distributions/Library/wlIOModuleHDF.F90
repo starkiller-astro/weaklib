@@ -1273,7 +1273,7 @@ CONTAINS
 
   SUBROUTINE ReadThermoState4DHDF( TS, file_id )
 
-    TYPE(ThermoState4DType), INTENT(inout)        :: TS
+    TYPE(ThermoState4DType), INTENT(inout)      :: TS
     INTEGER(HID_T), INTENT(in)                  :: file_id
 
     INTEGER(HID_T)                              :: group_id
@@ -1289,7 +1289,7 @@ CONTAINS
     CALL ReadHDF( "Units", TS % Units(:), &
                               group_id, datasize1d )
 
-    DO i = 1, 3
+    DO i = 1, 4
       datasize1d(1) = TS % nPoints(i)
       CALL ReadHDF( TS % Names(i), TS % States(i) % Values(:), &
                               group_id, datasize1d )
@@ -1306,6 +1306,9 @@ CONTAINS
 
     CALL ReadHDF( "iYe", buffer, group_id, datasize1d )
     TS % Indices % iYe = buffer(1)
+
+    CALL ReadHDF( "iYm", buffer, group_id, datasize1d )
+    TS % Indices % iYm = buffer(1)
 
     datasize1d(1) = SIZE( TS % LogInterp )
     CALL ReadHDF( "LogInterp", TS % LogInterp(:), group_id, datasize1d )
