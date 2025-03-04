@@ -656,6 +656,8 @@ CONTAINS
     NewiHeavyBE => NewDVID % iHeavyBindingEnergy, &
     NewiThermEnergy => NewDVID % iThermalEnergy, &
     NewiGamma1 => NewDVID % iGamma1, &
+    NewiProtonSelfEnergy => NewDVID % iProtonSelfEnergy, &
+    NewiNeutronSelfEnergy => NewDVID % iNeutronSelfEnergy, &
 
     OldiPressure => EOSTableIn % DV % Indices % iPressure , &
     OldiEntropy => EOSTableIn % DV % Indices % iEntropyPerBaryon, &
@@ -671,7 +673,9 @@ CONTAINS
     OldiHMassNum => EOSTableIn % DV % Indices % iHeavyMassNumber, &
     OldiHeavyBE => EOSTableIn % DV % Indices % iHeavyBindingEnergy, &
     OldiThermEnergy => EOSTableIn % DV % Indices % iThermalEnergy, &
-    OldiGamma1 => EOSTableIn % DV % Indices % iGamma1 )
+    OldiGamma1 => EOSTableIn % DV % Indices % iGamma1, &
+    OldiProtonSelfEnergy => EOSTableIn % DV % Indices % iProtonSelfEnergy, &
+    OldiNeutronSelfEnergy => EOSTableIn % DV % Indices % iNeutronSelfEnergy )
 
     CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPressure, OldiPressure )
@@ -718,6 +722,12 @@ CONTAINS
     CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiGamma1, OldiGamma1 )
     EOSTableOut % DV % Indices % iGamma1 = NewiGamma1
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiProtonSelfEnergy, OldiProtonSelfEnergy )
+    EOSTableOut % DV % Indices % iProtonSelfEnergy = NewiProtonSelfEnergy
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiNeutronSelfEnergy, OldiNeutronSelfEnergy )
+    EOSTableOut % DV % Indices % iNeutronSelfEnergy = NewiNeutronSelfEnergy
 
     END ASSOCIATE
 
@@ -758,7 +768,7 @@ CONTAINS
     INTEGER, INTENT(in)                             :: myid ! rank of each processor (MPI)   
     TYPE(EquationOfState4DTableType), INTENT(inout) :: EOSTable
     INTEGER, DIMENSION(4)                           :: nPoints
-    INTEGER, DIMENSION(24)                          :: buffer
+    INTEGER, DIMENSION(26)                          :: buffer
     INTEGER                                         :: nStates, nVariables, i
     INTEGER                                         :: i_count
     INTEGER                                         :: charlen
@@ -786,10 +796,12 @@ CONTAINS
     buffer(18) = EOSTable % DV % Indices % iHeavyBindingEnergy
     buffer(19) = EOSTable % DV % Indices % iThermalEnergy
     buffer(20) = EOSTable % DV % Indices % iGamma1
-    buffer(21) = EOSTable % TS % Indices % iRho
-    buffer(22) = EOSTable % TS % Indices % iT
-    buffer(23) = EOSTable % TS % Indices % iYe
-    buffer(24) = EOSTable % TS % Indices % iYm
+    buffer(21) = EOSTable % DV % Indices % iProtonSelfEnergy
+    buffer(22) = EOSTable % DV % Indices % iNeutronSelfEnergy
+    buffer(23) = EOSTable % TS % Indices % iRho
+    buffer(24) = EOSTable % TS % Indices % iT
+    buffer(25) = EOSTable % TS % Indices % iYe
+    buffer(26) = EOSTable % TS % Indices % iYm
 
     END IF
 
@@ -822,10 +834,12 @@ CONTAINS
     EOSTable % DV % Indices % iHeavyBindingEnergy        = buffer(18)
     EOSTable % DV % Indices % iThermalEnergy             = buffer(19)
     EOSTable % DV % Indices % iGamma1                    = buffer(20)
-    EOSTable % TS % Indices % iRho                       = buffer(21)
-    EOSTable % TS % Indices % iT                         = buffer(22)
-    EOSTable % TS % Indices % iYe                        = buffer(23)
-    EOSTable % TS % Indices % iYm                        = buffer(24)
+    EOSTable % DV % Indices % iProtonSelfEnergy          = buffer(21)
+    EOSTable % DV % Indices % iNeutronSelfEnergy         = buffer(22)
+    EOSTable % TS % Indices % iRho                       = buffer(23)
+    EOSTable % TS % Indices % iT                         = buffer(24)
+    EOSTable % TS % Indices % iYe                        = buffer(25)
+    EOSTable % TS % Indices % iYm                        = buffer(26)
 
     END IF
 

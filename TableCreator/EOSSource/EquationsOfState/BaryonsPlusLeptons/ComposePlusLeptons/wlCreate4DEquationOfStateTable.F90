@@ -44,9 +44,10 @@ PROGRAM wlCreateEquationOfStateTable
     
     REAL(dp) :: Minimum_Value, Add_to_energy
     LOGICAL  :: RedHDF5Table
-    INTEGER  :: iLepton, iRho, iTemp, iYe, iYm, iCount
+    INTEGER  :: iLepton, i, iRho, iTemp, iYe, iYm, iCount
 
     REAL(DP), ALLOCATABLE, DIMENSION(:) :: YmGrid
+    REAL(DP), ALLOCATABLE, DIMENSION(:,:,:) :: LogEnergy, LogEntropy
 
     REAL(DP) :: D, T, Yp, Ye, Ym
     REAL(DP) :: Xbary, dYp, OS_P, OS_E, OS_S, LocalOffset, Gamma, Cs
@@ -61,9 +62,9 @@ PROGRAM wlCreateEquationOfStateTable
     CompOSEFilePath = 'SFHo_no_ele/'
     CompOSEFHDF5Path = 'SFHo_no_ele/eoscompose.h5'
     IF (RedHDF5Table) THEN
-        BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
+        BaryonEOSTableName = '4DEOSTableHighres.h5'
     ELSE
-        BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+        BaryonEOSTableName = '4DEOSTable.h5'
     ENDIF
     iLepton = 0
     
@@ -243,10 +244,10 @@ PROGRAM wlCreateEquationOfStateTable
             T  = EOSTable % TS % States(2) % Values(iTemp)
             Ye = EOSTable % TS % States(3) % Values(iYe)
             Ym = EOSTable % TS % States(4) % Values(iYm)
-            Yp = Ye + Ym
-            IF (Yp > YpCompOSE(nPoints(3))) THEN
-              Yp = Ye
+            IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
+              Ym = 0
             ENDIF
+            Yp = Ye + Ym
             dYp = Yp - Ye
 
             ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
@@ -477,11 +478,10 @@ PROGRAM wlCreateEquationOfStateTable
           T  = EOSTable % TS % States(2) % Values(iTemp)
           Ye = EOSTable % TS % States(3) % Values(iYe)
           Ym = EOSTable % TS % States(4) % Values(iYm)
-          Yp = Ye + Ym
-
-          IF (Yp > YpCompOSE(nPoints(3))) THEN
-            Yp = Ye
+          IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
+            Ym = 0
           ENDIF
+          Yp = Ye + Ym
 
           ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
           ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
@@ -547,28 +547,30 @@ PROGRAM wlCreateEquationOfStateTable
       OS_E = 0.0_dp
     ENDIF
 
-    ! WRITE THE ROUTINE TO DO THIS!
-    ! This is one way of doing it, maybe not exactly correct
+    ALLOCATE( LogEnergy(nPointsCompose(1), nPointsCompose(2), nPointsCompose(3)) )
+    ALLOCATE( LogEntropy(nPointsCompose(1), nPointsCompose(2), nPointsCompose(3)) )
+
+    LogEnergy  = LOG10(EOSCompOSE(:,:,:,3) + OS_E)
+    LogEntropy = LOG10(EOSCompOSE(:,:,:,2) + OS_S)
+
     iCount = 0
     !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp, Gamma, Cs) &
     !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
-    !$OMP OS_P, OS_E, OS_S, HelmholtzTable, MuonTable, iCount) &
+    !$OMP LogEnergy, LogEntropy, OS_P, OS_E, OS_S, HelmholtzTable, MuonTable, iCount) &
     !$OMP COLLAPSE(3)
-    DO iYm=1,nPoints(4)
-      DO iRho=1,nPoints(1)-1
-        DO iTemp=1,nPoints(2)-1
-          DO iYe=1,nPoints(3)-1
+    DO iRho=1,nPoints(1)
+      DO iTemp=1,nPoints(2)
+        DO iYe=1,nPoints(3)
+          DO iYm=1,nPoints(4)
 
             ! Safely increment iCount without locking the whole loop
             !$OMP ATOMIC
             iCount = iCount + 1
 
             ! Print progress only every 1% of completion
-            IF (MOD(iCount, INT(0.01d0 * (nPoints(1)-1) * (nPoints(2)-1) * &
-                                         (nPoints(3)-1) *  nPoints(4)   )) .EQ. 0) THEN
+            IF (MOD(iCount, INT(0.01d0 * nPoints(1) * nPoints(2) * nPoints(3) * nPoints(4)   )) .EQ. 0) THEN
               !$OMP CRITICAL
-              WRITE(*,*) "Progress:", DBLE(iCount) / DBLE( (nPoints(1)-1) * &
-                      (nPoints(2)-1) * (nPoints(3)-1) * nPoints(4)) * 100.0d0, "%"
+              WRITE(*,*) "Progress:", DBLE(iCount) / DBLE( nPoints(1) * nPoints(2) * nPoints(3) * nPoints(4)) * 100.0d0, "%"
               !$OMP END CRITICAL
             ENDIF
 
@@ -576,13 +578,16 @@ PROGRAM wlCreateEquationOfStateTable
             T  = EOSTable % TS % States(2) % Values(iTemp)
             Ye = EOSTable % TS % States(3) % Values(iYe)
             Ym = EOSTable % TS % States(4) % Values(iYm)
+            IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
+              Ym = 0
+            ENDIF
             Yp = Ye + Ym
           
-            CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE(iRho:iRho+1), &
-                  TempCompOSE(iTemp:iTemp+1), YpCompOSE(iYe:iYe+1), &
-                  EOSCompOSE(iRho:iRho+1,iTemp:iTemp+1,iYe:iYe+1,1), OS_P, &
-                  LOG10(EOSCompOSE(iRho:iRho+1,iTemp:iTemp+1,iYe:iYe+1,3) + OS_E), OS_E, &
-                  LOG10(EOSCompOSE(iRho:iRho+1,iTemp:iTemp+1,iYe:iYe+1,2) + OS_S), OS_S, &
+            CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE(:), &
+                  TempCompOSE(:), YpCompOSE(:), &
+                  EOSCompOSE(:,:,:,1), OS_P, &
+                  LogEnergy (:,:,:), OS_E, &
+                  LogEntropy(:,:,:), OS_S, &
                     HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
 
             EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
@@ -591,141 +596,22 @@ PROGRAM wlCreateEquationOfStateTable
       ENDDO
     ENDDO
     !$OMP END PARALLEL DO
-
-    iRho = nPoints(1)
-    iCount = 0
-    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp, Gamma, Cs) &
-    !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
-    !$OMP OS_P, OS_E, OS_S, HelmholtzTable, MuonTable, iRho, iCount) &
-    !$OMP COLLAPSE(3)
-    DO iYm=1,nPoints(4)
-        DO iTemp=1,nPoints(2)
-          DO iYe=1,nPoints(3)
-
-            ! Safely increment iCount without locking the whole loop
-            !$OMP ATOMIC
-            iCount = iCount + 1
-
-            ! Print progress only every 1% of completion
-            IF (MOD(iCount, INT(0.01d0 * nPoints(4) * nPoints(2) * nPoints(3)   )) .EQ. 0) THEN
-              !$OMP CRITICAL
-              WRITE(*,*) "Progress:", DBLE(iCount) / DBLE( nPoints(4) * nPoints(2) * nPoints(3)) * 100.0d0, "%"
-              !$OMP END CRITICAL
-            ENDIF
-
-            D  = EOSTable % TS % States(1) % Values(iRho)
-            T  = EOSTable % TS % States(2) % Values(iTemp)
-            Ye = EOSTable % TS % States(3) % Values(iYe)
-            Ym = EOSTable % TS % States(4) % Values(iYm)
-            Yp = Ye + Ym
-          
-            CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE(iRho-1:), &
-                  TempCompOSE(:), YpCompOSE(:), &
-                  EOSCompOSE(iRho-1:,:,:,1), OS_P, &
-                  LOG10(EOSCompOSE(iRho-1:,:,:,3) + OS_E), OS_E, &
-                  LOG10(EOSCompOSE(iRho-1:,:,:,2) + OS_S), OS_S, &
-                    HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
-
-            EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
-
-        ENDDO
-      ENDDO
-    ENDDO
-    !$OMP END PARALLEL DO
-
-    WRITE(*,*) ' ENDED 1'
-
-    iTemp = nPoints(2)
-    iCount = 0
-    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp, Gamma, Cs) &
-    !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
-    !$OMP OS_P, OS_E, OS_S, HelmholtzTable, MuonTable, iTemp, iCount) &
-    !$OMP COLLAPSE(3)
-    DO iRho=1,nPoints(1)
-        DO iYm=1,nPoints(4)
-          DO iYe=1,nPoints(3)
-
-            ! Safely increment iCount without locking the whole loop
-            !$OMP ATOMIC
-            iCount = iCount + 1
-
-            ! Print progress only every 1% of completion
-            IF (MOD(iCount, INT(0.01d0 * nPoints(4) * nPoints(1) * nPoints(3)   )) .EQ. 0) THEN
-              !$OMP CRITICAL
-              WRITE(*,*) "Progress:", DBLE(iCount) / DBLE( nPoints(4) * nPoints(1) * nPoints(3)) * 100.0d0, "%"
-              !$OMP END CRITICAL
-            ENDIF
-            
-            D  = EOSTable % TS % States(1) % Values(iRho)
-            T  = EOSTable % TS % States(2) % Values(iTemp)
-            Ye = EOSTable % TS % States(3) % Values(iYe)
-            Ym = EOSTable % TS % States(4) % Values(iYm)
-            Yp = Ye + Ym
-          
-            CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE(:), &
-                  TempCompOSE(iTemp-1:), YpCompOSE(:), &
-                  EOSCompOSE(:,:,:,1), OS_P, &
-                  LOG10(EOSCompOSE(:,iTemp-1:,:,3) + OS_E), OS_E, &
-                  LOG10(EOSCompOSE(:,iTemp-1:,:,2) + OS_S), OS_S, &
-                    HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
-
-            EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
-
-        ENDDO
-      ENDDO
-    ENDDO
-    !$OMP END PARALLEL DO
-
-    WRITE(*,*) ' ENDED 2'
-
-    iYe = nPoints(3)
-    iCount = 0
-    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp, Gamma, Cs) &
-    !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
-    !$OMP OS_P, OS_E, OS_S, HelmholtzTable, MuonTable, iYe, iCount) &
-    !$OMP COLLAPSE(3)
-    DO iRho=1,nPoints(1)
-        DO iYm=1,nPoints(4)
-          DO iTemp=1,nPoints(2)
-
-            ! Safely increment iCount without locking the whole loop
-            !$OMP ATOMIC
-            iCount = iCount + 1
-
-            ! Print progress only every 1% of completion
-            IF (MOD(iCount, INT(0.01d0 * nPoints(4) * nPoints(2) * nPoints(1)   )) .EQ. 0) THEN
-              !$OMP CRITICAL
-              WRITE(*,*) "Progress:", DBLE(iCount) / DBLE( nPoints(4) * nPoints(2) * nPoints(1)) * 100.0d0, "%"
-              !$OMP END CRITICAL
-            ENDIF
-            
-            D  = EOSTable % TS % States(1) % Values(iRho)
-            T  = EOSTable % TS % States(2) % Values(iTemp)
-            Ye = EOSTable % TS % States(3) % Values(iYe)
-            Ym = EOSTable % TS % States(4) % Values(iYm)
-            Yp = Ye + Ym
-          
-            CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE(:), &
-                  TempCompOSE(:), YpCompOSE(iYe-1:), &
-                  EOSCompOSE(:,:,iYe-1:,1), OS_P, &
-                  LOG10(EOSCompOSE(:,:,iYe-1:,3) + OS_E), OS_E, &
-                  LOG10(EOSCompOSE(:,:,iYe-1:,2) + OS_S), OS_S, &
-                    HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
-
-            EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
-
-        ENDDO
-      ENDDO
-    ENDDO
-    !$OMP END PARALLEL DO
-    WRITE(*,*) ' ENDED 3'
+    WRITE(*,*) 'DONE'
 
     ! FINAL HOUSEKEEPING
+    DEALLOCATE(LogEnergy)
+    DEALLOCATE(LogEntropy)
     DEALLOCATE(RhoCompOSE)
     DEALLOCATE(TempCompOSE)
     DEALLOCATE(YpCompOSE)
     DEALLOCATE(EOSCompOSE)
     
+    ! Calculate maxima and minima
+    DO i = 1, EOSTable % DV % nVariables
+      EOSTable % DV % maxValues(i) = MAXVAL( EOSTable % DV % Variables(i) % Values)
+      EOSTable % DV % minValues(i) = MINVAL( EOSTable % DV % Variables(i) % Values)
+    ENDDO
+
     PRINT*, "Offset negative quantities"
     
     EOSTable % DV % Offsets(:) = 0.0_dp
@@ -755,7 +641,7 @@ PROGRAM wlCreateEquationOfStateTable
     EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values = &
         LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values)
 
-      EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values = &
+    EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values = &
         LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values)
     EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values = &
         LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values)

@@ -1123,14 +1123,14 @@ CONTAINS
 ! 4D -----------------------------------
   SUBROUTINE WriteThermoState4DHDF( TS, group_id )
 
-    TYPE(ThermoState4DType), INTENT(in)           :: TS
+    TYPE(ThermoState4DType), INTENT(in)         :: TS
     INTEGER(HID_T), INTENT(in)                  :: group_id
 
     INTEGER(HSIZE_T), DIMENSION(1)              :: datasize1d
     INTEGER                                     :: i
     INTEGER, DIMENSION(1)                       :: buffer
 
-    datasize1d(1) = 3
+    datasize1d(1) = 4
     CALL WriteHDF &
            ( "Dimensions", TS % nPoints(:), group_id, datasize1d )
     
@@ -1149,7 +1149,7 @@ CONTAINS
     CALL WriteHDF &
            ( "maxValues", TS % maxValues(:), group_id, datasize1d )
 
-    DO i = 1, 3
+    DO i = 1, 4
       datasize1d(1) = TS % nPoints(i)
       CALL WriteHDF &
              ( TS % Names(i), TS % States(i) % Values(:), group_id, datasize1d )
@@ -1164,6 +1164,9 @@ CONTAINS
 
     buffer(1) = TS % Indices % iYe
     CALL WriteHDF( "iYe",  buffer, group_id, datasize1d )
+
+    buffer(1) = TS % Indices % iYm
+    CALL WriteHDF( "iYm",  buffer, group_id, datasize1d )
 
   END SUBROUTINE WriteThermoState4DHDF
 

@@ -75,6 +75,7 @@ CONTAINS
     TS_target % Indices % iRho  = TS_source % Indices % iRho 
     TS_target % Indices % iT    = TS_source % Indices % iT 
     TS_target % Indices % iYe   = TS_source % Indices % iYe 
+    TS_target % Indices % iYm   = TS_source % Indices % iYm 
 
     DO i = 1, 4
 
