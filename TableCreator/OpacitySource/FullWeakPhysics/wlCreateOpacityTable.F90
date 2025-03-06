@@ -167,7 +167,7 @@ IMPLICIT NONE
                                               !   ( flavor identical )
    INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
-   INTEGER, PARAMETER      :: Iso_weak_magnetism &
+   INTEGER, PARAMETER      :: Scat_weak_magnetism &
                               = 1
                               !Weak magnetism corrections for isoenergetic scattering
                               !Horowitz 2002
@@ -177,12 +177,12 @@ IMPLICIT NONE
                               !Ion-ion correlation corrections to isoenergetic scattering
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
-   INTEGER, PARAMETER      :: Iso_many_body_corrections &
+   INTEGER, PARAMETER      :: Scat_many_body_corrections &
                               = 1
                               !Modification to neutral current scattering due to many-body effects
                               !Horowitz et al 2017
 
-   REAL(DP), PARAMETER     :: Iso_ga_strange &
+   REAL(DP), PARAMETER     :: Scat_ga_strange &
                               = -0.1d0
                               !Include strange-quark contributions to the axial vector coupling constant ga
                               !Value from Hobbs et al 2016
@@ -396,16 +396,16 @@ IMPLICIT NONE
                                   'Per Centimeter              '/)
 
    OpacityTable % Scat_Iso % weak_magnetism_corrections = &
-                  Iso_weak_magnetism
+                  Scat_weak_magnetism
 
    OpacityTable % Scat_Iso % ion_ion_corrections = &
                   Iso_ion_ion_corrections
 
    OpacityTable % Scat_Iso % many_body_corrections = &
-                  Iso_many_body_corrections
+                  Scat_many_body_corrections
 
    OpacityTable % Scat_Iso % ga_strange = &
-                  Iso_ga_strange
+                  Scat_ga_strange
 
    OpacityTable % Scat_Iso % np_isoenergetic = &
                   Scat_np_isoenergetic
@@ -439,13 +439,13 @@ END IF
    OpacityTable % Scat_NNS % Units = (/'Per Centimeter Per MeV^3'/)
 
    OpacityTable % Scat_NNS % weak_magnetism_corrections = &
-                  Iso_weak_magnetism
+                  Scat_weak_magnetism
 
    OpacityTable % Scat_NNS % many_body_corrections = &
-                  Iso_many_body_corrections
+                  Scat_many_body_corrections
 
    OpacityTable % Scat_NNS % ga_strange = &
-                  Iso_ga_strange
+                  Scat_ga_strange
 
 END IF
 
@@ -1167,8 +1167,8 @@ PRINT*, 'Filling OpacityTable ...'
            CALL scatical_weaklib &
            ( i_rb, OpacityTable % EnergyGrid % Values,  &
              nPointsE, rho, T, ye, xn, xp, xhe, xheavy, A, Z, &
-             Iso_weak_magnetism, Iso_ion_ion_corrections,     &
-             Iso_many_body_corrections, Iso_ga_strange, cok )
+             Scat_weak_magnetism, Iso_ion_ion_corrections,     &
+             Scat_many_body_corrections, Scat_ga_strange, cok )
 
            DO t_m = 1, nMom_Iso
 
@@ -1220,7 +1220,7 @@ PRINT*, 'Filling OpacityTable ...'
                ( nPointsE, &
                  OpacityTable % EnergyGrid % Values, &
                  OpacityTable % EnergyGrid % Edge, &
-                 TMev, chem_n, chem_p, Iso_weak_magnetism, Iso_ga_strange, &
+                 TMev, chem_n, chem_p, Scat_weak_magnetism, Scat_ga_strange, &
                  phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
                  phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
 
