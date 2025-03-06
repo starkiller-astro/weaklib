@@ -1,5 +1,5 @@
 SUBROUTINE scatnrgn_weaklib &
-           ( nez, egrid_c, egrid_e, tmev, chem_n, chem_p, g_strange, &
+           ( nez, egrid_c, egrid_e, tmev, chem_n, chem_p, wm, g_strange, &
              phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
              phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
 
@@ -93,6 +93,7 @@ SUBROUTINE scatnrgn_weaklib &
 !   tmev      : temperature, MeV
 !   chem_n    : neutron chemical potential, Chimera
 !   chem_p    : proton chemical potential, Chimera
+!   wm        : include weak magnetism corrections
 !   g_strange : strange quark contributions
 !
 !    Output arguments (without many-body corrections):
@@ -123,7 +124,8 @@ REAL(dp), DIMENSION(nez+1), INTENT(in) :: egrid_e  ! neutrino energy grid
 REAL(dp), INTENT(in)     :: tmev   ! temperature [MeV]
 REAL(dp), INTENT(in)     :: chem_n ! neutron chemical potential, Chimera
 REAL(dp), INTENT(in)     :: chem_p ! proton chemical potential, Chimera
-REAL(DP), INTENT(in)     :: g_strange
+INTEGER,  INTENT(in)     :: wm
+REAL(dp), INTENT(in)     :: g_strange
 
 !--------------------------------------------------------------------
 !        Output variables
@@ -234,15 +236,17 @@ END IF ! first
 !   proton scattering.
 !-----------------------------------------------------------------------
 
-! DO i = 1, igen
+  !Make weak magnetism corrections non-operational initially
+  !(these are multiplicative corrections)
+  xi_p_wm  = 1.0d0
+  xi_n_wm  = 1.0d0
+  xib_p_wm = 1.0d0
+  xib_n_wm = 1.0d0
 
-!   icube            = indx(i)
-!   tmev             = kmev * temp(i)
-!   mu_p             = chem_p(i) + dmnp + mp
-!   mu_n             = chem_n(i) + dmnp + mn
-
-  CALL nc_weak_mag_weaklib &
-         ( egrid_c, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
+  IF(wm == 1) THEN
+    CALL nc_weak_mag_weaklib &
+           ( egrid_c, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
+  END IF
 
 ! !-----------------------------------------------------------------------
 ! !  Many body corrections for neutrino-nucleon neutral current

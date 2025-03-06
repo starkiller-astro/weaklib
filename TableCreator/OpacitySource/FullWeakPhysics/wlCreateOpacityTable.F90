@@ -1220,7 +1220,7 @@ PRINT*, 'Filling OpacityTable ...'
                ( nPointsE, &
                  OpacityTable % EnergyGrid % Values, &
                  OpacityTable % EnergyGrid % Edge, &
-                 TMev, chem_n, chem_p, Iso_ga_strange, &
+                 TMev, chem_n, chem_p, Iso_weak_magnetism, Iso_ga_strange, &
                  phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
                  phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
 
@@ -1260,7 +1260,7 @@ PRINT*, 'Filling OpacityTable ...'
           = 1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
             ! phi1_nu_p was saved as phi1_nu_p(e,ep)
 
-          !-- nub on n
+          !-- nub on p
 
           OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
                ( :, :, 1, k_t, i_MuB )       &
