@@ -57,7 +57,9 @@ SUBROUTINE init_quad_scat_n
   !-----------------------------------------------------------------------
 
   C_nes                     = m_cm
-  R_nes                     = one/( 2.d0 * pi )
+!  R_nes                     = one/( 2.d0 * pi )
+  R_nes                     = one / ( 2.d0 * pi )**2
+                              !-- Additional 1/2pi for Chimera vs. thornado
 
   CALL gquad( nquad_a,    x_a,    wt_a,    nquad_a    )
   CALL gquad( nquad_e,    x_e,    wt_e,    nquad_e    )

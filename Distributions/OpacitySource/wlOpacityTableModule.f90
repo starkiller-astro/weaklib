@@ -92,7 +92,7 @@ MODULE wlOpacityTableModule
     TYPE(OpacityTypeScatIso)       :: &
       Scat_Iso   ! -- Isoenergenic Scattering
     TYPE(OpacityTypeScatNNS)       :: &
-      Scat_NNS  ! -- Inelastic Neutrino-Nucleon Scattering
+      Scat_NNS   ! -- Inelastic Neutrino-Nucleon Scattering
     TYPE(OpacityTypeScatNES)       :: &
       Scat_NES   ! -- Inelastic Neutrino-Electron Scattering
     TYPE(OpacityTypeScat)          :: &
