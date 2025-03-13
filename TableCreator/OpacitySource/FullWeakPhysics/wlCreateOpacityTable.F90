@@ -1508,6 +1508,15 @@ PRINT*, 'Filling OpacityTable ...'
     CALL FinalizeHDF( )
   END IF
 
+  IF( nOpac_NNS > 0 ) THEN
+    WriteTableName(stringlength+1:stringlength+8) = '-NNS.h5 '
+    CALL InitializeHDF( )
+    WRITE(*,*) 'Write NNS data into file ', TRIM(WriteTableName)
+    CALL WriteOpacityTableHDF &
+         ( OpacityTable, TRIM(WriteTableName), WriteOpacity_NNS_Option = .true. )
+    CALL FinalizeHDF( )
+  END IF
+
   IF( nOpac_NES > 0 ) THEN
     WriteTableName(stringlength+1:stringlength+8) = '-NES.h5 '
     CALL InitializeHDF( )

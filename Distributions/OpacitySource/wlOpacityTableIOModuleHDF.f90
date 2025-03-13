@@ -31,6 +31,7 @@ MODULE wlOpacityTableIOModuleHDF
     OpacityTypeEmAb,                 &
     OpacityTypeScat,                 &
     OpacityTypeScatIso,              &
+    OpacityTypeScatNNS,              &
     OpacityTypeScatNES
   USE wlIOModuleHDF, ONLY:           &
     ReadHDF,                         &
@@ -64,19 +65,22 @@ CONTAINS
 
   SUBROUTINE WriteOpacityTableHDF &
     ( OpacityTable, FileName, WriteOpacity_EmAb_Option, &
-      WriteOpacity_Iso_Option, WriteOpacity_NES_Option, &
-      WriteOpacity_Pair_Option, WriteOpacity_Brem_Option )
+      WriteOpacity_Iso_Option, WriteOpacity_NNS_Option, &
+      WriteOpacity_NES_Option, WriteOpacity_Pair_Option, &
+      WriteOpacity_Brem_Option )
  
     TYPE(OpacityTableType), INTENT(inout)        :: OpacityTable
     CHARACTER(len=*),       INTENT(in)           :: FileName
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_EmAb_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Iso_Option
+    LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_NNS_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_NES_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Pair_Option
     LOGICAL,                INTENT(in), OPTIONAL :: WriteOpacity_Brem_Option
 
     LOGICAL           :: WriteOpacity_EmAb
     LOGICAL           :: WriteOpacity_Iso 
+    LOGICAL           :: WriteOpacity_NNS 
     LOGICAL           :: WriteOpacity_NES 
     LOGICAL           :: WriteOpacity_Pair
     LOGICAL           :: WriteOpacity_Brem
@@ -96,6 +100,12 @@ CONTAINS
       WriteOpacity_Iso = WriteOpacity_Iso_Option
     ELSE
       WriteOpacity_Iso = .FALSE.
+    END IF
+
+    IF( PRESENT( WriteOpacity_NNS_Option ) )THEN
+      WriteOpacity_NNS = WriteOpacity_NNS_Option
+    ELSE
+      WriteOpacity_NNS = .FALSE.
     END IF
 
     IF( PRESENT( WriteOpacity_NES_Option ) )THEN
@@ -241,6 +251,99 @@ CONTAINS
             ENDIF
 
             CALL WriteGroupAttributeHDF_string("ion_ion_corrections", tempString, group_id) 
+
+          END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+
+            tempString(1) = "Many-body effects corrections for isoenergetic scattering, Horowitz et al (2017)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2017PhRvC..95b5801H/doi:10.1103/PhysRevC.95.025801"
+            IF(OpacityTable % Scat_Iso % many_body_corrections .gt. 0) THEN
+              tempString(3) = "Included."
+            ELSE
+              tempString(3) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("many_body_corrections", tempString, group_id) 
+
+          END BLOCK
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(5) :: tempString
+
+            WRITE(tempString(5),'(A13,ES11.3E3)') "ga_strange = ", OpacityTable % Scat_Iso % ga_strange
+
+            tempString(1) = "Strange quark controbutions to neutral-current neutrino nucleon interactions"
+            tempString(2) = "Suggested value is ga_strange = -0.1 or -0.04 from Hobbs et al 2016"
+            tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2016PhRvC..93e2801H/doi:10.1103/PhysRevC.93.052801"
+            tempString(4) = "Not active if ga_strange = 0"
+            !IF(OpacityTable % Scat_Iso % ga_strange .ne. 0.0d0) THEN
+            !  tempString(4) = "Included."
+            !ELSE
+            !  tempString(4) = "Not included."
+            !ENDIF
+
+            CALL WriteGroupAttributeHDF_string("strange_quark_contributions", tempString, group_id) 
+
+          END BLOCK
+        
+          CALL WriteVersionAttribute(group_id)
+
+        CALL CloseGroupHDF( group_id )
+
+      END IF
+
+    END IF
+
+    IF( WriteOpacity_NNS ) THEN
+
+      WRITE(*,*) "Writing out NNS"
+
+      CALL OpenGroupHDF( "MuBGrid", .true., file_id, group_id )
+      CALL WriteGridHDF( OpacityTable % MuBGrid, group_id )
+      CALL CloseGroupHDF( group_id )
+
+      IF( .NOT. ALLOCATED( OpacityTable % Scat_NNS % Names ) )THEN
+
+        ! --- Insert Appropriate Reaction ---
+        WRITE(*,'(A4,A)') &
+          '', 'OpacityTable % Scat_Iso not allocated.  Write Skipped.'
+
+      ELSE
+
+        CALL OpenGroupHDF &
+               ( "Scat_NNS_Kernels", .true., file_id, group_id )
+        CALL WriteOpacityTableHDF_Scat( OpacityTable % Scat_NNS, group_id )
+
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(2) :: tempString
+
+            tempString(1) = &
+            "Opacity for inelastic neutrino-nucleon scattering, Bruenn et al. (2020)"
+            tempString(2) = &
+            "https://ui.adsabs.harvard.edu/link_gateway/2020ApJS..248...11B/doi:10.3847/1538-4365/ab7aff"
+
+            CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
+
+          END BLOCK
+    
+          BLOCK
+
+            CHARACTER(LEN=100), DIMENSION(3) :: tempString
+
+            tempString(1) = "Weak magnetism corrections for isoenergetic scattering, Horowitz (2002)"
+            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2002PhRvD..65d3001H/doi:10.1103/PhysRevD.65.043001"
+            IF(OpacityTable % Scat_Iso % weak_magnetism_corrections .gt. 0) THEN
+              tempString(3) = "Included."
+            ELSE
+              tempString(3) = "Not included."
+            ENDIF
+
+            CALL WriteGroupAttributeHDF_string("weak_magnetism_corrections", tempString, group_id) 
 
           END BLOCK
 
@@ -812,6 +915,18 @@ CONTAINS
 
         tempInteger(1) = Scat % np_non_isoenergetic
         CALL WriteHDF( "np_non_isoenergetic", tempInteger, group_id, datasize1d )
+
+        tempReal(1)    = Scat % ga_strange
+        CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
+
+      TYPE IS ( OpacityTypeScatNNS )
+
+        datasize1d = 1
+        tempInteger(1) = Scat % weak_magnetism_corrections
+        CALL WriteHDF( "weak_magnetism_corr", tempInteger, group_id, datasize1d )
+
+        tempInteger(1) = Scat % many_body_corrections
+        CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
 
         tempReal(1)    = Scat % ga_strange
         CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
