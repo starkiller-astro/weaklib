@@ -20,7 +20,15 @@ CONTAINS
       real(dp) :: arg,a,b
       real(dp), parameter :: pi2=9.8696044d0
 
-      pl1 = x+dlog(1.d0+dexp(-x))
+!      pl1 = x+dlog(1.d0+dexp(-x))
+
+!-- (added by Cardall: to safeguard against overflow, treat negative x
+!                      as in the expression for Li_1 in Reddy 1998 Eq. (76) )
+      if (x > 0.d0) then
+        pl1 = x+dlog(1.d0+dexp(-x))
+      else
+        pl1 = dlog(1.d0+dexp(x))
+      end if
     
       if (x.ge.4.6) then
         pl2 = -(0.5d0*x*x + pi2/6.d0)/(1.d0+dexp(-1.5*x))
