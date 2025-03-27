@@ -174,6 +174,7 @@ OPTIMIZE_ranchu       = -O2
 OPTIMIZE_ranchuair    = -O2
 OPTIMIZE_vass         = -O3 -framework Accelerate -march=native
 OPTIMIZE_delta-cyc_gcc= -O3 -framework Accelerate -march=native
+#OPTIMIZE_delta-cyc_gcc= -O1
 OPTIMIZE_sjdunham     = -O2
 OPTIMIZE_titan_gnu    = -O3 -march=bdver1
 OPTIMIZE_titan_cray   =

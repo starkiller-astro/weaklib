@@ -273,6 +273,7 @@ END IF ! first
     e_in           = egrid_c(k)
     e_in_l         = egrid_e(k)
     e_in_u         = egrid_e(k+1)
+print*, '      >>> e_in_l, e_in, e_in_u', e_in_l, e_in, e_in_u
 
 !-----------------------------------------------------------------------
 !  Neutrino-nucleon downscattering kernels
@@ -283,6 +284,7 @@ END IF ! first
       e_out        = egrid_c(kp)
       e_out_l      = egrid_e(kp)
       e_out_u      = egrid_e(kp+1)
+print*, '         >>> e_out_l, e_out, e_out_u', e_out_l, e_out, e_out_u
 
 !-----------------------------------------------------------------------
 !  Compute neutrino-neutron inelastic scattering kernels
@@ -293,6 +295,8 @@ END IF ! first
       CALL scatncal_weaklib &
              ( e_in, e_out, e_in_l, e_in_u, e_out_l, e_out_u, tmev, &
                mu_n, sm, sct0_n, sct1_n, cv_n_nscat, ca_n_nscat )
+print*, '            >>> sct0_n', sct0_n
+print*, '            >>> sct1_n', sct1_n
 
 !-----------------------------------------------------------------------
 !  Compute neutrino-proton inelastic scattering kernels
@@ -303,6 +307,8 @@ END IF ! first
       CALL scatncal_weaklib &
              ( e_in, e_out, e_in_l, e_in_u, e_out_l, e_out_u, tmev, &
                mu_p, sm, sct0_p, sct1_p, cv_p_nscat, ca_p_nscat )
+print*, '            >>> sct0_p', sct0_p
+print*, '            >>> sct1_p', sct1_p
 
 !-----------------------------------------------------------------------
 !  Load scattering kernal arrays.

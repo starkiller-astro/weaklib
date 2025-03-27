@@ -218,7 +218,8 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
-   INTEGER,  PARAMETER     :: nPointsE = 40
+!   INTEGER,  PARAMETER     :: nPointsE = 40
+   INTEGER,  PARAMETER     :: nPointsE = 5
 !   !-- Logarithmically spaced grid points
 !   REAL(dp), PARAMETER     :: Emin = 1.0d-01 !lowest energy point
 !   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !highest energy point
@@ -237,8 +238,10 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set MuB grid limits
 !---------------------------------------------------------------------
-   INTEGER                 :: nPointsMuB = 120
-   REAL(dp), PARAMETER     :: MuBmin     =  750.d0 !-- MeV including rest mass
+!   INTEGER                 :: nPointsMuB = 120
+   INTEGER                 :: nPointsMuB = 1
+!   REAL(dp), PARAMETER     :: MuBmin     =  750.d0 !-- MeV including rest mass
+   REAL(dp), PARAMETER     :: MuBmin     = 1050.d0 !-- MeV including rest mass
    REAL(dp), PARAMETER     :: MuBmax     = 1050.d0 !-- MeV including rest mass
 
    ! --- other inner variables
@@ -434,9 +437,15 @@ END IF
    OpacityTable % Scat_NNS % nPoints(4) = OpacityTable % nPointsTS(2)
    OpacityTable % Scat_NNS % nPoints(5) = nPointsMuB
 
-   OpacityTable % Scat_NNS % Names = (/'LegendreCoefficients'/)
+   OpacityTable % Scat_NNS % Names = (/'Nu on Neutron   ', &
+                                       'Nu on Proton    ', &
+                                       'NuBar on Neutron', &
+                                       'NuBar on Proton '/)
 
-   OpacityTable % Scat_NNS % Units = (/'Per Centimeter Per MeV^3'/)
+   OpacityTable % Scat_NNS % Units = (/'TBD', &
+                                       'TBD', &
+                                       'TBD', &
+                                       'TBD' /)
 
    OpacityTable % Scat_NNS % weak_magnetism_corrections = &
                   Scat_weak_magnetism
@@ -1206,6 +1215,7 @@ PRINT*, 'Filling OpacityTable ...'
       DO i_MuB = 1, nPointsMuB
 
         MuB = OpacityTable % MuBGrid % Values(i_MuB)
+print*, '>>> MuB', MuB 
 
         !-- convert absolute chemical potential to Chimera convention
         chem_n  =  MuB - dmnp - mn_wl
@@ -1215,6 +1225,7 @@ PRINT*, 'Filling OpacityTable ...'
 
           T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
+print*, '   >>> TMev', TMeV
 
           CALL scatnrgn_weaklib &
                ( nPointsE, &
