@@ -2,6 +2,7 @@ MODULE scat_n_module_weaklib
 
 USE wlKindModule, ONLY: dp
 USE polylog_module_weaklib, ONLY: polylog
+USE numerical_module, ONLY: one, pi
 
 !-----------------------------------------------------------------------
 !  Constants
