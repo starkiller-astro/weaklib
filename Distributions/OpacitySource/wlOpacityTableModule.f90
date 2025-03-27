@@ -200,7 +200,7 @@ CONTAINS
     nPointsTemp(1:5) = &
            [ nPointsE, nPointsE, nMom_NNS, nPoints(iT), OpTab % nPointsMuB ]
     CALL AllocateOpacity &
-           ( OpTab % Scat_NNS % OpacityTypeScat, nPointsTemp(1:5), &
+           ( OpTab % Scat_NNS, nPointsTemp(1:5), &
              nMoments = nMom_NNS, nOpacities = nOpac_NNS )
 
     nPointsTemp(1:5) = &
