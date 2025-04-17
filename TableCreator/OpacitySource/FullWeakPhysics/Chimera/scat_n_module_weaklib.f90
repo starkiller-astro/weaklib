@@ -4,6 +4,8 @@ USE wlKindModule, ONLY: dp
 USE polylog_module_weaklib, ONLY: polylog
 USE numerical_module, ONLY: one, pi
 
+IMPLICIT none
+
 !-----------------------------------------------------------------------
 !  Constants
 !-----------------------------------------------------------------------
@@ -104,13 +106,13 @@ END SUBROUTINE init_quad_scat_n
       real(dp) :: zi1, zi2, zi3, impl, impt, impa, impva
       real(dp) :: r1, r2, r3, A, B
 
-print*, '               >>> n_difcs'
-print*, '               >>> E     ', E
-print*, '               >>> EP    ', EP
-print*, '               >>> costh ', costh
-print*, '               >>> T     ', T
-print*, '               >>> s     ', s
-print*, '               >>> mun   ', mun
+! print*, '               >>> n_difcs'
+! print*, '               >>> E     ', E
+! print*, '               >>> EP    ', EP
+! print*, '               >>> costh ', costh
+! print*, '               >>> T     ', T
+! print*, '               >>> s     ', s
+! print*, '               >>> mun   ', mun
 !------------------------------
 !--      KINEMATICAL FACTORS          
 !------------------------------
@@ -123,24 +125,24 @@ print*, '               >>> mun   ', mun
 !------------------------------
 
         eminus = 0.5d0*(-qo + q*dsqrt(1.d0 - 4.d0*(s*s/qu2)))
-print*, '               >>> eminus', eminus
+!print*, '               >>> eminus', eminus
         if(eminus.lt.s) eminus = s
-print*, '               >>> eminus', eminus
+!print*, '               >>> eminus', eminus
    
         l = eminus/T 
         u = mun/T
         z = qo/T
-print*, '               >>> l     ', l
-print*, '               >>> u     ', u
-print*, '               >>> z     ', z
+!print*, '               >>> l     ', l
+!print*, '               >>> u     ', u
+!print*, '               >>> z     ', z
 
         arg1 = l-u
         arg2 = l-u+z
-print*, '               >>> arg1  ', arg1
-print*, '               >>> arg2  ', arg2
+!print*, '               >>> arg1  ', arg1
+!print*, '               >>> arg2  ', arg2
 
         if(((arg1.gt.25.).and.(arg2.gt.25.)).or.(z.lt.-25.))then
-print*, '               >>> 1'
+!print*, '               >>> 1'
            I0 = 0.d0
            I1 = 0.d0
            I2 = 0.d0
@@ -148,7 +150,7 @@ print*, '               >>> 1'
         else
 
            if (dabs(z).lt.1.d-3) then
-print*, '               >>> 2a'
+!print*, '               >>> 2a'
 
              call polylog(arg1,uli1,uli2,uli3)
 
@@ -158,16 +160,16 @@ print*, '               >>> 2a'
              pd = 1.d0/(1.d0-0.5d0*z)
 
            else
-print*, '               >>> 2b'
+!print*, '               >>> 2b'
            
              call polylog(arg1,uli1,uli2,uli3)
              call polylog(arg2,bli1,bli2,bli3)
-print*, '               >>> uli1', uli1
-print*, '               >>> uli2', uli2
-print*, '               >>> uli3', uli3
-print*, '               >>> bli1', bli1
-print*, '               >>> bli2', bli2
-print*, '               >>> bli3', bli3
+!print*, '               >>> uli1', uli1
+!print*, '               >>> uli2', uli2
+!print*, '               >>> uli3', uli3
+!print*, '               >>> bli1', bli1
+!print*, '               >>> bli2', bli2
+!print*, '               >>> bli3', bli3
 
              zi1 = (uli1 - bli1)/z
              zi2 = (uli2 - bli2)/z
@@ -186,9 +188,9 @@ print*, '               >>> bli3', bli3
 !------------------------   
 !---  long vector:
 !------------------------  
-print*, '               >>> I0', I0
-print*, '               >>> I1', I1
-print*, '               >>> I2', I2
+!print*, '               >>> I0', I0
+!print*, '               >>> I1', I1
+!print*, '               >>> I2', I2
         impl = qu2*(I2 + qo*I1 + 0.25d0*qu2*I0 )/(2.d0*pi*q**3)
 !------------------------  
 !---   tran vector:

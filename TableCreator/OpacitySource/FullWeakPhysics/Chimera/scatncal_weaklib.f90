@@ -127,7 +127,7 @@ INTEGER                     :: i_eot           ! summation index of energy Gauss
 !-----------------------------------------------------------------------
 
 IF ( e_in == e_out ) THEN
-print*, '            >>> e_in == e_out'
+!print*, '            >>> e_in == e_out'
 
 !-----------------------------------------------------------------------
 !  Initialize scattering kernal and integration boundary parameter
@@ -225,7 +225,7 @@ END IF ! e_in == e_out
 !-----------------------------------------------------------------------
 
 IF ( e_in_l == e_out_u ) THEN
-print*, '            >>> e_in_l == e_out_u'
+!print*, '            >>> e_in_l == e_out_u'
 
 !-----------------------------------------------------------------------
 !  Initialize scattering kernal and integration boundary parameter
@@ -346,7 +346,7 @@ END IF ! e_in_l == e_out_u
 !-----------------------------------------------------------------------
 !   ||||| Case 3: e_in_l > e_out_u (noncontiguous energy zones) |||||
 !-----------------------------------------------------------------------
-print*, '            >>> e_in_l > e_out'
+!print*, '            >>> e_in_l > e_out'
 
 phi0              = zero
 phi1              = zero
