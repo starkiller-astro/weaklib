@@ -314,15 +314,15 @@ CONTAINS
     end if
 
     if(OpTab % Scat_Iso % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_Iso % OpacityTypeScat )
+      CALL DescribeOpacity( OpTab % Scat_Iso )
     end if
 
     if(OpTab % Scat_NNS % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_NNS % OpacityTypeScat )
+      CALL DescribeOpacity( OpTab % Scat_NNS )
     end if
 
     if(OpTab % Scat_NES % nOpacities .gt. 0) then
-      CALL DescribeOpacity( OpTab % Scat_NES % OpacityTypeScat )
+      CALL DescribeOpacity( OpTab % Scat_NES )
     end if
 
     if(OpTab % Scat_Pair % nOpacities .gt. 0) then
