@@ -179,12 +179,12 @@ CONTAINS
             (D*(dEbarydT + dEeledT + dEmudT)) ) / &
             (Pbary + Pele + Pmu)
       
-      ! Another way of doing it
-      Gamma = D*( (dPbarydD + dPeledD + dPmudD)   &
-            -     (dSbarydD + dSeledD + dSmudD)   &
-            *     (dPbarydT + dPeledT + dPmudT)   &
-            /     (dSbarydT + dSeledT + dSmudT) ) &
-            /     (Pbary + Pele + Pmu)
+      ! ! Another way of doing it
+      ! Gamma = D*( (dPbarydD + dPeledD + dPmudD)   &
+      !       -     (dSbarydD + dSeledD + dSmudD)   &
+      !       *     (dPbarydT + dPeledT + dPmudT)   &
+      !       /     (dSbarydT + dSeledT + dSmudT) ) &
+      !       /     (Pbary + Pele + Pmu)
 
       ! relativistic definition with enthalpy
       h = (1.0_dp + (Ebary + Eele + Emu)/cvel**2 + (Pbary + Pele + Pmu)/D/cvel**2)
@@ -243,61 +243,15 @@ CONTAINS
       Gamma = (D*dPdD + T*dPdT**2.0_DP / &
           (D*dEdT) ) / Ptot
 
-      ! Another way of doing it
-      Gamma = D/Ptot * ( dPdD - (dSdD*dPdT/dSdT) )
+      ! ! Another way of doing it
+      ! Gamma = D/Ptot * ( dPdD - (dSdD*dPdT/dSdT) )
 
       ! relativistic definition with enthalpy
       h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
       Cs = SQRT(Gamma * Ptot / (D*h))
       Cs = SQRT(Gamma * Ptot / (D))
 
-      ! ! Use Ott's to see if something changes
-      ! DO iL_T=1,3
-      !   DO iL_D=1,3
-      !     DO iL_Yp=1,3
-      !       ElectronPhotonState % t   = T_T(iT+iL_T-2)
-      !       ElectronPhotonState % rho = D_T(iD+iL_D-2)
-      !       ElectronPhotonState % ye  = Yp_T(iYp+iL_Yp-2) * Ye_over_Yp
-      !       CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
-
-      !       MuonState % t = T_T(iT+iL_T-2)
-      !       MuonState % rhoym = D_T(iD+iL_D-2) * Yp_T(iYp+iL_Yp-2) * Ym_over_Yp
-      !       CALL FullMuonEOS(MuonTable, MuonState)
-            
-      !       P_PhotLep_Ott(iL_D,iL_T,iL_Yp) = ElectronPhotonState % p + MuonState % p
-      !       E_PhotLep_Ott(iL_D,iL_T,iL_Yp) = ElectronPhotonState % e + MuonState % e 
-      !       S_PhotLep_Ott(iL_D,iL_T,iL_Yp) = ElectronPhotonState % s + MuonState % s
-
-      !     END DO
-      !   END DO
-      ! END DO
-
-      ! Ptot_T_Ott = LOG10(P_T(iD-1:iD+1,iT-1:iT+1,iYp-1:iYp+1) + P_PhotLep_Ott)
-      ! Etot_T_Ott = LOG10(10.00**E_T(iD-1:iD+1,iT-1:iT+1,iYp-1:iYp+1) + E_PhotLep_Ott )
-      ! Stot_T_Ott = 10.00**S_T(iD-1:iD+1,iT-1:iT+1,iYp-1:iYp+1) + S_PhotLep_Ott
-
-      ! eos_table(:,:,:,1) = Ptot_T_Ott
-      ! eos_table(:,:,:,2) = Stot_T_Ott
-      ! eos_table(:,:,:,3) = Etot_T_Ott
-      ! CALL derivatives_production(1, 3, 3, 3, &
-      !   LOG10(D_T(iD-1:iD+1)), LOG10(T_T(iT-1:iT+1)), Yp_T(iYp-1:iYp+1), &
-      !   eos_table, OS_E, cs2_temp, gamma_temp)
-
-      ! CALL LogInterpolateSingleVariable_3D_Custom_Point &
-      !   ( D, T, Yp, D_T(iD-1:iD+1), T_T(iT-1:iT+1), Yp_T(iYp-1:iYp+1), &
-      !   0.0d0, LOG10(cs2_temp), Cs )
-      
-      ! Cs = SQRT(Cs)
-
-      ! CALL LogInterpolateSingleVariable_3D_Custom_Point &
-      !   ( D, T, Yp, D_T(iD-1:iD+1), T_T(iT-1:iT+1), Yp_T(iYp-1:iYp+1), &
-      !   0.0d0, LOG10(gamma_temp), Gamma )
-
-      ! !Cs = SQRT(Gamma * Ptot / (D))
-
     ENDIF
-
-
 
   END SUBROUTINE CalculateSoundSpeed
 

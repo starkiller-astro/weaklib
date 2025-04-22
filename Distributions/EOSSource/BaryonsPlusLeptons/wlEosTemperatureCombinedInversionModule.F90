@@ -3,7 +3,7 @@ MODULE wlEosTemperatureCombinedInversionModule
   USE wlKindModule, ONLY: &
     dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable_2D_Custom_Point
+    LogInterpolateSingleVariable
   USE wlInterpolationUtilitiesModule, ONLY: &
     Index1D_Lin, &
     Index1D_Log
@@ -150,7 +150,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -180,7 +180,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
     
     f_b = X - X_b
@@ -216,7 +216,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -245,7 +245,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
@@ -278,7 +278,7 @@ CONTAINS
         END DO
         Xs_c = LOG10(Xs_c+OS)
     
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
@@ -330,7 +330,7 @@ CONTAINS
         END DO
         Xs_i = LOG10(Xs_i+OS)
 
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_i, X_i )
 
         f_c = X - X_c
@@ -455,7 +455,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -483,7 +483,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
@@ -515,7 +515,7 @@ CONTAINS
         END DO
         Xs_c = LOG10(Xs_c+OS)
 
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
@@ -561,7 +561,7 @@ CONTAINS
         END DO
         Xs_i = LOG10(Xs_i+OS)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_i, X_i )
 
         f_a = X - X_i
@@ -685,7 +685,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -714,7 +714,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
     
     f_b = X - X_b
@@ -748,7 +748,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -775,7 +775,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
@@ -806,7 +806,7 @@ CONTAINS
         END DO
         Xs_c = LOG10(Xs_c+OS)
     
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
@@ -856,7 +856,7 @@ CONTAINS
         END DO
         Xs_i = LOG10(Xs_i+OS)
 
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_i, X_i )
 
         f_c = X - X_c
@@ -976,7 +976,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -1002,7 +1002,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
@@ -1032,7 +1032,7 @@ CONTAINS
         END DO
         Xs_c = LOG10(Xs_c+OS)
 
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
@@ -1076,7 +1076,7 @@ CONTAINS
         END DO
         Xs_i = LOG10(Xs_i+OS)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_i, X_i )
 
         f_a = X - X_i
@@ -1203,7 +1203,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -1233,7 +1233,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
     
     f_b = X - X_b
@@ -1269,7 +1269,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -1298,7 +1298,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
@@ -1331,7 +1331,7 @@ CONTAINS
         END DO
         Xs_c = LOG10(Xs_c+OS)
     
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
@@ -1383,7 +1383,7 @@ CONTAINS
         END DO
         Xs_i = LOG10(Xs_i+OS)
 
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_i, X_i )
 
         f_c = X - X_c
@@ -1506,7 +1506,7 @@ CONTAINS
     END DO
     Xs_a = LOG10(Xs_a+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_a, X_a )
 
     f_a = X - X_a
@@ -1534,7 +1534,7 @@ CONTAINS
     END DO
     Xs_b = LOG10(Xs_b+OS)
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
           ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_b, X_b )
 
     f_b = X - X_b
@@ -1566,7 +1566,7 @@ CONTAINS
         END DO
         Xs_c = LOG10(Xs_c+OS)
 
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_c, X_c )
 
         f_c = X - X_c
@@ -1612,7 +1612,7 @@ CONTAINS
         END DO
         Xs_i = LOG10(Xs_i+OS)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
               ( LogD, Yp, LogDs_i, Yps_i, OS, Xs_i, X_i )
 
         f_a = X - X_i

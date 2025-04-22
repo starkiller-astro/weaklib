@@ -3,7 +3,7 @@ MODULE wlEosTemperatureSeparateInversionModule
   USE wlKindModule, ONLY: &
     dp
   USE wlInterpolationModule, ONLY: &
-    LogInterpolateSingleVariable_2D_Custom_Point
+    LogInterpolateSingleVariable
   USE wlInterpolationUtilitiesModule, ONLY: &
     Index1D_Lin, &
     Index1D_Log
@@ -121,7 +121,7 @@ CONTAINS
     T_a = Ts(i_a)
     Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
@@ -135,14 +135,13 @@ CONTAINS
     CALL FullMuonEOS(MuonTable, MuonState)
      
     X_a = Xb_a + ElectronPhotonState % e + MuonState % e
-
     f_a = X - X_a
     
     i_b = i_a + 1
     T_b = Ts(i_b)
     Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
@@ -170,7 +169,7 @@ CONTAINS
     T_a = Ts(i_a)
     Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
@@ -183,7 +182,7 @@ CONTAINS
     MuonState % rhoym = D * Ym
     CALL FullMuonEOS(MuonTable, MuonState)
     
-    X_a = Xb_a + ElectronPhotonState % e + MuonState % e 
+    X_a = Xb_a + ElectronPhotonState % e + MuonState % e
 
     f_a = X - X_a
     
@@ -191,7 +190,7 @@ CONTAINS
     T_b = Ts(i_b)
     Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
@@ -204,12 +203,7 @@ CONTAINS
     MuonState % rhoym = D * Ym
     CALL FullMuonEOS(MuonTable, MuonState)
 
-    X_b = Xb_b + ElectronPhotonState % e + MuonState % e 
-
-    f_b = X - X_b
-
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, X_b )
+    X_b = Xb_b + ElectronPhotonState % e + ElectronPhotonState % e
 
     f_b = X - X_b
 
@@ -221,7 +215,7 @@ CONTAINS
         T_c = Ts(i_c)
         Xbs_c = Xs(iD:iD+1,i_c,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
@@ -266,7 +260,7 @@ CONTAINS
         T_i = Ts(i)
         Xbs_i = Xs(iD:iD+1,i,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
@@ -305,8 +299,9 @@ CONTAINS
       END DO
 
       IF ( d_i >= SizeTs ) THEN 
+          WRITE(*,*) 'Error in Inversion', X, X_a, X_b, T_a, T_b
           Error = 13
-      ENDIF
+        ENDIF
     END IF
 
     IF ( Error .NE. 0 ) THEN
@@ -376,7 +371,7 @@ CONTAINS
     T_a = Ts(i_a)
     Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
@@ -398,7 +393,7 @@ CONTAINS
     T_b = Ts(i_b)
     Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
+    CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
@@ -424,7 +419,7 @@ CONTAINS
         T_c = Ts(i_c)
         Xbs_c = Xs(iD:iD+1,i_c,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
@@ -464,7 +459,7 @@ CONTAINS
         T_i = Ts(i)
         Xbs_i = Xs(iD:iD+1,i,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
+        CALL LogInterpolateSingleVariable &
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
@@ -499,8 +494,9 @@ CONTAINS
       f_a = X - X_a
       f_b = X - X_b
 
-      IF ( f_a * f_b > 0.0_dp ) Error = 13
-
+      IF ( f_a * f_b > 0.0_dp ) THEN
+        Error = 13
+      ENDIF
     END IF
 
     IF( Error .NE. 0 )THEN
@@ -531,7 +527,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    
+    REAL(dp) :: OS_local
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
@@ -574,10 +570,17 @@ CONTAINS
     ! --- First Check if Initial Guess Gives a Solution ---
     i_a = iT
     T_a = Ts(i_a)
-    Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
+    ! Find Local offset
+    OS_local =  MINVAL( Xs(iD:iD+1,i_a,iYp:iYp+1) )
+    IF (OS_local .lt. 0.0_dp) THEN
+      OS_local = -1.1d0*OS_local
+    ELSE
+      OS_local = 0.0_dp
+    ENDIF
+    Xbs_a = LOG10(Xs(iD:iD+1,i_a,iYp:iYp+1) + OS_local)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_a
@@ -595,10 +598,16 @@ CONTAINS
     
     i_b = i_a + 1
     T_b = Ts(i_b)
-    Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
-    
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
+    OS_local =  MINVAL( Xs(iD:iD+1,i_b,iYp:iYp+1) )
+    IF (OS_local .lt. 0.0_dp) THEN
+      OS_local = -1.1d0*OS_local
+    ELSE
+      OS_local = 0.0_dp
+    ENDIF
+    Xbs_b = LOG10(Xs(iD:iD+1,i_b,iYp:iYp+1) + OS_local)
+
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_b
@@ -623,10 +632,16 @@ CONTAINS
 
     i_a = 1
     T_a = Ts(i_a)
-    Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
-    
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
+    OS_local =  MINVAL( Xs(iD:iD+1,i_a,iYp:iYp+1) )
+    IF (OS_local .lt. 0.0_dp) THEN
+      OS_local = -1.1d0*OS_local
+    ELSE
+      OS_local = 0.0_dp
+    ENDIF
+    Xbs_a = LOG10(Xs(iD:iD+1,i_a,iYp:iYp+1) + OS_local)
+
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_a
@@ -644,10 +659,16 @@ CONTAINS
     
     i_b = SizeTs
     T_b = Ts(i_b)
-    Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
-    
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
+    OS_local =  MINVAL( Xs(iD:iD+1,i_b,iYp:iYp+1) )
+    IF (OS_local .lt. 0.0_dp) THEN
+      OS_local = -1.1d0*OS_local
+    ELSE
+      OS_local = 0.0_dp
+    ENDIF
+    Xbs_b = LOG10(Xs(iD:iD+1,i_b,iYp:iYp+1) + OS_local)
+
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_b
@@ -663,21 +684,22 @@ CONTAINS
 
     f_b = X - X_b
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, X_b )
-
-    f_b = X - X_b
-
     IF ( f_a * f_b <= 0.0_dp ) THEN
 
       i_c = MIN( MAX( i_a + 1, iT ), i_b - 1 )
       DO WHILE ( i_b > i_a + 1 )
 
         T_c = Ts(i_c)
-        Xbs_c = Xs(iD:iD+1,i_c,iYp:iYp+1)
-        
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
+        OS_local =  MINVAL( Xs(iD:iD+1,i_c,iYp:iYp+1) )
+        IF (OS_local .lt. 0.0_dp) THEN
+          OS_local = -1.1d0*OS_local
+        ELSE
+          OS_local = 0.0_dp
+        ENDIF
+        Xbs_c = LOG10(Xs(iD:iD+1,i_c,iYp:iYp+1) + OS_local)
+            
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t   = T_c
@@ -719,10 +741,16 @@ CONTAINS
       DO i = 2, SizeTs - 1
 
         T_i = Ts(i)
-        Xbs_i = Xs(iD:iD+1,i,iYp:iYp+1)
-        
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
+        OS_local =  MINVAL( Xs(iD:iD+1,i,iYp:iYp+1) )
+        IF (OS_local .lt. 0.0_dp) THEN
+          OS_local = -1.1d0*OS_local
+        ELSE
+          OS_local = 0.0_dp
+        ENDIF
+        Xbs_i = LOG10(Xs(iD:iD+1,i,iYp:iYp+1) + OS_local)
+
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t = T_i
@@ -790,6 +818,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
+    REAL(dp) :: OS_local
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
@@ -829,10 +858,16 @@ CONTAINS
 
     i_a = 1
     T_a = Ts(i_a)
-    Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
-    
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
+    OS_local =  MINVAL( Xs(iD:iD+1,i_a,iYp:iYp+1) )
+    IF (OS_local .lt. 0.0_dp) THEN
+      OS_local = -1.1d0*OS_local
+    ELSE
+      OS_local = 0.0_dp
+    ENDIF
+    Xbs_a = LOG10(Xs(iD:iD+1,i_a,iYp:iYp+1) + OS_local)
+
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_a
@@ -851,10 +886,16 @@ CONTAINS
 
     i_b = SizeTs
     T_b = Ts(i_b)
-    Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
-    
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
+    OS_local =  MINVAL( Xs(iD:iD+1,i_b,iYp:iYp+1) )
+    IF (OS_local .lt. 0.0_dp) THEN
+      OS_local = -1.1d0*OS_local
+    ELSE
+      OS_local = 0.0_dp
+    ENDIF
+    Xbs_b = LOG10(Xs(iD:iD+1,i_b,iYp:iYp+1) + OS_local)
+
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_b
@@ -877,10 +918,16 @@ CONTAINS
 
         i_c = MAX( i_a + 1, ( i_a + i_b ) / 2 )
         T_c = Ts(i_c)
-        Xbs_c = Xs(iD:iD+1,i_c,iYp:iYp+1)
-        
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
+        OS_local =  MINVAL( Xs(iD:iD+1,i_c,iYp:iYp+1) )
+        IF (OS_local .lt. 0.0_dp) THEN
+          OS_local = -1.1d0*OS_local
+        ELSE
+          OS_local = 0.0_dp
+        ENDIF
+        Xbs_c = LOG10(Xs(iD:iD+1,i_c,iYp:iYp+1) + OS_local)
+
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t = T_c
@@ -917,10 +964,16 @@ CONTAINS
       DO i = SizeTs - 1, 2, -1
 
         T_i = Ts(i)
-        Xbs_i = Xs(iD:iD+1,i,iYp:iYp+1)
-        
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
+        OS_local =  MINVAL( Xs(iD:iD+1,i,iYp:iYp+1) )
+        IF (OS_local .lt. 0.0_dp) THEN
+          OS_local = -1.1d0*OS_local
+        ELSE
+          OS_local = 0.0_dp
+        ENDIF
+        Xbs_i = LOG10(Xs(iD:iD+1,i,iYp:iYp+1) + OS_local)
+
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t = T_i
@@ -961,7 +1014,7 @@ CONTAINS
     IF( Error .NE. 0 )THEN
       T = 0.0_dp
     ELSE
-      T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS_local )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DPYpYl_NoGuess
@@ -986,7 +1039,6 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    
     INTEGER  :: iD, iT, iYp, iL_D, iL_Y
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
@@ -1031,8 +1083,8 @@ CONTAINS
     T_a = Ts(i_a)
     Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_a
@@ -1052,8 +1104,8 @@ CONTAINS
     T_b = Ts(i_b)
     Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_b
@@ -1070,7 +1122,7 @@ CONTAINS
     f_b = X - X_b
     
     IF ( f_a * f_b <= 0.0_dp ) THEN
-      T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      T = InverseLogInterp( T_a, T_b, X_a, X_b, X,  OS )
       RETURN
     END IF
 
@@ -1080,8 +1132,8 @@ CONTAINS
     T_a = Ts(i_a)
     Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_a
@@ -1101,8 +1153,8 @@ CONTAINS
     T_b = Ts(i_b)
     Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_b
@@ -1118,11 +1170,6 @@ CONTAINS
 
     f_b = X - X_b
 
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, X_b )
-
-    f_b = X - X_b
-
     IF ( f_a * f_b <= 0.0_dp ) THEN
 
       i_c = MIN( MAX( i_a + 1, iT ), i_b - 1 )
@@ -1131,8 +1178,8 @@ CONTAINS
         T_c = Ts(i_c)
         Xbs_c = Xs(iD:iD+1,i_c,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t   = T_c
@@ -1176,8 +1223,8 @@ CONTAINS
         T_i = Ts(i)
         Xbs_i = Xs(iD:iD+1,i,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t = T_i
@@ -1220,13 +1267,13 @@ CONTAINS
     IF ( Error .NE. 0 ) THEN
       T = 0.0_dp
     ELSE
-      T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      T = InverseLogInterp( T_a, T_b, X_a, X_b, X,  OS )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DSYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, Error )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -1237,7 +1284,7 @@ CONTAINS
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
     REAL(dp), INTENT(in)  :: Ds(1:), Ts(1:), Yps(1:)
     REAL(dp), INTENT(in)  :: Xs(1:,1:,1:)
-    REAL(dp), INTENT(in)  :: OS
+    REAL(dp), INTENT(in)  ::  OS
     
     REAL(dp), INTENT(out) :: T
     INTEGER,  INTENT(out) :: Error
@@ -1284,8 +1331,8 @@ CONTAINS
     T_a = Ts(i_a)
     Xbs_a = Xs(iD:iD+1,i_a,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_a
@@ -1306,8 +1353,8 @@ CONTAINS
     T_b = Ts(i_b)
     Xbs_b = Xs(iD:iD+1,i_b,iYp:iYp+1)
     
-    CALL LogInterpolateSingleVariable_2D_Custom_Point &
-           ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
+    CALL LogInterpolateSingleVariable &
+           ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
     ElectronPhotonState % t = T_b
@@ -1332,8 +1379,8 @@ CONTAINS
         T_c = Ts(i_c)
         Xbs_c = Xs(iD:iD+1,i_c,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t = T_c
@@ -1372,8 +1419,8 @@ CONTAINS
         T_i = Ts(i)
         Xbs_i = Xs(iD:iD+1,i,iYp:iYp+1)
         
-        CALL LogInterpolateSingleVariable_2D_Custom_Point &
-               ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
+        CALL LogInterpolateSingleVariable &
+               ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
         ElectronPhotonState % t = T_i
@@ -1414,7 +1461,7 @@ CONTAINS
     IF( Error .NE. 0 )THEN
       T = 0.0_dp
     ELSE
-      T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      T = InverseLogInterp( T_a, T_b, X_a, X_b, X,  OS )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess

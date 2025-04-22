@@ -36,7 +36,7 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER  :: iLepton, iRho, iTemp, iYe
 
     ReadFullTable = .false.
-    RedHDF5Table = .true.
+    RedHDF5Table = .false.
     ResetNegativePressure = .false.
     
     Add_to_energy = 8.9d0*ergmev/rmu

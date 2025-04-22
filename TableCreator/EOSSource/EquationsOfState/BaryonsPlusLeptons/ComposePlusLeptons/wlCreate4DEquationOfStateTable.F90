@@ -104,12 +104,12 @@ PROGRAM wlCreateEquationOfStateTable
     nPoints(1) = nPointsCompose(1)
     nPoints(2) = nPointsCompose(2)
     nPoints(3) = nPointsCompose(3)
-    nPoints(4) = 30
+    nPoints(4) = 35
 
     ALLOCATE( YmGrid(nPoints(4)) )
 
     ! Set up logarithmic grid, we will see exactly how
-     CALL MakeLogGrid( 1.0d-5, 0.1_dp, nPoints(4), YmGrid )
+     CALL MakeLogGrid( 1.0d-6, 0.1_dp, nPoints(4), YmGrid )
 
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
@@ -221,7 +221,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! and typically MAXVAL(YpCompOSE) ~ 0.55 so you should be quite safe.
 
     iCount = 0
-    !$OMP PARALLEL DO PRIVATE(ElectronPhotonState, MuonState, D, T, Ye, Ym, Yp, dYp, LocalOffset, Xbary) &
+    !$OMP PARALLEL DO PRIVATE(ElectronPhotonState, MuonState, Ye, Ym, Yp, dYp, LocalOffset, Xbary) &
     !$OMP SHARED(iCount) &
     !$OMP COLLAPSE(3)
     DO iRho=1,nPoints(1)
@@ -240,8 +240,6 @@ PROGRAM wlCreateEquationOfStateTable
               !$OMP END CRITICAL
             ENDIF
 
-            D  = EOSTable % TS % States(1) % Values(iRho)
-            T  = EOSTable % TS % States(2) % Values(iTemp)
             Ye = EOSTable % TS % States(3) % Values(iYe)
             Ym = EOSTable % TS % States(4) % Values(iYm)
             IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
@@ -252,12 +250,11 @@ PROGRAM wlCreateEquationOfStateTable
 
             ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
             ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
-            ElectronPhotonState % ye  = EOSTable % TS % States(3) % Values(iYe)
+            ElectronPhotonState % ye  = Ye
             CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
             MuonState % t     = EOSTable % TS % States(2) % Values(iTemp)
-            MuonState % rhoym = EOSTable % TS % States(1) % Values(iRho) * &
-                                EOSTable % TS % States(4) % Values(iYm)
+            MuonState % rhoym = EOSTable % TS % States(1) % Values(iRho) * Ym
             CALL FullMuonEOS(MuonTable, MuonState)
 
             ! PRESSURE
@@ -275,6 +272,11 @@ PROGRAM wlCreateEquationOfStateTable
             EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe,iYm) = &
             Xbary + MuonState % p + ElectronPhotonState % p
 
+            IF (iRho == 200 .and. iYe == 48 .and. iYm == 1) THEN
+              WRITE(*,*) Xbary , MuonState % p , ElectronPhotonState % p, Ym
+              WRITE(*,*) iRho,iTemp,iYe,iYm
+            ENDIF
+
             ! ENTROPY
             LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,2) )
             IF (LocalOffset .lt. 0.0_dp) THEN
@@ -289,6 +291,11 @@ PROGRAM wlCreateEquationOfStateTable
             
             EOSTable % DV % Variables(2) % Values(iRho,iTemp,iYe,iYm) = &
               Xbary + MuonState % s + ElectronPhotonState % s
+
+            IF (iYm == 1 .and. MuonState % s / (Xbary + ElectronPhotonState % s) > 0.1d0) THEN
+              WRITE(*,*) Xbary , MuonState % s , ElectronPhotonState % s, Ym
+              WRITE(*,*) iRho,iTemp,iYe,iYm
+            ENDIF
 
             ! ENERGY
             LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,3) )
@@ -474,18 +481,9 @@ PROGRAM wlCreateEquationOfStateTable
       DO iTemp=1,nPoints(2)
         DO iYm=1,nPoints(4)
 
-          D  = EOSTable % TS % States(1) % Values(iRho)
-          T  = EOSTable % TS % States(2) % Values(iTemp)
-          Ye = EOSTable % TS % States(3) % Values(iYe)
-          Ym = EOSTable % TS % States(4) % Values(iYm)
-          IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
-            Ym = 0
-          ENDIF
-          Yp = Ye + Ym
-
           ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
           ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
-          ElectronPhotonState % ye  = EOSTable % TS % States(3) % Values(iYe)
+          ElectronPhotonState % ye  = EOSTable % TS % States(3) % Values(nPoints(3))
           CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
           EOSTable % DV % Variables(1) % Values(iRho,iTemp,nPoints(3),iYm) = &
@@ -554,7 +552,7 @@ PROGRAM wlCreateEquationOfStateTable
     LogEntropy = LOG10(EOSCompOSE(:,:,:,2) + OS_S)
 
     iCount = 0
-    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Yp, Gamma, Cs) &
+    !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Gamma, Cs) &
     !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
     !$OMP LogEnergy, LogEntropy, OS_P, OS_E, OS_S, HelmholtzTable, MuonTable, iCount) &
     !$OMP COLLAPSE(3)
@@ -581,14 +579,13 @@ PROGRAM wlCreateEquationOfStateTable
             IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
               Ym = 0
             ENDIF
-            Yp = Ye + Ym
           
             CALL CalculateSoundSpeed( D, T, Ye, Ym, RhoCompOSE(:), &
                   TempCompOSE(:), YpCompOSE(:), &
                   EOSCompOSE(:,:,:,1), OS_P, &
                   LogEnergy (:,:,:), OS_E, &
                   LogEntropy(:,:,:), OS_S, &
-                    HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
+                  HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
 
             EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
           ENDDO
@@ -613,7 +610,7 @@ PROGRAM wlCreateEquationOfStateTable
     ENDDO
 
     PRINT*, "Offset negative quantities"
-    
+
     EOSTable % DV % Offsets(:) = 0.0_dp
     
     WRITE(*,*) 'These are the offsets'
@@ -627,27 +624,18 @@ PROGRAM wlCreateEquationOfStateTable
         ELSE IF ( Minimum_Value .gt. 0.0_dp) THEN
             EOSTable % DV % Offsets(iVars) = 0.0_dp
         ELSE
-          WRITE(*,*) 'Minimum is zero', iVars, Minimum_Value
+          WRITE(*,*) 'Minimum is zero', iVars
+          EOSTable % DV % Variables(iVars) % Values = & 
+              MAX(EOSTable % DV % Variables(iVars) % Values, 1.0e-30_dp)
         ENDIF
 
         WRITE(*,*) iVars, EOSTable % DV % Offsets(iVars), Minimum_Value
 
+        EOSTable % DV % Variables(iVars) % Values = &
+          LOG10(EOSTable % DV % Variables(iVars) % Values)
+
     END DO
    
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values)
-
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iElectronChemicalPotential) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values)
-
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"

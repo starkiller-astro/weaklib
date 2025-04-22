@@ -146,7 +146,6 @@ CONTAINS
 
     REAL(dp), INTENT(in) :: Ds(1:)      , Ts(1:)      , Yps(1:)
     REAL(dp), INTENT(in) :: Es(1:,1:,1:), Ps(1:,1:,1:), Ss(1:,1:,1:)
-
     CHARACTER(len=*), INTENT(IN)   :: HelmholtzTableName, MuonTableName
     LOGICAL,  INTENT(in), OPTIONAL :: Verbose_Option
     
@@ -207,6 +206,7 @@ CONTAINS
     REAL(dp) :: Yp
     
     Yp = Ye + Ym
+    
     CheckInputError = 0
 
     IF ( .NOT. InversionComponentsInitialized ) THEN
@@ -256,7 +256,7 @@ CONTAINS
     ErrorString(13) = 'Unable to Find Any Root'
 
     WRITE(*,*)
-    WRITE(*,*) '  wlEOSInversionModule ERROR: ' // TRIM( ErrorString(Error) )
+    WRITE(*,*) '  wlEOSSplitInversionModule ERROR: ' // TRIM( ErrorString(Error) )
     WRITE(*,*)
 
   END SUBROUTINE DescribeEOSComponentsInversionError
@@ -277,21 +277,15 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
     
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 1.0d0
-    InputP = 0.0d0
-    InputS = 0.0d0
-    
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_Guess &
-             ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, Error )
+             ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
+               OS, T, T_Guess, Error )
     END IF
     
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error
-
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError &
     ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess )
@@ -309,12 +303,6 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
 
     INTEGER  :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 1.0d0
-    InputP = 0.0d0
-    InputS = 0.0d0
     
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
@@ -340,12 +328,6 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 1.0d0
-    InputP = 0.0d0
-    InputS = 0.0d0
     
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
@@ -373,12 +355,6 @@ CONTAINS
 
     INTEGER  :: Error
     
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 1.0d0
-    InputP = 0.0d0
-    InputS = 0.0d0
-    
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
@@ -403,12 +379,6 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 0.0d0
-    InputP = 1.0d0
-    InputS = 0.0d0
     
     T = 0.0_dp
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
@@ -437,12 +407,6 @@ CONTAINS
 
     INTEGER  :: Error
     
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 0.0d0
-    InputP = 1.0d0
-    InputS = 0.0d0
-    
     T = 0.0_dp
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
@@ -467,13 +431,7 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
 
-    InputE = 0.0d0
-    InputP = 1.0d0
-    InputS = 0.0d0
-    
     T = 0.0_dp
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
@@ -499,13 +457,7 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
 
-    InputE = 0.0d0
-    InputP = 1.0d0
-    InputS = 0.0d0
-    
     T = 0.0_dp
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
@@ -530,12 +482,6 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 0.0d0
-    InputP = 0.0d0
-    InputS = 1.0d0
     
     T = 0.0_dp
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
@@ -564,12 +510,6 @@ CONTAINS
 
     INTEGER  :: Error
     
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 0.0d0
-    InputP = 0.0d0
-    InputS = 1.0d0
-    
     T = 0.0_dp
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
@@ -594,12 +534,6 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 0.0d0
-    InputP = 0.0d0
-    InputS = 1.0d0
     
     T = 0.0_dp
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
@@ -626,12 +560,6 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
 
     INTEGER  :: Error
-    
-    REAL(DP) :: InputE, InputP, InputS
-
-    InputE = 0.0d0
-    InputP = 0.0d0
-    InputS = 1.0d0
     
     T = 0.0_dp
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )

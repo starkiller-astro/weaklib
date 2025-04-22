@@ -33,10 +33,10 @@ PROGRAM wlCalculateSoundSpeed
     REAL(dp) :: mue_baryons, mue_electrons, mue_total
     REAL(dp) :: mup_baryons, mup_total, mun_baryons, mun_total
     
-    REAL(DP) :: OS_P, OS_E, OS_S, OS_V
+    REAL(DP) :: OS_P, OS_E, OS_S
     REAL(DP) :: D, T, Yp, Ye, Ym, cs2, Gamma
     REAL(dp), ALLOCATABLE :: eos_table(:,:,:,:), Pe(:,:,:), Ee(:,:,:), &
-        P_T(:,:,:), V_T(:,:,:), D_T(:), T_T(:), Yp_T(:)
+        P_T(:,:,:), S_T(:,:,:), E_T(:,:,:), D_T(:), T_T(:), Yp_T(:)
     
     LOGICAL :: RedHDF5Table, SeparateContributions
     INTEGER :: igamma = 3
@@ -47,7 +47,7 @@ PROGRAM wlCalculateSoundSpeed
     CHARACTER(len=128) :: BaryonEOSTableName, FullEOSTableName, BaryonPlusEleName
 
     RedHDF5Table = .false.
-    SeparateContributions = .TRUE.
+    SeparateContributions = .false.
     
     IF (RedHDF5Table) THEN
         FullEOSTableName = 'FullEOS_interpolated.h5'
@@ -116,13 +116,13 @@ PROGRAM wlCalculateSoundSpeed
                 ! calculate electron quantities
                 CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
 
-                Ee(iRho,iTemp,iYp) = ElectronPhotonState % e + 0.511d0 / rmu * ergmev * ElectronPhotonState % ye
+                Ee(iRho,iTemp,iYp) = ElectronPhotonState % e
                 Pe(iRho,iTemp,iYp) = ElectronPhotonState % p
                 
-                press_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
+                press_baryons = (EOSBaryonTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
                     EOSBaryonTable % DV % Offsets(iPressure)
                 press_electrons = ElectronPhotonState % p
-                press_total = 10.0d0**(EOSFullTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
+                press_total = (EOSFullTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
                     EOSFullTable % DV % Offsets(iPressure)
                 
                 s_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
@@ -133,7 +133,7 @@ PROGRAM wlCalculateSoundSpeed
                 
                 eps_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
                     EOSBaryonTable % DV % Offsets(iEnergy)
-                eps_electrons = ElectronPhotonState % e + 0.511 / rmu * ergmev * ElectronPhotonState % ye
+                eps_electrons = ElectronPhotonState % e
                 eps_total = 10.0d0**(EOSFullTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
                     EOSFullTable % DV % Offsets(iEnergy)
                 
@@ -182,7 +182,8 @@ PROGRAM wlCalculateSoundSpeed
     
     ALLOCATE( eos_table(nRho, nTemp, nYp, 3) )
     ALLOCATE( P_T(nRho, nTemp, nYp) )
-    ALLOCATE( V_T(nRho, nTemp, nYp) )
+    ALLOCATE( E_T(nRho, nTemp, nYp) )
+    ALLOCATE( S_T(nRho, nTemp, nYp) )
     ALLOCATE( D_T(nRho) )
     ALLOCATE( T_T(nTemp) )
     ALLOCATE( Yp_T(nYp) )
@@ -191,7 +192,7 @@ PROGRAM wlCalculateSoundSpeed
     CALL CPU_TIME( tBegin )
     ! SOME DEFINITION
     CALL CalculateSeparateSoundSpeed(nRho, nTemp, nYp, &
-        10.0d0**(EOSBaryonTable % DV % Variables(iPressure) % Values(:,:,:)) - OS_P, Pe, &
+        (EOSBaryonTable % DV % Variables(iPressure) % Values(:,:,:)) - OS_P, Pe, &
         10.0d0**(EOSBaryonTable % DV % Variables(iEnergy) % Values(:,:,:)) - OS_E, Ee, &
         OS_E, &
         EOSBaryonTable % TS % States(1) % Values(:),  &
@@ -219,8 +220,8 @@ PROGRAM wlCalculateSoundSpeed
     T_T = EOSBaryonTable % TS % States(2) % Values(:)
     Yp_T = EOSBaryonTable % TS % States(3) % Values(:)
     P_T = EOSBaryonTable % DV % Variables(iPressure) % Values(:,:,:)
-    V_T = EOSBaryonTable % DV % Variables(iEnergy) % Values(:,:,:)
-    OS_V = OS_E
+    E_T = EOSBaryonTable % DV % Variables(iEnergy) % Values(:,:,:)
+    S_T = EOSBaryonTable % DV % Variables(iEntropy) % Values(:,:,:)
     
     ! Do some housekeeping
     WRITE(*,*) 'start bollig'
@@ -237,7 +238,7 @@ PROGRAM wlCalculateSoundSpeed
                 Ye = Yp
                 Ym = 0.0d0
                 
-                CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, V_T, OS_V, &
+                CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, S_T, OS_S, &
                     HelmholtzTable, MuonTable, Gamma, cs2, SeparateContributions)
 
                 EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2
@@ -457,7 +458,7 @@ CONTAINS
         
         do k=1,nye
             do j=1,ntemp
-                do i=1,nrho		
+                do i=1,nrho	
                     Gamma(i,j,k) = (Pb(i,j,k) * dlnPbdlnrho(i,j,k) + Pe(i,j,k) * dlnPedlnrho(i,j,k) + &
                         (Pb(i,j,k) * dlnPbdlnT(i,j,k) + Pe(i,j,k) * dlnPedlnT(i,j,k))**2.0d0 / &
                         ((Eb(i,j,k) * dlnEbdlnT(i,j,k) + Ee(i,j,k) * dlnEedlnT(i,j,k)) * rho(i) ) ) / &
