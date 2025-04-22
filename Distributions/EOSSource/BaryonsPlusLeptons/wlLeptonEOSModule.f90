@@ -381,7 +381,7 @@ CONTAINS
     WRITE(*,*) MAXVAL(MuonEOS % s), MINVAL(MuonEOS % s)
     WRITE(*,*) MAXVAL(MuonEOS % mu), MINVAL(MuonEOS % mu)
     
-  END  SUBROUTINE ReadMuonEOSdat
+  END SUBROUTINE ReadMuonEOSdat
 
   ! Tools to calculate derivatives, maybe worth moving into another MODULE
   FUNCTION Gradient(y, x, nX) RESULT(grad)

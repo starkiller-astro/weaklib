@@ -145,32 +145,26 @@ CONTAINS
 
       ELSE
       
-        CALL GetIndexAndDelta_Log( D * Ym, MuonTable % rhoym(:), iD, dD )
+        CALL GetIndexAndDelta_Log( D, MuonTable % rhoym(:)/Ym, iD, dD )
         CALL GetIndexAndDelta_Log( T, MuonTable % t(:), iT, dT )
         
         aD = 1.0_dp / ( D * LOG10( MuonTable % rhoym(iD+1) / MuonTable % rhoym(iD) ) )
         aT = 1.0_dp / ( T * LOG10( MuonTable % t(iT+1) / MuonTable % t(iT) ) )
 
         CALL LinearInterpDeriv_Array_Point &
-          ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % p), Pmu, &
-            dPmudD, dPmudT )
-        
-        dPmudD = dPmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
-        
-        CALL LinearInterpDeriv_Array_Point &
-          ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % e), Emu, &
-            dEmudD, dEmudT )
-            
-        dEmudD = dEmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
+          ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % p (iT:iT+1,iD:iD+1)), Pmu, &
+            dPmudT, dPmudD )
 
         CALL LinearInterpDeriv_Array_Point &
-          ( iD, iT, dD, dT, aD, aT, 0.0_dp, LOG10(MuonTable % s), Smu, &
-            dSmudD, dSmudT )
+          ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % e (iT:iT+1,iD:iD+1)), Emu, &
+            dEmudT, dEmudD )
           
-        dSmudD = dSmudD * Ym ! make sure the derivative is wr2 rho, not rhoym
-
+        CALL LinearInterpDeriv_Array_Point &
+          ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % s (iT:iT+1,iD:iD+1)), Smu, &
+            dSmudT, dSmudD )
+          
       ENDIF
-
+      
       ! D and T in front take care of the derivative 
       ! wr2 logrho and logT. The rho multiplying the denominator in the second 
       ! one makes sure that you have erg/cm^3 instead of erg/g
@@ -178,7 +172,7 @@ CONTAINS
             T*(dPbarydT + dPeledT + dPmudT)**2.0_DP / &
             (D*(dEbarydT + dEeledT + dEmudT)) ) / &
             (Pbary + Pele + Pmu)
-      
+
       ! ! Another way of doing it
       ! Gamma = D*( (dPbarydD + dPeledD + dPmudD)   &
       !       -     (dSbarydD + dSeledD + dSmudD)   &
@@ -243,7 +237,7 @@ CONTAINS
       Gamma = (D*dPdD + T*dPdT**2.0_DP / &
           (D*dEdT) ) / Ptot
 
-      ! ! Another way of doing it
+      ! Another way of doing it
       ! Gamma = D/Ptot * ( dPdD - (dSdD*dPdT/dSdT) )
 
       ! relativistic definition with enthalpy

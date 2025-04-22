@@ -47,7 +47,7 @@ PROGRAM wlCalculateSoundSpeed
     CHARACTER(len=128) :: BaryonEOSTableName, FullEOSTableName, BaryonPlusEleName
 
     RedHDF5Table = .false.
-    SeparateContributions = .false.
+    SeparateContributions = .true.
     
     IF (RedHDF5Table) THEN
         FullEOSTableName = 'FullEOS_interpolated.h5'
@@ -236,7 +236,7 @@ PROGRAM wlCalculateSoundSpeed
                 Yp = EOSBaryonTable % TS % States(3) % Values(iYp)
                 
                 Ye = Yp
-                Ym = 0.0d0
+                Ym = 1.0d-2
                 
                 CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, S_T, OS_S, &
                     HelmholtzTable, MuonTable, Gamma, cs2, SeparateContributions)
