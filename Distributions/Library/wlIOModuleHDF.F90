@@ -1272,6 +1272,14 @@ CONTAINS
     CALL WriteHDF( "iGamma1", buffer, &
                              group_id, datasize1d )
 
+    buffer(1) = DV % Indices % iNeutronSelfEnergy 
+    CALL WriteHDF( "iNeutronSelfEnergy", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iProtonSelfEnergy 
+    CALL WriteHDF( "iProtonSelfEnergy", buffer, &
+                            group_id, datasize1d )
+
   END SUBROUTINE WriteDependentVariables4DHDF
 
   SUBROUTINE ReadThermoState4DHDF( TS, file_id )

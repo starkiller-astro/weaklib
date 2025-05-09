@@ -373,7 +373,7 @@ PROGRAM wlCreateEquationOfStateTable
         ELSE
           WRITE(*,*) 'Minimum is zero', iVars
           EOSTable % DV % Variables(iVars) % Values = & 
-              MAX(EOSTable % DV % Variables(iVars) % Values, 1.0e-30_dp)
+              MAX(EOSTable % DV % Variables(iVars) % Values, 1.0e-99_dp)
         ENDIF
 
         WRITE(*,*) iVars, EOSTable % DV % Offsets(iVars), Minimum_Value

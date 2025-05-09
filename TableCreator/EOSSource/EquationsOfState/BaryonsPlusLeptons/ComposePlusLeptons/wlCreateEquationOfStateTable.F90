@@ -229,17 +229,11 @@ PROGRAM wlCreateEquationOfStateTable
 
     END DO
    
-    !EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values = &
-    !    LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iPressure) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iEntropyPerBaryon) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iInternalEnergyDensity) % Values)
-        
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iProtonChemicalPotential) % Values)
-    EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values = &
-        LOG10(EOSTable % DV % Variables(EOSTable % DV % Indices % iNeutronChemicalPotential) % Values)
+    ! Now log everything before putting it in the table (except for pressure)
+    DO iVars = 2, nVariables
+      EOSTable % DV % Variables(iVars) % Values = &
+          LOG10( MAX(EOSTable % DV % Variables(iVars) % Values, 1.0d-99) )
+    END DO
                   
     ! ------------- NOW DO ELECTRON EOS ------------------ !
     nPointsHelm = (/ iTempMax, iDenMax /)

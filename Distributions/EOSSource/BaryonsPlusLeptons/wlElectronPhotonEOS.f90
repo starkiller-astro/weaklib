@@ -415,8 +415,8 @@ CONTAINS
   ElectronPhotonState % dpdT = dpresdt
   ElectronPhotonState % dpdr = dpresdd
 
-  ElectronPhotonState % e    = ener + me / rmu * ergmev * ye
-  ElectronPhotonState % eele = eele + me / rmu * ergmev * ye
+  ElectronPhotonState % e    = ener !+ me / rmu * ergmev * ye
+  ElectronPhotonState % eele = eele !+ me / rmu * ergmev * ye
   ElectronPhotonState % erad = erad
   ElectronPhotonState % dedT = denerdt
   ElectronPhotonState % dedr = denerdd

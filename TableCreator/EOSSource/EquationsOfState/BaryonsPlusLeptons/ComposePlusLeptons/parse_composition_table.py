@@ -9,119 +9,132 @@ import numpy as np
 import sys
 
 def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7):
-
+    
     yq = np.loadtxt(file_yq, skiprows=2)
     with open(file_compo, 'r') as f:
         lines = f.readlines()
-        
-        N = len(lines)
-        
-        irho, iT, iyq = np.zeros(N,dtype=int), np.zeros(N,dtype=int), np.zeros(N,dtype=int)
-        Xp, Xn, Xa, Xh, Abar, Zbar = np.zeros(N), np.zeros(N), np.zeros(N), np.zeros(N), np.zeros(N), np.zeros(N)
-        for iL, line in enumerate(lines):
-            
-            elements = [l.strip() for l in line.split()]
-            data = [int(ele) if ele.isdigit() else float(ele) for ele in elements]
-            
-            # now that you have the data, identify how many pairs and quads you have
-            iT[iL], irho[iL], iyq[iL] = data[0], data[1], data[2]
-            iphase, Npairs = data[3], data[4]
-            
-            if len(data) > 5 + 2*Npairs:
-                Nquad = data[5 + 2*Npairs]
+
+    N = len(lines)
+    irho = np.zeros(N, dtype=int)
+    iT = np.zeros(N, dtype=int)
+    iyq = np.zeros(N, dtype=int)
+    Xp = np.zeros(N)
+    Xn = np.zeros(N)
+    Xa = np.zeros(N)
+    Xh = np.zeros(N)
+    Abar = np.zeros(N)
+    Zbar = np.zeros(N)
+
+    for iL, line in enumerate(lines):
+        elements = line.split()
+        data = [int(ele) if ele.isdigit() else float(ele) for ele in elements]
+
+        iT[iL], irho[iL], iyq[iL] = data[0], data[1], data[2]
+        iphase, Npairs = data[3], data[4]
+
+        base_idx = 5
+        if len(data) > base_idx + 2 * Npairs:
+            Nquad = data[base_idx + 2 * Npairs]
+            has_quad = True
+        else:
+            Nquad = 0
+            has_quad = False
+            if len(data) != base_idx + 2 * Npairs:
+                raise RuntimeError(f'incompatible data length 1 at line {iL}: {len(data)} vs {base_idx + 2 * Npairs}')
+
+        expected_len = base_idx + 2 * Npairs + (1 + 4 * Nquad if has_quad else 0)
+        if len(data) != expected_len:
+            raise RuntimeError(f'incompatible data length 2 at line {iL}: {len(data)} vs {expected_len}')
+
+        for ipair in range(Npairs):
+            dict_index = data[base_idx + 2 * ipair]
+            abundance_fraction = data[base_idx + 2 * ipair + 1]
+
+            key = str(dict_index)
+            if key not in dict_pairs:
+                raise RuntimeError(f"Unknown index {key} at line {iL}")
+            charge, baryon_number = dict_pairs[key]
+            mass_fraction = abundance_fraction * baryon_number
+
+            if dict_index == 10:
+                Xn[iL] = mass_fraction
+            elif dict_index == 11:
+                Xp[iL] = mass_fraction
+            elif dict_index == 4002:
+                Xa[iL] = mass_fraction
+            elif dict_index == 0:
+                continue  # skip electron
             else:
-                Nquad = 0
-                if len(data) != 5 + 2*Npairs:
-                    print('incompatible data length 1', len(data), 5 + 2*Npairs )
-                    sys.exit()
-                    
-            if len(data) != 5 + 2*Npairs + 4*Nquad+1:
-                print('incompatible data length 2', len(data), 5 + 2*Npairs + 4*Nquad+1 )
-                sys.exit()
-                
-            for ipair in range(Npairs):
-                dict_index = data[5 + 2*ipair]
-                abundance_fraction = data[5 + 2*ipair+1]
-                baryon_number = dict_pairs[str(dict_index)][1]
-                mass_fraction = abundance_fraction * baryon_number
-                charge = dict_pairs[str(dict_index)][0]
-                
-                if dict_index == 10:
-                    Xn[iL] = mass_fraction
-                elif dict_index == 11:
-                    Xp[iL] = mass_fraction
-                elif dict_index == 4002:
-                    Xa[iL] = mass_fraction
-                elif dict_index == 0:
-                    electron_fraction = abundance_fraction
-                else:
-                    # lumping light nuclei in to protons and neutrons
-                    Xp[iL] += mass_fraction * charge / baryon_number
-                    Xn[iL] += mass_fraction * (baryon_number - charge) / baryon_number
-            
-            if Nquad > 1:
-                print("I can't handle this, sorry")
-                # sys.exit()
-            
-            if Nquad == 0:
-                # check mass fraction sums to 1
-                if abs(Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL] - 1.0) > mfrac_tol:
-                    print('mass fraction not conserved 1', iL, Xh[iL] + Xp[iL] + Xn[iL])
-                    sys.exit()
-                    
-                # check charge conservation            
-                if abs(Xp[iL] + Xa[iL]/2. - yq[iyq[iL]-1]) > charge_tol:
-                    print('charge not conserved 2', iL, Xp[iL] + Xa[iL]/2., yq[iyq[iL]-1])
-                    sys.exit()
-                
-                continue            
-            else:
-                index = data[5 + 2*Npairs+1]
-                if index != dict_pairs['index_avg_nucleus']:
-                    print('I do not know what particle this is')
-                    sys.exit()
-                    
-                Abar[iL] = data[5 + 2*Npairs+2]
-                Zbar[iL] = data[5 + 2*Npairs+3]
-                Xh[iL] = data[5 + 2*Npairs+4] * Abar[iL]
-                
-                # check mass fraction sums to 1
-                if abs(Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL] - 1.0) > mfrac_tol:
-                    print('mass fraction not conserved 3', iL, Xh[iL] + Xp[iL] + Xn[iL])
-                    sys.exit()
-                    
-                # check charge conservation
-                if abs(Xp[iL] + Xa[iL]/2. + Zbar[iL]/Abar[iL]*Xh[iL] - yq[iyq[iL]-1]) > charge_tol:
-                    print('charge not conserved 3', iL, Xp[iL] + Xa[iL]/2. + Zbar[iL]/Abar[iL]*Xh[iL], yq[iyq[iL]-1])
-                    sys.exit()        
+                # lumping light nuclei
+                Xp[iL] += mass_fraction * charge / baryon_number
+                Xn[iL] += mass_fraction * (baryon_number - charge) / baryon_number
+
+        if Nquad > 1:
+            raise RuntimeError(f"I can't handle Nquad > 1 at line {iL}")
+
+        if Nquad == 0:
+            msum = Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL]
+            if abs(msum - 1.0) > mfrac_tol:
+                raise RuntimeError(f"mass fraction not conserved at line {iL}: {msum}")
+
+            charge_sum = Xp[iL] + Xa[iL]/2.
+            if abs(charge_sum - yq[iyq[iL]-1]) > charge_tol:
+                raise RuntimeError(f"charge not conserved at line {iL}: {charge_sum} vs {yq[iyq[iL]-1]}")
+            continue
+
+        # Nquad == 1
+        quad_idx = base_idx + 2 * Npairs + 1
+        index = data[quad_idx]
+        if index != dict_pairs['index_avg_nucleus']:
+            raise RuntimeError(f"Unknown quad index {index} at line {iL}")
+
+        Abar[iL] = data[quad_idx + 1]
+        Zbar[iL] = data[quad_idx + 2]
+        Xh[iL] = data[quad_idx + 3] * Abar[iL]
+
+        msum = Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL]
+        if abs(msum - 1.0) > mfrac_tol:
+            raise RuntimeError(f"mass fraction not conserved (quad) at line {iL}: {msum}")
+
+        charge_sum = Xp[iL] + Xa[iL]/2. + Zbar[iL]/Abar[iL]*Xh[iL]
+        if abs(charge_sum - yq[iyq[iL]-1]) > charge_tol:
+            raise RuntimeError(f"charge not conserved (quad) at line {iL}: {charge_sum} vs {yq[iyq[iL]-1]}")
 
     return iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar
 
 def read_micro(file_micro, dict_micro):
     with open(file_micro, 'r') as f:
         lines = f.readlines()
-        
-        N = len(lines)
-        
-        irho, iT, iyq = np.zeros(N,dtype=int), np.zeros(N,dtype=int), np.zeros(N,dtype=int)
-        p_self_ene, n_self_ene = np.zeros(N), np.zeros(N)
-        for iL, line in enumerate(lines):
-            
-            elements = [l.strip() for l in line.split()]
-            data = [int(ele) if ele.isdigit() else float(ele) for ele in elements]        
-            iT[iL], irho[iL], iyq[iL] = data[0], data[1], data[2]
 
-            nMicro = data[3]
+    N = len(lines)
+    irho = np.zeros(N, dtype=int)
+    iT = np.zeros(N, dtype=int)
+    iyq = np.zeros(N, dtype=int)
+    p_self_ene = np.zeros(N)
+    n_self_ene = np.zeros(N)
 
-            # now get indices and values
-            indices = np.array(data[4:][::2])
-            values  = np.array(data[4:][1::2])
+    id_neutron = dict_micro['Neutron Self Energy']
+    id_proton = dict_micro['Proton Self Energy']
 
-            in_self_ene = np.where( indices == dict_micro['Neutron Self Energy'] )[0][0]
-            n_self_ene[iL] = values[in_self_ene]
+    for iL, line in enumerate(lines):
+        # Keep original parsing logic
+        elements = line.split()
+        data = [int(ele) if ele.isdigit() else float(ele) for ele in elements]
 
-            ip_self_ene = np.where( indices == dict_micro['Proton Self Energy'] )[0][0]
-            p_self_ene[iL] = values[ip_self_ene]
+        iT[iL], irho[iL], iyq[iL] = data[0], data[1], data[2]
+        nMicro = data[3]
+
+        indices = data[4:][::2]
+        values  = data[4:][1::2]
+
+        # Use dictionary for fast lookup
+        id_val = dict(zip(indices, values))
+
+        try:
+            n_self_ene[iL] = id_val[id_neutron]
+            p_self_ene[iL] = id_val[id_proton]
+        except KeyError as e:
+            raise RuntimeError(f"Missing micro value at line {iL}: {e}")
 
     return n_self_ene, p_self_ene
 

@@ -5,7 +5,7 @@ include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
 
-INTERPOLATION_SPLIT_TABLE = SEPARATE
+INTERPOLATION_SPLIT_TABLE = COMBINED
 DEFINES   += $(MDEFS)$(PP)INTERPOLATION_SPLIT_TABLE_$(INTERPOLATION_SPLIT_TABLE)
 
 VPATH += \

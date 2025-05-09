@@ -44,7 +44,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     REAL(dp) :: Minimum_Value, Add_to_energy
     LOGICAL  :: RedHDF5Table
-    INTEGER  :: iLepton, i, iRho, iTemp, iYe, iYm, iCount
+    INTEGER  :: iLepton, i, iRho, iTemp, iYe, iYm, iYp, iCount
 
     REAL(DP), ALLOCATABLE, DIMENSION(:) :: YmGrid
     REAL(DP), ALLOCATABLE, DIMENSION(:,:,:) :: LogEnergy, LogEntropy
@@ -221,7 +221,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! and typically MAXVAL(YpCompOSE) ~ 0.55 so you should be quite safe.
 
     iCount = 0
-    !$OMP PARALLEL DO PRIVATE(ElectronPhotonState, MuonState, Ye, Ym, Yp, dYp, LocalOffset, Xbary) &
+    !$OMP PARALLEL DO PRIVATE(ElectronPhotonState, MuonState, Ye, Ym, Yp, iYp, dYp, LocalOffset, Xbary) &
     !$OMP SHARED(iCount) &
     !$OMP COLLAPSE(3)
     DO iRho=1,nPoints(1)
@@ -243,10 +243,12 @@ PROGRAM wlCreateEquationOfStateTable
             Ye = EOSTable % TS % States(3) % Values(iYe)
             Ym = EOSTable % TS % States(4) % Values(iYm)
             IF (Ye + Ym > YpCompOSE(nPoints(3))) THEN
-              Ym = 0
+              Ym = 0.0d0
             ENDIF
             Yp = Ye + Ym
-            dYp = Yp - Ye
+
+            ! Now get index for baryonic table
+            CALL GetIndexAndDelta_Lin( Yp, YpCompOSE, iYp, dYp )
 
             ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
             ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
@@ -258,7 +260,7 @@ PROGRAM wlCreateEquationOfStateTable
             CALL FullMuonEOS(MuonTable, MuonState)
 
             ! PRESSURE
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,1) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,1) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -267,18 +269,18 @@ PROGRAM wlCreateEquationOfStateTable
                 LocalOffset = 0.0_dp
             ENDIF
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,1) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,1) + LocalOffset), Xbary )
           
             EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe,iYm) = &
             Xbary + MuonState % p + ElectronPhotonState % p
 
-            IF (iRho == 200 .and. iYe == 48 .and. iYm == 1) THEN
-              WRITE(*,*) Xbary , MuonState % p , ElectronPhotonState % p, Ym
-              WRITE(*,*) iRho,iTemp,iYe,iYm
+            IF (EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe,iYm) < 0.0d0) THEN
+              WRITE(*,*) iYe, iYp, Ye, Ym, Yp, dYp, Xbary, MuonState % p, ElectronPhotonState % p
+              STOP
             ENDIF
 
             ! ENTROPY
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,2) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,2) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -287,18 +289,13 @@ PROGRAM wlCreateEquationOfStateTable
                 LocalOffset = 0.0_dp
             ENDIF
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,2) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,2) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(2) % Values(iRho,iTemp,iYe,iYm) = &
               Xbary + MuonState % s + ElectronPhotonState % s
 
-            IF (iYm == 1 .and. MuonState % s / (Xbary + ElectronPhotonState % s) > 0.1d0) THEN
-              WRITE(*,*) Xbary , MuonState % s , ElectronPhotonState % s, Ym
-              WRITE(*,*) iRho,iTemp,iYe,iYm
-            ENDIF
-
             ! ENERGY
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,3) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,3) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -307,7 +304,7 @@ PROGRAM wlCreateEquationOfStateTable
                 LocalOffset = 0.0_dp
             ENDIF
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,3) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,3) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(3) % Values(iRho,iTemp,iYe,iYm) = &
               Xbary + MuonState % e + ElectronPhotonState % e + Add_to_energy
@@ -317,7 +314,7 @@ PROGRAM wlCreateEquationOfStateTable
               ElectronPhotonState % mue
 
             ! PROTON CHEMICAL POTENTIAL
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,5) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,5) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -327,12 +324,12 @@ PROGRAM wlCreateEquationOfStateTable
             ENDIF
 
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,5) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,5) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(5) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! NEUTRON CHEMICAL POTENTIAL
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,6) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,6) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -342,12 +339,12 @@ PROGRAM wlCreateEquationOfStateTable
             ENDIF
 
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,6) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,6) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(6) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! PROTON MASS FRACTION
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,7) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,7) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -356,13 +353,18 @@ PROGRAM wlCreateEquationOfStateTable
                 LocalOffset = 0.0_dp
             ENDIF
 
-            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,7) + LocalOffset), Xbary )
+            ! This is a workaround for now
+            CALL LinearInterp_Array_Point( 1, dYp, 0.0d0, &
+              EOSCompOSE(iRho,iTemp,iYp:iYp+1,7), Xbary )
+            Xbary = LOG10( MAX(Xbary, 1.0d-99) )
+
+            ! CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+            !   LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,7) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(7) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! NEUTRON MASS FRACTION
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,8) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,8) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -371,13 +373,18 @@ PROGRAM wlCreateEquationOfStateTable
                 LocalOffset = 0.0_dp
             ENDIF
 
-            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,8) + LocalOffset), Xbary )
+            ! This is a workaround for now
+            CALL LinearInterp_Array_Point( 1, dYp, 0.0d0, &
+              EOSCompOSE(iRho,iTemp,iYp:iYp+1,8), Xbary )
+            Xbary = LOG10( MAX(Xbary, 1.0d-99) )
+
+            ! CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+            !   LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,8) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(8) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! ALPHA MASS FRACTION
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,9) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,9) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -385,14 +392,19 @@ PROGRAM wlCreateEquationOfStateTable
             ELSE
                 LocalOffset = 0.0_dp
             ENDIF
+            
+            ! This is a workaround for now
+            CALL LinearInterp_Array_Point( 1, dYp, 0.0d0, &
+              EOSCompOSE(iRho,iTemp,iYp:iYp+1,9), Xbary )
+            Xbary = LOG10( MAX(Xbary, 1.0d-99) )
 
-            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,9) + LocalOffset), Xbary )
+            ! CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+            !   LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,9) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(9) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! HEAVY MASS FRACTION
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,10) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,10) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -401,13 +413,18 @@ PROGRAM wlCreateEquationOfStateTable
                 LocalOffset = 0.0_dp
             ENDIF
 
-            CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,10) + LocalOffset), Xbary )
+            ! This is a workaround for now
+            CALL LinearInterp_Array_Point( 1, dYp, 0.0d0, &
+              EOSCompOSE(iRho,iTemp,iYp:iYp+1,10), Xbary )
+            Xbary = LOG10( MAX(Xbary, 1.0d-99) )
+
+            ! CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
+            !   LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,10) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(10) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! HEAVY CHARGE NUMBER
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,11) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,11) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -417,12 +434,12 @@ PROGRAM wlCreateEquationOfStateTable
             ENDIF
 
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,11) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,11) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(11) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! HEAVY MASS NUMBER
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,12) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,12) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -432,16 +449,16 @@ PROGRAM wlCreateEquationOfStateTable
             ENDIF
 
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,12) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,12) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(12) % Values(iRho,iTemp,iYe,iYm) = Xbary
             ! HEAVY BINDING ENERGY
-            EOSTable % DV % Variables(13) % Values(iRho,iTemp,iYe,iYm) = Xbary
+            EOSTable % DV % Variables(13) % Values(iRho,iTemp,iYe,iYm) = 1.0d-99
             ! THERMAL ENERGY
-            EOSTable % DV % Variables(14) % Values(iRho,iTemp,iYe,iYm) = Xbary
+            EOSTable % DV % Variables(14) % Values(iRho,iTemp,iYe,iYm) = 1.0d-99
 
             ! PROTON SELF ENERGY
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,16) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,16) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -451,12 +468,12 @@ PROGRAM wlCreateEquationOfStateTable
             ENDIF
 
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,16) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,16) + LocalOffset), Xbary )
 
             EOSTable % DV % Variables(16) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
             ! NEUTRON SELF ENERGY
-            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYe:iYe+1,17) )
+            LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,17) )
             IF (LocalOffset .lt. 0.0_dp) THEN
                 LocalOffset = -1.1d0*LocalOffset
             ELSE IF (LocalOffset .eq. 0.0_dp) THEN
@@ -466,7 +483,7 @@ PROGRAM wlCreateEquationOfStateTable
             ENDIF
 
             CALL LinearInterp_Array_Point( 1, dYp, LocalOffset, &
-              LOG10(EOSCompOSE(iRho,iTemp,iYe:iYe+1,17) + LocalOffset), Xbary )
+              LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,17) + LocalOffset), Xbary )
 
             EOSTable % DV % Variables(17) % Values(iRho,iTemp,iYe,iYm) = Xbary
 
@@ -617,16 +634,22 @@ PROGRAM wlCreateEquationOfStateTable
     DO iVars = 1, nVariables
         Minimum_Value = MINVAL(EOSTable % DV % Variables(iVars) % Values)
         IF ( Minimum_Value .lt. 0.0_dp) THEN
-            EOSTable % DV % Offsets(iVars) = -1.1_dp * Minimum_Value
-            EOSTable % DV % Variables(iVars) % Values =  &
-                EOSTable % DV % Variables(iVars) % Values + & 
-                EOSTable % DV % Offsets(iVars)
+            ! Sometimes mass fractions are very small and negative, just set them to very small number
+            IF (Minimum_Value .gt. -1.0d-15) THEN
+              EOSTable % DV % Variables(iVars) % Values = MAX(1.0d-99, EOSTable % DV % Variables(iVars) % Values)
+              EOSTable % DV % Offsets(iVars) = 0.0d0
+            ELSE
+              EOSTable % DV % Offsets(iVars) = -1.1_dp * Minimum_Value
+              EOSTable % DV % Variables(iVars) % Values =  &
+                  EOSTable % DV % Variables(iVars) % Values + & 
+                  EOSTable % DV % Offsets(iVars)
+            ENDIF
         ELSE IF ( Minimum_Value .gt. 0.0_dp) THEN
             EOSTable % DV % Offsets(iVars) = 0.0_dp
         ELSE
           WRITE(*,*) 'Minimum is zero', iVars
           EOSTable % DV % Variables(iVars) % Values = & 
-              MAX(EOSTable % DV % Variables(iVars) % Values, 1.0e-30_dp)
+              MAX(EOSTable % DV % Variables(iVars) % Values, 1.0e-99_dp)
         ENDIF
 
         WRITE(*,*) iVars, EOSTable % DV % Offsets(iVars), Minimum_Value
