@@ -57,6 +57,7 @@ PROGRAM wlCreateEquationOfStateTable
     Add_to_energy = 8.9d0*ergmev/rmu
     Add_to_energy = 2.0d0*ergmev/rmu
     Add_to_energy = + cvel**2 - ergmev * mn / rmu + 8.9d0 * ergmev / rmu
+    Add_to_energy = 0.0d0
 
     ! path of the original compose table
     CompOSEFilePath = 'SFHo_no_ele/'

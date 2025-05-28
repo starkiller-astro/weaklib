@@ -236,8 +236,8 @@ MODULE wlCompOSEInterface
             ! now handle the chemical potentials. This is the relativistic expression including the 
             ! nucleon mass. Be careful because some opacities need the NR version, or shifted to a reference
             ! mass, e.g. both mup and mun use the neutron mass...
-            EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass + NeutronMass
-            EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass + Q4*NeutronMass + ProtonMass
+            EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass
+            EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = (Q3 + 1.0_dp)*NeutronMass + Q4*NeutronMass
 
             IF (Q4 == 0.0d0) THEN
                 WRITE(*,*) iT, iRho, iYp
@@ -501,9 +501,9 @@ MODULE wlCompOSEInterface
                          NeutronMass * ergmev / rmu - cvel**2.0_dp
           
                     ! now handle the chemical potentials. These include rest mass already.
-                    EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = ThermoTable(iRho,iT,iYp,iMub_in_Table) + NeutronMass
+                    EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = ThermoTable(iRho,iT,iYp,iMub_in_Table)
                     EOSCompOSE(iRho,iT,iYp,iProtonChemPotCompOSE) = &
-                        ThermoTable(iRho,iT,iYp,iMuq_in_Table) + ThermoTable(iRho,iT,iYp,iMub_in_Table) + ProtonMass
+                        ThermoTable(iRho,iT,iYp,iMuq_in_Table) + ThermoTable(iRho,iT,iYp,iMub_in_Table)
                     
                     ! Take care of microscopic quantities
                     IF (iProtEffMass_in_Table > 0 ) THEN

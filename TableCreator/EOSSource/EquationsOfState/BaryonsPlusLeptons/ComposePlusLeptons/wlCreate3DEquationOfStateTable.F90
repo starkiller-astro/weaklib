@@ -40,7 +40,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &
         HelmDatFilePath, MuonDatFilePath, &
-        BaryonEOSTableName
+        EOSTableName
     
     REAL(dp) :: Minimum_Value, Add_to_energy
     LOGICAL  :: RedHDF5Table
@@ -56,18 +56,19 @@ PROGRAM wlCreateEquationOfStateTable
     Add_to_energy = 8.9d0*ergmev/rmu
     Add_to_energy = 2.0d0*ergmev/rmu
     Add_to_energy = + cvel**2 - ergmev * mn / rmu + 8.9d0 * ergmev / rmu
+    Add_to_energy = 0.0d0
 
     ! path of the original compose table
     CompOSEFilePath = 'SFHo_no_ele/'
     CompOSEFHDF5Path = 'SFHo_no_ele/eoscompose.h5'
     IF (RedHDF5Table) THEN
-        BaryonEOSTableName = 'EOSTableHighres.h5'
+        EOSTableName = '3DEOSTable_Highres.h5'
     ELSE
-        BaryonEOSTableName = 'EOSTable.h5'
+        EOSTableName = '3DEOSTable.h5'
     ENDIF
     iLepton = 0
     
-    nVariables = 15
+    nVariables = 19
 
     IF (RedHDF5Table) THEN
         ! This is to read the HDF5 file
@@ -136,7 +137,7 @@ PROGRAM wlCreateEquationOfStateTable
     EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
     
     PRINT*, "Allocate Names " 
-    EOSTable % DV % Names(1:15) = (/'Pressure                        ', &
+    EOSTable % DV % Names(1:19) = (/'Pressure                        ', &
     'Entropy Per Baryon              ', &
     'Internal Energy Density         ', &
     'Electron Chemical Potential     ', &
@@ -150,7 +151,11 @@ PROGRAM wlCreateEquationOfStateTable
     'Heavy Mass Number               ', &
     'Thermal Energy                  ', &
     'Heavy Binding Energy            ', &
-    'Gamma1                          '/)
+    'Gamma1                          ', &
+    'Neutron Effective Mass          ', &
+    'Proton Effective Mass           ', &
+    'Neutron Vector Self Energy      ', &
+    'Proton Vector Self Energy       '/)
     
     PRINT*, "Set Dependent Variable Identifier Indicies "
     
@@ -169,9 +174,13 @@ PROGRAM wlCreateEquationOfStateTable
     EOSTable % DV % Indices % iHeavyBindingEnergy = 13
     EOSTable % DV % Indices % iThermalEnergy = 14
     EOSTable % DV % Indices % iGamma1 = 15
+    EOSTable % DV % Indices % iNeutronEffMass = 16
+    EOSTable % DV % Indices % iProtonEffMass = 17
+    EOSTable % DV % Indices % iNeutronSelfEnergy = 18
+    EOSTable % DV % Indices % iProtonSelfEnergy = 19
     
     PRINT*, "Allocate Dependent Variable Units " 
-    EOSTable % DV % Units(1:15) = (/'Dynes per cm^2                  ', &
+    EOSTable % DV % Units(1:19) = (/'Dynes per cm^2                  ', &
     'k_b per baryon                  ', &
     'erg per gram                    ', &
     'MeV                             ', &
@@ -185,7 +194,11 @@ PROGRAM wlCreateEquationOfStateTable
     '                                ', &
     'MeV                             ', &
     'MeV                             ', &
-    '                                '/)
+    '                                ', &
+    'MeV                             ', &
+    'MeV                             ', &
+    'MeV                             ', &
+    'MeV                             '/)
     
     PRINT*, "Begin Populating EOSTable" 
     
@@ -232,50 +245,27 @@ PROGRAM wlCreateEquationOfStateTable
           EOSTable % DV % Variables(4) % Values(iRho,iTemp,iYe) = &
             ElectronPhotonState % mue
 
-          ! PROTON CHEMICAL POTENTIAL
-          EOSTable % DV % Variables(5) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,5)
-
-          ! NEUTRON CHEMICAL POTENTIAL
-          EOSTable % DV % Variables(6) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,6)
-
-          ! PROTON MASS FRACTION
-          EOSTable % DV % Variables(7) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,7)
-
-          ! NEUTRON MASS FRACTION
-          EOSTable % DV % Variables(8) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,8)
-
-          ! ALPHA MASS FRACTION
-          EOSTable % DV % Variables(9) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,9)
-
-          ! HEAVY MASS FRACTION
-          EOSTable % DV % Variables(10) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,10)
-
-          ! HEAVY CHARGE NUMBER
-          EOSTable % DV % Variables(11) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,11)
-
-          ! HEAVY MASS NUMBER
-          EOSTable % DV % Variables(12) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,12)
-
-          ! HEAVY BINDING ENERGY
-          EOSTable % DV % Variables(13) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,13)
-
-          ! THERMAL ENERGY
-          EOSTable % DV % Variables(14) % Values(iRho,iTemp,iYe) = &
-          EOSCompOSE(iRho,iTemp,iYe,14)
-
         ENDDO
       ENDDO
     ENDDO
     !$OMP END PARALLEL DO
+
+    ! thermo and compo state
+    EOSTable % DV % Variables(5)  % Values(:,:,:) = EOSCompOSE(:,:,:,5)
+    EOSTable % DV % Variables(6)  % Values(:,:,:) = EOSCompOSE(:,:,:,6)
+    EOSTable % DV % Variables(7)  % Values(:,:,:) = EOSCompOSE(:,:,:,7)
+    EOSTable % DV % Variables(8)  % Values(:,:,:) = EOSCompOSE(:,:,:,8)
+    EOSTable % DV % Variables(9)  % Values(:,:,:) = EOSCompOSE(:,:,:,9)
+    EOSTable % DV % Variables(10) % Values(:,:,:) = EOSCompOSE(:,:,:,10)
+    EOSTable % DV % Variables(11) % Values(:,:,:) = EOSCompOSE(:,:,:,11)
+    EOSTable % DV % Variables(12) % Values(:,:,:) = EOSCompOSE(:,:,:,12)
+    EOSTable % DV % Variables(13) % Values(:,:,:) = EOSCompOSE(:,:,:,13)
+    EOSTable % DV % Variables(14) % Values(:,:,:) = EOSCompOSE(:,:,:,14)
+    ! Gamma calculated later
+    EOSTable % DV % Variables(16) % Values(:,:,:) = EOSCompOSE(:,:,:,16)
+    EOSTable % DV % Variables(17) % Values(:,:,:) = EOSCompOSE(:,:,:,17)
+    EOSTable % DV % Variables(18) % Values(:,:,:) = EOSCompOSE(:,:,:,18)
+    EOSTable % DV % Variables(19) % Values(:,:,:) = EOSCompOSE(:,:,:,19)
 
     ! GAMMA
     OS_P = 0.0_dp
@@ -385,8 +375,8 @@ PROGRAM wlCreateEquationOfStateTable
    
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
-    WRITE (*,*) "Starting HDF write: Baryonic EOS"
-    CALL WriteEquationOfStateCompOSETableHDF( EOSTable, BaryonEOSTableName )
+    WRITE (*,*) "Starting HDF write: 3D EOS"
+    CALL WriteEquationOfStateCompOSETableHDF( EOSTable, EOSTableName )
     CALL FinalizeHDF( )
 
     WRITE (*,*) "HDF write successful"

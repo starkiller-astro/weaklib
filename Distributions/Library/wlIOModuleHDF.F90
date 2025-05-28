@@ -1529,6 +1529,14 @@ CONTAINS
     CALL WriteHDF( "iGamma1", buffer, &
                              group_id, datasize1d )
 
+    buffer(1) = DV % Indices % iNeutronEffMass 
+    CALL WriteHDF( "iNeutronEffMass", buffer, &
+                             group_id, datasize1d )
+
+    buffer(1) = DV % Indices % iProtonEffMass 
+    CALL WriteHDF( "iProtonEffMass", buffer, &
+                             group_id, datasize1d )
+
     buffer(1) = DV % Indices % iNeutronSelfEnergy 
     CALL WriteHDF( "iNeutronSelfEnergy", buffer, &
                              group_id, datasize1d )
@@ -1701,6 +1709,14 @@ CONTAINS
     CALL ReadHDF( "iNeutronSelfEnergy", buffer, &
                              group_id, datasize1d )
     DV % Indices % iNeutronSelfEnergy = buffer(1)
+
+    CALL ReadHDF( "iNeutronEffMass", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iNeutronEffMass = buffer(1)
+
+    CALL ReadHDF( "iProtonEffMass", buffer, &
+                             group_id, datasize1d )
+    DV % Indices % iProtonEffMass = buffer(1)
 
     CALL ReadHDF( "iProtonSelfEnergy", buffer, &
                              group_id, datasize1d )
