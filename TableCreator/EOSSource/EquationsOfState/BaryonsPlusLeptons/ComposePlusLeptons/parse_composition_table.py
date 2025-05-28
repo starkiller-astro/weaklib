@@ -103,6 +103,7 @@ def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7)
     return iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar
 
 def read_micro(file_micro, dict_micro):
+    
     with open(file_micro, 'r') as f:
         lines = f.readlines()
 
@@ -110,11 +111,15 @@ def read_micro(file_micro, dict_micro):
     irho = np.zeros(N, dtype=int)
     iT = np.zeros(N, dtype=int)
     iyq = np.zeros(N, dtype=int)
+    p_eff_mass = np.zeros(N)
+    n_eff_mass = np.zeros(N)
     p_self_ene = np.zeros(N)
     n_self_ene = np.zeros(N)
 
-    id_neutron = dict_micro['Neutron Self Energy']
-    id_proton = dict_micro['Proton Self Energy']
+    id_n_eff_mass = dict_micro['Neutron Effective Mass']
+    id_p_eff_mass = dict_micro['Proton Effective Mass']
+    id_n_self_ene = dict_micro['Neutron Self Energy']
+    id_p_self_ene = dict_micro['Proton Self Energy']
 
     for iL, line in enumerate(lines):
         # Keep original parsing logic
@@ -131,12 +136,14 @@ def read_micro(file_micro, dict_micro):
         id_val = dict(zip(indices, values))
 
         try:
-            n_self_ene[iL] = id_val[id_neutron]
-            p_self_ene[iL] = id_val[id_proton]
+            n_eff_mass[iL] = id_val[id_n_eff_mass]
+            p_eff_mass[iL] = id_val[id_p_eff_mass]
+            n_self_ene[iL] = id_val[id_n_self_ene]
+            p_self_ene[iL] = id_val[id_p_self_ene]
         except KeyError as e:
             raise RuntimeError(f"Missing micro value at line {iL}: {e}")
 
-    return n_self_ene, p_self_ene
+    return n_eff_mass, p_eff_mass, n_self_ene, p_self_ene
 
 # set tolerances for charge and mass conservation
 charge_tol = 1e-7
@@ -166,12 +173,13 @@ dict_micro = { 'Neutron Effective Mass' : 10041, \
                'Neutron Self Energy' : 10051, \
                'Proton Self Energy' : 11051 } # this is in eos.pdf
 
-n_self_ene, p_self_ene = read_micro(file_micro, dict_micro)
+n_eff_mass, p_eff_mass, n_self_ene, p_self_ene = \
+  read_micro(file_micro, dict_micro)
 
 iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar = read_compo(file_compo, file_yq, dict_pairs, \
                                                       charge_tol=charge_tol, mfrac_tol=mfrac_tol)
 
-
-data_to_write = np.column_stack((iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar, n_self_ene, p_self_ene))
+data_to_write = np.column_stack((iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar, \
+                                 n_eff_mass, p_eff_mass, n_self_ene, p_self_ene))
 np.savetxt(file_WL_format, data_to_write, fmt=['%3.0i ','%3.0i ','%3.0i ', \
-    '%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E '])
+    '%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E ','%.7E '])

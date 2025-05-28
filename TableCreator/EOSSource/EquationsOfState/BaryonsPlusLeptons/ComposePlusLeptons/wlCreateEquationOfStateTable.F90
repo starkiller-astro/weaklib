@@ -23,7 +23,7 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER, DIMENSION(3)          :: nPointsBaryon
     INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsDenon
     INTEGER                        :: nVariables
-    TYPE(EquationOfStateTableType) :: EOSTable
+    TYPE(EquationOfStateCompOSETableType) :: EOSTable
     TYPE(HelmholtzTableType) :: HelmEOSTable
     TYPE(MuonEOSType) :: MuonEOSTable
     
@@ -38,6 +38,7 @@ PROGRAM wlCreateEquationOfStateTable
     ReadFullTable = .false.
     RedHDF5Table = .false.
     ResetNegativePressure = .false.
+    nVariables = 19
     
     Add_to_energy = 8.9d0*ergmev/rmu
     Add_to_energy = 2.0d0*ergmev/rmu
@@ -70,8 +71,6 @@ PROGRAM wlCreateEquationOfStateTable
         MuonEOSTableName = BaryonEOSTableName
         iLepton = 0
     ENDIF 
-    
-    nVariables = 17
 
     IF (RedHDF5Table) THEN
         ! This is to read the HDF5 file
@@ -86,7 +85,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
     WRITE(*,*) nPointsBaryon
-    CALL AllocateEquationOfStateTable( EOSTable, nPointsBaryon , nVariables )
+    CALL AllocateEquationOfStateCompOSETable( EOSTable, nPointsBaryon , nVariables )
     
     EOSTable % TS % Names(1:3) = (/'Density                         ',&
     'Temperature                     ',&
@@ -110,7 +109,7 @@ PROGRAM wlCreateEquationOfStateTable
     EOSTable % TS % LogInterp(1:3) =  (/1, 1, 0/)
     
     PRINT*, "Allocate Names " 
-    EOSTable % DV % Names(1:17) = (/'Pressure                        ', &
+    EOSTable % DV % Names(1:19) = (/'Pressure                        ', &
     'Entropy Per Baryon              ', &
     'Internal Energy Density         ', &
     'Electron Chemical Potential     ', &
@@ -125,6 +124,8 @@ PROGRAM wlCreateEquationOfStateTable
     'Thermal Energy                  ', &
     'Heavy Binding Energy            ', &
     'Gamma1                          ', &
+    'Neutron Effective Mass          ', &
+    'Proton Effective Mass           ', &
     'Neutron Vector Self Energy      ', &
     'Proton Vector Self Energy       '/)
     
@@ -145,11 +146,13 @@ PROGRAM wlCreateEquationOfStateTable
     EOSTable % DV % Indices % iHeavyBindingEnergy = 13
     EOSTable % DV % Indices % iThermalEnergy = 14
     EOSTable % DV % Indices % iGamma1 = 15
-    EOSTable % DV % Indices % iNeutronSelfEnergy = 16
-    EOSTable % DV % Indices % iProtonSelfEnergy = 17
+    EOSTable % DV % Indices % iNeutronEffMass = 16
+    EOSTable % DV % Indices % iProtonEffMass = 17
+    EOSTable % DV % Indices % iNeutronSelfEnergy = 18
+    EOSTable % DV % Indices % iProtonSelfEnergy = 19
     
     PRINT*, "Allocate Dependent Variable Units " 
-    EOSTable % DV % Units(1:17) = (/'Dynes per cm^2                  ', &
+    EOSTable % DV % Units(1:19) = (/'Dynes per cm^2                  ', &
     'k_b per baryon                  ', &
     'erg per gram                    ', &
     'MeV                             ', &
@@ -165,6 +168,8 @@ PROGRAM wlCreateEquationOfStateTable
     'MeV                             ', &
     '                                ', &
     'MeV                             ', &
+    'MeV                             ', &
+    'MeV                             ', &
     'MeV                             '/)
     
     PRINT*, "Begin Populating EOSTable" 
@@ -174,21 +179,25 @@ PROGRAM wlCreateEquationOfStateTable
     EOSTable % TS % States(3) % Values = YpCompOSE
     
     ! thermo and compo state
-    EOSTable % DV % Variables(1) % Values(:,:,:) = EOSCompOSE(:,:,:,1)
-    EOSTable % DV % Variables(2) % Values(:,:,:) = EOSCompOSE(:,:,:,2)
-    EOSTable % DV % Variables(3) % Values(:,:,:) = EOSCompOSE(:,:,:,3) + Add_to_energy
-    EOSTable % DV % Variables(4) % Values(:,:,:) = EOSCompOSE(:,:,:,4)
-    EOSTable % DV % Variables(5) % Values(:,:,:) = EOSCompOSE(:,:,:,5)
-    EOSTable % DV % Variables(6) % Values(:,:,:) = EOSCompOSE(:,:,:,6)
-    EOSTable % DV % Variables(7) % Values(:,:,:) = EOSCompOSE(:,:,:,7)
-    EOSTable % DV % Variables(8) % Values(:,:,:) = EOSCompOSE(:,:,:,8)
-    EOSTable % DV % Variables(9) % Values(:,:,:) = EOSCompOSE(:,:,:,9)
+    EOSTable % DV % Variables(1)  % Values(:,:,:) = EOSCompOSE(:,:,:,1)
+    EOSTable % DV % Variables(2)  % Values(:,:,:) = EOSCompOSE(:,:,:,2)
+    EOSTable % DV % Variables(3)  % Values(:,:,:) = EOSCompOSE(:,:,:,3) + Add_to_energy
+    EOSTable % DV % Variables(4)  % Values(:,:,:) = EOSCompOSE(:,:,:,4)
+    EOSTable % DV % Variables(5)  % Values(:,:,:) = EOSCompOSE(:,:,:,5)
+    EOSTable % DV % Variables(6)  % Values(:,:,:) = EOSCompOSE(:,:,:,6)
+    EOSTable % DV % Variables(7)  % Values(:,:,:) = EOSCompOSE(:,:,:,7)
+    EOSTable % DV % Variables(8)  % Values(:,:,:) = EOSCompOSE(:,:,:,8)
+    EOSTable % DV % Variables(9)  % Values(:,:,:) = EOSCompOSE(:,:,:,9)
     EOSTable % DV % Variables(10) % Values(:,:,:) = EOSCompOSE(:,:,:,10)
     EOSTable % DV % Variables(11) % Values(:,:,:) = EOSCompOSE(:,:,:,11)
     EOSTable % DV % Variables(12) % Values(:,:,:) = EOSCompOSE(:,:,:,12)
     EOSTable % DV % Variables(13) % Values(:,:,:) = EOSCompOSE(:,:,:,13)
     EOSTable % DV % Variables(14) % Values(:,:,:) = EOSCompOSE(:,:,:,14)
     EOSTable % DV % Variables(15) % Values(:,:,:) = EOSCompOSE(:,:,:,15)
+    EOSTable % DV % Variables(16) % Values(:,:,:) = EOSCompOSE(:,:,:,16)
+    EOSTable % DV % Variables(17) % Values(:,:,:) = EOSCompOSE(:,:,:,17)
+    EOSTable % DV % Variables(18) % Values(:,:,:) = EOSCompOSE(:,:,:,18)
+    EOSTable % DV % Variables(19) % Values(:,:,:) = EOSCompOSE(:,:,:,19)
     
     DEALLOCATE(RhoCompOSE)
     DEALLOCATE(TempCompOSE)
@@ -254,7 +263,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"
-    CALL WriteEquationOfStateTableHDF( EOSTable, BaryonEOSTableName )
+    CALL WriteEquationOfStateComPOSETableHDF( EOSTable, BaryonEOSTableName )
     CALL FinalizeHDF( )
     
     ! NOW ADD Helmholtz EOS TO PREVIOUSLY CREATED H5 FILE
@@ -271,7 +280,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     WRITE (*,*) "HDF write successful"
     
-    CALL DeAllocateEquationOfStateTable( EOSTable )
+    CALL DeAllocateEquationOfStateComPOSETable( EOSTable )
     CALL DeallocateHelmholtzTable( HelmEOSTable )
     CALL DeAllocateMuonEOS( MuonEOSTable )
 

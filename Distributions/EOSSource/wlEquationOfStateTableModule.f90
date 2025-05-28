@@ -3,8 +3,6 @@ MODULE wlEquationOfStateTableModule
   USE wlKindModule, ONLY: dp
   USE wlThermoStateModule
   USE wlDependentVariablesModule
-  USE wlThermoState4DModule
-  USE wlDependentVariables4DModule
 
   USE HDF5
 
@@ -29,6 +27,14 @@ MODULE wlEquationOfStateTableModule
     TYPE(MetadataType)           :: MD
   END TYPE
 
+  TYPE, PUBLIC :: EquationOfStateCompOSETableType
+    INTEGER                      :: nVariables
+    INTEGER, DIMENSION(3)        :: nPoints
+    TYPE(ThermoStateType)        :: TS
+    TYPE(DependentVariablesCompOSEType) :: DV
+    TYPE(MetadataType)           :: MD
+  END TYPE
+
   TYPE, PUBLIC :: EquationOfState4DTableType
     INTEGER                        :: nVariables
     INTEGER, DIMENSION(4)          :: nPoints
@@ -42,6 +48,12 @@ MODULE wlEquationOfStateTableModule
   PUBLIC :: TableLimitFail
   PUBLIC :: SwapDependentVariables
   PUBLIC :: IndexMatch
+
+  PUBLIC :: AllocateEquationOfStateCompOSETable
+  PUBLIC :: DeAllocateEquationOfStateCompOSETable
+  PUBLIC :: CompOSETableLimitFail
+  PUBLIC :: SwapDependentVariablesCompOSE
+  PUBLIC :: IndexMatchCompOSE
 
   PUBLIC :: AllocateEquationOfState4DTable
   PUBLIC :: DeAllocateEquationOfState4DTable
@@ -115,13 +127,8 @@ CONTAINS
       EOSTable % DV % Names( IndexBuffer ) = NameBuffer
       EOSTable % DV % Units( IndexBuffer ) = UnitBuffer
 
-#if EOSMODE_TABLE_COMBINED
-      CALL IndexMatch     ( TargetBuffer, IndexBuffer, &
+      CALL IndexMatch( TargetBuffer, IndexBuffer, &
                     EOSTable % DV % Indices )
-#elif EOSMODE_TABLE_SPLIT
-      CALL IndexMatchSplit( TargetBuffer, IndexBuffer, &
-                    EOSTable % DV % Indices )
-#endif              
 
   END SUBROUTINE SwapDependentVariables
 
@@ -165,11 +172,86 @@ CONTAINS
 
   END SUBROUTINE IndexMatch
 
-  SUBROUTINE IndexMatchSplit( TargetBuffer, IndexBuffer, Indices )
+  
+  ! ---------------------------------------------------------------------- !
+  ! ------------------------------ CompOSE SECTION ----------------------- !
+  ! ---------------------------------------------------------------------- !
+
+  SUBROUTINE AllocateEquationOfStateCompOSETable( EOSTable, nPoints, nVariables )
+
+    TYPE(EquationOfStateCompOSETableType), INTENT(inout) :: EOSTable
+    INTEGER, INTENT(in)                           :: nVariables
+    INTEGER, DIMENSION(3), INTENT(in)             :: nPoints
+
+    EOSTable % nPoints(1:3) = nPoints(1:3)
+    EOSTable % nVariables = nVariables
+
+    CALL AllocateThermoState( EOSTable % TS, EOSTable % nPoints )
+    CALL AllocateDependentVariablesCompOSE &
+           ( EOSTable % DV, EOSTable % nPoints, EOSTable % nVariables )
+
+  END SUBROUTINE AllocateEquationOfStateCompOSETable
+
+
+  SUBROUTINE DeAllocateEquationOfStateCompOSETable( EOSTable )
+
+    TYPE(EquationOfStateCompOSETableType) :: EOSTable
+
+    CALL DeAllocateThermoState( EOSTable % TS )
+    CALL DeAllocateDependentVariablesCompOSE( EOSTable % DV )
+
+  END SUBROUTINE DeAllocateEquationOfStateCompOSETable
+
+  LOGICAL FUNCTION CompOSETableLimitFail( rho, t, ye, EOSTable )
+
+    REAL(dp), INTENT(in)                       :: rho, t, ye
+    TYPE(EquationOfStateCompOSETableType), INTENT(in) :: EOSTable
+
+    CompOSETableLimitFail = .false.
+    IF ( rho < EOSTable % TS % minValues(1) ) CompOSETableLimitFail = .true.
+    IF ( rho > EOSTable % TS % maxValues(1) ) CompOSETableLimitFail = .true.
+    IF (   t < EOSTable % TS % minValues(2) ) CompOSETableLimitFail = .true.
+    IF (   t > EOSTable % TS % maxValues(2) ) CompOSETableLimitFail = .true.
+    IF (  ye < EOSTable % TS % minValues(3) ) CompOSETableLimitFail = .true.
+    IF (  ye > EOSTable % TS % maxValues(3) ) CompOSETableLimitFail = .true.
+
+  END FUNCTION CompOSETableLimitFail
+
+  SUBROUTINE SwapDependentVariablesCompOSE( EOSTable, TargetBuffer, IndexBuffer )
+
+    TYPE(EquationOfStateCompOSETableType), INTENT(inout)  :: EOSTable
+    CHARACTER(LEN=32)                              :: NameBuffer
+    CHARACTER(LEN=32)                              :: UnitBuffer
+    INTEGER, INTENT(in)                            :: IndexBuffer
+    INTEGER, INTENT(in)                            :: TargetBuffer
+    REAL(dp), DIMENSION(:,:,:), ALLOCATABLE        :: ValuesBuffer
+
+    ALLOCATE( ValuesBuffer( EOSTable % DV % nPoints(1), &
+               EOSTable % DV % nPoints(2), EOSTable % DV % nPoints(3) ) )
+
+      ValuesBuffer(:,:,:) = EOSTable % DV % Variables( TargetBuffer ) % Values(:,:,:)
+      NameBuffer = EOSTable % DV % Names( TargetBuffer )
+      UnitBuffer = EOSTable % DV % Units( TargetBuffer )
+
+      EOSTable % DV % Variables( TargetBuffer ) % Values(:,:,:) &
+                = EOSTable % DV % Variables( IndexBuffer ) % Values(:,:,:)
+      EOSTable % DV % Names( TargetBuffer ) = EOSTable % DV % Names( IndexBuffer )
+      EOSTable % DV % Units( TargetBuffer ) = EOSTable % DV % Units( IndexBuffer )
+
+      EOSTable % DV % Variables( IndexBuffer ) % Values(:,:,:) = ValuesBuffer(:,:,:)
+      EOSTable % DV % Names( IndexBuffer ) = NameBuffer
+      EOSTable % DV % Units( IndexBuffer ) = UnitBuffer
+
+      CALL IndexMatchCompOSE( TargetBuffer, IndexBuffer, &
+                    EOSTable % DV % Indices )
+
+  END SUBROUTINE SwapDependentVariablesCompOSE
+
+  SUBROUTINE IndexMatchCompOSE( TargetBuffer, IndexBuffer, Indices )
 
     INTEGER, INTENT(in)        :: TargetBuffer
     INTEGER, INTENT(in)        :: IndexBuffer
-    TYPE(DVIDType), INTENT(inout) :: Indices  
+    TYPE(DVIDCompOSEType), INTENT(inout) :: Indices  
 
       IF ( TargetBuffer == 1) THEN 
       Indices % iPressure = IndexBuffer 
@@ -178,32 +260,44 @@ CONTAINS
       ELSE IF ( TargetBuffer == 3) THEN 
       Indices % iInternalEnergyDensity = IndexBuffer 
       ELSE IF ( TargetBuffer == 4) THEN 
-      Indices % iProtonChemicalPotential = IndexBuffer 
+      Indices % iElectronChemicalPotential = IndexBuffer 
       ELSE IF ( TargetBuffer == 5) THEN 
-      Indices % iNeutronChemicalPotential = IndexBuffer 
+      Indices % iProtonChemicalPotential = IndexBuffer
       ELSE IF ( TargetBuffer == 6) THEN 
-      Indices % iProtonMassFraction = IndexBuffer 
+      Indices % iNeutronChemicalPotential = IndexBuffer 
       ELSE IF ( TargetBuffer == 7) THEN 
-      Indices % iNeutronMassFraction = IndexBuffer 
+      Indices % iProtonMassFraction = IndexBuffer 
       ELSE IF ( TargetBuffer == 8) THEN 
-      Indices % iAlphaMassFraction = IndexBuffer 
+      Indices % iNeutronMassFraction = IndexBuffer 
       ELSE IF ( TargetBuffer == 9) THEN 
+      Indices % iAlphaMassFraction = IndexBuffer 
+      ELSE IF ( TargetBuffer == 10) THEN 
       Indices % iHeavyMassFraction = IndexBuffer 
-      ELSE IF (TargetBuffer == 10) THEN 
-      Indices % iHeavyChargeNumber = IndexBuffer 
       ELSE IF (TargetBuffer == 11) THEN 
-      Indices % iHeavyMassNumber = IndexBuffer 
+      Indices % iHeavyChargeNumber = IndexBuffer 
       ELSE IF (TargetBuffer == 12) THEN 
-      Indices % iHeavyBindingEnergy = IndexBuffer 
+      Indices % iHeavyMassNumber = IndexBuffer 
       ELSE IF (TargetBuffer == 13) THEN 
-      Indices % iThermalEnergy = IndexBuffer 
+      Indices % iHeavyBindingEnergy = IndexBuffer 
       ELSE IF (TargetBuffer == 14) THEN 
-      Indices % iProtonSelfEnergy = IndexBuffer 
+      Indices % iThermalEnergy = IndexBuffer 
       ELSE IF (TargetBuffer == 15) THEN 
+      Indices % iGamma1 = IndexBuffer 
+      ELSE IF (TargetBuffer == 16) THEN 
+      Indices % iProtonEffMass = IndexBuffer 
+      ELSE IF (TargetBuffer == 17) THEN 
+      Indices % iNeutronEffMass = IndexBuffer 
+      ELSE IF (TargetBuffer == 18) THEN 
+      Indices % iProtonSelfEnergy = IndexBuffer 
+      ELSE IF (TargetBuffer == 19) THEN 
       Indices % iNeutronSelfEnergy = IndexBuffer 
       END IF
 
-  END SUBROUTINE IndexMatchSplit
+  END SUBROUTINE IndexMatchCompOSE
+
+  ! ---------------------------------------------------------------------- !
+  ! --------------------------------- 4D SECTION ------------------------- !
+  ! ---------------------------------------------------------------------- !
 
   SUBROUTINE AllocateEquationOfState4DTable( EOSTable, nPoints, nVariables )
 

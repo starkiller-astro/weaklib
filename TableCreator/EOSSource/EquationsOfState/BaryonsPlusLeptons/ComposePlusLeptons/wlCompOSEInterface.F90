@@ -19,7 +19,7 @@ MODULE wlCompOSEInterface
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: TempCompOSE
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: YpCompOSE
     
-    INTEGER, PARAMETER :: nVariablesCompOSE             = 17
+    INTEGER, PARAMETER :: nVariablesCompOSE             = 19
     INTEGER, PARAMETER :: iPressCompOSE                 = 1
     INTEGER, PARAMETER :: iEntropyCompOSE               = 2
     INTEGER, PARAMETER :: iInternalEnergyDensityCompOSE = 3
@@ -35,8 +35,10 @@ MODULE wlCompOSEInterface
     INTEGER, PARAMETER :: iHeavyBindingEnergyCompOSE    = 13
     INTEGER, PARAMETER :: iThermalEnergyCompOSE         = 14
     INTEGER, PARAMETER :: iGammaCompose                 = 15
-    INTEGER, PARAMETER :: iProtonSelfEnergyCompOSE      = 16
-    INTEGER, PARAMETER :: iNeutronSelfEnergyCompOSE     = 17
+    INTEGER, PARAMETER :: iProtonEffMassCompOSE         = 16
+    INTEGER, PARAMETER :: iNeutronEffMassCompOSE        = 17
+    INTEGER, PARAMETER :: iProtonSelfEnergyCompOSE      = 18
+    INTEGER, PARAMETER :: iNeutronSelfEnergyCompOSE     = 19
     
     ! These are used for the HDF5 thermo table (i.e. Table 7.1 from Compose manual v. 3.0)
     INTEGER, PARAMETER :: iThermoPressure = 1
@@ -72,6 +74,8 @@ MODULE wlCompOSEInterface
     INTEGER, PARAMETER :: iCompoHeavy = 999
     INTEGER, PARAMETER :: iMicroNeutSelfEnergy = 10051
     INTEGER, PARAMETER :: iMicroProtSelfEnergy = 11051
+    INTEGER, PARAMETER :: iMicroNeutEffMass    = 10041
+    INTEGER, PARAMETER :: iMicroProtEffMass    = 11041
 
     CONTAINS
     
@@ -125,7 +129,8 @@ MODULE wlCompOSEInterface
         INTEGER  :: iLepton, iRho, iT, iYp, i_tot
         REAL(dp) :: NeutronMass, ProtonMass
         REAL(dp) :: Q1, Q2, Q3, Q4, Q5, Q6, Q7, TotalInternalEnergy
-        REAL(dp) :: Xp, Xn, Xa, Xh, Abar, Zbar, neut_self_ene, prot_self_ene
+        REAL(dp) :: Xp, Xn, Xa, Xh, Abar, Zbar
+        REAL(dp) :: n_eff_mass, p_eff_mass, neut_self_ene, prot_self_ene
         
         IF ( PRESENT(AllocateEOS_Optional) ) THEN
           AllocateEOS = AllocateEOS_Optional
@@ -250,7 +255,8 @@ MODULE wlCompOSEInterface
         ! Here you prrobably need to decide what to DO with the light nuclei
         DO i_tot=1,nTemp*nRho*nYp
             
-            READ(123,*) iT, iRho, iYp, Xp, Xn, Xa, Xh, Abar, Zbar, neut_self_ene, prot_self_ene
+            READ(123,*) iT, iRho, iYp, Xp, Xn, Xa, Xh, Abar, Zbar, &
+              n_eff_mass, p_eff_mass, neut_self_ene, prot_self_ene
             
             EOSCompOSE(iRho,iT,iYp,iProtonMassFractionCompOSE)  = Xp
             EOSCompOSE(iRho,iT,iYp,iNeutronMassFractionCompOSE) = Xn
@@ -258,6 +264,8 @@ MODULE wlCompOSEInterface
             EOSCompOSE(iRho,iT,iYp,iHeavyMassFractionCompOSE)   = Xh
             EOSCompOSE(iRho,iT,iYp,iHeavyMassNumberCompOSE)     = Abar
             EOSCompOSE(iRho,iT,iYp,iHeavyChargeNumberCompOSE)   = Zbar
+            EOSCompOSE(iRho,iT,iYp,iNeutronEffMassCompOSE)      = n_eff_mass*NeutronMass
+            EOSCompOSE(iRho,iT,iYp,iProtonEffMassCompOSE)       = p_eff_mass*ProtonMass
             EOSCompOSE(iRho,iT,iYp,iNeutronSelfEnergyCompOSE)   = neut_self_ene
             EOSCompOSE(iRho,iT,iYp,iProtonSelfEnergyCompOSE)    = prot_self_ene
             
@@ -304,6 +312,7 @@ MODULE wlCompOSEInterface
         
         INTEGER :: iPress_in_Table, iEntr_in_Table, iEps_in_Table, iMub_in_Table, iMuq_in_Table, &
                    iXp_in_Table, iXn_in_Table, iXa_in_Table, &
+                   iNeutEffMass_in_Table, iProtEffMass_in_Table, &
                    iNeutSelfEnergy_in_Table, iProtSelfEnergy_in_Table
         
         LOGICAL :: fix_composition
@@ -438,24 +447,36 @@ MODULE wlCompOSEInterface
         ENDIF
         
         ! Find microscopic quantities you need
+        iNeutEffMass_in_Table = 0
+        iProtEffMass_in_Table = 0
         iNeutSelfEnergy_in_Table = 0
         iProtSelfEnergy_in_Table = 0
         ! Find the indices you want in the table
         DO iMicro=1,nMicro
           WRITE(*,*) iMicro, MicroIndices(iMicro), iMicroNeutSelfEnergy
-            IF (MicroIndices(iMicro) == iMicroNeutSelfEnergy) THEN
+            IF (MicroIndices(iMicro) == iMicroNeutEffMass) THEN
+              iNeutEffMass_in_Table = iMicro
+            ELSE IF (MicroIndices(iMicro) == iMicroProtEffMass) THEN
+              iProtEffMass_in_Table = iMicro
+            ELSE IF (MicroIndices(iMicro) == iMicroNeutSelfEnergy) THEN
               iNeutSelfEnergy_in_Table = iMicro
             ELSE IF (MicroIndices(iMicro) == iMicroProtSelfEnergy) THEN
               iProtSelfEnergy_in_Table = iMicro
             END IF
         END DO		
 
+        IF ( iNeutEffMass_in_Table == 0 ) THEN
+          WRITE(*,*) 'No Dirac Mass for Neutrons in Table, will be set to zero!!!'
+        END IF
+        IF ( iProtEffMass_in_Table == 0 ) THEN
+          WRITE(*,*) 'No Dirac Mass for Protons in Table, will be set to zero!!!'
+        END IF
         IF ( iNeutSelfEnergy_in_Table == 0 ) THEN
           WRITE(*,*) 'No Vector self energy for Neutrons in Table, will be set to zero!!!'
-        END IF
+        END IF 
         IF ( iProtSelfEnergy_in_Table == 0 ) THEN
           WRITE(*,*) 'No Proton self energy for Neutrons in Table, will be set to zero!!!'
-        END IF      
+        END IF    
 
         IF (AllocateEOS) THEN
           ALLOCATE( EOSCompOSE(nRho,nTemp,nYp,nVariablesCompOSE) )
@@ -485,6 +506,18 @@ MODULE wlCompOSEInterface
                         ThermoTable(iRho,iT,iYp,iMuq_in_Table) + ThermoTable(iRho,iT,iYp,iMub_in_Table) + ProtonMass
                     
                     ! Take care of microscopic quantities
+                    IF (iProtEffMass_in_Table > 0 ) THEN
+                      EOSCompOSE(iRho,iT,iYp,iProtonEffMassCompOSE) = &
+                          MicroTable(iRho,iT,iYp,iProtEffMass_in_Table)
+                    ELSE
+                        EOSCompOSE(iRho,iT,iYp,iProtEffMass_in_Table) = 0.0_dp
+                    ENDIF
+                    IF (iNeutEffMass_in_Table > 0 ) THEN
+                      EOSCompOSE(iRho,iT,iYp,iNeutronEffMassCompOSE) = &
+                          MicroTable(iRho,iT,iYp,iNeutEffMass_in_Table)
+                    ELSE
+                        EOSCompOSE(iRho,iT,iYp,iNeutEffMass_in_Table) = 0.0_dp
+                    ENDIF
                     IF (iNeutSelfEnergy_in_Table > 0 ) THEN
                         EOSCompOSE(iRho,iT,iYp,iNeutronSelfEnergyCompOSE) = &
                             MicroTable(iRho,iT,iYp,iNeutSelfEnergy_in_Table)

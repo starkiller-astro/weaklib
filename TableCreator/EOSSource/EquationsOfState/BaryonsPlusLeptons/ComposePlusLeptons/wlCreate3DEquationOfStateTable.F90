@@ -32,7 +32,7 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER, DIMENSION(3)            :: nPointsCompose
     INTEGER, DIMENSION(3)            :: nPoints
     INTEGER                          :: nVariables
-    TYPE(EquationOfStateTableType) :: EOSTable
+    TYPE(EquationOfStateCompOSETableType) :: EOSTable
     TYPE(HelmholtzTableType)         :: HelmholtzTable
     TYPE(MuonEOSType)                :: MuonTable
     TYPE(ElectronPhotonStateType)    :: ElectronPhotonState
@@ -106,7 +106,7 @@ PROGRAM wlCreateEquationOfStateTable
 
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
-    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
+    CALL AllocateEquationOfStateCompOSETable( EOSTable, nPoints , nVariables )
              
     EOSTable % TS % States(1) % Values = RhoCompOSE
     EOSTable % TS % States(2) % Values = TempCompOSE
@@ -386,12 +386,12 @@ PROGRAM wlCreateEquationOfStateTable
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"
-    CALL WriteEquationOfStateTableHDF( EOSTable, BaryonEOSTableName )
+    CALL WriteEquationOfStateCompOSETableHDF( EOSTable, BaryonEOSTableName )
     CALL FinalizeHDF( )
 
     WRITE (*,*) "HDF write successful"
     
-    CALL DeAllocateEquationOfStateTable( EOSTable )
+    CALL DeAllocateEquationOfStateCompOSETable( EOSTable )
     CALL DeallocateHelmholtzTable( HelmholtzTable )
     CALL DeAllocateMuonEOS( MuonTable )
 
