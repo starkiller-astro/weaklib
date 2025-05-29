@@ -183,7 +183,8 @@ IMPLICIT NONE
                               !Horowitz et al 2017
 
    REAL(DP), PARAMETER     :: Scat_ga_strange &
-                              = -0.1d0
+!                              = -0.1d0
+                              = 0.0d0
                               !Include strange-quark contributions to the axial vector coupling constant ga
                               !Value from Hobbs et al 2016
 
@@ -218,8 +219,7 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set E grid limits
 !---------------------------------------------------------------------
-!   INTEGER,  PARAMETER     :: nPointsE = 40
-   INTEGER,  PARAMETER     :: nPointsE = 5
+   INTEGER,  PARAMETER     :: nPointsE = 40
 !   !-- Logarithmically spaced grid points
 !   REAL(dp), PARAMETER     :: Emin = 1.0d-01 !lowest energy point
 !   REAL(dp), PARAMETER     :: Emax = 3.0d+02 !highest energy point
@@ -238,10 +238,8 @@ IMPLICIT NONE
 !---------------------------------------------------------------------
 ! Set MuB grid limits
 !---------------------------------------------------------------------
-!   INTEGER                 :: nPointsMuB = 120
-   INTEGER                 :: nPointsMuB = 1
-!   REAL(dp), PARAMETER     :: MuBmin     =  750.d0 !-- MeV including rest mass
-   REAL(dp), PARAMETER     :: MuBmin     = 1050.d0 !-- MeV including rest mass
+   INTEGER                 :: nPointsMuB = 120
+   REAL(dp), PARAMETER     :: MuBmin     =  750.d0 !-- MeV including rest mass
    REAL(dp), PARAMETER     :: MuBmax     = 1050.d0 !-- MeV including rest mass
 
    ! --- other inner variables
@@ -1126,6 +1124,7 @@ PRINT*, 'Filling OpacityTable ...'
    DO l_ye = 1, nYe
 
      ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+print*, '>>> Iso Ye', Ye 
 
      DO k_t = 1, nT
 
@@ -1215,7 +1214,7 @@ PRINT*, 'Filling OpacityTable ...'
       DO i_MuB = 1, nPointsMuB
 
         MuB = OpacityTable % MuBGrid % Values(i_MuB)
-print*, '>>> MuB', MuB 
+print*, '>>> NNS MuB', MuB 
 
         !-- convert absolute chemical potential to Chimera convention
         chem_n  =  MuB - dmnp - mn_wl
@@ -1225,7 +1224,7 @@ print*, '>>> MuB', MuB
 
           T = OpacityTable % TS % States (iT) % Values (k_t)
           TMeV = T * kMeV
-print*, '   >>> TMev', TMeV
+!print*, '   >>> TMev', TMeV
 
           CALL scatnrgn_weaklib &
                ( nPointsE, &
@@ -1307,6 +1306,7 @@ print*, '   >>> TMev', TMeV
       DO i_eta = 1, nPointsEta
 
         eta = OpacityTable % EtaGrid % Values(i_eta)
+print*, '>>> NES eta', eta 
 
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
@@ -1441,10 +1441,120 @@ print*, '   >>> TMev', TMeV
 
   CALL DescribeOpacityTable( OpacityTable )
 
+!----------------------------------------------------------
+!           Quick and dirty output
+!----------------------------------------------------------
+
+  QuickDirty: BLOCK
+
+    INTEGER :: iE
+    REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
+                                     phi0_nub_Iso, phi1_nub_Iso
+
+   ASSOCIATE(  &
+       iRho    => OpacityTable % TS % Indices % iRho                           , &
+       nRho    => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho) , &
+       iT      => OpacityTable % TS % Indices % iT                             , &
+       nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
+       iYe     => OpacityTable % TS % Indices % iYe                            , &
+       nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
+       E_cells => OpacityTable % EnergyGrid % Values                           , &
+       Indices => OpacityTable % EOSTable % DV % Indices                       , &
+       DVOffs  => OpacityTable % EOSTable % DV % Offsets                       , &
+       DVar    => OpacityTable % EOSTable % DV % Variables  )
+
+  WRITE (*,*)
+
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> Rho values'
+  ! DO j_rho = 1, nRho
+  !   rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+  ! END DO
+
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> T values'
+  ! DO k_t = 1, nT
+  !   T = OpacityTable % TS % States (iT) % Values (k_t)
+  !   TMeV = T * kMeV
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+  ! END DO
+
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> Ye values'
+  ! DO l_ye = 1, nYe
+  !   ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+  ! END DO
+
+    j_rho = 118
+    rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+
+    k_t = 25
+    T = OpacityTable % TS % States (iT) % Values (k_t)
+    TMeV = T * kMeV
+    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+
+    l_ye = 20
+    ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+
+    A   = 10**DVar(Indices % iHeavyMassNumber) % &
+          Values(j_rho, k_t, l_ye) &
+          - DVOffs(Indices % iHeavyMassNumber)   &
+          - epsilon
+    WRITE (*,*) 'A', A
+
+    Z   = 10**DVar(Indices % iHeavyChargeNumber) % &
+          Values(j_rho, k_t, l_ye) &
+          - DVOffs(Indices % iHeavyChargeNumber)   &
+          - epsilon
+    WRITE (*,*) 'Z', Z
+
+    phi0_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
+                       ( :, 1, j_rho, k_t, l_ye )
+    phi1_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
+                       ( :, 2, j_rho, k_t, l_ye )
+
+    phi0_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
+                       ( :, 1, j_rho, k_t, l_ye )
+    phi1_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
+                       ( :, 2, j_rho, k_t, l_ye )
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> Nu Iso: E, Phi0, Phi1, Phi0 - Phi1'
+    DO iE = 1, nPointsE
+      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+        E_Cells ( iE ),     '    ', &
+        phi0_nu_Iso ( iE ), '    ', &
+        phi1_nu_Iso ( iE ), '    ', &
+        phi0_nu_Iso ( iE )  -  phi1_nu_Iso ( iE )
+    END DO
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> NuB Iso: E, Phi0, Phi1, Phi0 - Phi1'
+    DO iE = 1, nPointsE
+      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+        E_Cells ( iE ),      '    ', &
+        phi0_nub_Iso ( iE ), '    ', &
+        phi1_nub_Iso ( iE ), '    ', &
+        phi0_nub_Iso ( iE )  -  phi1_nub_Iso ( iE )
+    END DO
+
+  WRITE (*,*)
+
+   END ASSOCIATE ! rho-T-Ye
+
+   END BLOCK QuickDirty
+
+!--------------------------------------------------------------
+
 ! --------------------------------------------------------------------
 !          LOG the WHOLE table for storage
 ! --------------------------------------------------------------------
 
+  WRITE(*,*)
   WRITE(*,*) 'LOG the whole table with relevant offset for storage'
 
   DO i_r = 1, nOpac_EmAb
@@ -1556,6 +1666,7 @@ print*, '   >>> TMev', TMeV
   END IF
 
   WRITE (*,*) "HDF write successful"
+
 
 !  IF ( EmAb_nuclei_EC_table .gt. 0) THEN
 !    DO i_r = 1, OpacityTable % EmAb % EC_table_nOpacities
