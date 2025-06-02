@@ -86,7 +86,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! -------------------- NOW DO BARYONIC EOS ----------------------------------------------
     PRINT*, "Allocate Baryonic EOS"
     WRITE(*,*) nPointsBaryon
-    CALL AllocateEquationOfStateCompOSETable( EOSTable, nPointsBaryon , nVariables )
+    CALL AllocateEquationOfStateTable( EOSTable, nPointsBaryon , nVariables )
     
     EOSTable % TS % Names(1:3) = (/'Density                         ',&
     'Temperature                     ',&
@@ -264,7 +264,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Starting HDF write: Baryonic EOS"
-    CALL WriteEquationOfStateComPOSETableHDF( EOSTable, BaryonEOSTableName )
+    CALL WriteEquationOfStateTableHDF( EOSTable, BaryonEOSTableName )
     CALL FinalizeHDF( )
     
     ! NOW ADD Helmholtz EOS TO PREVIOUSLY CREATED H5 FILE
@@ -281,7 +281,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     WRITE (*,*) "HDF write successful"
     
-    CALL DeAllocateEquationOfStateComPOSETable( EOSTable )
+    CALL DeAllocateEquationOfStateTable( EOSTable )
     CALL DeallocateHelmholtzTable( HelmEOSTable )
     CALL DeAllocateMuonEOS( MuonEOSTable )
 

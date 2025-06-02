@@ -48,20 +48,37 @@ MODULE wlEquationOfStateTableModule
   PUBLIC :: TableLimitFail
   PUBLIC :: SwapDependentVariables
   PUBLIC :: IndexMatch
+  
+  INTERFACE AllocateEquationOfStateTable
+    MODULE PROCEDURE AllocateEquationOfState3DTable
+    MODULE PROCEDURE AllocateEquationOfState4DTable
+    MODULE PROCEDURE AllocateEquationOfStateCompOSETable
+  END INTERFACE AllocateEquationOfStateTable
 
-  PUBLIC :: AllocateEquationOfStateCompOSETable
-  PUBLIC :: DeAllocateEquationOfStateCompOSETable
-  PUBLIC :: CompOSETableLimitFail
-  PUBLIC :: SwapDependentVariablesCompOSE
-  PUBLIC :: IndexMatchCompOSE
+  INTERFACE DeAllocateEquationOfStateTable
+    MODULE PROCEDURE DeAllocateEquationOfState3DTable
+    MODULE PROCEDURE DeAllocateEquationOfState4DTable
+    MODULE PROCEDURE DeAllocateEquationOfStateCompOSETable
+  END INTERFACE DeAllocateEquationOfStateTable
 
-  PUBLIC :: AllocateEquationOfState4DTable
-  PUBLIC :: DeAllocateEquationOfState4DTable
+  INTERFACE TableLimitFail
+    MODULE PROCEDURE TableLimitFail3D
+  END INTERFACE TableLimitFail
+
+  INTERFACE SwapDependentVariables
+    MODULE PROCEDURE SwapDependentVariables3D
+    MODULE PROCEDURE SwapDependentVariablesCompOSE
+  END INTERFACE SwapDependentVariables
+
+  INTERFACE IndexMatch
+    MODULE PROCEDURE IndexMatch3D
+    MODULE PROCEDURE IndexMatchCompOSE
+  END INTERFACE IndexMatch
 
 CONTAINS
 
 
-  SUBROUTINE AllocateEquationOfStateTable( EOSTable, nPoints, nVariables )
+  SUBROUTINE AllocateEquationOfState3DTable( EOSTable, nPoints, nVariables )
 
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     INTEGER, INTENT(in)                           :: nVariables
@@ -74,35 +91,35 @@ CONTAINS
     CALL AllocateDependentVariables &
            ( EOSTable % DV, EOSTable % nPoints, EOSTable % nVariables )
 
-  END SUBROUTINE AllocateEquationOfStateTable
+  END SUBROUTINE AllocateEquationOfState3DTable
 
 
-  SUBROUTINE DeAllocateEquationOfStateTable( EOSTable )
+  SUBROUTINE DeAllocateEquationOfState3DTable( EOSTable )
 
     TYPE(EquationOfStateTableType) :: EOSTable
 
     CALL DeAllocateThermoState( EOSTable % TS )
     CALL DeAllocateDependentVariables( EOSTable % DV )
 
-  END SUBROUTINE DeAllocateEquationOfStateTable
+  END SUBROUTINE DeAllocateEquationOfState3DTable
 
 
-  LOGICAL FUNCTION TableLimitFail( rho, t, ye, EOSTable )
+  LOGICAL FUNCTION TableLimitFail3D( rho, t, ye, EOSTable )
 
     REAL(dp), INTENT(in)                       :: rho, t, ye
     TYPE(EquationOfStateTableType), INTENT(in) :: EOSTable
 
-    TableLimitFail = .false.
-    IF ( rho < EOSTable % TS % minValues(1) ) TableLimitFail = .true.
-    IF ( rho > EOSTable % TS % maxValues(1) ) TableLimitFail = .true.
-    IF (   t < EOSTable % TS % minValues(2) ) TableLimitFail = .true.
-    IF (   t > EOSTable % TS % maxValues(2) ) TableLimitFail = .true.
-    IF (  ye < EOSTable % TS % minValues(3) ) TableLimitFail = .true.
-    IF (  ye > EOSTable % TS % maxValues(3) ) TableLimitFail = .true.
+    TableLimitFail3D = .false.
+    IF ( rho < EOSTable % TS % minValues(1) ) TableLimitFail3D = .true.
+    IF ( rho > EOSTable % TS % maxValues(1) ) TableLimitFail3D = .true.
+    IF (   t < EOSTable % TS % minValues(2) ) TableLimitFail3D = .true.
+    IF (   t > EOSTable % TS % maxValues(2) ) TableLimitFail3D = .true.
+    IF (  ye < EOSTable % TS % minValues(3) ) TableLimitFail3D = .true.
+    IF (  ye > EOSTable % TS % maxValues(3) ) TableLimitFail3D = .true.
 
-  END FUNCTION TableLimitFail
+  END FUNCTION TableLimitFail3D
 
-  SUBROUTINE SwapDependentVariables( EOSTable, TargetBuffer, IndexBuffer )
+  SUBROUTINE SwapDependentVariables3D( EOSTable, TargetBuffer, IndexBuffer )
 
     TYPE(EquationOfStateTableType), INTENT(inout)  :: EOSTable
     CHARACTER(LEN=32)                              :: NameBuffer
@@ -127,12 +144,12 @@ CONTAINS
       EOSTable % DV % Names( IndexBuffer ) = NameBuffer
       EOSTable % DV % Units( IndexBuffer ) = UnitBuffer
 
-      CALL IndexMatch( TargetBuffer, IndexBuffer, &
+      CALL IndexMatch3D( TargetBuffer, IndexBuffer, &
                     EOSTable % DV % Indices )
 
-  END SUBROUTINE SwapDependentVariables
+  END SUBROUTINE SwapDependentVariables3D
 
-  SUBROUTINE IndexMatch( TargetBuffer, IndexBuffer, Indices )
+  SUBROUTINE IndexMatch3D( TargetBuffer, IndexBuffer, Indices )
 
     INTEGER, INTENT(in)        :: TargetBuffer
     INTEGER, INTENT(in)        :: IndexBuffer
@@ -170,7 +187,7 @@ CONTAINS
       Indices % iGamma1 = IndexBuffer 
       END IF
 
-  END SUBROUTINE IndexMatch
+  END SUBROUTINE IndexMatch3D
 
   
   ! ---------------------------------------------------------------------- !

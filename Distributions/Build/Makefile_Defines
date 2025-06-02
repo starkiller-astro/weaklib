@@ -18,3 +18,9 @@ else
       DEFINES   += $(MDEFS)$(PP)WEAKLIB_OMP
    endif
 endif
+
+
+EOSTYPE	?= 3D # Possible are 4D, 3D, COMPOSE. 3D is the "old" weaklib table
+
+DEFINES += \
+	$(MDEFS)$(PP)EOSTYPE_$(EOSTYPE)

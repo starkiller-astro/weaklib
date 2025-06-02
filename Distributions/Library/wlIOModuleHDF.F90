@@ -35,13 +35,27 @@ MODULE wlIOModuleHDF
   PUBLIC WriteGroupAttributeHDF_string
   PUBLIC WriteVersionAttribute
 
-  PUBLIC ReadDependentVariablesCompOSEHDF
-  PUBLIC WriteDependentVariablesCompOSEHDF
+  INTERFACE WriteThermoStateHDF
+    MODULE PROCEDURE WriteThermoState3DHDF
+    MODULE PROCEDURE WriteThermoState4DHDF
+  END INTERFACE WriteThermoStateHDF
 
-  PUBLIC WriteThermoState4DHDF
-  PUBLIC WriteDependentVariables4DHDF
-  PUBLIC ReadThermoState4DHDF
-  PUBLIC ReadDependentVariables4DHDF
+  INTERFACE WriteDependentVariablesHDF
+    MODULE PROCEDURE WriteDependentVariables3DHDF
+    MODULE PROCEDURE WriteDependentVariables4DHDF
+    MODULE PROCEDURE WriteDependentVariablesCompOSEHDF
+  END INTERFACE WriteDependentVariablesHDF
+
+  INTERFACE ReadThermoStateHDF
+    MODULE PROCEDURE ReadThermoState3DHDF
+    MODULE PROCEDURE ReadThermoState4DHDF
+  END INTERFACE ReadThermoStateHDF
+
+  INTERFACE ReadDependentVariablesHDF
+    MODULE PROCEDURE ReadDependentVariables3DHDF
+    MODULE PROCEDURE ReadDependentVariables4DHDF
+    MODULE PROCEDURE ReadDependentVariablesCompOSEHDF
+  END INTERFACE ReadDependentVariablesHDF
 
   INTERFACE ReadHDF
     MODULE PROCEDURE Read1dHDF_double
@@ -792,7 +806,7 @@ CONTAINS
 
   END SUBROUTINE WriteVersionAttribute
   
-  SUBROUTINE WriteThermoStateHDF( TS, group_id )
+  SUBROUTINE WriteThermoState3DHDF( TS, group_id )
 
     TYPE(ThermoStateType), INTENT(in)           :: TS
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -836,9 +850,9 @@ CONTAINS
     buffer(1) = TS % Indices % iYe
     CALL WriteHDF( "iYe",  buffer, group_id, datasize1d )
 
-  END SUBROUTINE WriteThermoStateHDF
+  END SUBROUTINE WriteThermoState3DHDF
 
-  SUBROUTINE WriteDependentVariablesHDF( DV, group_id )
+  SUBROUTINE WriteDependentVariables3DHDF( DV, group_id )
 
     TYPE(DependentVariablesType), INTENT(in)    :: DV
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -941,9 +955,9 @@ CONTAINS
     CALL WriteHDF( "iGamma1", buffer, &
                              group_id, datasize1d )
 
-  END SUBROUTINE WriteDependentVariablesHDF
+  END SUBROUTINE WriteDependentVariables3DHDF
 
-  SUBROUTINE ReadThermoStateHDF( TS, file_id )
+  SUBROUTINE ReadThermoState3DHDF( TS, file_id )
 
     TYPE(ThermoStateType), INTENT(inout)        :: TS
     INTEGER(HID_T), INTENT(in)                  :: file_id
@@ -984,9 +998,9 @@ CONTAINS
 
     CALL CloseGroupHDF( group_id )
 
-  END SUBROUTINE ReadThermoStateHDF
+  END SUBROUTINE ReadThermoState3DHDF
 
-  SUBROUTINE ReadDependentVariablesHDF( DV, file_id )
+  SUBROUTINE ReadDependentVariables3DHDF( DV, file_id )
 
     TYPE(DependentVariablesType), INTENT(inout) :: DV
     INTEGER(HID_T), INTENT(in)                  :: file_id
@@ -1097,7 +1111,7 @@ CONTAINS
 
     CALL CloseGroupHDF( group_id )
 
-  END SUBROUTINE ReadDependentVariablesHDF
+  END SUBROUTINE ReadDependentVariables3DHDF
   
   SUBROUTINE WriteDependentVariablesCompOSEHDF( DV, group_id )
 

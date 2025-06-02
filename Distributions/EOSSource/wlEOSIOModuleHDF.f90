@@ -18,27 +18,45 @@ MODULE wlEOSIOModuleHDF
   PUBLIC DescribeEquationOfStateTable
   PUBLIC BroadcastEquationOfStateTableParallel
   PUBLIC MatchTableStructure
+
   PUBLIC TransferDependentVariables
   PUBLIC EOSVertexQuery
   PUBLIC ReadEOSMetadataHDF
   PUBLIC WriteEOSMetadataHDF
 
-  PUBLIC WriteEquationOfState4DTableHDF
-  PUBLIC ReadEquationOfState4DTableHDF
-  PUBLIC DescribeEquationOfState4DTable
-  PUBLIC BroadcastEquationOfState4DTableParallel
-  PUBLIC Match4DTableStructure
+  INTERFACE WriteEquationOfStateTableHDF
+    MODULE PROCEDURE WriteEquationOfState3DTableHDF
+    MODULE PROCEDURE WriteEquationOfState4DTableHDF
+    MODULE PROCEDURE WriteEquationOfStateCompOSETableHDF
+  END INTERFACE WriteEquationOfStateTableHDF
 
-  PUBLIC WriteEquationOfStateCompOSETableHDF
-  PUBLIC ReadEquationOfStateCompOSETableHDF
-  PUBLIC DescribeEquationOfStateCompOSETable
-  PUBLIC BroadcastEquationOfStateCompOSETableParallel
-  PUBLIC MatchCompOSETableStructure
+  INTERFACE ReadEquationOfStateTableHDF
+    MODULE PROCEDURE ReadEquationOfState3DTableHDF
+    MODULE PROCEDURE ReadEquationOfState4DTableHDF
+    MODULE PROCEDURE ReadEquationOfStateCompOSETableHDF
+  END INTERFACE ReadEquationOfStateTableHDF
+
+  INTERFACE DescribeEquationOfStateTable
+    MODULE PROCEDURE DescribeEquationOfState3DTable
+    MODULE PROCEDURE DescribeEquationOfState4DTable
+    MODULE PROCEDURE DescribeEquationOfStateCompOSETable
+  END INTERFACE DescribeEquationOfStateTable
+  
+  INTERFACE BroadcastEquationOfStateTableParallel
+    MODULE PROCEDURE BroadcastEquationOfState3DTableParallel
+    MODULE PROCEDURE BroadcastEquationOfState4DTableParallel
+    MODULE PROCEDURE BroadcastEquationOfStateCompOSETableParallel
+  END INTERFACE BroadcastEquationOfStateTableParallel
+
+  INTERFACE MatchTableStructure
+    MODULE PROCEDURE Match3DTableStructure
+    MODULE PROCEDURE Match4DTableStructure
+    MODULE PROCEDURE MatchCompOSETableStructure
+  END INTERFACE MatchTableStructure
 
 CONTAINS
 
-
-  SUBROUTINE WriteEquationOfStateTableHDF( EOSTable, EOSTableName_Option )
+  SUBROUTINE WriteEquationOfState3DTableHDF( EOSTable, EOSTableName_Option )
 
     TYPE(EquationOfStateTableType), INTENT(inout)        :: EOSTable
     CHARACTER(len=*),               INTENT(in), OPTIONAL :: EOSTableName_Option
@@ -69,10 +87,10 @@ CONTAINS
 
     CALL CloseFileHDF( file_id )
 
-  END SUBROUTINE WriteEquationOfStateTableHDF
+  END SUBROUTINE WriteEquationOfState3DTableHDF
 
 
-  SUBROUTINE DescribeEquationOfStateTable( EOSTable )
+  SUBROUTINE DescribeEquationOfState3DTable( EOSTable )
 
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
 
@@ -81,7 +99,7 @@ CONTAINS
     ASSOCIATE( TS => EOSTable % TS )
 
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfState3DTable'
     DO i = 1, 3
 
       WRITE(*,*)
@@ -121,7 +139,7 @@ CONTAINS
 
     END ASSOCIATE ! DV
 
-  END SUBROUTINE DescribeEquationOfStateTable
+  END SUBROUTINE DescribeEquationOfState3DTable
 
   SUBROUTINE ReadEOSMetadataHDF( MD, file_id )
 
@@ -191,7 +209,7 @@ CONTAINS
 
   END SUBROUTINE WriteEOSMetadataHDF
 
-  SUBROUTINE ReadEquationOfStateTableHDF( EOSTable, FileName )
+  SUBROUTINE ReadEquationOfState3DTableHDF( EOSTable, FileName )
 
     TYPE(EquationOfStateTableType), INTENT(inout) :: EOSTable
     CHARACTER(len=*), INTENT(in)                  :: FileName
@@ -217,13 +235,13 @@ CONTAINS
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
-    CALL DescribeEquationOfStateTable( EOSTable )
+    CALL DescribeEquationOfState3DTable( EOSTable )
 
     CALL CloseFileHDF( file_id )
 
-  END SUBROUTINE ReadEquationOfStateTableHDF
+  END SUBROUTINE ReadEquationOfState3DTableHDF
 
-  SUBROUTINE BroadcastEquationOfStateTableParallel &
+  SUBROUTINE BroadcastEquationOfState3DTableParallel &
                ( EOSTable, rootproc, myid, ierr,  COMMUNICATOR )
 
     USE MPI
@@ -362,7 +380,7 @@ CONTAINS
     EOSTable % MD % WLRevision(1)      = sendstring(6) 
     EOSTable % MD % TableLink(1)       = sendstring(7) 
 
-  END SUBROUTINE BroadcastEquationOfStateTableParallel
+  END SUBROUTINE BroadcastEquationOfState3DTableParallel
 
 
   SUBROUTINE TransferDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
@@ -387,7 +405,7 @@ CONTAINS
   END SUBROUTINE TransferDependentVariables
 
 
-  SUBROUTINE MatchTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
+  SUBROUTINE Match3DTableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
 
     TYPE(EquationOfStateTableType), INTENT(in)    :: EOSTableIn
     TYPE(EquationOfStateTableType), INTENT(out)   :: EOSTableOut
@@ -485,7 +503,7 @@ CONTAINS
 
     END ASSOCIATE
 
-  END SUBROUTINE MatchTableStructure
+  END SUBROUTINE Match3DTableStructure
 
   SUBROUTINE EOSVertexQuery( irho, iT, iYe, EOSTable, Values )
 
@@ -533,7 +551,7 @@ CONTAINS
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-    CALL WriteDependentVariablesCompOSEHDF( EOSTable % DV, group_id )
+    CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
@@ -554,7 +572,7 @@ CONTAINS
     ASSOCIATE( TS => EOSTable % TS )
 
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfState3DTable'
     DO i = 1, 3
 
       WRITE(*,*)
@@ -614,11 +632,11 @@ CONTAINS
     CALL ReadNumberVariablesHDF( nVariables, group_id )
     CALL CloseGroupHDF( group_id )
 
-    CALL AllocateEquationOfStateCompOSETable( EOSTable, nPoints , nVariables )
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
     CALL ReadThermoStateHDF( EOSTable % TS, file_id )
 
-    CALL WriteDependentVariablesCompOSEHDF( EOSTable % DV, file_id )
+    CALL WriteDependentVariablesHDF( EOSTable % DV, file_id )
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
@@ -685,7 +703,7 @@ CONTAINS
       nPoints(3) = buffer(3)
       nVariables = buffer(4) 
 
-      CALL AllocateEquationOfStateCompOSETable( EOSTable, nPoints , nVariables )
+      CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
       EOSTable % DV % Indices % iPressure                  = buffer( 5)
       EOSTable % DV % Indices % iEntropyPerBaryon          = buffer( 6)
@@ -798,7 +816,7 @@ CONTAINS
     TYPE(DVIDCompOSEType), INTENT(in)                    :: NewDVID
     INTEGER, INTENT(in)                           :: NewnVariables
 
-    CALL AllocateEquationOfStateCompOSETable( EOSTableOut, EOSTableIn % nPoints, &
+    CALL AllocateEquationOfStateTable( EOSTableOut, EOSTableIn % nPoints, &
                                      NewnVariables )
 
     EOSTableOut % DV % Indices = NewDVID
@@ -905,7 +923,7 @@ CONTAINS
     ASSOCIATE( TS => EOSTable % TS )
 
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateTable'
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfState3DTable'
     DO i = 1, 4
 
       WRITE(*,*)
@@ -966,11 +984,11 @@ CONTAINS
     CALL OpenFileHDF( EOSTableName, .true., file_id )
 
     CALL OpenGroupHDF( "ThermoState", .true., file_id, group_id )
-    CALL WriteThermoState4DHDF( EOSTable % TS, group_id )
+    CALL WriteThermoStateHDF( EOSTable % TS, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "DependentVariables", .true., file_id, group_id )
-    CALL WriteDependentVariables4DHDF( EOSTable % DV, group_id )
+    CALL WriteDependentVariablesHDF( EOSTable % DV, group_id )
     CALL CloseGroupHDF( group_id )
 
     CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
@@ -999,15 +1017,15 @@ CONTAINS
     CALL ReadNumberVariablesHDF( nVariables, group_id )
     CALL CloseGroupHDF( group_id )
 
-    CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
-    CALL ReadThermoState4DHDF( EOSTable % TS, file_id )
+    CALL ReadThermoStateHDF( EOSTable % TS, file_id )
 
-    CALL ReadDependentVariables4DHDF( EOSTable % DV, file_id )
+    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
-    CALL DescribeEquationOfState4DTable( EOSTable )
+    CALL DescribeEquationOfStateTable( EOSTable )
 
     CALL CloseFileHDF( file_id )
 
@@ -1020,7 +1038,7 @@ CONTAINS
     TYPE(DVID4DType), INTENT(in)                    :: NewDVID
     INTEGER, INTENT(in)                             :: NewnVariables
 
-    CALL AllocateEquationOfState4DTable( EOSTableOut, EOSTableIn % nPoints, &
+    CALL AllocateEquationOfStateTable( EOSTableOut, EOSTableIn % nPoints, &
                                      NewnVariables )
 
     EOSTableOut % DV % Indices = NewDVID
@@ -1207,7 +1225,7 @@ CONTAINS
     nPoints(4) = buffer(4)
     nVariables = buffer(5) 
 
-    CALL AllocateEquationOfState4DTable( EOSTable, nPoints , nVariables )
+    CALL AllocateEquationOfStateTable( EOSTable, nPoints , nVariables )
 
     EOSTable % DV % Indices % iPressure                  = buffer( 6)
     EOSTable % DV % Indices % iEntropyPerBaryon          = buffer( 7)

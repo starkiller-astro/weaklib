@@ -1,5 +1,6 @@
 WL_OPACITYSOURCE = \
   wlOpacityFieldsModule.o \
   wlOpacityTableModule.o \
+  wlCalculateAbEmOpacityModule.o \
   wlParallelModule.o \
   wlOpacityTableIOModuleHDF.o

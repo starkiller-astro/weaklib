@@ -59,6 +59,7 @@ MODULE wlOpacityTableModule
     AllocateEquationOfStateTable
   USE wlThermoStateModule, ONLY: &
     ThermoStateType, &
+    ThermoState4DType, &
     AllocateThermoState, &
     DeAllocateThermoState, &
     CopyThermoState 
@@ -81,8 +82,17 @@ MODULE wlOpacityTableModule
     INTEGER        :: nPointsTS(3)
     TYPE(GridType) :: EnergyGrid
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
+#ifdef EOSTYPE_3D
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
+#elif defined(EOSTYPE_4D)
+    TYPE(EquationOfStateTable4DType) :: EOSTable
+    TYPE(ThermoState4DType)          :: TS
+#elif defined(EOSTYPE_COMPOSE)
+    TYPE(EquationOfStateTableCompOSEType) :: EOSTable
+    TYPE(ThermoStateType)          :: TS
+#endif
+
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
     TYPE(OpacityTypeScatIso)       :: &
@@ -115,7 +125,11 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
+#ifdef EOSTYPE_4D
+    TYPE(ThermoState4DType),INTENT(in), OPTIONAL :: OpacityThermoState_Option
+#else
     TYPE(ThermoStateType),  INTENT(in), OPTIONAL :: OpacityThermoState_Option
+#endif
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
     LOGICAL               :: Verbose

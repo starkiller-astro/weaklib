@@ -49,16 +49,26 @@ MODULE wlThermoStateModule
   END TYPE  
 
   PUBLIC AllocateThermoState 
-  PUBLIC DeAllocateThermoState 
+  PUBLIC DeAllocateThermoState
   PUBLIC CopyThermoState
- 
-  PUBLIC AllocateThermoState4D 
-  PUBLIC DeAllocateThermoState4D 
-  PUBLIC CopyThermoState4D
- 
+  INTERFACE AllocateThermoState
+    MODULE PROCEDURE AllocateThermoState3D
+    MODULE PROCEDURE AllocateThermoState4D
+  END INTERFACE AllocateThermoState
+
+  INTERFACE DeAllocateThermoState
+    MODULE PROCEDURE ADeAllocateThermoState3D
+    MODULE PROCEDURE DeAllocateThermoState4D
+  END INTERFACE DeAllocateThermoState
+
+  INTERFACE CopyThermoState
+    MODULE PROCEDURE CopyThermoState3D
+    MODULE PROCEDURE CopyThermoState4D
+  END INTERFACE CopyThermoState
+
 CONTAINS 
 
-  SUBROUTINE AllocateThermoState( TS, nPoints )
+  SUBROUTINE AllocateThermoState3D( TS, nPoints )
      
     TYPE(ThermoStateType) :: TS
     INTEGER, DIMENSION(3), INTENT(in) :: nPoints
@@ -71,9 +81,9 @@ CONTAINS
       ALLOCATE( TS % States(i) % Values(1:TS % nPoints(i)) ) 
     END DO 
  
-  END SUBROUTINE AllocateThermoState
+  END SUBROUTINE AllocateThermoState3D
 
-  SUBROUTINE DeAllocateThermoState( TS )
+  SUBROUTINE DeAllocateThermoState3D( TS )
 
     TYPE(ThermoStateType) :: TS
 
@@ -83,9 +93,9 @@ CONTAINS
       DEALLOCATE( TS % States(i) % Values )
     END DO 
 
-  END SUBROUTINE DeAllocateThermoState
+  END SUBROUTINE DeAllocateThermoState3D
 
-  SUBROUTINE CopyThermoState( TS_target, TS_source )
+  SUBROUTINE CopyThermoState3D( TS_target, TS_source )
     
     TYPE(ThermoStateType) :: TS_target, TS_source
 
@@ -107,7 +117,7 @@ CONTAINS
 
     END DO
 
-  END SUBROUTINE CopyThermoState
+  END SUBROUTINE CopyThermoState3D
 
   SUBROUTINE AllocateThermoState4D( TS, nPoints )
      
