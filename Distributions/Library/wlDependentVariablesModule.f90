@@ -116,18 +116,23 @@ MODULE wlDependentVariablesModule
     TYPE(DVID4DType) :: Indices
   END TYPE
 
-  PUBLIC AllocateDependentVariables
-  PUBLIC DeAllocateDependentVariables
-
-  PUBLIC AllocateDependentVariablesCompOSE
-  PUBLIC DeAllocateDependentVariablesCompOSE
+  PUBLIC :: AllocateDependentVariables
+  PUBLIC :: DeAllocateDependentVariables
+  INTERFACE AllocateDependentVariables
+    MODULE PROCEDURE AllocateDependentVariables3D
+    MODULE PROCEDURE AllocateDependentVariablesCompOSE
+    MODULE PROCEDURE AllocateDependentVariables4D
+  END INTERFACE AllocateDependentVariables
   
-  PUBLIC AllocateDependentVariables4D
-  PUBLIC DeAllocateDependentVariables4D
+  INTERFACE DeAllocateDependentVariables
+    MODULE PROCEDURE DeAllocateDependentVariables3D
+    MODULE PROCEDURE DeAllocateDependentVariablesCompOSE
+    MODULE PROCEDURE DeAllocateDependentVariables4D
+  END INTERFACE DeAllocateDependentVariables
 
 CONTAINS
 
-  SUBROUTINE AllocateDependentVariables( DV, nPoints, nVariables )
+  SUBROUTINE AllocateDependentVariables3D( DV, nPoints, nVariables )
    
     TYPE(DependentVariablesType)      :: DV 
     INTEGER,               INTENT(in) :: nVariables
@@ -153,10 +158,10 @@ CONTAINS
              % Values(1:nPoints(1), 1:nPoints(2), 1:nPoints(3)) )
     END DO
 
-  END SUBROUTINE AllocateDependentVariables
+  END SUBROUTINE AllocateDependentVariables3D
 
 
-  SUBROUTINE DeAllocateDependentVariables( DV )
+  SUBROUTINE DeAllocateDependentVariables3D( DV )
   
     TYPE(DependentVariablesType) :: DV
 
@@ -175,7 +180,7 @@ CONTAINS
     DEALLOCATE( DV % minValues )
     DEALLOCATE( DV % maxValues )
 
-  END SUBROUTINE DeAllocateDependentVariables
+  END SUBROUTINE DeAllocateDependentVariables3D
 
 
   SUBROUTINE AllocateDependentVariablesCompOSE( DV, nPoints, nVariables )

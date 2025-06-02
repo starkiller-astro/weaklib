@@ -636,7 +636,7 @@ CONTAINS
 
     CALL ReadThermoStateHDF( EOSTable % TS, file_id )
 
-    CALL WriteDependentVariablesHDF( EOSTable % DV, file_id )
+    CALL ReadDependentVariablesHDF( EOSTable % DV, file_id )
 
     CALL ReadEOSMetadataHDF( EOSTable % MD, file_id )
 
@@ -842,6 +842,10 @@ CONTAINS
     NewiHeavyBE => NewDVID % iHeavyBindingEnergy, &
     NewiThermEnergy => NewDVID % iThermalEnergy, &
     NewiGamma1 => NewDVID % iGamma1, &
+    NewiProtonEffMass => NewDVID % iProtonEffMass, &
+    NewiNeutronEffMass => NewDVID % iNeutronEffMass, &
+    NewiProtonSelfEnergy => NewDVID % iProtonSelfEnergy, &
+    NewiNeutronSelfEnergy => NewDVID % iNeutronSelfEnergy, &
 
     OldiPressure => EOSTableIn % DV % Indices % iPressure , &
     OldiEntropy => EOSTableIn % DV % Indices % iEntropyPerBaryon, &
@@ -857,7 +861,11 @@ CONTAINS
     OldiHMassNum => EOSTableIn % DV % Indices % iHeavyMassNumber, &
     OldiHeavyBE => EOSTableIn % DV % Indices % iHeavyBindingEnergy, &
     OldiThermEnergy => EOSTableIn % DV % Indices % iThermalEnergy, &
-    OldiGamma1 => EOSTableIn % DV % Indices % iGamma1 )
+    OldiGamma1 => EOSTableIn % DV % Indices % iGamma1, &
+    OldiProtonEffMass => EOSTableIn % DV % Indices % iProtonEffMass, &
+    OldiNeutronEffMass => EOSTableIn % DV % Indices % iNeutronEffMass, &
+    OldiProtonSelfEnergy => EOSTableIn % DV % Indices % iProtonSelfEnergy, &
+    OldiNeutronSelfEnergy => EOSTableIn % DV % Indices % iNeutronSelfEnergy)
 
     CALL TransferCompOSEDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPressure, OldiPressure )
@@ -904,6 +912,18 @@ CONTAINS
     CALL TransferCompOSEDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiGamma1, OldiGamma1 )
     EOSTableOut % DV % Indices % iGamma1 = NewiGamma1
+    CALL TransferCompOSEDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiProtonEffMass, OldiProtonEffMass )
+    EOSTableOut % DV % Indices % iProtonEffMass = NewiProtonEffMass
+    CALL TransferCompOSEDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                    NewiNeutronEffMass, OldiNeutronEffMass )
+    EOSTableOut % DV % Indices % iNeutronEffMass = NewiNeutronEffMass
+    CALL TransferCompOSEDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                    NewiProtonSelfEnergy, OldiProtonSelfEnergy )
+    EOSTableOut % DV % Indices % iProtonSelfEnergy = NewiProtonSelfEnergy
+    CALL TransferCompOSEDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                    NewiNeutronSelfEnergy, OldiNeutronSelfEnergy )
+    EOSTableOut % DV % Indices % iNeutronSelfEnergy = NewiNeutronSelfEnergy
 
     END ASSOCIATE
 
@@ -1066,6 +1086,8 @@ CONTAINS
     NewiGamma1 => NewDVID % iGamma1, &
     NewiProtonSelfEnergy => NewDVID % iProtonSelfEnergy, &
     NewiNeutronSelfEnergy => NewDVID % iNeutronSelfEnergy, &
+    NewiProtonEffMass => NewDVID % iProtonEffMass, &
+    NewiNeutronEffMass => NewDVID % iNeutronEffMass, &
 
     OldiPressure => EOSTableIn % DV % Indices % iPressure , &
     OldiEntropy => EOSTableIn % DV % Indices % iEntropyPerBaryon, &
@@ -1083,7 +1105,9 @@ CONTAINS
     OldiThermEnergy => EOSTableIn % DV % Indices % iThermalEnergy, &
     OldiGamma1 => EOSTableIn % DV % Indices % iGamma1, &
     OldiProtonSelfEnergy => EOSTableIn % DV % Indices % iProtonSelfEnergy, &
-    OldiNeutronSelfEnergy => EOSTableIn % DV % Indices % iNeutronSelfEnergy )
+    OldiNeutronSelfEnergy => EOSTableIn % DV % Indices % iNeutronSelfEnergy, &
+    OldiProtonEffMass => EOSTableIn % DV % Indices % iProtonEffMass, &
+    OldiNeutronEffMass => EOSTableIn % DV % Indices % iNeutronEffMass )
 
     CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiPressure, OldiPressure )
@@ -1136,6 +1160,12 @@ CONTAINS
     CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
                                      NewiNeutronSelfEnergy, OldiNeutronSelfEnergy )
     EOSTableOut % DV % Indices % iNeutronSelfEnergy = NewiNeutronSelfEnergy
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiProtonEffMass, OldiProtonEffMass )
+    EOSTableOut % DV % Indices % iProtonEffMass = NewiProtonEffMass
+    CALL Transfer4DDependentVariables( EOSTableIn % DV, EOSTableOut % DV, &
+                                     NewiNeutronEffMass, OldiNeutronEffMass )
+    EOSTableOut % DV % Indices % iNeutronEffMass = NewiNeutronEffMass
 
     END ASSOCIATE
 

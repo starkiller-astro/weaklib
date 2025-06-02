@@ -204,7 +204,7 @@ CONTAINS
     EOSTable % nVariables = nVariables
 
     CALL AllocateThermoState( EOSTable % TS, EOSTable % nPoints )
-    CALL AllocateDependentVariablesCompOSE &
+    CALL AllocateDependentVariables &
            ( EOSTable % DV, EOSTable % nPoints, EOSTable % nVariables )
 
   END SUBROUTINE AllocateEquationOfStateCompOSETable
@@ -215,7 +215,7 @@ CONTAINS
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
 
     CALL DeAllocateThermoState( EOSTable % TS )
-    CALL DeAllocateDependentVariablesCompOSE( EOSTable % DV )
+    CALL DeAllocateDependentVariables( EOSTable % DV )
 
   END SUBROUTINE DeAllocateEquationOfStateCompOSETable
 
@@ -325,8 +325,8 @@ CONTAINS
     EOSTable % nPoints(1:4) = nPoints(1:4)
     EOSTable % nVariables = nVariables
 
-    CALL AllocateThermoState4D( EOSTable % TS, EOSTable % nPoints )
-    CALL AllocateDependentVariables4D &
+    CALL AllocateThermoState( EOSTable % TS, EOSTable % nPoints )
+    CALL AllocateDependentVariables &
            ( EOSTable % DV, EOSTable % nPoints, EOSTable % nVariables )
 
   END SUBROUTINE AllocateEquationOfState4DTable
@@ -336,8 +336,8 @@ CONTAINS
 
     TYPE(EquationOfState4DTableType) :: EOSTable
 
-    CALL DeAllocateThermoState4D( EOSTable % TS )
-    CALL DeAllocateDependentVariables4D( EOSTable % DV )
+    CALL DeAllocateThermoState( EOSTable % TS )
+    CALL DeAllocateDependentVariables( EOSTable % DV )
 
   END SUBROUTINE DeAllocateEquationOfState4DTable
 

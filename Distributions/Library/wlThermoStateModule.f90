@@ -57,7 +57,7 @@ MODULE wlThermoStateModule
   END INTERFACE AllocateThermoState
 
   INTERFACE DeAllocateThermoState
-    MODULE PROCEDURE ADeAllocateThermoState3D
+    MODULE PROCEDURE DeAllocateThermoState3D
     MODULE PROCEDURE DeAllocateThermoState4D
   END INTERFACE DeAllocateThermoState
 
