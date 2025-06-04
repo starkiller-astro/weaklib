@@ -19,8 +19,7 @@ else
    endif
 endif
 
-
-EOSTYPE	?= 3D # Possible are 4D, 3D, COMPOSE. 3D is the "old" weaklib table
+EOSMODE	?= 3D # Possible are 4D, 3D, COMPOSE. 3D is the "old" weaklib table
 
 DEFINES += \
-	$(MDEFS)$(PP)EOSTYPE_$(EOSTYPE)
+	$(MDEFS)$(PP)EOSMODE_$(EOSMODE)

@@ -55,6 +55,8 @@ MODULE wlOpacityTableModule
     ReadEquationOfStateTableHDF
   USE wlEquationOfStateTableModule, ONLY: &
     EquationOfStateTableType, &
+    EquationOfState4DTableType, &
+    EquationOfStateCompOSETableType, &
     DeAllocateEquationOfStateTable, &
     AllocateEquationOfStateTable
   USE wlThermoStateModule, ONLY: &
@@ -79,17 +81,22 @@ MODULE wlOpacityTableModule
     INTEGER        :: nOpacities_Brem, nMoments_Brem
     INTEGER        :: nPointsE
     INTEGER        :: nPointsEta
+#ifdef EOSMODE_4D
+    INTEGER        :: nPointsTS(4)
+#else
     INTEGER        :: nPointsTS(3)
+#endif
     TYPE(GridType) :: EnergyGrid
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
-#ifdef EOSTYPE_3D
+    
+#ifdef EOSMODE_3D
     TYPE(EquationOfStateTableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
-#elif defined(EOSTYPE_4D)
-    TYPE(EquationOfStateTable4DType) :: EOSTable
+#elif defined(EOSMODE_4D)
+    TYPE(EquationOfState4DTableType) :: EOSTable
     TYPE(ThermoState4DType)          :: TS
-#elif defined(EOSTYPE_COMPOSE)
-    TYPE(EquationOfStateTableCompOSEType) :: EOSTable
+#elif defined(EOSMODE_COMPOSE)
+    TYPE(EquationOfStateCompOSETableType) :: EOSTable
     TYPE(ThermoStateType)          :: TS
 #endif
 
@@ -125,7 +132,7 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nPointsE
     INTEGER,                INTENT(in)           :: nPointsEta
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
-#ifdef EOSTYPE_4D
+#ifdef EOSMODE_4D
     TYPE(ThermoState4DType),INTENT(in), OPTIONAL :: OpacityThermoState_Option
 #else
     TYPE(ThermoStateType),  INTENT(in), OPTIONAL :: OpacityThermoState_Option
