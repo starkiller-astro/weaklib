@@ -10,6 +10,7 @@ include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
 all: wlOpacityFieldsTest \
      wlReadOpacityTableTest \
      wlOpacityPerformanceTest \
+		 wlTestElasticOpacity \
      wlInterpolateAb \
      wlInterpolateIso \
      wlInterpolateNES \
@@ -20,7 +21,7 @@ Interpolations: wlInterpolateAb   \
                 wlInterpolateIso  \
                 wlInterpolateNES  \
                 wlInterpolatePair \
-		wlInterpolateBrem
+								wlInterpolateBrem
 
 wlOpacityFieldsTest: \
 	$(weaklib) wlOpacityFieldsTest.o
@@ -38,6 +39,12 @@ wlOpacityPerformanceTest: \
 	$(weaklib) wlOpacityPerformanceTest.o
 	$(FLINKER) $(FLAGS) -o wlOpacityPerformanceTest_$(MACHINE) \
 	$(weaklib) wlOpacityPerformanceTest.o \
+	$(LIBRARIES)
+
+wlTestElasticOpacity: \
+	$(weaklib) wlTestElasticOpacity.o
+	$(FLINKER) $(FLAGS) -o wlTestElasticOpacity_$(MACHINE) \
+	$(weaklib) wlTestElasticOpacity.o \
 	$(LIBRARIES)
 
 wlInterpolateAb: \

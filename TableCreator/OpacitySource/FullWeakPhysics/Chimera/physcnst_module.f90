@@ -66,6 +66,8 @@ REAL(dp), PARAMETER  :: rmu       = 1.0d0/avn     ! mean baryon mass [g]
 
 REAL(dp), PARAMETER  :: me        = 0.510998d+00  ! electron mass [MeV]
 
+REAL(dp), PARAMETER  :: mmu       = 105.65837d+00 ! muon mass [MeV]
+
 REAL(dp), PARAMETER  :: mp        = 938.272d+00   ! proton mass [MeV]
 
 REAL(dp), PARAMETER  :: mn        = 939.565d+00   ! neutron mass [MeV]

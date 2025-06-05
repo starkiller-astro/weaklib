@@ -6,7 +6,7 @@ PROGRAM wlCalculateSoundSpeed
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonEOSType
+    HelmholtzTableType, MuonTableType
   USE wlHelmMuonIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF, ReadMuonTableHDF
   USE wlElectronPhotonEOS, ONLY: &
@@ -20,7 +20,7 @@ PROGRAM wlCalculateSoundSpeed
     
     TYPE(HelmholtzTableType) :: HelmholtzTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonEOSType) :: MuonTable
+    TYPE(MuonTableType) :: MuonTable
     TYPE(MuonStateType) :: MuonState
     TYPE(EquationOfStateTableType) :: EOSBaryonTable, EOSFullTable, EOSBaryonPlusEleTable
     

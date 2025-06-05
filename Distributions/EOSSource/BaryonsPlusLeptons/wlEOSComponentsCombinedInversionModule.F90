@@ -15,7 +15,7 @@ MODULE wlEOSComponentsCombinedInversionModule
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonStateType, ElectronPhotonEOS
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonEOSType
+    HelmholtzTableType, MuonTableType
   USE wlHelmMuonIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF, ReadMuonTableHDF
     

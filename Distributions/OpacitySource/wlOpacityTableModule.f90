@@ -90,16 +90,14 @@ MODULE wlOpacityTableModule
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
     
 #ifdef EOSMODE_3D
-    TYPE(EquationOfStateTableType) :: EOSTable
-    TYPE(ThermoStateType)          :: TS
+    TYPE(EquationOfStateTableType)        :: EOSTable
 #elif defined(EOSMODE_4D)
-    TYPE(EquationOfState4DTableType) :: EOSTable
-    TYPE(ThermoState4DType)          :: TS
+    TYPE(EquationOfState4DTableType)      :: EOSTable
 #elif defined(EOSMODE_COMPOSE)
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
-    TYPE(ThermoStateType)          :: TS
 #endif
 
+    TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
     TYPE(OpacityTypeScatIso)       :: &

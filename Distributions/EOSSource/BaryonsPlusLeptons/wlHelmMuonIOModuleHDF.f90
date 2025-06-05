@@ -4,7 +4,7 @@ MODULE wlHelmMuonIOModuleHDF
     USE wlLeptonEOSModule, ONLY: &
         HelmholtzTableType, &
         AllocateHelmholtzTable, DeallocateHelmholtzTable, &
-        MuonEOSType, &
+        MuonTableType, &
         AllocateMuonEOS, DeAllocateMuonEOS
     USE wlIOModuleHDF
     USE HDF5
@@ -221,7 +221,7 @@ CONTAINS
         
     SUBROUTINE WriteMuonTableHDF( MuonTable, FileName, NewFile )
         
-        TYPE(MuonEOSType), INTENT(INOUT)  :: MuonTable
+        TYPE(MuonTableType), INTENT(INOUT)  :: MuonTable
         CHARACTER(len=*), INTENT(IN) :: FileName
         LOGICAL, INTENT(IN) :: NewFile
         
@@ -258,7 +258,7 @@ CONTAINS
         
     SUBROUTINE ReadMuonTableHDF( MuonTable, FileName )
     
-        TYPE(MuonEOSType), INTENT(INOUT)  :: MuonTable
+        TYPE(MuonTableType), INTENT(INOUT)  :: MuonTable
         CHARACTER(len=*), INTENT(IN) :: FileName
         
         INTEGER(HID_T) :: file_id

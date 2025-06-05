@@ -21,7 +21,7 @@ PROGRAM wlComposeNewInversionTest
   USE wlEOSComponentsSeparateInversionModule
 #endif
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonEOSType
+    HelmholtzTableType, MuonTableType
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonEOS, ElectronPhotonStateType
   USE wlMuonEOS, ONLY: &
@@ -64,7 +64,7 @@ PROGRAM wlComposeNewInversionTest
     EOSBaryonTable
   TYPE(HelmholtzTableType) :: HelmholtzTable
   TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-  TYPE(MuonEOSType) :: MuonTable
+  TYPE(MuonTableType) :: MuonTable
   TYPE(MuonStateType) :: MuonState
   REAL(DP), DIMENSION(:), ALLOCATABLE :: &
     Ds_bary, Ts_bary, Yps_bary, &

@@ -873,11 +873,7 @@ CONTAINS
     INTEGER            :: iOp
     INTEGER            :: nPointsE
     INTEGER            :: nPointsEta
-#ifdef EOSMODE_4D
-    INTEGER        :: nPointsTS(4)
-#else
-    INTEGER        :: nPointsTS(3)
-#endif
+    INTEGER            :: nPointsTS(3)
     INTEGER            :: nOpac_EmAb
     INTEGER            :: nOpac_Iso
     INTEGER            :: nMom_Iso
@@ -900,7 +896,7 @@ CONTAINS
 #ifdef EOSMODE_4D
     TYPE(ThermoState4DType) :: TS
 #else
-    TYPE(ThermoStateType) :: TS
+    TYPE(ThermoStateType)   :: TS
 #endif
 
     IF( PRESENT( EquationOfStateTableName_Option ) &

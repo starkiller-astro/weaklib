@@ -12,7 +12,7 @@ MODULE wlEosTemperatureCombinedInversionModule
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonStateType, ElectronPhotonEOS
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonEOSType
+    HelmholtzTableType, MuonTableType
   USE wlHelmMuonIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF, ReadMuonTableHDF
     
@@ -28,7 +28,7 @@ MODULE wlEosTemperatureCombinedInversionModule
   PUBLIC :: InvertTemperatureWith_DSYpYl_NoGuess
   
   TYPE(HelmholtzTableType) :: HelmholtzTable 
-  TYPE(MuonEOSType) :: MuonTable
+  TYPE(MuonTableType) :: MuonTable
   
 CONTAINS
 

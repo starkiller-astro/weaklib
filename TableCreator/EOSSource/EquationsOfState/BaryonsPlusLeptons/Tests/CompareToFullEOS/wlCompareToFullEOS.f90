@@ -5,7 +5,7 @@ PROGRAM wlCompareToFullEOS
   USE wlIOModuleHDF
 	USE wlEOSIOModuleHDF	
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonEOSType
+    HelmholtzTableType, MuonTableType
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonEOS, ElectronPhotonStateType
   USE wlHelmholtzEOS, ONLY: &

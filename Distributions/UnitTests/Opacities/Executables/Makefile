@@ -10,4 +10,6 @@ USE_OMP_OL ?= FALSE
 USE_OACC   ?= FALSE
 USE_OMP    ?= FALSE
 
+EOSMODE = COMPOSE
+
 include ../Makefile_Opacities

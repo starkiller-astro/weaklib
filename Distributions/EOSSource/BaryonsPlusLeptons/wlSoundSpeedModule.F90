@@ -3,7 +3,7 @@ MODULE wlSoundSpeedModule
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, cvel, cm3fm3
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonEOSType
+    HelmholtzTableType, MuonTableType
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonEOS, ElectronPhotonStateType
   USE wlMuonEOS, ONLY: &
@@ -36,7 +36,7 @@ CONTAINS
     LOGICAL, INTENT(IN)  :: SeparateContributions
 
     TYPE(HelmholtzTableType), INTENT(IN) :: HelmholtzTable
-    TYPE(MuonEOSType), INTENT(IN) :: MuonTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     
     REAL(DP), INTENT(OUT)    :: Gamma, Cs
 

@@ -21,3 +21,11 @@ wlOpacityTableIOModuleHDF.o: \
   wlIOModuleHDF.o \
   wlParallelModule.o \
   wlOpacityTableIOModuleHDF.f90
+
+wlCalculateAbEmOpacityModule.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlEquationOfStateTableModule.o \
+  wlInterpolationModule.o \
+  wlMuonEOS.o \
+  wlLeptonEOSModule.o

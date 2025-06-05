@@ -66,7 +66,7 @@ MODULE wlLeptonEOSModule
     
   END TYPE HelmholtzTableType
   
-  TYPE, PUBLIC :: MuonEOSType
+  TYPE, PUBLIC :: MuonTableType
       
     INTEGER :: nPointsDen
     INTEGER :: nPointsTemp
@@ -84,7 +84,7 @@ MODULE wlLeptonEOSModule
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnedlnrho
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnedlnT
 
-  END TYPE MuonEOSType
+  END TYPE MuonTableType
 
   PUBLIC AllocateHelmholtzTable
   PUBLIC DeallocateHelmholtzTable
@@ -190,7 +190,7 @@ CONTAINS
 
   SUBROUTINE AllocateMuonEOS( MuonEOS, nPoints )
     
-    TYPE(MuonEOSType)      :: MuonEOS
+    TYPE(MuonTableType)      :: MuonEOS
     INTEGER, DIMENSION(2), INTENT(IN) :: nPoints
 
     MuonEOS % nPointsTemp  = nPoints(1)
@@ -213,7 +213,7 @@ CONTAINS
 
   SUBROUTINE DeAllocateMuonEOS( MuonEOS )
     
-    TYPE(MuonEOSType)      :: MuonEOS
+    TYPE(MuonTableType)      :: MuonEOS
 
     DEALLOCATE( MuonEOS % t )
     DEALLOCATE( MuonEOS % rhoym )
@@ -326,7 +326,7 @@ CONTAINS
 
   SUBROUTINE ReadMuonEOSdat(MuonDatFilePath, MuonEOS)
     
-    TYPE(MuonEOSType), INTENT(INOUT) :: MuonEOS 
+    TYPE(MuonTableType), INTENT(INOUT) :: MuonEOS 
     CHARACTER(len=128), INTENT(IN) :: MuonDatFilePath
     
     ! Local variables

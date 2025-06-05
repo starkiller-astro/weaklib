@@ -5,17 +5,21 @@ USE wlKindModule, ONLY: dp
 
 REAL(dp), PARAMETER  :: pi        = 3.1415926535897932385d0 ! pi
 
+REAL(dp), PARAMETER  :: ergmev    = 1.602177d-6   ! ergs per MeV
+
 REAL(dp), PARAMETER  :: h_cgs     = 6.62607535359d-27 ! Planck's constant [g cm^2 s^{-1}]
 
 REAL(dp), PARAMETER  :: hbar_cgs  = h_cgs/( 2.d0*pi ) ! Planck's constant divided by 2*pi [MeV s]
+
+REAL(dp), PARAMETER  :: h         = h_cgs / ergmev   ! Planck's constant [MeV s]
+
+REAL(dp), PARAMETER  :: hbar      = h/( 2.d0*pi ) ! Planck's constant divided by 2*pi [MeV s]
 
 REAL(dp), PARAMETER  :: cvel      = 2.99792d+10   ! velocity of light [cm s^{-1}]
 
 REAL(dp), PARAMETER  :: cvel_inv  = 1.d0/cvel     ! 1/( velocity of light [cm s^{-1}])
 
 REAL(dp), PARAMETER  :: g         = 6.67384d-08   ! Gravitational constant [dynes cm^{2} g^{-2}]
-
-REAL(dp), PARAMETER  :: ergmev    = 1.602177d-6   ! ergs per MeV
 
 REAL(dp), PARAMETER  :: ergfoe    = 1.d-51        ! ergs/s per foe
 
@@ -48,5 +52,31 @@ REAL(dp), PARAMETER  :: qe        = 4.8032042712d-10 ! electron charge [statcoul
 REAL(dp), PARAMETER  :: sigma_sb  = 5.670374419d-5 ! Stefan Bolzmann constant in csg [erg cm^{−2} s^{−1} K^{−4}]
 
 REAL(dp), PARAMETER  :: asol      = 4.0d0 * sigma_sb / cvel
+
+! Weak Interactions
+REAL(dp), PARAMETER  :: Gw        = 1.027d-5      ! weak interaction constant (proton mass).
+
+REAL(dp), PARAMETER  :: Gw_MeV    = 1.16636d-11   ! weak interaction constant [MeV].
+
+REAL(dp), PARAMETER  :: sin2W     = 0.23116d+00   ! weak mixing angle.
+
+REAL(dp), PARAMETER  :: gv        = 1.0d+00       ! Fermi beta decay constant. This is unity as
+!                                                       the coupling for Fermi decay is absorbed 
+!                                                       by the weak interaction constant.
+
+REAL(dp), PARAMETER  :: ga        = 1.26d+00      ! Gamow-Teller beta decay constant. This is 
+!                                                       not unity as the oupling for Gamow-Teller
+!                                                       decay is renormalized. 
+
+REAL(dp), PARAMETER  :: cv        = 0.96d+00      ! weak interaction constant, which in the 
+!                                                       standard model is given by
+!                                                               1       2
+!                                                          cv = _ + 2sin (W)
+!                                                               2
+!                                                       where W is the 'Weinberg angle'.  
+
+REAL(dp), PARAMETER  :: ca        = 0.5d+00       ! weak interaction constant, which in the 
+!                                                       standard model is given by
+!                                                          cv = 1/2 .
 
 END MODULE wlEosConstantsModule

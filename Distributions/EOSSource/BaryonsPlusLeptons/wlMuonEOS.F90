@@ -5,7 +5,7 @@ MODULE wlMuonEOS
         Index1D_Lin, &
         Index1D_Log
     USE wlLeptonEOSModule, ONLY: &
-        MuonEOSType
+        MuonTableType
         
     IMPLICIT NONE
     PRIVATE
@@ -34,7 +34,7 @@ CONTAINS
     ! INTERPOLATION ROUTINES FROM TOBIAS
     SUBROUTINE FullMuonEOS(MuonTable, MuonState, CalculateDerivatives_Option)
         
-        TYPE(MuonEOSType), INTENT(IN) :: MuonTable
+        TYPE(MuonTableType), INTENT(IN) :: MuonTable
         TYPE (MuonStateType), INTENT(INOUT) :: MuonState
         LOGICAL, DIMENSION(3), OPTIONAL, INTENT(IN)  :: CalculateDerivatives_Option
         LOGICAL :: CalculatePressureDerivatives, CalculateEntropyDerivatives, &
