@@ -190,8 +190,8 @@ CONTAINS
 #if defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO &
     !$OMP PRIVATE( iE, OpElNuMu, OpElNuMuBar ) & 
-    !$OMP SHARED( T, Enu, Mup, mp, Mp_eff, Up, n_p, &
-    !$OMP         Mumu, mmu, Mun, mn, Mn_eff, Un, n_n )
+    !$OMP SHARED( T, Enu, Mup, Mp_eff, Up, n_p, &
+    !$OMP         Mumu, Mun, Mn_eff, Un, n_n )
 #endif
     DO iE=1, nE
 
@@ -208,7 +208,7 @@ CONTAINS
 
     ENDDO
 #if defined(WEAKLIB_OMP)
-    !$OMP END PARALLEL
+    !$OMP END PARALLEL DO
 #endif
 
   IF (DoWeakMagRec) THEN
@@ -267,8 +267,8 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP)
     !$OMP PARALLEL DO &
-    !$OMP PRIVATE( iE, small_E, tau, eta, G, Fp1, Fp2, Fn1, Fn2, &
-    !$OMP          cv, ca, F2, temp_wm1, temp_wm2, temp_wm3 )
+    !$OMP PRIVATE( iE, small_E, cv, ca, F2, &
+    !$OMP          temp_wm1, temp_wm2, temp_wm3 )
 #endif
     DO iE=1, nE
 
@@ -303,7 +303,7 @@ CONTAINS
       WeakMagRecNuLepBar(iE) = (temp_wm1 - temp_wm2)/temp_wm3
     ENDDO
 #if defined(WEAKLIB_OMP)
-    !$OMP END PARALLEL
+    !$OMP END PARALLEL DO
 #endif
 
   END SUBROUTINE CalculateHorowitzWeakMagRecoil
