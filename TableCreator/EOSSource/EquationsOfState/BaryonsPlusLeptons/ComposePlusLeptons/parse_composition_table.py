@@ -8,7 +8,89 @@ Created on Tue Apr 16 15:10:55 2024
 import numpy as np
 import sys
 
-def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7):
+DummyValue = 123456
+
+def HandleLightClusters(XDict, ZDict, ADict, dict_compo_names, How = 'LumpIntoNucleons'):
+    
+    if How == 'LumpIntoNucleons':
+        return LumpIntoNucleons(XDict, ZDict, ADict, dict_compo_names)
+    elif How == 'LumpIntoHeavyNucleus':
+        return LumpIntoHeavyNucleus(XDict, ZDict, ADict, dict_compo_names)
+    elif How == 'LumpIntoAlphasAndNucleons':
+        return LumpIntoAlphasAndNucleons(XDict, ZDict, ADict, dict_compo_names)
+    else:
+        raise RuntimeError('Specify valid strtegy to handle light nuclei')
+  
+def LumpIntoNucleons(XDict, ZDict, ADict, dict_compo_names):
+    
+    Xp = XDict[dict_compo_names['Proton']]
+    Xn = XDict[dict_compo_names['Neutron']]
+    Xa = XDict[dict_compo_names['Alpha']]
+
+    indices = list(XDict.keys())
+    names = list(dict_compo_names.keys())
+    ClustersIndices = [dict_compo_names[name] for name in names \
+                       if not name in ['Proton', 'Neutron', 'Alpha']]
+
+    for key in ClustersIndices:
+        mass_fraction, charge, baryon_number = XDict[key], ZDict[key], ADict[key]
+
+        Xp += mass_fraction * charge / baryon_number
+        Xn += mass_fraction * (baryon_number - charge) / baryon_number
+
+    return XDict['Heavy'], ZDict['Heavy'], ADict['Heavy'], Xp, Xn, Xa
+
+def LumpIntoAlphasAndNucleons(XDict, ZDict, ADict, dict_compo_names):
+    # Still not implemented, maybe put one neutron from H3 and/or deuteron into He3 and
+    # the rest lump into nucleons. But what if there is a ton of He3 and no deuteron/H3?
+    return
+
+def LumpIntoHeavyNucleus(XDict, ZDict, ADict, dict_compo_names):
+    
+    indices = list(XDict.keys())
+    Xp = XDict[dict_compo_names['Proton']]
+    Xn = XDict[dict_compo_names['Neutron']]
+    Xa = XDict[dict_compo_names['Alpha']]
+
+    indices = list(XDict.keys())
+    names = list(dict_compo_names.keys())
+    ClustersIndices = [dict_compo_names[name] for name in names \
+                       if not name in ['Proton', 'Neutron', 'Alpha']]
+
+    if not 'Heavy' in indices:
+        raise RuntimeError('No Heavies it seems in this line')
+    
+    Xh   = XDict['Heavy']
+    Zbar = ZDict['Heavy']
+    Abar = ADict['Heavy']
+
+    Zbar_new, Abar_new, Xh_new = 0, 0, 0.0
+    for key in ClustersIndices:
+        mass_fraction, charge, baryon_number = XDict[key], ZDict[key], ADict[key]
+
+        if mass_fraction == 0:
+            continue
+        
+        # If you get past this then you should have Heavies AND Light Clusters
+        if Zbar == DummyValue:
+            # if you don't have heavy nuclei but only light clusters it might be
+            # that the light cluster abundances are super small. Doesn't really
+            # matter what you do with them
+            XClust = [XDict[ind] for ind in ClustersIndices]
+            if sum(XClust) > 1e-10:
+                print('No Heavy Nuclei here, and Light clusters have X =',XDict[ClustersIndices])
+            return LumpIntoNucleons(XDict, ZDict, ADict, dict_compo_names)
+
+        Xh_new   = Xh + mass_fraction
+        Abar_new = (Xh*Abar      + mass_fraction*baryon_number*mass_fraction) / Xh_new
+        Zbar_new = (Xh*Zbar/Abar + mass_fraction*charge/baryon_number)        / Xh_new * Abar_new
+
+        Zbar, Abar, Xh = Zbar_new, Abar_new, Xh_new
+
+    return Xh, Zbar, Abar, Xp, Xn, Xa
+    
+def read_compo(file_compo, file_yq, dict_pairs, dict_compo_names, \
+               HowToHandleLightClusters='LumpIntoNucleons', charge_tol=1e-7, mfrac_tol=1e-7):
     
     yq = np.loadtxt(file_yq, skiprows=2)
     with open(file_compo, 'r') as f:
@@ -46,6 +128,18 @@ def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7)
         if len(data) != expected_len:
             raise RuntimeError(f'incompatible data length 2 at line {iL}: {len(data)} vs {expected_len}')
 
+        # Initialize dictionaries with composition information
+        XDict, ZDict, ADict = {}, {}, {}
+        for key in list(dict_pairs.keys())[:-1]:
+            XDict[key] = 0.0
+            charge, baryon_number = dict_pairs[key]
+            ZDict[key] = charge
+            ADict[key] = baryon_number
+
+        XDict['Heavy'] = 0.0
+        ZDict['Heavy'] = DummyValue # Should not matter!
+        ADict['Heavy'] = DummyValue # Should not matter!
+
         for ipair in range(Npairs):
             dict_index = data[base_idx + 2 * ipair]
             abundance_fraction = data[base_idx + 2 * ipair + 1]
@@ -53,26 +147,22 @@ def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7)
             key = str(dict_index)
             if key not in dict_pairs:
                 raise RuntimeError(f"Unknown index {key} at line {iL}")
+            
             charge, baryon_number = dict_pairs[key]
             mass_fraction = abundance_fraction * baryon_number
 
-            if dict_index == 10:
-                Xn[iL] = mass_fraction
-            elif dict_index == 11:
-                Xp[iL] = mass_fraction
-            elif dict_index == 4002:
-                Xa[iL] = mass_fraction
-            elif dict_index == 0:
-                continue  # skip electron
-            else:
-                # lumping light nuclei
-                Xp[iL] += mass_fraction * charge / baryon_number
-                Xn[iL] += mass_fraction * (baryon_number - charge) / baryon_number
+            XDict[key] = mass_fraction
+            ZDict[key] = charge
+            ADict[key] = baryon_number
 
         if Nquad > 1:
             raise RuntimeError(f"I can't handle Nquad > 1 at line {iL}")
 
         if Nquad == 0:
+            Xh[iL], _, _, Xp[iL], Xn[iL], Xa[iL] = HandleLightClusters(XDict, ZDict, ADict, \
+                                      dict_compo_names, How=HowToHandleLightClusters)
+            if Xh[iL] > 0:
+                raise RuntimeError('This should not happen, investigate!')
             msum = Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL]
             if abs(msum - 1.0) > mfrac_tol:
                 raise RuntimeError(f"mass fraction not conserved at line {iL}: {msum}")
@@ -82,7 +172,6 @@ def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7)
                 raise RuntimeError(f"charge not conserved at line {iL}: {charge_sum} vs {yq[iyq[iL]-1]}")
             continue
 
-        # Nquad == 1
         quad_idx = base_idx + 2 * Npairs + 1
         index = data[quad_idx]
         if index != dict_pairs['index_avg_nucleus']:
@@ -90,14 +179,24 @@ def read_compo(file_compo, file_yq, dict_pairs, charge_tol=1e-7, mfrac_tol=1e-7)
 
         Abar[iL] = data[quad_idx + 1]
         Zbar[iL] = data[quad_idx + 2]
-        Xh[iL] = data[quad_idx + 3] * Abar[iL]
+        Xh[iL]   = data[quad_idx + 3] * Abar[iL]
+
+        XDict['Heavy'] = Xh[iL]
+        ZDict['Heavy'] = Zbar[iL]
+        ADict['Heavy'] = Abar[iL]
+        
+        Xh[iL], Zbar[iL], Abar[iL], Xp[iL], Xn[iL], Xa[iL] = \
+          HandleLightClusters(XDict, ZDict, ADict, \
+              dict_compo_names, How=HowToHandleLightClusters)
 
         msum = Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL]
         if abs(msum - 1.0) > mfrac_tol:
+            print(data)
             raise RuntimeError(f"mass fraction not conserved (quad) at line {iL}: {msum}")
 
         charge_sum = Xp[iL] + Xa[iL]/2. + Zbar[iL]/Abar[iL]*Xh[iL]
         if abs(charge_sum - yq[iyq[iL]-1]) > charge_tol:
+            print(data)
             raise RuntimeError(f"charge not conserved (quad) at line {iL}: {charge_sum} vs {yq[iyq[iL]-1]}")
 
     return iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar
@@ -149,9 +248,13 @@ def read_micro(file_micro, dict_micro):
 charge_tol = 1e-7
 mfrac_tol = 1e-7
 
+file_yq = 'Executables/SFHo_no_ele/eos.yq'
 file_compo = 'Executables/SFHo_no_ele/eos.compo'
 file_micro = 'Executables/SFHo/eos.micro'
-file_yq = 'Executables/SFHo_no_ele/eos.yq'
+# Sometimes file_micro needs to be the full table 
+# since effective mass and nuclear potentials are 
+# not always included in the table without electrons
+
 file_WL_format = 'Executables/SFHo_no_ele/eos.compomicro.wl'
 
 # you find this in the specific eos.pdf file from the CompOSE database
@@ -160,12 +263,25 @@ file_WL_format = 'Executables/SFHo_no_ele/eos.compomicro.wl'
 # the charge and baryon numbers, but then if there are mesons it gets tricky I think.
 dict_pairs = { '10'  : (0,1), \
                '11'  : (1,1), \
-               '0'   : (1,0), \
                '4002': (2,4), \
                '3002': (2,3), \
                '3001': (1,3), \
                '2001': (1,2), \
                'index_avg_nucleus' : 999} # this is in eos.pdf
+
+dict_compo_names = {'Neutron'  : '10'  , \
+                    'Proton'   : '11'  , \
+                    'Alpha'    : '4002', \
+                    'He3'      : '3002', \
+                    'H3'       : '3001', \
+                    'Deuteron' : '2001'  \
+                    }
+
+HowToHandleLightClusters = 'LumpIntoHeavyNucleus'
+# HowToHandleLightClusters = 'LumpIntoNucleons'
+
+iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar = read_compo(file_compo, file_yq, dict_pairs, dict_compo_names, \
+                            HowToHandleLightClusters=HowToHandleLightClusters, charge_tol=charge_tol, mfrac_tol=mfrac_tol)
 
 # now the microscopic part
 dict_micro = { 'Neutron Effective Mass' : 10041, \
@@ -175,9 +291,6 @@ dict_micro = { 'Neutron Effective Mass' : 10041, \
 
 n_eff_mass, p_eff_mass, n_self_ene, p_self_ene = \
   read_micro(file_micro, dict_micro)
-
-iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar = read_compo(file_compo, file_yq, dict_pairs, \
-                                                      charge_tol=charge_tol, mfrac_tol=mfrac_tol)
 
 data_to_write = np.column_stack((iT, irho, iyq, Xp, Xn, Xa, Xh, Abar, Zbar, \
                                  n_eff_mass, p_eff_mass, n_self_ene, p_self_ene))

@@ -19,26 +19,26 @@ MODULE wlCompOSEInterface
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: TempCompOSE
     REAL(dp), PUBLIC, DIMENSION(:), ALLOCATABLE :: YpCompOSE
     
-    INTEGER, PARAMETER :: nVariablesCompOSE             = 19
-    INTEGER, PARAMETER :: iPressCompOSE                 = 1
-    INTEGER, PARAMETER :: iEntropyCompOSE               = 2
-    INTEGER, PARAMETER :: iInternalEnergyDensityCompOSE = 3
-    INTEGER, PARAMETER :: iElectronChemPotCompOSE       = 4
-    INTEGER, PARAMETER :: iProtonChemPotCompOSE         = 5
-    INTEGER, PARAMETER :: iNeutronChemPotCompOSE        = 6
-    INTEGER, PARAMETER :: iProtonMassFractionCompOSE    = 7
-    INTEGER, PARAMETER :: iNeutronMassFractionCompOSE   = 8
-    INTEGER, PARAMETER :: iAlphaMassFractionCompOSE     = 9
-    INTEGER, PARAMETER :: iHeavyMassFractionCompOSE     = 10
-    INTEGER, PARAMETER :: iHeavyChargeNumberCompOSE     = 11
-    INTEGER, PARAMETER :: iHeavyMassNumberCompOSE       = 12
-    INTEGER, PARAMETER :: iHeavyBindingEnergyCompOSE    = 13
-    INTEGER, PARAMETER :: iThermalEnergyCompOSE         = 14
-    INTEGER, PARAMETER :: iGammaCompose                 = 15
-    INTEGER, PARAMETER :: iProtonEffMassCompOSE         = 16
-    INTEGER, PARAMETER :: iNeutronEffMassCompOSE        = 17
-    INTEGER, PARAMETER :: iProtonSelfEnergyCompOSE      = 18
-    INTEGER, PARAMETER :: iNeutronSelfEnergyCompOSE     = 19
+    INTEGER, PARAMETER, PUBLIC :: nVariablesCompOSE             = 19
+    INTEGER, PARAMETER, PUBLIC :: iPressCompOSE                 = 1
+    INTEGER, PARAMETER, PUBLIC :: iEntropyCompOSE               = 2
+    INTEGER, PARAMETER, PUBLIC :: iInternalEnergyDensityCompOSE = 3
+    INTEGER, PARAMETER, PUBLIC :: iElectronChemPotCompOSE       = 4
+    INTEGER, PARAMETER, PUBLIC :: iProtonChemPotCompOSE         = 5
+    INTEGER, PARAMETER, PUBLIC :: iNeutronChemPotCompOSE        = 6
+    INTEGER, PARAMETER, PUBLIC :: iProtonMassFractionCompOSE    = 7
+    INTEGER, PARAMETER, PUBLIC :: iNeutronMassFractionCompOSE   = 8
+    INTEGER, PARAMETER, PUBLIC :: iAlphaMassFractionCompOSE     = 9
+    INTEGER, PARAMETER, PUBLIC :: iHeavyMassFractionCompOSE     = 10
+    INTEGER, PARAMETER, PUBLIC :: iHeavyChargeNumberCompOSE     = 11
+    INTEGER, PARAMETER, PUBLIC :: iHeavyMassNumberCompOSE       = 12
+    INTEGER, PARAMETER, PUBLIC :: iHeavyBindingEnergyCompOSE    = 13
+    INTEGER, PARAMETER, PUBLIC :: iThermalEnergyCompOSE         = 14
+    INTEGER, PARAMETER, PUBLIC :: iGammaCompose                 = 15
+    INTEGER, PARAMETER, PUBLIC :: iNeutronEffMassCompOSE        = 16
+    INTEGER, PARAMETER, PUBLIC :: iProtonEffMassCompOSE         = 17
+    INTEGER, PARAMETER, PUBLIC :: iNeutronSelfEnergyCompOSE     = 18
+    INTEGER, PARAMETER, PUBLIC :: iProtonSelfEnergyCompOSE      = 19
     
     ! These are used for the HDF5 thermo table (i.e. Table 7.1 from Compose manual v. 3.0)
     INTEGER, PARAMETER :: iThermoPressure = 1

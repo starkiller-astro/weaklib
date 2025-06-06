@@ -90,32 +90,6 @@ CONTAINS
             RETURN
         ENDIF
         
-        ! This is only if the grid is not log
-        ! ! .....find t-index......................................................
-        ! IF (temp .le. MuonTable % t(1)) THEN
-            ! ! At these low temperatures muons don't really matter
-            ! MuonState % p = 0.0d0
-            ! MuonState % e = 0.0d0
-            ! MuonState % s = 0.0d0
-            ! MuonState % mu = 0.0d0
-            ! RETURN
-            
-        ! ELSE IF (temp .ge. MuonTable % t(it_max)) THEN
-            ! it = it_max
-        ! ELSE
-            ! DO i=1,it_max-1
-                ! IF ( (temp .ge. MuonTable % t(i)) .and. (temp .lt. MuonTable % t(i+1)) ) THEN
-                    ! it = i
-                    ! EXIT
-                ! END IF
-            ! END DO
-        ! END IF
-        
-        ! IF (it .ne. it_1) THEN
-            ! WRITE(*,*) it, it_1
-            ! STOP
-        ! ENDIF
-        
         iDen = Index1D_Log( rhoym, MuonTable % rhoym(:) )
 
         ! At these low densities muons don't really matter
@@ -127,27 +101,6 @@ CONTAINS
             RETURN
         ENDIF
         
-        ! This is only if the grid is not log
-        ! ! .....find d-index......................................................
-        ! IF (rhoym .le. MuonTable % rhoym(it,1)) THEN
-            ! ! At these low densities muons don't really matter
-            ! MuonState % p = 0.0d0
-            ! MuonState % e = 0.0d0
-            ! MuonState % s = 0.0d0
-            ! MuonState % mu = 0.0d0
-            ! RETURN
-        ! ELSE IF (rhoym .ge. MuonTable % rhoym(it,iDen_max)) THEN
-            ! iDen = iDen_max
-        ! ELSE
-            ! DO i=iDen_max-1,1,-1
-                ! IF((rhoym .ge. MuonTable % rhoym(it,i)) .and. &
-                ! (rhoym .lt. MuonTable % rhoym(it,i+1)))THEN
-                    ! iDen = i
-                    ! exit
-                ! END IF
-            ! END DO
-        ! END IF
-        
         !.....determine interpolation weights ..................................
         dt = LOG10( MuonTable % t(it+1) ) - LOG10( MuonTable % t(it) )
         dd = LOG10( MuonTable % rhoym(iDen+1) ) - LOG10( MuonTable % rhoym(iDen) )
@@ -156,7 +109,7 @@ CONTAINS
         rd = (logrhoymu - LOG10( MuonTable % rhoym(iDen) ))/dd
                 
         !.....interpolation scheme.............................................
-        MuonState % mu = & ! muon chemical potential  [MeV]
+        MuonState % mu = & ! muon chemical potential (including rest mass)  [MeV]
             (1.-rt)*(1.-rd) * MuonTable % mu(it  ,iDen  ) &
              +  rt *(1.-rd) * MuonTable % mu(it+1,iDen  ) &
              +     rt * rd  * MuonTable % mu(it+1,iDen+1) &
