@@ -2,7 +2,7 @@ MODULE wlHelmMuonIOModuleHDF
     
     USE wlKindModule, ONLY: dp
     USE wlLeptonEOSModule, ONLY: &
-        HelmholtzTableType, &
+        HelmTableType, &
         AllocateHelmholtzTable, DeallocateHelmholtzTable, &
         MuonTableType, &
         AllocateMuonEOS, DeAllocateMuonEOS
@@ -22,9 +22,9 @@ MODULE wlHelmMuonIOModuleHDF
     
 CONTAINS
     
-    SUBROUTINE WriteHelmholtzTableHDF( HelmholtzTable, FileName, NewFile )
+    SUBROUTINE WriteHelmholtzTableHDF( HelmTable, FileName, NewFile )
         
-        TYPE(HelmholtzTableType), INTENT(INOUT)  :: HelmholtzTable
+        TYPE(HelmTableType), INTENT(INOUT)  :: HelmTable
         CHARACTER(len=*), INTENT(IN) :: FileName
         LOGICAL, INTENT(IN) :: NewFile
         
@@ -37,91 +37,91 @@ CONTAINS
         
         CALL OpenFileHDF( FileName, NewFile, file_id, ReadWrite_Option = .TRUE. )
         
-        datasize2d = (/ HelmholtzTable % nPointsDen, HelmholtzTable % nPointsTemp /) 
+        datasize2d = (/ HelmTable % nPointsDen, HelmTable % nPointsTemp /) 
         
-        CALL OpenGroupHDF( "HelmholtzTable", .true., file_id, group_id )
+        CALL OpenGroupHDF( "HelmTable", .true., file_id, group_id )
         datasize1d = 2
         CALL WriteHDF( "DimensionsHelmTable", &
-        (/ HelmholtzTable % nPointsDen, HelmholtzTable % nPointsTemp /), group_id, datasize1d )
+        (/ HelmTable % nPointsDen, HelmTable % nPointsTemp /), group_id, datasize1d )
         
-        datasize1d = HelmholtzTable % nPointsDen
-        CALL WriteHDF( "Density", HelmholtzTable % d, group_id, datasize1d )
-        datasize1d = HelmholtzTable % nPointsTemp
-        CALL WriteHDF( "Temperature", HelmholtzTable % t, group_id, datasize1d )
+        datasize1d = HelmTable % nPointsDen
+        CALL WriteHDF( "Density", HelmTable % d, group_id, datasize1d )
+        datasize1d = HelmTable % nPointsTemp
+        CALL WriteHDF( "Temperature", HelmTable % t, group_id, datasize1d )
         CALL CloseGroupHDF( group_id )
 
-        CALL OpenGroupHDF( "HelmholtzTable/FreeEnergyTable", .true., file_id, group_id )
-        CALL WriteHDF( "f", HelmholtzTable % f(:,:),     group_id, datasize2d )
-        CALL WriteHDF( "fd", HelmholtzTable % fd(:,:),    group_id, datasize2d )
-        CALL WriteHDF( "ft", HelmholtzTable % ft(:,:),    group_id, datasize2d )
-        CALL WriteHDF( "fdd", HelmholtzTable % fdd(:,:),   group_id, datasize2d )
-        CALL WriteHDF( "ftt", HelmholtzTable % ftt(:,:),   group_id, datasize2d )
-        CALL WriteHDF( "fdt", HelmholtzTable % fdt(:,:),   group_id, datasize2d )
-        CALL WriteHDF( "fddt", HelmholtzTable % fddt(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "fdtt", HelmholtzTable % fdtt(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "fddtt", HelmholtzTable % fddtt(:,:), group_id, datasize2d )
+        CALL OpenGroupHDF( "HelmTable/FreeEnergyTable", .true., file_id, group_id )
+        CALL WriteHDF( "f", HelmTable % f(:,:),     group_id, datasize2d )
+        CALL WriteHDF( "fd", HelmTable % fd(:,:),    group_id, datasize2d )
+        CALL WriteHDF( "ft", HelmTable % ft(:,:),    group_id, datasize2d )
+        CALL WriteHDF( "fdd", HelmTable % fdd(:,:),   group_id, datasize2d )
+        CALL WriteHDF( "ftt", HelmTable % ftt(:,:),   group_id, datasize2d )
+        CALL WriteHDF( "fdt", HelmTable % fdt(:,:),   group_id, datasize2d )
+        CALL WriteHDF( "fddt", HelmTable % fddt(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "fdtt", HelmTable % fdtt(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "fddtt", HelmTable % fddtt(:,:), group_id, datasize2d )
         CALL CloseGroupHDF( group_id )
         
-        CALL OpenGroupHDF( "HelmholtzTable/dPdRhoTable", .true., file_id, group_id )
-        CALL WriteHDF( "dpdf", HelmholtzTable % dpdf(:,:),   group_id, datasize2d )
-        CALL WriteHDF( "dpdfd", HelmholtzTable % dpdfd(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "dpdft", HelmholtzTable % dpdft(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "dpdfdt", HelmholtzTable % dpdfdt(:,:), group_id, datasize2d )
+        CALL OpenGroupHDF( "HelmTable/dPdRhoTable", .true., file_id, group_id )
+        CALL WriteHDF( "dpdf", HelmTable % dpdf(:,:),   group_id, datasize2d )
+        CALL WriteHDF( "dpdfd", HelmTable % dpdfd(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "dpdft", HelmTable % dpdft(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "dpdfdt", HelmTable % dpdfdt(:,:), group_id, datasize2d )
         CALL CloseGroupHDF( group_id )
     
-        CALL OpenGroupHDF( "HelmholtzTable/EleChemPotTable", .true., file_id, group_id )
-        CALL WriteHDF( "ef", HelmholtzTable % ef(:,:),   group_id, datasize2d )
-        CALL WriteHDF( "efd", HelmholtzTable % efd(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "eft", HelmholtzTable % eft(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "efdt", HelmholtzTable % efdt(:,:), group_id, datasize2d )
+        CALL OpenGroupHDF( "HelmTable/EleChemPotTable", .true., file_id, group_id )
+        CALL WriteHDF( "ef", HelmTable % ef(:,:),   group_id, datasize2d )
+        CALL WriteHDF( "efd", HelmTable % efd(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "eft", HelmTable % eft(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "efdt", HelmTable % efdt(:,:), group_id, datasize2d )
         CALL CloseGroupHDF( group_id )
         
-        CALL OpenGroupHDF( "HelmholtzTable/NumberDensityTable", .true., file_id, group_id )
-        CALL WriteHDF( "xf", HelmholtzTable % xf(:,:),   group_id, datasize2d )
-        CALL WriteHDF( "xfd", HelmholtzTable % xfd(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "xft", HelmholtzTable % xft(:,:),  group_id, datasize2d )
-        CALL WriteHDF( "xfdt", HelmholtzTable % xfdt(:,:), group_id, datasize2d )
+        CALL OpenGroupHDF( "HelmTable/NumberDensityTable", .true., file_id, group_id )
+        CALL WriteHDF( "xf", HelmTable % xf(:,:),   group_id, datasize2d )
+        CALL WriteHDF( "xfd", HelmTable % xfd(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "xft", HelmTable % xft(:,:),  group_id, datasize2d )
+        CALL WriteHDF( "xfdt", HelmTable % xfdt(:,:), group_id, datasize2d )
         CALL CloseGroupHDF( group_id )
         
-        datasize1d = HelmholtzTable % nPointsTemp
-        CALL OpenGroupHDF( "HelmholtzTable/DeltasTempTable", .true., file_id, group_id )
-        CALL WriteHDF( "dt", HelmholtzTable % dt(:),   group_id, datasize1d )
-        CALL WriteHDF( "dt2", HelmholtzTable % dt2(:),  group_id, datasize1d )
-        CALL WriteHDF( "dti", HelmholtzTable % dti(:),  group_id, datasize1d )
-        CALL WriteHDF( "dt2i", HelmholtzTable % dt2i(:), group_id, datasize1d )
+        datasize1d = HelmTable % nPointsTemp
+        CALL OpenGroupHDF( "HelmTable/DeltasTempTable", .true., file_id, group_id )
+        CALL WriteHDF( "dt", HelmTable % dt(:),   group_id, datasize1d )
+        CALL WriteHDF( "dt2", HelmTable % dt2(:),  group_id, datasize1d )
+        CALL WriteHDF( "dti", HelmTable % dti(:),  group_id, datasize1d )
+        CALL WriteHDF( "dt2i", HelmTable % dt2i(:), group_id, datasize1d )
         CALL CloseGroupHDF( group_id )
         
-        datasize1d = HelmholtzTable % nPointsDen
-        CALL OpenGroupHDF( "HelmholtzTable/DeltasDenTable", .true., file_id, group_id )
-        CALL WriteHDF( "dd", HelmholtzTable % dd(:),   group_id, datasize1d )
-        CALL WriteHDF( "dd2", HelmholtzTable % dd2(:),  group_id, datasize1d )
-        CALL WriteHDF( "ddi", HelmholtzTable % ddi(:),  group_id, datasize1d )
-        CALL WriteHDF( "dd2i", HelmholtzTable % dd2i(:), group_id, datasize1d )
+        datasize1d = HelmTable % nPointsDen
+        CALL OpenGroupHDF( "HelmTable/DeltasDenTable", .true., file_id, group_id )
+        CALL WriteHDF( "dd", HelmTable % dd(:),   group_id, datasize1d )
+        CALL WriteHDF( "dd2", HelmTable % dd2(:),  group_id, datasize1d )
+        CALL WriteHDF( "ddi", HelmTable % ddi(:),  group_id, datasize1d )
+        CALL WriteHDF( "dd2i", HelmTable % dd2i(:), group_id, datasize1d )
         CALL CloseGroupHDF( group_id )
         
         datasize1d = 1
-        CALL OpenGroupHDF( "HelmholtzTable/LimitsTable", .true., file_id, group_id )
-        buffer(1) = HelmholtzTable % mintemp
+        CALL OpenGroupHDF( "HelmTable/LimitsTable", .true., file_id, group_id )
+        buffer(1) = HelmTable % mintemp
         CALL WriteHDF( "mintemp", buffer, group_id, datasize1d )
-        buffer(1) = HelmholtzTable % maxtemp
+        buffer(1) = HelmTable % maxtemp
         CALL WriteHDF( "maxtemp", buffer, group_id, datasize1d )
-        buffer(1) = HelmholtzTable % mindens
+        buffer(1) = HelmTable % mindens
         CALL WriteHDF( "mindens", buffer, group_id, datasize1d )
-        buffer(1) = HelmholtzTable % maxdens
+        buffer(1) = HelmTable % maxdens
         CALL WriteHDF( "maxdens", buffer, group_id, datasize1d )
         CALL CloseGroupHDF( group_id )
         
         !CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
-        !CALL WriteEOSMetadataHDF( HelmholtzTable % MD, group_id )
+        !CALL WriteEOSMetadataHDF( HelmTable % MD, group_id )
         !CALL CloseGroupHDF( group_id )
         
         CALL CloseFileHDF( file_id )
             
     END SUBROUTINE WriteHelmholtzTableHDF
     
-    SUBROUTINE ReadHelmholtzTableHDF( HelmholtzTable, FileName )
+    SUBROUTINE ReadHelmholtzTableHDF( HelmTable, FileName )
     
-    TYPE(HelmholtzTableType), INTENT(INOUT)  :: HelmholtzTable
+    TYPE(HelmTableType), INTENT(INOUT)  :: HelmTable
     CHARACTER(len=*), INTENT(IN) :: FileName
     
     INTEGER(HID_T) :: file_id
@@ -135,84 +135,84 @@ CONTAINS
     CALL OpenFileHDF( FileName, .false., file_id )
     
     datasize1d(1) = 2
-    CALL OpenGroupHDF( "HelmholtzTable", .false., file_id, group_id )
+    CALL OpenGroupHDF( "HelmTable", .false., file_id, group_id )
     CALL ReadHDF( "DimensionsHelmTable", nPoints(:), group_id, datasize1d )
     CALL CloseGroupHDF( group_id )
     
     ! Allocate Helmholtz EOS
-    CALL AllocateHelmholtzTable( HelmholtzTable, nPoints )
+    CALL AllocateHelmholtzTable( HelmTable, nPoints )
 
-    CALL OpenGroupHDF( "HelmholtzTable", .false., file_id, group_id )
-    datasize1d = HelmholtzTable % nPointsDen
-    CALL ReadHDF( "Density", HelmholtzTable % d, group_id, datasize1d )
-    datasize1d = HelmholtzTable % nPointsTemp
-    CALL ReadHDF( "Temperature", HelmholtzTable % t, group_id, datasize1d )
+    CALL OpenGroupHDF( "HelmTable", .false., file_id, group_id )
+    datasize1d = HelmTable % nPointsDen
+    CALL ReadHDF( "Density", HelmTable % d, group_id, datasize1d )
+    datasize1d = HelmTable % nPointsTemp
+    CALL ReadHDF( "Temperature", HelmTable % t, group_id, datasize1d )
     CALL CloseGroupHDF( group_id )
 
-    datasize2d = (/ HelmholtzTable % nPointsDen, HelmholtzTable % nPointsTemp /) 
-    CALL OpenGroupHDF( "HelmholtzTable/FreeEnergyTable", .false., file_id, group_id )
-    CALL ReadHDF( "f", HelmholtzTable % f(:,:),     group_id, datasize2d )
-    CALL ReadHDF( "fd", HelmholtzTable % fd(:,:),    group_id, datasize2d )
-    CALL ReadHDF( "ft", HelmholtzTable % ft(:,:),    group_id, datasize2d )
-    CALL ReadHDF( "fdd", HelmholtzTable % fdd(:,:),   group_id, datasize2d )
-    CALL ReadHDF( "ftt", HelmholtzTable % ftt(:,:),   group_id, datasize2d )
-    CALL ReadHDF( "fdt", HelmholtzTable % fdt(:,:),   group_id, datasize2d )
-    CALL ReadHDF( "fddt", HelmholtzTable % fddt(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "fdtt", HelmholtzTable % fdtt(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "fddtt", HelmholtzTable % fddtt(:,:), group_id, datasize2d )
+    datasize2d = (/ HelmTable % nPointsDen, HelmTable % nPointsTemp /) 
+    CALL OpenGroupHDF( "HelmTable/FreeEnergyTable", .false., file_id, group_id )
+    CALL ReadHDF( "f", HelmTable % f(:,:),     group_id, datasize2d )
+    CALL ReadHDF( "fd", HelmTable % fd(:,:),    group_id, datasize2d )
+    CALL ReadHDF( "ft", HelmTable % ft(:,:),    group_id, datasize2d )
+    CALL ReadHDF( "fdd", HelmTable % fdd(:,:),   group_id, datasize2d )
+    CALL ReadHDF( "ftt", HelmTable % ftt(:,:),   group_id, datasize2d )
+    CALL ReadHDF( "fdt", HelmTable % fdt(:,:),   group_id, datasize2d )
+    CALL ReadHDF( "fddt", HelmTable % fddt(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "fdtt", HelmTable % fdtt(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "fddtt", HelmTable % fddtt(:,:), group_id, datasize2d )
     CALL CloseGroupHDF( group_id )
     
-    CALL OpenGroupHDF( "HelmholtzTable/dPdRhoTable", .false., file_id, group_id )
-    CALL ReadHDF( "dpdf", HelmholtzTable % dpdf(:,:),   group_id, datasize2d )
-    CALL ReadHDF( "dpdfd", HelmholtzTable % dpdfd(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "dpdft", HelmholtzTable % dpdft(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "dpdfdt", HelmholtzTable % dpdfdt(:,:), group_id, datasize2d )
+    CALL OpenGroupHDF( "HelmTable/dPdRhoTable", .false., file_id, group_id )
+    CALL ReadHDF( "dpdf", HelmTable % dpdf(:,:),   group_id, datasize2d )
+    CALL ReadHDF( "dpdfd", HelmTable % dpdfd(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "dpdft", HelmTable % dpdft(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "dpdfdt", HelmTable % dpdfdt(:,:), group_id, datasize2d )
     CALL CloseGroupHDF( group_id )
     
-    CALL OpenGroupHDF( "HelmholtzTable/EleChemPotTable", .false., file_id, group_id )
-    CALL ReadHDF( "ef", HelmholtzTable % ef(:,:),   group_id, datasize2d )
-    CALL ReadHDF( "efd", HelmholtzTable % efd(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "eft", HelmholtzTable % eft(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "efdt", HelmholtzTable % efdt(:,:), group_id, datasize2d )
+    CALL OpenGroupHDF( "HelmTable/EleChemPotTable", .false., file_id, group_id )
+    CALL ReadHDF( "ef", HelmTable % ef(:,:),   group_id, datasize2d )
+    CALL ReadHDF( "efd", HelmTable % efd(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "eft", HelmTable % eft(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "efdt", HelmTable % efdt(:,:), group_id, datasize2d )
     CALL CloseGroupHDF( group_id )
     
-    CALL OpenGroupHDF( "HelmholtzTable/NumberDensityTable", .false., file_id, group_id )
-    CALL ReadHDF( "xf", HelmholtzTable % xf(:,:),   group_id, datasize2d )
-    CALL ReadHDF( "xfd", HelmholtzTable % xfd(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "xft", HelmholtzTable % xft(:,:),  group_id, datasize2d )
-    CALL ReadHDF( "xfdt", HelmholtzTable % xfdt(:,:), group_id, datasize2d )
+    CALL OpenGroupHDF( "HelmTable/NumberDensityTable", .false., file_id, group_id )
+    CALL ReadHDF( "xf", HelmTable % xf(:,:),   group_id, datasize2d )
+    CALL ReadHDF( "xfd", HelmTable % xfd(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "xft", HelmTable % xft(:,:),  group_id, datasize2d )
+    CALL ReadHDF( "xfdt", HelmTable % xfdt(:,:), group_id, datasize2d )
     CALL CloseGroupHDF( group_id )
     
-    datasize1d = HelmholtzTable % nPointsTemp
-    CALL OpenGroupHDF( "HelmholtzTable/DeltasTempTable", .false., file_id, group_id )
-    CALL ReadHDF( "dt", HelmholtzTable % dt(:),   group_id, datasize1d )
-    CALL ReadHDF( "dt2", HelmholtzTable % dt2(:),  group_id, datasize1d )
-    CALL ReadHDF( "dti", HelmholtzTable % dti(:),  group_id, datasize1d )
-    CALL ReadHDF( "dt2i", HelmholtzTable % dt2i(:), group_id, datasize1d )
+    datasize1d = HelmTable % nPointsTemp
+    CALL OpenGroupHDF( "HelmTable/DeltasTempTable", .false., file_id, group_id )
+    CALL ReadHDF( "dt", HelmTable % dt(:),   group_id, datasize1d )
+    CALL ReadHDF( "dt2", HelmTable % dt2(:),  group_id, datasize1d )
+    CALL ReadHDF( "dti", HelmTable % dti(:),  group_id, datasize1d )
+    CALL ReadHDF( "dt2i", HelmTable % dt2i(:), group_id, datasize1d )
     CALL CloseGroupHDF( group_id )
     
-    datasize1d = HelmholtzTable % nPointsDen
-    CALL OpenGroupHDF( "HelmholtzTable/DeltasDenTable", .false., file_id, group_id )
-    CALL ReadHDF( "dd", HelmholtzTable % dd(:),   group_id, datasize1d )
-    CALL ReadHDF( "dd2", HelmholtzTable % dd2(:),  group_id, datasize1d )
-    CALL ReadHDF( "ddi", HelmholtzTable % ddi(:),  group_id, datasize1d )
-    CALL ReadHDF( "dd2i", HelmholtzTable % dd2i(:), group_id, datasize1d )
+    datasize1d = HelmTable % nPointsDen
+    CALL OpenGroupHDF( "HelmTable/DeltasDenTable", .false., file_id, group_id )
+    CALL ReadHDF( "dd", HelmTable % dd(:),   group_id, datasize1d )
+    CALL ReadHDF( "dd2", HelmTable % dd2(:),  group_id, datasize1d )
+    CALL ReadHDF( "ddi", HelmTable % ddi(:),  group_id, datasize1d )
+    CALL ReadHDF( "dd2i", HelmTable % dd2i(:), group_id, datasize1d )
     CALL CloseGroupHDF( group_id )
     
     datasize1d = 1
-    CALL OpenGroupHDF( "HelmholtzTable/LimitsTable", .false., file_id, group_id )
+    CALL OpenGroupHDF( "HelmTable/LimitsTable", .false., file_id, group_id )
     CALL ReadHDF( "mintemp", buffer, group_id, datasize1d )
-    HelmholtzTable % mintemp = buffer(1)
+    HelmTable % mintemp = buffer(1)
     CALL ReadHDF( "maxtemp", buffer, group_id, datasize1d )
-    HelmholtzTable % maxtemp = buffer(1)
+    HelmTable % maxtemp = buffer(1)
     CALL ReadHDF( "mindens", buffer, group_id, datasize1d )
-    HelmholtzTable % mindens = buffer(1)
+    HelmTable % mindens = buffer(1)
     CALL ReadHDF( "maxdens", buffer, group_id, datasize1d )
-    HelmholtzTable % maxdens = buffer(1)
+    HelmTable % maxdens = buffer(1)
     CALL CloseGroupHDF( group_id )
         
     !CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
-    !CALL WriteEOSMetadataHDF( HelmholtzTable % MD, group_id )
+    !CALL WriteEOSMetadataHDF( HelmTable % MD, group_id )
     !CALL CloseGroupHDF( group_id )
     
     CALL CloseFileHDF( file_id )

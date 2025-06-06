@@ -12,7 +12,7 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
         ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
     USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
-    USE wlLeptonEOSModule, ONLY: HelmholtzTableType, MuonTableType, &
+    USE wlLeptonEOSModule, ONLY: HelmTableType, MuonTableType, &
         iTempMax, iDenMax, &
         nTempMuon, nDenMuon, &
         ReadHelmEOSdat, ReadMuonEOSdat, &
@@ -33,7 +33,7 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER, DIMENSION(3)            :: nPoints
     INTEGER                          :: nVariables
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
-    TYPE(HelmholtzTableType)         :: HelmholtzTable
+    TYPE(HelmTableType)         :: HelmTable
     TYPE(MuonTableType)                :: MuonTable
     TYPE(ElectronPhotonStateType)    :: ElectronPhotonState
     TYPE(MuonStateType)              :: MuonState
@@ -87,10 +87,10 @@ PROGRAM wlCreateEquationOfStateTable
     ! ------------- NOW DO ELECTRON EOS ------------------ !
     nPoints2D = (/ iTempMax, iDenMax /)
     PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmholtzTable, nPoints2D )
+    CALL AllocateHelmholtzTable( HelmTable, nPoints2D )
     
     HelmDatFilePath = '../helm_table.dat'
-    CALL ReadHelmEOSdat( HelmDatFilePath, HelmholtzTable )
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTable )
     
     ! ------------- NOW DO MUON EOS ------------------ !
     nPoints2D = (/ nTempMuon, nDenMuon /)
@@ -227,7 +227,7 @@ PROGRAM wlCreateEquationOfStateTable
           ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
           ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
           ElectronPhotonState % ye  = Ye
-          CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+          CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
           ! PRESSURE
           EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe) = &
@@ -297,7 +297,7 @@ PROGRAM wlCreateEquationOfStateTable
     iCount = 0
     !$OMP PARALLEL DO PRIVATE(D, T, Ye, Gamma, Cs) &
     !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
-    !$OMP LogEnergy, LogEntropy, OS_P, OS_E, OS_S, HelmholtzTable, MuonTable,iCount) &
+    !$OMP LogEnergy, LogEntropy, OS_P, OS_E, OS_S, HelmTable, MuonTable,iCount) &
     !$OMP COLLAPSE(3)
     DO iRho=1,nPoints(1)
       DO iTemp=1,nPoints(2)
@@ -323,7 +323,7 @@ PROGRAM wlCreateEquationOfStateTable
                   EOSCompOSE(:,:,:,1), OS_P, &
                   LogEnergy (:,:,:), OS_E, &
                   LogEntropy(:,:,:), OS_S, &
-                  HelmholtzTable, MuonTable, Gamma, Cs, .FALSE.)
+                  HelmTable, MuonTable, Gamma, Cs, .FALSE.)
 
             EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe) = Gamma
         ENDDO
@@ -382,7 +382,7 @@ PROGRAM wlCreateEquationOfStateTable
     WRITE (*,*) "HDF write successful"
     
     CALL DeAllocateEquationOfStateTable( EOSTable )
-    CALL DeallocateHelmholtzTable( HelmholtzTable )
+    CALL DeallocateHelmholtzTable( HelmTable )
     CALL DeAllocateMuonEOS( MuonTable )
 
     ! Now Create Electron EOS

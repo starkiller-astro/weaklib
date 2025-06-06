@@ -15,7 +15,7 @@ MODULE wlEOSComponentsSeparateInversionModule
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonStateType, ElectronPhotonEOS
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonTableType
+    HelmTableType, MuonTableType
   USE wlHelmMuonIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF, ReadMuonTableHDF
     
@@ -142,13 +142,13 @@ MODULE wlEOSComponentsSeparateInversionModule
 CONTAINS
 
   SUBROUTINE InitializeEOSComponentsInversion( Ds, Ts, Yps, Es, Ps, Ss, &
-      HelmholtzTableName, MuonTableName, Verbose_Option )
+      HelmTable, MuonTable, Verbose_Option )
 
     REAL(dp), INTENT(in) :: Ds(1:)      , Ts(1:)      , Yps(1:)
     REAL(dp), INTENT(in) :: Es(1:,1:,1:), Ps(1:,1:,1:), Ss(1:,1:,1:)
-    CHARACTER(len=*), INTENT(IN)   :: HelmholtzTableName, MuonTableName
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     LOGICAL,  INTENT(in), OPTIONAL :: Verbose_Option
-    
     LOGICAL :: Verbose
 
     IF( PRESENT( Verbose_Option ) )THEN
@@ -158,7 +158,7 @@ CONTAINS
     END IF
 
     ! Initialize Helmholtz and Muon Local Tables
-    CALL InitializeLeptonTables( HelmholtzTableName, MuonTableName )
+    CALL InitializeLeptonTables( HelmTable, MuonTable )
     
     MinD  = MINVAL( Ds  ); MaxD  = MAXVAL( Ds  )
     MinT  = MINVAL( Ts  ); MaxT  = MAXVAL( Ts  )

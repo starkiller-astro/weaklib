@@ -6,7 +6,7 @@ PROGRAM wlCalculateSoundSpeed
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonTableType
+    HelmTableType, MuonTableType
   USE wlHelmMuonIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF, ReadMuonTableHDF
   USE wlElectronPhotonEOS, ONLY: &
@@ -18,7 +18,7 @@ PROGRAM wlCalculateSoundSpeed
     
     IMPLICIT NONE
     
-    TYPE(HelmholtzTableType) :: HelmholtzTable
+    TYPE(HelmTableType) :: HelmTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonTableType) :: MuonTable
     TYPE(MuonStateType) :: MuonState
@@ -60,7 +60,7 @@ PROGRAM wlCalculateSoundSpeed
     BaryonPlusEleName = 'csBaryonPlusEle.h5'
     
     ! read in helmholtz table
-    CALL ReadHelmholtzTableHDF( HelmholtzTable, BaryonEOSTableName )
+    CALL ReadHelmholtzTableHDF( HelmTable, BaryonEOSTableName )
     
     ! read in baryon table -------------------------------
     CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
@@ -114,7 +114,7 @@ PROGRAM wlCalculateSoundSpeed
                 ElectronPhotonState % ye = EOSBaryonTable % TS % States(3) % Values(iYp)
                 
                 ! calculate electron quantities
-                CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+                CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
                 Ee(iRho,iTemp,iYp) = ElectronPhotonState % e
                 Pe(iRho,iTemp,iYp) = ElectronPhotonState % p
@@ -239,7 +239,7 @@ PROGRAM wlCalculateSoundSpeed
                 Ym = 1.0d-2
                 
                 CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, S_T, OS_S, &
-                    HelmholtzTable, MuonTable, Gamma, cs2, SeparateContributions)
+                    HelmTable, MuonTable, Gamma, cs2, SeparateContributions)
 
                 EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2
                 EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = Gamma			

@@ -5,7 +5,7 @@ PROGRAM wlCompareToFullEOS
   USE wlIOModuleHDF
 	USE wlEOSIOModuleHDF	
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonTableType
+    HelmTableType, MuonTableType
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonEOS, ElectronPhotonStateType
   USE wlHelmholtzEOS, ONLY: &
@@ -19,7 +19,7 @@ PROGRAM wlCompareToFullEOS
 	
 	TYPE(ElectronPhotonStateType) :: ElectronPhotonState
 	TYPE(HelmholtzStateType) :: HelmholtzState
-	TYPE(HelmholtzTableType) :: HelmholtzTable
+	TYPE(HelmTableType) :: HelmTable
   TYPE(EquationOfStateTableType) :: EOSBaryonTable, EOSFullTable, EOSBaryonPlusEleTable, EOSEleTable
 	
 	INTEGER :: nRho, nTemp, nYp, iAbar, iZbar, iBE, iPressure, iRho, iTemp, iYp, iXp, iXa, iXn, iXh, &
@@ -50,7 +50,7 @@ PROGRAM wlCompareToFullEOS
 	ENDIF
 
 	! read in helmholtz table
-	CALL ReadHelmholtzTableHDF( HelmholtzTable, BaryonEOSTableName )
+	CALL ReadHelmholtzTableHDF( HelmTable, BaryonEOSTableName )
 	
 	! read in baryon table -------------------------------
   CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
@@ -108,8 +108,8 @@ PROGRAM wlCompareToFullEOS
 				HelmholtzState % zbar = zbar_total
 
 				! calculate electron quantities
-        CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
-        CALL FullHelmEOS(1, HelmholtzTable, HelmholtzState)
+        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL FullHelmEOS(1, HelmTable, HelmholtzState)
         CALL wlGetElectronEOS(ElectronPhotonState % rho, &
             ElectronPhotonState % t, ElectronPhotonState % ye, &
             press_e_BCK, entrop_e_BCK, energ_e_BCK, chem_e_BCK)

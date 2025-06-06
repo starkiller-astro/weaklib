@@ -3,7 +3,7 @@ MODULE wlSoundSpeedModule
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, cvel, cm3fm3
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonTableType
+    HelmTableType, MuonTableType
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonEOS, ElectronPhotonStateType
   USE wlMuonEOS, ONLY: &
@@ -26,7 +26,7 @@ CONTAINS
   ! This one also calculates derivatives, but maybe you can provide derivatives ?
   SUBROUTINE CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, &
     P_T, OS_P, E_T, OS_E, S_T, OS_S, &
-    HelmholtzTable, MuonTable, Gamma, Cs, SeparateContributions)
+    HelmTable, MuonTable, Gamma, Cs, SeparateContributions)
 
     REAL(DP), INTENT(IN) :: D, T, Ye, Ym
     REAL(DP), INTENT(IN) :: D_T(1:), T_T(1:), Yp_T(1:)
@@ -35,7 +35,7 @@ CONTAINS
     REAL(DP), INTENT(IN) :: OS_P, OS_E, OS_S
     LOGICAL, INTENT(IN)  :: SeparateContributions
 
-    TYPE(HelmholtzTableType), INTENT(IN) :: HelmholtzTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
     TYPE(MuonTableType), INTENT(IN) :: MuonTable
     
     REAL(DP), INTENT(OUT)    :: Gamma, Cs
@@ -84,7 +84,7 @@ CONTAINS
       ElectronPhotonState % ye   = Ye
 
       ! calculate electron quantities
-      CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+      CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
       Pele = ElectronPhotonState % p
       Eele = ElectronPhotonState % e
@@ -205,7 +205,7 @@ CONTAINS
             ElectronPhotonState % t   = T_T(iT+iL_T-1)
             ElectronPhotonState % rho = D_T(iD+iL_D-1)
             ElectronPhotonState % ye  = Yp_T(iYp+iL_Yp-1) * Ye_over_Yp
-            CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+            CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t = T_T(iT+iL_T-1)
             MuonState % rhoym = D_T(iD+iL_D-1) * Yp_T(iYp+iL_Yp-1) * Ym_over_Yp

@@ -2,7 +2,7 @@ MODULE wlElectronPhotonEOS
   
   USE wlKindModule, ONLY: dp
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType
+    HelmTableType
   USE wlEosConstantsModule, ONLY: &
     pi, rmu, kerg, cvel, me, &
     kmev, ergmev, sigma_sb, asol
@@ -44,7 +44,7 @@ CONTAINS
   SUBROUTINE ElectronPhotonEOS(HelmTable, ElectronPhotonState)
      
     !..input arguments
-    TYPE(HelmholtzTableType), INTENT(IN) :: HelmTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
     TYPE (ElectronPhotonStateType), INTENT(INOUT) :: ElectronPhotonState
 
   !..declare local variables

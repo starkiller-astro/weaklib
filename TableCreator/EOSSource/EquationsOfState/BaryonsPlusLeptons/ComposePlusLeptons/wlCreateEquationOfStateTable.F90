@@ -9,7 +9,7 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
         ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
     USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
-    USE wlLeptonEOSModule, ONLY: HelmholtzTableType, MuonTableType, &
+    USE wlLeptonEOSModule, ONLY: HelmTableType, MuonTableType, &
         iTempMax, iDenMax, &
         nTempMuon, nDenMuon, &
         ReadHelmEOSdat, ReadMuonEOSdat, &
@@ -24,7 +24,7 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsDenon
     INTEGER                        :: nVariables
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
-    TYPE(HelmholtzTableType) :: HelmEOSTable
+    TYPE(HelmTableType) :: HelmEOSTable
     TYPE(MuonTableType) :: MuonEOSTable
     
     CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &

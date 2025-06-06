@@ -21,7 +21,7 @@ PROGRAM wlComposeNewInversionTest
   USE wlEOSComponentsSeparateInversionModule
 #endif
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType, MuonTableType
+    HelmTableType, MuonTableType
   USE wlElectronPhotonEOS, ONLY: &
     ElectronPhotonEOS, ElectronPhotonStateType
   USE wlMuonEOS, ONLY: &
@@ -62,7 +62,7 @@ PROGRAM wlComposeNewInversionTest
     Error
   TYPE(EquationOfStateTableType) :: &
     EOSBaryonTable
-  TYPE(HelmholtzTableType) :: HelmholtzTable
+  TYPE(HelmTableType) :: HelmTable
   TYPE(ElectronPhotonStateType) :: ElectronPhotonState
   TYPE(MuonTableType) :: MuonTable
   TYPE(MuonStateType) :: MuonState
@@ -100,7 +100,7 @@ PROGRAM wlComposeNewInversionTest
   CALL InitializeHDF( )
   
   ! read in helmholtz table
-  CALL ReadHelmholtzTableHDF( HelmholtzTable, BaryonPlusHelmTableName )
+  CALL ReadHelmholtzTableHDF( HelmTable, BaryonPlusHelmTableName )
 
   ! read in muon table
   CALL ReadMuonTableHDF( MuonTable, BaryonPlusHelmTableName )
@@ -170,7 +170,7 @@ PROGRAM wlComposeNewInversionTest
         ElectronPhotonState % ye = Yps_bary(iYp) - Ymu_temp
         
         ! calculate electron quantities
-        CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         Es_helm = ElectronPhotonState % e
         Ps_helm = ElectronPhotonState % p
@@ -213,8 +213,8 @@ PROGRAM wlComposeNewInversionTest
            10.0d0**( Es_full ) - OS_E, &
            10.0d0**( Ps_full ) - OS_P, &
            10.0d0**( Ss_full ) - OS_S, &
-           BaryonPlusHelmTableName, &
-           BaryonPlusHelmTableName, &
+           HelmTable, &
+           MuonTable, &
            Verbose_Option = .TRUE. )
 
 ! #if defined(WEAKLIB_OMP_OL)
@@ -330,7 +330,7 @@ PROGRAM wlComposeNewInversionTest
     ElectronPhotonState % ye = Ye(iP)
     
     ! calculate electron quantities
-    CALL ElectronPhotonEOS(HelmholtzTable, ElectronPhotonState)
+    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
     Es_helm = ElectronPhotonState % e
     Ps_helm = ElectronPhotonState % p

@@ -2,7 +2,7 @@ MODULE wlHelmholtzEOS
   
   USE wlKindModule, ONLY: dp
   USE wlLeptonEOSModule, ONLY: &
-    HelmholtzTableType
+    HelmTableType
   USE wlEosConstantsModule, ONLY: &
     pi, rmu, kerg, h_cgs, avn, cvel, qe, &
     kmev, ergmev, sigma_sb
@@ -107,7 +107,7 @@ CONTAINS
     
     !..input arguments
     INTEGER, INTENT(IN) :: input
-    TYPE(HelmholtzTableType), INTENT(IN) :: HelmTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
     TYPE (HelmholtzStateType), INTENT(INOUT) :: HelmholtzState
     
     !..rows to store EOS data

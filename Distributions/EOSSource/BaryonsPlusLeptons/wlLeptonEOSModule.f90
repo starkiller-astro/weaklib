@@ -10,7 +10,7 @@ MODULE wlLeptonEOSModule
     INTEGER, PARAMETER, PUBLIC :: iTempMax=541, iDenMax=201 
     INTEGER, PARAMETER, PUBLIC :: nTempMuon=270, nDenMuon=1501 
   
-   TYPE, PUBLIC :: HelmholtzTableType
+   TYPE, PUBLIC :: HelmTableType
     
     INTEGER :: nPointsDen !imax
     INTEGER :: nPointsTemp !jmax
@@ -64,7 +64,7 @@ MODULE wlLeptonEOSModule
     REAL(dp) :: mindens
     REAL(dp) :: maxdens
     
-  END TYPE HelmholtzTableType
+  END TYPE HelmTableType
   
   TYPE, PUBLIC :: MuonTableType
       
@@ -96,95 +96,95 @@ MODULE wlLeptonEOSModule
   
 CONTAINS
 
-  SUBROUTINE AllocateHelmholtzTable( HelmholtzTable, nPoints )
+  SUBROUTINE AllocateHelmholtzTable( HelmTable, nPoints )
     
-    TYPE(HelmholtzTableType), INTENT(INOUT) :: HelmholtzTable 
+    TYPE(HelmTableType), INTENT(INOUT) :: HelmTable 
     INTEGER, DIMENSION(2), INTENT(IN)     :: nPoints
         
-    HelmholtzTable % nPointsDen   = nPoints(1)
-    HelmholtzTable % nPointsTemp  = nPoints(2)
+    HelmTable % nPointsDen   = nPoints(1)
+    HelmTable % nPointsTemp  = nPoints(2)
     
-    ALLOCATE( HelmholtzTable % d( nPoints(1) ) )
-    ALLOCATE( HelmholtzTable % t( nPoints(2) ) )
+    ALLOCATE( HelmTable % d( nPoints(1) ) )
+    ALLOCATE( HelmTable % t( nPoints(2) ) )
     
-    ALLOCATE( HelmholtzTable % f    ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % fd   ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % ft   ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % fdd  ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % ftt  ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % fdt  ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % fddt ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % fdtt ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % fddtt( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % f    ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % fd   ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % ft   ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % fdd  ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % ftt  ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % fdt  ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % fddt ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % fdtt ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % fddtt( nPoints(1), nPoints(2) ) )
     
-    ALLOCATE( HelmholtzTable % dpdf  ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % dpdfd ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % dpdft ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % dpdfdt( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % dpdf  ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % dpdfd ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % dpdft ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % dpdfdt( nPoints(1), nPoints(2) ) )
     
-    ALLOCATE( HelmholtzTable % ef  ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % efd ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % eft ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % efdt( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % ef  ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % efd ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % eft ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % efdt( nPoints(1), nPoints(2) ) )
     
-    ALLOCATE( HelmholtzTable % xf  ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % xfd ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % xft ( nPoints(1), nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % xfdt( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % xf  ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % xfd ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % xft ( nPoints(1), nPoints(2) ) )
+    ALLOCATE( HelmTable % xfdt( nPoints(1), nPoints(2) ) )
     
-    ALLOCATE( HelmholtzTable % dt  ( nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % dt2 ( nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % dti ( nPoints(2) ) )
-    ALLOCATE( HelmholtzTable % dt2i( nPoints(2) ) )
+    ALLOCATE( HelmTable % dt  ( nPoints(2) ) )
+    ALLOCATE( HelmTable % dt2 ( nPoints(2) ) )
+    ALLOCATE( HelmTable % dti ( nPoints(2) ) )
+    ALLOCATE( HelmTable % dt2i( nPoints(2) ) )
     
-    ALLOCATE( HelmholtzTable % dd  ( nPoints(1) ) )
-    ALLOCATE( HelmholtzTable % dd2 ( nPoints(1) ) )
-    ALLOCATE( HelmholtzTable % ddi ( nPoints(1) ) )
-    ALLOCATE( HelmholtzTable % dd2i( nPoints(1) ) )
+    ALLOCATE( HelmTable % dd  ( nPoints(1) ) )
+    ALLOCATE( HelmTable % dd2 ( nPoints(1) ) )
+    ALLOCATE( HelmTable % ddi ( nPoints(1) ) )
+    ALLOCATE( HelmTable % dd2i( nPoints(1) ) )
     
   END SUBROUTINE AllocateHelmholtzTable
   
-  SUBROUTINE DeallocateHelmholtzTable( HelmholtzTable )
+  SUBROUTINE DeallocateHelmholtzTable( HelmTable )
   
-    TYPE(HelmholtzTableType)      :: HelmholtzTable 
+    TYPE(HelmTableType)      :: HelmTable 
 
-    DeAllocate( HelmholtzTable % t )
-    DeAllocate( HelmholtzTable % d )
+    DeAllocate( HelmTable % t )
+    DeAllocate( HelmTable % d )
     
-    DeAllocate( HelmholtzTable % f )
-    DeAllocate( HelmholtzTable % fd )
-    DeAllocate( HelmholtzTable % ft )
-    DeAllocate( HelmholtzTable % fdd )
-    DeAllocate( HelmholtzTable % ftt )
-    DeAllocate( HelmholtzTable % fdt )
-    DeAllocate( HelmholtzTable % fddt )
-    DeAllocate( HelmholtzTable % fdtt )
-    DeAllocate( HelmholtzTable % fddtt )
+    DeAllocate( HelmTable % f )
+    DeAllocate( HelmTable % fd )
+    DeAllocate( HelmTable % ft )
+    DeAllocate( HelmTable % fdd )
+    DeAllocate( HelmTable % ftt )
+    DeAllocate( HelmTable % fdt )
+    DeAllocate( HelmTable % fddt )
+    DeAllocate( HelmTable % fdtt )
+    DeAllocate( HelmTable % fddtt )
     
-    DeAllocate( HelmholtzTable % dpdf )
-    DeAllocate( HelmholtzTable % dpdfd )
-    DeAllocate( HelmholtzTable % dpdft )
-    DeAllocate( HelmholtzTable % dpdfdt )
+    DeAllocate( HelmTable % dpdf )
+    DeAllocate( HelmTable % dpdfd )
+    DeAllocate( HelmTable % dpdft )
+    DeAllocate( HelmTable % dpdfdt )
     
-    DeAllocate( HelmholtzTable % ef )
-    DeAllocate( HelmholtzTable % efd )
-    DeAllocate( HelmholtzTable % eft )
-    DeAllocate( HelmholtzTable % efdt )
+    DeAllocate( HelmTable % ef )
+    DeAllocate( HelmTable % efd )
+    DeAllocate( HelmTable % eft )
+    DeAllocate( HelmTable % efdt )
     
-    DeAllocate( HelmholtzTable % xf )
-    DeAllocate( HelmholtzTable % xfd )
-    DeAllocate( HelmholtzTable % xft )
-    DeAllocate( HelmholtzTable % xfdt )
+    DeAllocate( HelmTable % xf )
+    DeAllocate( HelmTable % xfd )
+    DeAllocate( HelmTable % xft )
+    DeAllocate( HelmTable % xfdt )
     
-    DeAllocate( HelmholtzTable % dt )
-    DeAllocate( HelmholtzTable % dt2 )
-    DeAllocate( HelmholtzTable % dti )
-    DeAllocate( HelmholtzTable % dt2i )
+    DeAllocate( HelmTable % dt )
+    DeAllocate( HelmTable % dt2 )
+    DeAllocate( HelmTable % dti )
+    DeAllocate( HelmTable % dt2i )
     
-    DeAllocate( HelmholtzTable % dd )
-    DeAllocate( HelmholtzTable % dd2 )
-    DeAllocate( HelmholtzTable % ddi )
-    DeAllocate( HelmholtzTable % dd2i )  
+    DeAllocate( HelmTable % dd )
+    DeAllocate( HelmTable % dd2 )
+    DeAllocate( HelmTable % ddi )
+    DeAllocate( HelmTable % dd2i )  
   
   END SUBROUTINE DeallocateHelmholtzTable
 
@@ -230,9 +230,9 @@ CONTAINS
 
   END SUBROUTINE DeAllocateMuonEOS
 
-  SUBROUTINE ReadHelmEOSdat(HelmDatFilePath, HelmholtzTable)
+  SUBROUTINE ReadHelmEOSdat(HelmDatFilePath, HelmTable)
     
-    TYPE(HelmholtzTableType), INTENT(INOUT) :: HelmholtzTable 
+    TYPE(HelmTableType), INTENT(INOUT) :: HelmTable 
     CHARACTER(len=128), INTENT(IN) :: HelmDatFilePath
     
     ! Local variables
@@ -243,84 +243,84 @@ CONTAINS
         !..   read the helmholtz free energy table
         tlo   = 3.0d0
         thi   = 13.0d0
-        tstp  = (thi - tlo)/float(HelmholtzTable % nPointsTemp-1)
+        tstp  = (thi - tlo)/float(HelmTable % nPointsTemp-1)
         tstpi = 1.0d0/tstp
         dlo   = -12.0d0
         dhi   = 15.0d0
-        dstp  = (dhi - dlo)/float(HelmholtzTable % nPointsDen-1)
+        dstp  = (dhi - dlo)/float(HelmTable % nPointsDen-1)
         dstpi = 1.0d0/dstp
     
-        do iT=1,HelmholtzTable % nPointsTemp
+        do iT=1,HelmTable % nPointsTemp
       tsav = tlo + (iT-1)*tstp
-      HelmholtzTable % t(iT) = 10.0d0**(tsav)
+      HelmTable % t(iT) = 10.0d0**(tsav)
     enddo
-    do iDen=1,HelmholtzTable % nPointsDen
+    do iDen=1,HelmTable % nPointsDen
       dsav = dlo + (iDen-1)*dstp
-      HelmholtzTable % d(iDen) = 10.0d0**(dsav)
+      HelmTable % d(iDen) = 10.0d0**(dsav)
     end do
     
     OPEN(UNIT=1234,FILE=TRIM(ADJUSTL(HelmDatFilePath)), STATUS='old', IOSTAT=istat)
     
     IF (istat .ne. 0) THEN
-      WRITE(*,*) 'Cannot open HelmholtzTable % table.dat!'
+      WRITE(*,*) 'Cannot open HelmTable % table.dat!'
       STOP
     ENDIF
     
     !..read the helmholtz free energy table
-    do iT=1, HelmholtzTable % nPointsTemp
-      do iDen=1, HelmholtzTable % nPointsDen
-        read(1234,*) HelmholtzTable % f(iDen,iT), HelmholtzTable % fd(iDen,iT), HelmholtzTable % ft(iDen,iT),&
-        HelmholtzTable % fdd(iDen,iT), HelmholtzTable % ftt(iDen,iT), HelmholtzTable % fdt(iDen,iT), & 
-        HelmholtzTable % fddt(iDen,iT), HelmholtzTable % fdtt(iDen,iT), HelmholtzTable % fddtt(iDen,iT)
+    do iT=1, HelmTable % nPointsTemp
+      do iDen=1, HelmTable % nPointsDen
+        read(1234,*) HelmTable % f(iDen,iT), HelmTable % fd(iDen,iT), HelmTable % ft(iDen,iT),&
+        HelmTable % fdd(iDen,iT), HelmTable % ftt(iDen,iT), HelmTable % fdt(iDen,iT), & 
+        HelmTable % fddt(iDen,iT), HelmTable % fdtt(iDen,iT), HelmTable % fddtt(iDen,iT)
       enddo
     enddo
     
     !..read the pressure derivative with density table
-    DO iT=1, HelmholtzTable % nPointsTemp
-      DO iDen=1, HelmholtzTable % nPointsDen
-        read(1234,*) HelmholtzTable % dpdf(iDen,iT), HelmholtzTable % dpdfd(iDen,iT),&
-        HelmholtzTable % dpdft(iDen,iT), HelmholtzTable % dpdfdt(iDen,iT)
+    DO iT=1, HelmTable % nPointsTemp
+      DO iDen=1, HelmTable % nPointsDen
+        read(1234,*) HelmTable % dpdf(iDen,iT), HelmTable % dpdfd(iDen,iT),&
+        HelmTable % dpdft(iDen,iT), HelmTable % dpdfdt(iDen,iT)
       ENDDO
     ENDDO
     
     !..read the electron chemical potential table
-    DO iT=1, HelmholtzTable % nPointsTemp
-      DO iDen=1, HelmholtzTable % nPointsDen
-        READ(1234,*) HelmholtzTable % ef(iDen,iT), HelmholtzTable % efd(iDen,iT),&
-        HelmholtzTable % eft(iDen,iT), HelmholtzTable % efdt(iDen,iT)
+    DO iT=1, HelmTable % nPointsTemp
+      DO iDen=1, HelmTable % nPointsDen
+        READ(1234,*) HelmTable % ef(iDen,iT), HelmTable % efd(iDen,iT),&
+        HelmTable % eft(iDen,iT), HelmTable % efdt(iDen,iT)
       ENDDO
     ENDDO
     
     !..read the number density table
-    DO iT=1, HelmholtzTable % nPointsTemp
-      DO iDen=1, HelmholtzTable % nPointsDen
-        READ(1234,*) HelmholtzTable % xf(iDen,iT), HelmholtzTable % xfd(iDen,iT),&
-        HelmholtzTable % xft(iDen,iT), HelmholtzTable % xfdt(iDen,iT)
+    DO iT=1, HelmTable % nPointsTemp
+      DO iDen=1, HelmTable % nPointsDen
+        READ(1234,*) HelmTable % xf(iDen,iT), HelmTable % xfd(iDen,iT),&
+        HelmTable % xft(iDen,iT), HelmTable % xfdt(iDen,iT)
       ENDDO
     ENDDO
     
     CLOSE(1234)
     
     !..   construct the temperature and density deltas and their inverses
-    do iT = 1, HelmholtzTable % nPointsTemp-1
-      HelmholtzTable % dt(iT)   = HelmholtzTable % t(iT+1) - HelmholtzTable % t(iT)
-      HelmholtzTable % dt2(iT)  = HelmholtzTable % dt(iT) * HelmholtzTable % dt(iT)
-      HelmholtzTable % dti(iT)  = 1.0d0/HelmholtzTable % dt(iT)
-      HelmholtzTable % dt2i(iT) = 1.0d0/HelmholtzTable % dt2(iT)
+    do iT = 1, HelmTable % nPointsTemp-1
+      HelmTable % dt(iT)   = HelmTable % t(iT+1) - HelmTable % t(iT)
+      HelmTable % dt2(iT)  = HelmTable % dt(iT) * HelmTable % dt(iT)
+      HelmTable % dti(iT)  = 1.0d0/HelmTable % dt(iT)
+      HelmTable % dt2i(iT) = 1.0d0/HelmTable % dt2(iT)
     end do
     
-    do iDen = 1, HelmholtzTable % nPointsDen-1
-      HelmholtzTable % dd(iDen)   = HelmholtzTable % d(iDen+1) - HelmholtzTable % d(iDen)
-      HelmholtzTable % dd2(iDen)  = HelmholtzTable % dd(iDen) * HelmholtzTable % dd(iDen)
-      HelmholtzTable % ddi(iDen)  = 1.0d0/HelmholtzTable % dd(iDen)
-      HelmholtzTable % dd2i(iDen) = 1.0d0/HelmholtzTable % dd2(iDen)
+    do iDen = 1, HelmTable % nPointsDen-1
+      HelmTable % dd(iDen)   = HelmTable % d(iDen+1) - HelmTable % d(iDen)
+      HelmTable % dd2(iDen)  = HelmTable % dd(iDen) * HelmTable % dd(iDen)
+      HelmTable % ddi(iDen)  = 1.0d0/HelmTable % dd(iDen)
+      HelmTable % dd2i(iDen) = 1.0d0/HelmTable % dd2(iDen)
     end do
     
     ! Set up the miniDenm and maxiDenm possible densities.
-    HelmholtzTable % mintemp = 10.d0**tlo
-    HelmholtzTable % maxtemp = 10.d0**thi
-    HelmholtzTable % mindens = 10.d0**dlo
-    HelmholtzTable % maxdens = 10.d0**dhi
+    HelmTable % mintemp = 10.d0**tlo
+    HelmTable % maxtemp = 10.d0**thi
+    HelmTable % mindens = 10.d0**dlo
+    HelmTable % maxdens = 10.d0**dhi
     
   END  SUBROUTINE ReadHelmEOSdat
 
