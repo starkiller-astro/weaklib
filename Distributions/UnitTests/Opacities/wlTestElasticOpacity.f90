@@ -2,14 +2,22 @@ PROGRAM wlTestElasticOpacity
 
   USE wlKindModule, ONLY: dp
   USE HDF5
+  USE wlInterpolationModule, ONLY: &
+    LogInterpolateSingleVariable
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE wlLeptonEOSModule
+  USE wlMuonEOS
+  USE wlElectronPhotonEOS
   USE wlHelmMuonIOModuleHDF
-  USE wlEosConstantsModule, ONLY: kmev
+  USE wlEosConstantsModule, ONLY: &
+    rmu, mp, me, mn, mmu, cm3fm3, kmev
   USE wlCalculateAbEmOpacityModule, ONLY: &
-    ElasticAbsorptionOpacityNuMu
+    ElasticAbsorptionOpacityNum, &
+    ElasticAbsorptionOpacityNue, &
+    CalculateHorowitzWeakMagRecoil
+
   IMPLICIT NONE
 
   INTEGER                        :: i
@@ -21,12 +29,26 @@ PROGRAM wlTestElasticOpacity
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
 #endif
   TYPE(MuonTableType) :: MuonTable
+  TYPE(MuonStateType) :: MuonState
+
+  TYPE(HelmTableType) :: HelmTable
+  TYPE(ElectronPhotonStateType) :: ElectronPhotonState
+
   REAL(DP) :: D, T, Ye, Ym
-  REAL(DP), ALLOCATABLE, DIMENSION(:) :: E, OpElNu, OpElNuBar
+  REAL(DP), ALLOCATABLE, DIMENSION(:) :: E
+  REAL(DP), ALLOCATABLE, DIMENSION(:) :: OpElNue , OpElNueBar
+  REAL(DP), ALLOCATABLE, DIMENSION(:) :: OpElNum, OpElNumBar
   REAL(DP) :: Emin, Emax, dE
   INTEGER  :: iE, nE
 
+  ! LOCAL VARIABLES
+  REAL(DP) :: Yp, Xp, Xn, dYp
+  REAL(DP) :: Mup, Mun, Mumu, Mue
+  REAL(DP) :: Mp_eff, Mn_eff, Up, Un, n_n, n_p
+  INTEGER  :: iEOS_Rho, iEOS_T, iEOS_Yp, iDV
+  
   CALL ReadEquationOfStateTableHDF( EOSTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
+  CALL ReadHelmholtzTableHDF( HelmTable, "BaryonsPlusHelmPlusMuonsEOS.h5"  )
   CALL ReadMuonTableHDF( MuonTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
 
   ! See Fischer 2020 Table II for Thermo State and Figure 1 for opacity
@@ -36,8 +58,10 @@ PROGRAM wlTestElasticOpacity
   dE = (Emax - Emin) / DBLE(nE)
 
   ALLOCATE( E(nE) )
-  ALLOCATE( OpElNu(nE) )
-  ALLOCATE( OpElNuBar(nE) )
+  ALLOCATE( OpElNue(nE) )
+  ALLOCATE( OpElNum(nE) )
+  ALLOCATE( OpElNueBar(nE) )
+  ALLOCATE( OpElNumBar(nE) )
 
   DO iE=1,nE
     E(iE) = Emin + (iE-1)*dE
@@ -55,16 +79,146 @@ PROGRAM wlTestElasticOpacity
   Ye = 0.15d0 !Does not matter...
   Ym = 0.05
 
-  CALL ElasticAbsorptionOpacityNuMu(D, T, Ye, Ym, E, nE, &
-    EOSTable, MuonTable, OpElNu, OpElNuBar)
+  ! Calculate all relevant quantities
+  iEOS_Rho = EOSTable % TS % Indices % iRho
+  iEOS_T   = EOSTable % TS % Indices % iT
+  iEOS_Yp  = EOSTable % TS % Indices % iYe ! Ye is actually Yp, but for consistency reasons it was not changed
+
+  Yp = Ye + Ym
+
+  iDV = EOSTable % DV % Indices % iNeutronChemicalPotential
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mun )
+
+  iDV = EOSTable % DV % Indices % iProtonChemicalPotential
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mup )
+
+#ifdef EOSMODE_3D
+  Mn_eff = 0.0d0
+  Mp_eff = 0.0d0
+  Up     = 0.0d0
+  Un     = 0.0d0
+#else
+  iDV = EOSTable % DV % Indices % iNeutronEffMass
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mn_eff )
+
+  iDV = EOSTable % DV % Indices % iNeutronSelfEnergy
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Un )
+
+  iDV = EOSTable % DV % Indices % iProtonEffMass
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mp_eff )
+
+  iDV = EOSTable % DV % Indices % iProtonSelfEnergy
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Up )
+#endif
+
+  iDV = EOSTable % DV % Indices % iProtonMassFraction
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Xp )
+
+  iDV = EOSTable % DV % Indices % iNeutronMassFraction
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T)   % Values,   &
+        EOSTable % TS % States(iEOS_Yp)  % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Xn )
+
+  ! Muons
+  MuonState % t     = T
+  MuonState % rhoym = D * Ym
+  CALL FullMuonEOS(MuonTable, MuonState)
+  Mumu = MuonState % mu
+
+  ! Electrons
+  ElectronPhotonState % t   = T
+  ElectronPhotonState % rho = D
+  ElectronPhotonState % ye  = Ye
+  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+  Mue = ElectronPhotonState % mue
+
+  WRITE(*,*) 't     =', T * kmev
+  WRITE(*,*) 'ye    =', ye
+  WRITE(*,*) 'ym    =', ym
+  WRITE(*,*) 'd     =', d
+  WRITE(*,*) 'yp    =', yp
+  WRITE(*,*) 'chemmu=', Mumu
+  WRITE(*,*) 'cheme =', Mue
+  WRITE(*,*) 'chemn =', Mun - mn
+  WRITE(*,*) 'chemp =', Mup - mp
+  WRITE(*,*) 'xn    =', xn
+  WRITE(*,*) 'xp    =', xp
+  WRITE(*,*) 'un    =', un
+  WRITE(*,*) 'up    =', up
+  WRITE(*,*) 'massn =', Mn_eff
+  WRITE(*,*) 'massp =', Mp_eff
+  WRITE(*,*) 'nB    =', D * cm3fm3 / rmu
+  WRITE(*,*) 'phin  =', Mun - Mn_eff - Un
+  WRITE(*,*) 'phip  =', Mup - Mp_eff - Up
+
+  ! Initialize Recoil correction!
+  CALL CalculateHorowitzWeakMagRecoil(E, nE)
+
+  DO iE=1,nE
+    CALL ElasticAbsorptionOpacityNue (D, T, E(iE), iE, &
+      Mun, Mn_eff, Un, Xn, Mup, Mp_eff, Up, Xp, Mue , &
+      OpElNue(iE) , OpElNueBar(iE) , IncludeWeakMagRecoil_Option=.true.)
+
+    CALL ElasticAbsorptionOpacityNum(D, T, E(iE), iE, &
+      Mun, Mn_eff, Un, Xn, Mup, Mp_eff, Up, Xp, Mumu, &
+      OpElNum(iE), OpElNumBar(iE), IncludeWeakMagRecoil_Option=.true.)
+  ENDDO
 
   ! Print headers
-  WRITE(*,'(A16, A18, A20, A10, A10, A22, A24)') 'Energy (MeV)', 'Density (g/cc)', &
-    'Temperature (MeV)', 'Ye', 'Ym', 'Opacity Nu (1/cm)', 'Opacity NuBar (1/cm)'
+  WRITE(*,*)
+  WRITE(*,'(A13, A14, A11, A9, A9, A20, A23, A20, A23)') 'Energy (MeV)', 'Rho (g/cc)', &
+    'T (MeV)', 'Ye', 'Ym', 'Opacity Nue (1/cm)', 'Opacity NueBar (1/cm)', &
+    'Opacity Num (1/cm)', 'Opacity NumBar (1/cm)'
   DO iE=1,nE
     ! Print values under each header
-    WRITE(*,'(F16.6, ES18.6, F20.6, F10.4, F10.4, ES22.6, ES24.6)') &
-      E(iE), D, T*kmev, Ye, Ym, OpElNu(iE), OpElNuBar(iE)
+    WRITE(*,'(F13.6, ES14.6, F11.6, F9.4, F9.4, ES20.8, ES23.8, ES20.8, ES23.8)') &
+      E(iE), D, T*kmev, Ye, Ym, OpElNue(iE), OpElNueBar(iE), OpElNum(iE), OpElNumBar(iE)
   ENDDO
 
   DEALLOCATE(E)

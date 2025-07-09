@@ -62,9 +62,11 @@ PROGRAM wlComposeNewInversionTest
     Error
   TYPE(EquationOfStateTableType) :: &
     EOSBaryonTable
-  TYPE(HelmTableType) :: HelmTable
+  TYPE(HelmTableType), TARGET, SAVE :: HelmTable
+  TYPE(HelmTableType), POINTER :: HelmTable_point
   TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-  TYPE(MuonTableType) :: MuonTable
+  TYPE(MuonTableType), TARGET, SAVE :: MuonTable
+  TYPE(MuonTableType), POINTER :: MuonTable_point
   TYPE(MuonStateType) :: MuonState
   REAL(DP), DIMENSION(:), ALLOCATABLE :: &
     Ds_bary, Ts_bary, Yps_bary, &

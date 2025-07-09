@@ -27,18 +27,18 @@ MODULE wlEosTemperatureCombinedInversionModule
   PUBLIC :: InvertTemperatureWith_DSYpYl_Guess
   PUBLIC :: InvertTemperatureWith_DSYpYl_NoGuess
   
-  TYPE(HelmTableType) :: HelmTable 
-  TYPE(MuonTableType) :: MuonTable
+  TYPE(HelmTableType), POINTER :: HelmTable 
+  TYPE(MuonTableType), POINTER :: MuonTable
   
 CONTAINS
 
   SUBROUTINE InitializeLeptonTables( HelmTable_In, MuonTable_In )
 
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable_In
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable_In
+    TYPE(HelmTableType), POINTER, INTENT(IN) :: HelmTable_In
+    TYPE(MuonTableType), POINTER, INTENT(IN) :: MuonTable_In
 
-    HelmTable = HelmTable_In
-    MuonTable = MuonTable_In
+    HelmTable => HelmTable_In
+    MuonTable => MuonTable_In
 
   END SUBROUTINE InitializeLeptonTables
 

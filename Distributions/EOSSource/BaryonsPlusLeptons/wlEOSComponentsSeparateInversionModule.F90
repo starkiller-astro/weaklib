@@ -146,8 +146,8 @@ CONTAINS
 
     REAL(dp), INTENT(in) :: Ds(1:)      , Ts(1:)      , Yps(1:)
     REAL(dp), INTENT(in) :: Es(1:,1:,1:), Ps(1:,1:,1:), Ss(1:,1:,1:)
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), POINTER, INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), POINTER, INTENT(IN) :: MuonTable
     LOGICAL,  INTENT(in), OPTIONAL :: Verbose_Option
     LOGICAL :: Verbose
 
