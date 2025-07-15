@@ -1,0 +1,44 @@
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+
+CUBA_DIR = /home/lbocciol/MuonProject/CUBA/Cuba-4.2.2
+CUBA_LIB = -L$(CUBA_DIR) -lcuba
+
+.DEFAULT_GOAL := all
+
+all: wlTestGSI \
+     wlTestParallelGSI
+
+wlTestGSI: \
+	$(weaklib) wlTestGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestGSI_$(MACHINE) \
+	$(weaklib) wlTestGSI.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestParallelGSI: \
+	$(weaklib) wlTestParallelGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestParallelGSI_$(MACHINE) \
+	$(weaklib) wlTestParallelGSI.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+clean:
+	rm -f *.o *.mod *.ld *.acc.s
+
+clobber: clean
+	rm -f *_$(MACHINE)
+
+wlTestGSI.o: \
+	Opacity_SemiLep_2D_GSI.o \
+	Opacity_SemiLep_4D_GSI.o \
+	wlSemiLeptonicOpacityModule2D.o \
+	wlSemiLeptonicOpacityModule4D.o
+
+wlTestParallelGSI.o: \
+	Opacity_SemiLep_2D_GSI.o \
+	Opacity_SemiLep_4D_GSI.o \
+	wlSemiLeptonicOpacityModule2D.o \
+	wlSemiLeptonicOpacityModule4D.o

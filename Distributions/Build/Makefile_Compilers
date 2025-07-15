@@ -29,6 +29,7 @@ OPENMP_OL_spock_cce  = -fopenmp
 OPENMP_OL_spock_gcc  = -fopenmp
 OPENMP_vass          = -fopenmp 
 OPENMP_savio         = -fopenmp 
+OPENMP_ubuntu        = -fopenmp 
 ifeq ($(USE_OMP),TRUE)
     OPENMP               = $(OPENMP_$(MACHINE))
 else ifeq ($(USE_OMP_OL),TRUE)

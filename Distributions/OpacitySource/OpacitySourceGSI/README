@@ -1,0 +1,36 @@
+This is the code from the GSI open source GitLab:
+https://git.gsi.de/nucastro_archive/supernovamuonicrates
+
+It is adapted and slightly modified.
+
+It requires the library CUBA (see README in the GitLab routines)
+
+Work In Progress: Parallelization
+Right now it parallelizes very poorly. I have not tried to use CUBA 
+built-in parallel capabilities, I am not sure they would interact well 
+with thornado/Flash-X. So my idea was to have CUBA run in serial, and
+parallelize the loops over energies and grid points. But that also 
+seems to be slow. 
+
+Right now the way I am testing parallelization is to build CUBA with:
+./configure
+make
+
+Then you have to link the libcuba.a library by setting the CUBA_PATH in the
+Makefile
+
+When you run the ./test_parallel, you have to also set 
+export CUBACORES=0
+export CUBACORESMAX=0
+to force CUBA to use only one thread. This speeds up the computation significantly,
+but it still scales horribly. Not sure why. I also had to declare all the variables
+in the 2D and 4D modules as threadprivate, but maybe that is not the best option?
+Have to investigate this more. Maybe the overhead is caused by Vegas being called 
+N times on N threads? I still don't understand why the parallel can be SLOWER than
+the serial...
+
+Other doubts/questions
+- In the original routines there are lots of REAL(4) numbers (i.e. 1.0 instead of 1.0d0, etc...)
+If you compile with -fdefault-real-8 it should be fine, but it is still kinda weird to not
+do it explicitly. So in my routines I changed all of them
+- Not sure what Tfac is. but it is 100 in the 4D routines and 150 in the 2D routines...
