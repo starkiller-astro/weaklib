@@ -1,5 +1,3 @@
 WL_OPACITYSOURCE_GSI = \
-  Opacity_SemiLep_2D_GSI.o \
-  Opacity_SemiLep_4D_GSI.o \
   wlSemiLeptonicOpacityModule2D.o \
   wlSemiLeptonicOpacityModule4D.o

@@ -4,4 +4,4 @@ include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_Object
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
 
 Weaklib_TableCreator = \
-  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(SHAREDMODULES)
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(WL_OPACITYSOURCE_GSI) $(SHAREDMODULES)

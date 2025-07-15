@@ -23,6 +23,7 @@ Weaklib_TableCreator = \
   $(WL_LIBRARY) \
   $(WL_EOSSOURCE) \
   $(WL_OPACITYSOURCE) \
+	$(WL_OPACITYSOURCE_GSI) \
   $(SHAREDMODULES) \
   $(OPACITYFULLWEAK) \
   $(CHIMERA) \
