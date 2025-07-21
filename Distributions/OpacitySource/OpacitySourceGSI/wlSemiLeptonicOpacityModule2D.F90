@@ -17,7 +17,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mn, mp, mpi, Vud, &
-   massA, massV, gamma_p, gamma_n
+   massA, massV, gamma_p, gamma_n, hbarc, hbar
 
   IMPLICIT NONE
   PRIVATE
@@ -172,7 +172,7 @@ SUBROUTINE Integral_2D(xEnu,res)   ! captures
       res = res + xf2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*wEn(i)*wEe(j)/Enu**2
     END DO
   END DO
-  res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/197.327d-18
+  res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc*1.0d10
 
 END SUBROUTINE Integral_2D
 
@@ -225,10 +225,9 @@ SUBROUTINE Integral_2D_D(xEnu,res)   ! decay/inverse decay
   END DO
 
   IF(opt0.eq.3) THEN
-    res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/197.327d-18
+    res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc*1.0d10
   ELSE IF(opt0.eq.4) THEN
-    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2*(1.d13/197.327d0)**3*&
-          (3.d23/197.327d0) 
+    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar*1.0d10
   END IF
 
   res = -res

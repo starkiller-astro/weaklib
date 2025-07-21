@@ -9,12 +9,26 @@ CUBA_LIB = -L$(CUBA_DIR) -lcuba
 .DEFAULT_GOAL := all
 
 all: wlTestGSI \
+     wlTestGSI2D \
+     wlTestSpeed \
      wlTestParallelGSI
 
 wlTestGSI: \
 	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestGSI.o
 	$(FLINKER) $(FLAGS) -o wlTestGSI_$(MACHINE) \
 	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestGSI.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestGSI2D: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestGSI2D.o
+	$(FLINKER) $(FLAGS) -o wlTestGSI2D_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestGSI2D.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestSpeed: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestSpeed.o
+	$(FLINKER) $(FLAGS) -o wlTestSpeed_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestSpeed.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
 wlTestParallelGSI: \
@@ -30,12 +44,35 @@ clobber: clean
 	rm -f *_$(MACHINE)
 
 wlTestGSI.o: \
+	wlKindModule.o \
 	wlSemiLeptonicOpacityModule2D.o \
 	wlSemiLeptonicOpacityModule4D.o \
 	Opacity_SemiLep_2D_GSI.o \
 	Opacity_SemiLep_4D_GSI.o
 
+wlTestGSI2D.o: \
+	wlKindModule.o \
+	wlSemiLeptonicOpacityModule2D.o \
+	Opacity_SemiLep_2D_GSI.o
+
+wlTestSpeed.o: \
+	wlKindModule.o \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlInterpolationModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlMuonEOS.o \
+  wlElectronPhotonEOS.o \
+  wlHelmMuonIOModuleHDF.o \
+	wlOpacityTableModule.o \
+	wlOpacityTableIOModuleHDF.o \
+	wlOpacityFieldsModule.o
+
 wlTestParallelGSI.o: \
+	wlKindModule.o \
 	wlSemiLeptonicOpacityModule2D.o \
 	wlSemiLeptonicOpacityModule4D.o \
 	Opacity_SemiLep_2D_GSI.o \

@@ -16,7 +16,7 @@ MODULE wlSemiLeptonicOpacityModule4D
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mn, mp, mpi, Vud, &
-   massA, massV, gamma_p, gamma_n
+   massA, massV, gamma_p, gamma_n, hbarc, hbar
    
   IMPLICIT NONE
   PRIVATE
@@ -217,7 +217,7 @@ REAL(dp) FUNCTION Integration()
     gridno_C, statefile_C, spin_C, &
     neval, fail, integral, error, prob)
 
-  Integration = integral(1)/197.327d-18*2.d0
+  Integration = integral(1)/hbarc*1.0d10*2.d0
   RETURN
 
 END FUNCTION Integration
@@ -240,10 +240,9 @@ REAL(dp) FUNCTION Integration_D()
     neval, fail, integral, error, prob)
 
   IF(reaction_index .eq. 3) THEN
-     Integration_D = integral(1) / 197.327d-18*2.d0
+     Integration_D = integral(1) / hbarc*1.0d10*2.d0
   ELSE IF(reaction_index .eq. 4) THEN
-     Integration_D = integral(1)*Enu**2 / (2.d0*pi**2)*2.d0 &
-        *(1.d13/197.327d0)**3*(3.d23/197.327d0)
+     Integration_D = integral(1)*Enu**2 / (2.d0*pi**2)*2.d0 / hbarc**3/hbar*1.0d10
   END IF
 
   RETURN

@@ -17,6 +17,8 @@ REAL(dp), PARAMETER  :: hbar      = h/( 2.d0*pi ) ! Planck's constant divided by
 
 REAL(dp), PARAMETER  :: cvel      = 2.99792d+10   ! velocity of light [cm s^{-1}]
 
+REAL(dp), PARAMETER  :: hbarc     = hbar*cvel     ! hbar * c (MeV cm)
+
 REAL(dp), PARAMETER  :: cvel_inv  = 1.d0/cvel     ! 1/( velocity of light [cm s^{-1}])
 
 REAL(dp), PARAMETER  :: g         = 6.67384d-08   ! Gravitational constant [dynes cm^{2} g^{-2}]

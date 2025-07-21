@@ -3,8 +3,6 @@ PROGRAM wlTestGSI
   USE wlKindModule, ONLY: dp
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
     Opacity_CC_2D
-  USE wlSemiLeptonicOpacityModule4D, ONLY: &
-    Opacity_CC_4D
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mn, mp, me, mmu, mpi, &
    Vud, massA, massV, gamma_p, gamma_n
@@ -21,13 +19,11 @@ PROGRAM wlTestGSI
   INTEGER :: nDone, total, lastPrint
   LOGICAL, PARAMETER :: DoMuons = .true.
 
-  REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:,:), OpaA_4D(:,:,:,:)
-  REAL(DP), ALLOCATABLE :: OpaA_2D_OLD(:,:,:,:), OpaA_4D_OLD(:,:,:,:)
+  REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:,:)
   REAL(DP), ALLOCATABLE :: T(:), Rho(:), Ye(:), Ym(:), &
                          Mue(:), Mum(:), Mun(:), Mup(:), Un(:), Up(:)
 
-  REAL(DP) :: t1, t2, t_start, t_end, t_2D, t_4D
-  REAL(DP) :: t_2D_OLD, t_4D_OLD, err
+  REAL(DP) :: t1, t2, t_start, t_end, t_2D
 
   ! GSI Constants, they will change the results!
   REAL(DP) , PARAMETER :: pi_GSI = 3.1415927d0, Gw_MeV_GSI = 1.166d-11, &
@@ -56,11 +52,8 @@ PROGRAM wlTestGSI
   READ(123,*)
 
   ! You can also set nThermoPoints to a smaller value for quick checks
-  nThermoPoints = 2
+  ! nThermoPoints = 2
   ALLOCATE(OpaA_2D(NP, nThermoPoints, nApprox, nOp))
-  ALLOCATE(OpaA_4D(NP, nThermoPoints, nApprox, nOp))
-  ALLOCATE(OpaA_2D_OLD(NP, nThermoPoints, nApprox, nOp))
-  ALLOCATE(OpaA_4D_OLD(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(T(nThermoPoints), Rho(nThermoPoints), Ye(nThermoPoints), Ym(nThermoPoints))
   ALLOCATE(Mue(nThermoPoints), Mum(nThermoPoints), Mun(nThermoPoints), Mup(nThermoPoints))
   ALLOCATE(Un(nThermoPoints), Up(nThermoPoints))
@@ -73,20 +66,14 @@ PROGRAM wlTestGSI
   CALL CPU_TIME(t_start)
 
   OpaA_2D = 0.d0
-  OpaA_2D_OLD = 0.d0
-  OpaA_4D = 0.d0
-  OpaA_4D_OLD = 0.d0
 
   nDone = 0
   lastPrint = -1
   total = 4 * 4 * nThermoPoints
 
   t_2D = 0.0d0
-  t_4D = 0.0d0
-  t_2D_OLD = 0.0d0
-  t_4D_OLD = 0.0d0
-  DO j = 1, nApprox
-    DO k = 1, nOp
+  DO j = 4, nApprox
+    DO k = 1, 2
       DO i = 1, nThermoPoints
         xTem = T(i)
         if (DoMuons) then
@@ -101,7 +88,6 @@ PROGRAM wlTestGSI
         xUn = Un(i)
         xUp = Up(i)
 
-        WRITE(*,*) i,j,k
         CALL CPU_TIME(t1)
         DO l=1, NP
           call Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
@@ -110,55 +96,11 @@ PROGRAM wlTestGSI
         CALL CPU_TIME(t2)
         t_2D = t_2D + t2 - t1
 
-        CALL CPU_TIME(t1)
-        call Opacity_CC_2D_GSI(j-1, k, NP, EnuA, OpaA_2D_OLD(:, i, j, k), &
-                        xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
-        CALL CPU_TIME(t2)
-        OpaA_2D_OLD(:, i, j, k) = OpaA_2D_OLD(:, i, j, k) * 1.0d5 ! 1/km to 1/cm
-        t_2D_OLD = t_2D_OLD + t2 - t1
-
-        CALL CPU_TIME(t1)
-        DO l=1, NP
-          CALL Opacity_CC_4D(j-1, k, EnuA(l), OpaA_4D(l, i, j, k), &
-                  xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
-        END DO
-        CALL CPU_TIME(t2)
-        t_4D = t_4D + t2 - t1
-
-        CALL CPU_TIME(t1)
-        call Opacity_CC_4D_GSI(j-1, k, NP, EnuA, OpaA_4D_OLD(:, i, j, k), &
-                          xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
-        CALL CPU_TIME(t2)
-        OpaA_4D_OLD(:, i, j, k) = OpaA_4D_OLD(:, i, j, k) * 1.0d5 ! 1/km to 1/cm
-        t_4D_OLD = t_4D_OLD + t2 - t1
-
-        ! Check 2D
-        Error = OpaA_2D_OLD(:, i, j, k) - OpaA_2D(:, i, j, k)
-        err = 0.0d0
-        DO l=1,NP
-          IF (OpaA_2D_OLD(l, i, j, k) > 0.0d0) THEN
-            err = MAX( err, ABS(Error(l))/OpaA_2D_OLD(l, i, j, k) )
-          ENDIF
-        END DO
-
-        IF (err > 1.0d-5) THEN
-          WRITE(*,*)
-          WRITE(*,*) '2D Error large', err
-          WRITE(*,*) i, j, k
-        ENDIF
-
-        Error = OpaA_4D_OLD(:, i, j, k) - OpaA_4D(:, i, j, k)
-        err = 0.0d0
-        DO l=1,NP
-          IF (OpaA_4D_OLD(l, i, j, k) > 0.0d0) THEN
-            err = MAX( err, ABS(Error(l))/OpaA_4D_OLD(l, i, j, k) )
-          ENDIF
-        END DO
-        IF (err > 5.0d-3) THEN
-          WRITE(*,*)
-          WRITE(*,*) '4D Error large', err
-          WRITE(*,*) i, j, k
-        ENDIF
+        nDone = nDone + 1
+        if ((nDone * 100 / total) > lastPrint) then
+          lastPrint = nDone * 100 / total
+          print*, 'Progress: ', lastPrint, '% completed'
+        endif
 
       END DO
     END DO
@@ -167,29 +109,13 @@ PROGRAM wlTestGSI
   CALL CPU_TIME(t_end)
 
   WRITE(*,'(/,A,f10.3)') 'Total wall‑clock time :', t_end - t_start
-  WRITE(*,'(A,f10.3)')   ' OLD 2D kernels       :', t_2D_old
   WRITE(*,'(A,f10.3)')   ' NEW 2D kernels       :', t_2D
-  WRITE(*,'(A,f10.3)')   ' OLD 4D kernels       :', t_4D_old
-  WRITE(*,'(A,f10.3)')   ' NEW 4D kernels       :', t_4D
-  
+
   OPEN(200, file='OpaA_2D.bin', status='replace', form='unformatted', access='stream')
   WRITE(200) OpaA_2D
   CLOSE(200)
 
-  OPEN(200, file='OpaA_2D_OLD.bin', status='replace', form='unformatted', access='stream')
-  WRITE(200) OpaA_2D_OLD
-  CLOSE(200)
-
-  OPEN(201, file='OpaA_4D.bin', status='replace', form='unformatted', access='stream')
-  WRITE(201) OpaA_4D
-  CLOSE(201)
-
-  OPEN(201, file='OpaA_4D_OLD.bin', status='replace', form='unformatted', access='stream')
-  WRITE(201) OpaA_4D_OLD
-  CLOSE(201)
-
-
-  DEALLOCATE(OpaA_2D, OpaA_2D_OLD, OpaA_4D, OpaA_4D_OLD)
+  DEALLOCATE(OpaA_2D)
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up)
 
 END PROGRAM wlTestGSI

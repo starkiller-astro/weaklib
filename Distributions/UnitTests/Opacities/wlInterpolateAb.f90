@@ -42,7 +42,7 @@ PROGRAM wlInterpolateAb
                                          Inte_Ye, database
   CHARACTER(LEN=100)                  :: Format1, Format2, Format3
   CHARACTER(LEN=30)                   :: a
-  INTEGER                             :: i, datasize
+  INTEGER                             :: i, datasize, ierr
 
   !-------- variables for output ------------------------------------------
   INTEGER(HID_T)                          :: file_id, group_id
@@ -67,6 +67,8 @@ PROGRAM wlInterpolateAb
   READ(12,*) EosTableName
   READ(12,*) OpTableName
   CLOSE(12, STATUS = 'keep')
+
+  CALL MPI_INIT( ierr )
 
   !--------------------------------------------------
   !   interpolated energy 

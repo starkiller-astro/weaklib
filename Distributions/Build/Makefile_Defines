@@ -19,6 +19,10 @@ else
    endif
 endif
 
+ifeq ($(USE_CUBA),TRUE)
+  DEFINES   += $(MDEFS)$(PP)WEAKLIB_CUBA
+endif
+
 EOSMODE	?= 3D # Possible are 4D, 3D, COMPOSE. 3D is the "old" weaklib table
 
 DEFINES += \
