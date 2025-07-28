@@ -17,7 +17,9 @@ MODULE wlSemiLeptonicOpacityModule4D
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mn, mp, mpi, Vud, &
    massA, massV, gamma_p, gamma_n, hbarc, hbar
-   
+  ! USE wlEosConstantsModule, ONLY: &
+  !  pi, hbarc, hbar
+
   IMPLICIT NONE
   PRIVATE
 
@@ -35,8 +37,8 @@ MODULE wlSemiLeptonicOpacityModule4D
   REAL(DP), PARAMETER :: userdata_C = 0.0d0
 
   ! Sampling configuration
-  INTEGER,  PARAMETER :: nstart_C    = 10000     ! Tunable
-  INTEGER,  PARAMETER :: nincrease_C = 1000      ! Tunable
+  INTEGER,  PARAMETER :: nstart_C    = 5000    ! Tunable
+  INTEGER,  PARAMETER :: nincrease_C = 500     ! Tunable
   INTEGER,  PARAMETER :: nbatch_C    = 1000
   INTEGER,  PARAMETER :: gridno_C    = 0
 
@@ -69,11 +71,12 @@ MODULE wlSemiLeptonicOpacityModule4D
   ! These are constants  -----------------------------------------
   REAL(DP),  PARAMETER :: Mnp = (mp + mn)/2.0d0, F2wm0 = gamma_p - gamma_n - 1.0d0, &
        Dnp = mn - mp, GfVud2 = (Gw_MeV*Vud)**2
-  ! ! If you want to reproduce exactly the GSI numbers you need:
+
+  ! If you want to reproduce exactly the GSI numbers you need:
   ! REAL(DP),  PARAMETER :: Gw_MeV=1.166d-11,Vud=0.97427d0, F2wm0 = 3.706d0, &
   !      ga =1.2723d0,gv=1.d0, Mpi=139.57d0, Mnp=938.919d0, &
-  !      massA = 1.0d3, massV = 840.d0, &
   !      Dnp=1.293d0, massA=1.0d3,massV=840.d0 , GfVud2 = (Gw_MeV*Vud)**2
+
   REAL(DP),  PARAMETER :: Tfac = 100.0d0
 
   REAL(DP) :: jVA = 1.d0, JAF = 1.d0 ! They get modified later but only for cases 3 and 4, we'll see in the future
@@ -242,7 +245,7 @@ REAL(dp) FUNCTION Integration_D()
   IF(reaction_index .eq. 3) THEN
      Integration_D = integral(1) / hbarc*1.0d10*2.d0
   ELSE IF(reaction_index .eq. 4) THEN
-     Integration_D = integral(1)*Enu**2 / (2.d0*pi**2)*2.d0 / hbarc**3/hbar*1.0d10
+     Integration_D = integral(1)*Enu**2 / (2.d0*pi**2)*2.d0 / hbarc**3/hbar*1.0d5
   END IF
 
   RETURN

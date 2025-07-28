@@ -11,7 +11,7 @@ PROGRAM wlTestGSI
 
   IMPLICIT NONE
 
-  INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4
+  INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4, nE_2D = 50
   REAL(DP), PARAMETER :: masse = me , massm = mmu
   REAL(DP), PARAMETER :: massn = mn, massp = mp
 
@@ -56,7 +56,7 @@ PROGRAM wlTestGSI
   READ(123,*)
 
   ! You can also set nThermoPoints to a smaller value for quick checks
-  nThermoPoints = 2
+  nThermoPoints = 1
   ALLOCATE(OpaA_2D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(OpaA_4D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(OpaA_2D_OLD(NP, nThermoPoints, nApprox, nOp))
@@ -101,11 +101,10 @@ PROGRAM wlTestGSI
         xUn = Un(i)
         xUp = Up(i)
 
-        WRITE(*,*) i,j,k
         CALL CPU_TIME(t1)
         DO l=1, NP
           call Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-                xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
+                xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp, nE_2D)
         END DO
         CALL CPU_TIME(t2)
         t_2D = t_2D + t2 - t1

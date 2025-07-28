@@ -32,7 +32,7 @@ PROGRAM wlTestSpeed
 
   IMPLICIT NONE
 
-  INTEGER , PARAMETER :: NP = 60, nOp = 2, iApprox = 0 ! from 0 to 3
+  INTEGER , PARAMETER :: NP = 60, nOp = 2, iApprox = 0, nE_2D = 50
   INTEGER , PARAMETER :: nOutTerminal = 100
   REAL(DP), PARAMETER :: masse = me , massm = mmu
   REAL(DP), PARAMETER :: massn = mn, massp = mp
@@ -212,7 +212,7 @@ PROGRAM wlTestSpeed
       DO k = 1, nOp
         CALL CPU_TIME(t1)
         CALL Opacity_CC_2D(iApprox, k, EnuA(l), OpaA_2D(l, i, k), &
-              xT(i), xMul, xMun, xMup, xMl, massn, massp, xUn, xUp)
+              xT(i), xMul, xMun, xMup, xMl, massn, massp, xUn, xUp, nE_2D)
         CALL CPU_TIME(t2)
         t_2D = t_2D + t2 - t1
 

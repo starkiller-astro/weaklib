@@ -3,23 +3,21 @@
 !!! Andreas Lohs & Gang Guo
 !!! neutrino CC opacity is given by 2D integrals
 !!! processes to be considered in this routine
-!!! ReactionIndex=1: v + n -> e- + p  (oapcity in 1/km)
-!!! ReactionIndex=2: vb + p -> e+ + n (opacity in 1/km)
-!!! ReactionIndex=3: vb + p + e- -> n (opacity in 1/km)
-!!! ReactionIndex=4: n -> vb + e- + p [emissivity in v/(s cm^3 MeV)]
+!!! opt=1: v + n -> e- + p  (oapcity in 1/km)
+!!! opt=2: vb + p -> e+ + n (opacity in 1/km)
+!!! opt=3: vb + p + e- -> n (opacity in 1/km)
+!!! opt=4: n -> vb + e- + p [emissivity in v/(s cm^3 MeV)]
 
-!!! nE defined in module: the No. of grids used in gaussian
+!!! Ngrids defined in module: the No. of grids used in gaussian
 !!! quadrature for each dimention
-!!! seems nE needs be >~30 to reach an accuracy of 5%
+!!! seems Ngrids needs be >~30 to reach an accuracy of 5%
 
 MODULE wlSemiLeptonicOpacityModule2D
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
-   pi, Gw_MeV, ga, gv, mpi, Vud, &
+   pi, Gw_MeV, ga, gv, mn, mp, mpi, Vud, &
    massA, massV, gamma_p, gamma_n, hbarc, hbar
-  ! USE wlEosConstantsModule, ONLY: &
-  !  pi, hbarc, hbar
 
   IMPLICIT NONE
   PRIVATE
@@ -28,26 +26,40 @@ MODULE wlSemiLeptonicOpacityModule2D
   ! ! If you want to reproduce exactly the GSI numbers you need:
   ! REAL(DP),  PARAMETER :: Gw_MeV=1.166d-11,Vud=0.97427d0, F2wm0 = 3.706d0, &
   !      ga =1.2723d0,gv=1.d0, Mpi=139.57d0, Mnp=938.919d0, &
+  !      massA = 1.0d3, massV = 840.d0, &
   !      Dnp=1.293d0, massA=1.0d3,massV=840.d0 , GfVud2 = (Gw_MeV*Vud)**2
 
-  REAL(DP), PARAMETER :: Tfac = 300.0d0
+  REAL(DP), PARAMETER :: Tfac = 150.0d0
   REAL(DP), PARAMETER :: gasq = ga**2, gvsq = gv**2, gva = gv*ga
+  INTEGER,  PARAMETER :: Ngrids = 50      !!! to be tuned by user     
 
-  !========================================================================
+  REAL(DP) :: lepton_mass, neutron_mass, proton_mass, Un, Up
+  REAL(DP) :: T, Mun, Mup, Mul, ml2, mn2, mp2
+  REAL(DP) :: Enu, En, pnmax, pnmin, ppmax
+  INTEGER  :: anti, opt0, opt_form=0, opt_pseudo=0, opt_WM=0
+
+! #if defined(USE_OMP)
+!   !$omp threadprivate(lepton_mass, neutron_mass, proton_mass, Un, Up, &
+!   !$omp               T, Mun, Mup, Mul, ml2, mn2, mp2,                &
+!   !$omp               Enu, En, pnmax, pnmin, ppmax,                   &
+!   !$omp               anti, opt0, opt_form, opt_pseudo, opt_WM)
+! #endif
+
+!========================================================================
 ! Routine to calculate the neutrino CC opacity via 2D integrals
 ! Inputs:
-! (1) WhicCorrection=0,1,2,3 for LO, LO+weak magnetism(WM),
+! (1) opt_had=0,1,2,3 for LO, LO+weak magnetism(WM),
 ! LO+WM+pseduoscalar(PS), LO+WM+PS+form factor dependencies
-! (2) ReactionIndex=ReactionIndex=1,2,3,4 for nu capture on n, nub capture on p, inverse
+! (2) opt=opt0=1,2,3,4 for nu capture on n, nub capture on p, inverse
 ! neutron decay, neutron decay emissivity
-! (3) Enu(NP): neutrino energy array in MeV with dimension NP
+! (3) xEnu(NP): neutrino energy array in MeV with dimension NP
 ! (4) xT: Temperature in MeV
 ! (5) xMul, xml: relativistic chemical potentials & masses of
 ! e^-(mu^-) in MeV
 ! (6) xMun,xMup,xmn,xmp,xUn,xUp: relativistic chemical
 ! potentials, masses, & potentials of neutron and proton in MeV
 ! relativsitic disperstion relation for nucleons,
-! E2=SQRT(p^2+Mass2^2)+U2
+! En=SQRT(p^2+neutron_mass^2)+Un
 ! Outputs:
 ! (7) OpaA(NP): opacities in km^-1; for neutron decay, emissivities
 ! in (s cm^3 MeV)^-1
@@ -58,154 +70,163 @@ MODULE wlSemiLeptonicOpacityModule2D
 
 CONTAINS
 
-SUBROUTINE Opacity_CC_2D(WhicCorrection, ReactionIndex, Enu, OpaA, xT, xMul, xMun, xMup, &
-     xml, xmn, xmp, xUn, xUp, nE) 
+SUBROUTINE Opacity_CC_2D(opt_had, opt, xEnu, OpaA, xT, xMul, xMun, xMup,&
+     xml, xmn, xmp, xUn, xUp) 
 
-  INTEGER , INTENT(IN)  :: ReactionIndex, WhicCorrection, nE
-  REAL(DP), INTENT(IN)  :: Enu,xT,xMul,xMun,xMup,xml,xmn,xmp,xUn,xUp 
-  REAL(DP), INTENT(OUT) :: OpaA
+  INTEGER :: opt,opt_had
+  REAL(DP), INTENT(IN) :: xEnu,xT,xMul,xMun,xMup,xml,xmn,xmp,xUn,xUp 
+  REAL(8), INTENT(OUT) :: OpaA
 
-  REAL(DP) :: anti
-  INTEGER  :: IncludeCorrections(3)
+  opt0 = opt
 
-  SELECT CASE(WhicCorrection)
+  SELECT CASE(opt_had)
   CASE (0)
-     IncludeCorrections(1) = 0
-     IncludeCorrections(2) = 0
-     IncludeCorrections(3) = 0
+     opt_wm=0
+     opt_pseudo=0
+     opt_form=0
   CASE (1)
-     IncludeCorrections(1) = 1
-     IncludeCorrections(2) = 0
-     IncludeCorrections(3) = 0
+     opt_wm=1
+     opt_pseudo=0
+     opt_form=0
   CASE (2)
-     IncludeCorrections(1) = 1
-     IncludeCorrections(2) = 1
-     IncludeCorrections(3) = 0
+     opt_wm=1
+     opt_pseudo=1
+     opt_form=0
   CASE (3)
-     IncludeCorrections(1) = 1
-     IncludeCorrections(2) = 1
-     IncludeCorrections(3) = 1
+     opt_wm=1
+     opt_pseudo=1
+     opt_form=1
   END SELECT
 
-  SELECT CASE(ReactionIndex)
+  lepton_mass = xml
+
+  T = xT
+  Mul = xMul
+  IF(opt0.eq.2) THEN
+     Mul = -xMul
+  END IF
+  SELECT CASE(opt0)
   CASE (1)
-    anti = 1.0d0
-    CALL Integral_2D(Enu, xT, xmn, xml, xmp, xUn, xUp, xMun, xMul, xMup, anti, 1, IncludeCorrections, nE, OpaA)
-  CASE (2)
-    anti = -1.0d0
-    CALL Integral_2D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, -xMul, xMun, anti, 2, IncludeCorrections, nE, OpaA)
-  CASE (3)
-    anti = -1.0d0
-    CALL Integral_2D_D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, xMul, xMun, anti, 3, IncludeCorrections, nE, OpaA)
-  CASE (4)
-    anti = -1.0d0
-    CALL Integral_2D_D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, xMul, xMun, anti, 4, IncludeCorrections, nE, OpaA)
+     neutron_mass = xmn
+     proton_mass = xmp
+     Un = xUn
+     Up = xUp
+     Mun = xMun
+     Mup = xMup
+     anti = 1
+  CASE (2,3,4)
+     proton_mass = xmn
+     neutron_mass = xmp
+     Up = xUn
+     Un = xUp
+     Mup = xMun
+     Mun = xMup
+     anti = -1
+  END SELECT
+
+  mn2 = neutron_mass**2
+  mp2 = proton_mass**2
+  ml2 = lepton_mass**2
+
+  SELECT CASE(opt0)
+  CASE (1,2)
+    CALL Integral_2D(xEnu, OpaA)
+  CASE (3,4)
+    CALL Integral_2D_D(xEnu, OpaA)
   END SELECT
 
 END SUBROUTINE Opacity_CC_2D
 
-! For a more efficient parallelization this whole thing can be probably taken out, and we make 4 different integrations, one per reaction
-SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti, ReactionIndex, IncludeCorrections, nE, res)   ! captures
+SUBROUTINE Integral_2D(xEnu,res)   ! captures
 
-  REAL(DP), INTENT(IN)  :: Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti
-  INTEGER , INTENT(IN)  :: ReactionIndex, IncludeCorrections(3), nE
-  REAL(DP), INTENT(OUT) :: res
-
-  REAL(DP) :: P2,xq0_min,xq0_max,E3_min,E3_max,E2_min,E2_max
-  REAL(DP) :: xa(nE), wxa(nE), wE2(nE), wE3(nE)
-  INTEGER  :: i, j
-  REAL(DP) :: xamp, E2, E3, E4
+  REAL(DP) :: xpn3,xq0_min,xq0_max,Ee_min,Ee_max,xEe,En_min,En_max
+  REAL(DP) :: xa(Ngrids),wxa(Ngrids), wEn(Ngrids),wEe(Ngrids)
+  INTEGER :: i, j
+  REAL(DP) :: xEnu,res,xamp,Ep
   REAL(DP) :: xf2,xf3,xf4
-  REAL(DP) :: p2min, p2max
 
+  Enu = xEnu
   res = 0.0d0
-  CALL Range_pn(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max)
-  IF( p2min > p2max ) RETURN
-  E2_min = SQRT(p2min**2 + Mass2**2) + U2
-  E2_max = SQRT(p2max**2 + Mass2**2) + U2
+  CALL Range_pn()
+  IF( pnmin > pnmax ) RETURN
+  En_min = SQRT(pnmin**2 + mn2) + Un
+  En_max = SQRT(pnmax**2 + mn2) + Un
 
-  CALL gauleg(0.d0, 1.d0, xa, wxa, nE)
+  CALL gauleg(0.d0, 1.d0, xa, wxa, Ngrids)
 
-  ! Loop over incoming particle (i.e. particle 2)
-  !!$omp parallel do private(i,j,E2,P2,xf2,E3,E3,xf3,xf4,xamp,E3_min,E3_max,xq0_min,xq0_max) reduction(+:res)
-  DO i=1, nE
-    E2 = xa(i)*(E2_max - E2_min) + E2_min
-    wE2(i) = wxa(i)*(E2_max - E2_min)
-    P2 = SQRT( (E2 - U2)**2 - Mass2**2 )
-    CALL Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
-    E3_min = Enu - xq0_max
-    E3_max = Enu - xq0_min
-    xf2 = FD(E2, Mu2, T)
-  ! Loop over outgoing particle (i.e. particle 3)
-    DO j=1,nE
-      E3 = xa(j)*(E3_max - E3_min) + E3_min
-      wE3(j) = wxa(j)*(E3_max - E3_min)
-      E4 = Enu + E2 - E3
-      CALL Calc_ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, ReactionIndex, IncludeCorrections, xamp)
-      xf3 = FD(E3, Mu3, T)
-      xf4 = FD(E4, Mu4, T)
-      res = res + xf2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*wE2(i)*wE3(j)/Enu**2
+  DO i=1, Ngrids
+    En = xa(i)*(En_max-En_min)+En_min
+    wEn(i) = wxa(i)*(En_max-En_min)
+    xpn3 = SQRT( (En - Un)**2 - mn2 )
+    CALL Ebounds( xpn3, xq0_min, xq0_max)
+    Ee_min = Enu - xq0_max
+    Ee_max = Enu - xq0_min
+    xf2 = 1.0d0/( EXP((En-Mun)/T) + 1.0d0 )
+    DO j=1,Ngrids
+      xEe = xa(j)*(Ee_max-Ee_min)+Ee_min
+      wEe(j) = wxa(j)*(Ee_max-Ee_min)
+      Ep = Enu+En-xEe
+      CALL Calc_ampsq(En,xEe,xamp)
+      xf3 = 1.0d0/( EXP((xEe-Mul)/T) + 1.0d0 )
+      xf4 = 1.0d0/( EXP((Ep-Mup)/T) + 1.0d0 )
+      res = res + xf2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*wEn(i)*wEe(j)/Enu**2
     END DO
   END DO
-  !!$omp end parallel do
-
   res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc*1.0d10
 
 END SUBROUTINE Integral_2D
 
-! For a more efficient parallelization this whole thing can be probably taken out, and we make 4 different integrations, one per reaction
-SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti, ReactionIndex, IncludeCorrections, nE, res)   ! decay/inverse decay
+SUBROUTINE Integral_2D_D(xEnu,res)   ! decay/inverse decay
 
-  REAL(DP), INTENT(IN)  :: Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti
-  INTEGER , INTENT(IN)  :: ReactionIndex, IncludeCorrections(3), nE
-  REAL(DP), INTENT(OUT) :: res
-
-  REAL(DP) :: P2,xq0_min,xq0_max,E3_min,E3_max,E2_min,E2_max
-  REAL(DP) :: xa(nE), wxa(nE), wE2(nE), wE3(nE)
+  REAL(DP) :: xpn3,xq0_min,xq0_max,Ee_min,Ee_max,xEe,En_min,En_max
+  REAL(DP) :: xa(Ngrids),wxa(Ngrids), wEn(Ngrids), wEe(Ngrids)
   INTEGER :: i,j
-  REAL(DP) :: xamp
-  REAL(DP) :: E2, E3, E4
+  REAL(DP) :: xEnu,res,xamp
+  REAL(DP) :: E1,mu2,mu4,mu3,U2,U4,Ep
   REAL(DP) :: xf2,xf3,xf4
-  REAL(DP) :: p2min, p2max, p4max
 
+  U2 = Un
+  U4 = Up
+  mu2 = Mun
+  mu4 = Mup
+  mu3 = Mul
+
+  Enu = xEnu
+  E1 = xEnu
   res = 0.0d0
-  CALL Range_pn_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIndex, p2min, p2max, p4max)
-  IF( p2min > p2max ) RETURN
-  E2_min = SQRT(p2min**2 + Mass2**2) + U2
-  E2_max = SQRT(p2max**2 + Mass2**2) + U2
+  CALL Range_pn_D()
+  IF( pnmin > pnmax ) RETURN
+  En_min = SQRT(pnmin**2 + mn2) + Un
+  En_max = SQRT(pnmax**2 + mn2) + Un
 
-  CALL gauleg(0.d0, 1.d0, xa, wxa, nE)
+  CALL gauleg(0.d0, 1.d0, xa, wxa, Ngrids)
 
-  ! Loop over incoming particle (i.e. particle 2)
-  !!$omp parallel do private(i,j,E2,P2,xf2,E3,E3,xf3,xf4,xamp,E3_min,E3_max,xq0_min,xq0_max) reduction(+:res)
-  DO i=1, nE
-    E2 = xa(i)*(E2_max - E2_min) + E2_min
-    wE2(i) = wxa(i)*(E2_max - E2_min)
-    P2 = SQRT( (E2-U2)**2 - Mass2**2 )
-    CALL Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, ReactionIndex, xq0_min, xq0_max )
-    E3_min = xq0_min - Enu
-    E3_max = xq0_max - Enu
-    xf2 = FD(E2, Mu2, T)
-  ! Loop over outgoing particle (i.e. particle 3)
-    DO j=1,nE
-      E3 = xa(j)*(E3_max - E3_min) + E3_min
-      wE3(j) = wxa(j)*(E3_max - E3_min)
-      E4 = Enu + E3 + E2
-      CALL Calc_ampsq(Enu, T, E2, -E3, Mass2, Mass3, Mass4, U2, U4, anti, ReactionIndex, IncludeCorrections, xamp)
-      xf3 = FD(E3, Mu3, T)
-      xf4 = FD(E4, Mu4, T)
-      IF(ReactionIndex.eq.3) THEN ! inverse decay
-        res = res + xf2*xf3*(1.0d0-xf4)*xamp*wE2(i)*wE3(j)/Enu**2
-      ELSE IF(ReactionIndex.eq.4) THEN ! n decay, *blocking of neutrinos is not added*
-        res = res + (1.0d0-xf2)*(1.0d0-xf3)*xf4*xamp*wE2(i)*wE3(j)/Enu**2
+  DO i=1,Ngrids
+    En = xa(i)*(En_max-En_min) + En_min
+    wEn(i) = wxa(i)*(En_max-En_min)
+    xpn3 = SQRT( (En-Un)**2 - mn2 )
+    CALL Ebounds_D( xpn3, xq0_min, xq0_max )
+    Ee_min = xq0_min - Enu
+    Ee_max = xq0_max - Enu
+    xf2 = 1.0d0/( EXP((En-Mun)/T) + 1.0d0 )
+    DO j=1,Ngrids
+      xEe = xa(j)*(Ee_max-Ee_min)+Ee_min
+      wEe(j) = wxa(j)*(Ee_max-Ee_min)
+      Ep = Enu+xEe+En
+      CALL Calc_ampsq(En,-xEe,xamp)
+      xf3 = 1.0d0/( EXP((xEe-Mul)/T) + 1.0d0 )
+      xf4 = 1.0d0/( EXP((Ep-Mup)/T) + 1.0d0 )
+      IF(opt0.eq.3) THEN ! inverse decay
+        res = res + xf2*xf3*(1.0d0-xf4)*xamp*wEn(i)*wEe(j)/Enu**2
+      ELSE IF(opt0.eq.4) THEN ! n decay, *blocking of neutrinos is not added*
+        res = res + (1.0d0-xf2)*(1.0d0-xf3)*xf4*xamp*wEn(i)*wEe(j)/Enu**2
       END IF
     END DO
   END DO
-  !!$omp end parallel do
 
-  IF(ReactionIndex.eq.3) THEN
+  IF(opt0.eq.3) THEN
     res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc*1.0d10
-  ELSE IF(ReactionIndex.eq.4) THEN
+  ELSE IF(opt0.eq.4) THEN
     res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar*1.0d10
   END IF
 
@@ -215,17 +236,16 @@ END SUBROUTINE Integral_2D_D
 
 
 !!! calculate the amplitudes, keep the following unchanged
-SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, ReactionIndex, IncludeCorrections, Ampsq )
+PURE ELEMENTAL SUBROUTINE Calc_Ampsq( E2, E3, Ampsq )
 
-  REAL(DP), INTENT(IN)  :: Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti
-  INTEGER , INTENT(IN)  :: ReactionIndex, IncludeCorrections(3)
+  REAL(DP), INTENT(IN)  :: E2, E3
   REAL(DP), INTENT(OUT) :: Ampsq
 
   REAL(DP) :: P1,P2,P3,P4,Pmax,Pmin,Pmax2,Pmin2,Pmax3,Pmin3
   REAL(DP) :: Ia,Ib,Ic,Id,Ie,Ig,Ih,Ij,Ik,Il,A,B,Ct,D,E,del0,&
        del1,del2,eps0,eps1,alp0,alp1,alp2,bet0,bet1,cplA,cplB,cplC,&
        cplD,cplE,cplG,cplH,cplJ,cplK,cplL,JFF,KFF,LFF 
-  REAL(DP) :: E2f,E4f,E1,Qmass,dmf,dU2,E4,MassNuc
+  REAL(DP) :: m2f,E2f,m4f,E4f,E1,Qmass,dmf,U2,U4,dU2,m3,E4,m2,xE3
   REAL(DP) :: Iam,Iap,Ibm,Ibp,Icm,Icp,Idp,Iem,Iep,Igp
   REAL(DP) :: gaf,gvf,f2sq
   REAL(DP) :: AmassSq,VmassSq,AVmassSq,APmassSq,AFmassSq,VFmassSq,&
@@ -239,19 +259,24 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
 
   Ampsq = 0.0d0
 
-  MassNuc = 0.5d0*( Mass2 + Mass4 )
+  m2 = 0.5d0*( proton_mass + neutron_mass )
+  m2f = neutron_mass
+  m4f = proton_mass
+  m3 = lepton_mass
+  U2 = Un
+  U4 = Up
   dU2 = U2 - U4
-  dmf = Mass2 - Mass4
-  Qmass = 0.5d0*( Mass2**2 - Mass4**2 )
+  dmf = m2f - m4f
+  Qmass = 0.5d0*( m2f**2 - m4f**2 )
 
   E1 = Enu
   E4 = E1 + E2 - E3
   E4f = E4 - U4
   E2f = E2 - U2
   P1 = E1
-  P3 = SQRT( E3**2 - Mass3**2 )
-  P2 = SQRT( (E2 - U2)**2 - Mass2**2 )
-  P4 = SQRT( (E4 - U4)**2 - Mass4**2 )
+  P3 = SQRT( E3**2 - m3**2 )
+  P2 = SQRT( (E2 - U2)**2 - m2f**2 )
+  P4 = SQRT( (E4 - U4)**2 - m4f**2 )
 
   IF( P1 .ne. P1) RETURN
   IF( P2 .ne. P2) RETURN
@@ -340,7 +365,7 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
 
   Il = pi**2/15.0d0*(60.0d0*(Pmax-Pmin))
 
-  IF(IncludeCorrections(1) .eq. 1) THEN
+  IF(opt_WM .eq. 1) THEN
      gvf = gv*F2wm0
      gaf = ga*F2wm0
      f2sq = F2wm0**2
@@ -350,40 +375,41 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
      f2sq = 0.0d0
   END IF
 
-  cplA = (gvsq+2.0d0*anti*gva+gasq)+anti*2.0d0*gaf*Mass2/MassNuc*(1.0d0-dmf/2.0d0/Mass2)
-  cplB = (gvsq-2.0d0*anti*gva+gasq)-anti*2.0d0*gaf*Mass2/MassNuc*(1.0d0-dmf/2.0d0/Mass2)
-  cplC = F2sq/MassNuc**2
-  cplD =-F2sq/MassNuc**2
-  cplE = F2sq/MassNuc**2*(-0.5d0*Mass3**2+dU2*(E3-E1)-0.5d0*dU2**2)
-  cplG = gvf*Mass2/MassNuc*(2.0d0-dmf/Mass2)+0.5d0*F2sq/MassNuc**2*(Mass2*Mass4-Qmass+0.25d0*&
-       Mass3**2-dU2*(E1+E2f)-dU2**2/4.0d0) 
-  cplH = 0.5d0*F2sq/MassNuc**2*(2.0d0*Qmass+Mass3**2+dU2*(3.0d0*E1-E3+2.0d0*E4f))
+  xE3 = E3
+  cplA = (gvsq+2.0d0*anti*gva+gasq)+anti*2.0d0*gaf*m2f/m2*(1.0d0-dmf/2.0d0/m2f)
+  cplB = (gvsq-2.0d0*anti*gva+gasq)-anti*2.0d0*gaf*m2f/m2*(1.0d0-dmf/2.0d0/m2f)
+  cplC = F2sq/m2**2
+  cplD =-F2sq/m2**2
+  cplE = F2sq/m2**2*(-0.5d0*m3**2+dU2*(xE3-E1)-0.5d0*dU2**2)
+  cplG = gvf*m2f/m2*(2.0d0-dmf/m2f)+0.5d0*F2sq/m2**2*(m2f*m4f-Qmass+0.25d0*&
+       m3**2-dU2*(E1+E2f)-dU2**2/4.0d0) 
+  cplH = 0.5d0*F2sq/m2**2*(2.0d0*Qmass+m3**2+dU2*(3.0d0*E1-xE3+2.0d0*E4f))
 
-  JFF = -Mass3**2*(E1+0.5d0*E2f+0.5d0*E4f)+Qmass*(E3-3.0d0*E1) &
-       +0.5d0*dU2*(E4f*(3.0d0*E3-5.0d0*E1)+E2f*(E3+E1)+E3**2-E1**2-2.0d0*Qmass) &
-       + dU2**2*(E1-E3-E4f)+0.5d0*dU2**3
+  JFF = -m3**2*(E1+0.5d0*E2f+0.5d0*E4f)+Qmass*(xE3-3.0d0*E1) &
+       +0.5d0*dU2*(E4f*(3.0d0*xE3-5.0d0*E1)+E2f*(xE3+E1)+xE3**2-E1**2-2.0d0*Qmass) &
+       + dU2**2*(E1-xE3-E4f)+0.5d0*dU2**3
   JFF = JFF*dU2
-  cplJ = gvf*dmf/MassNuc*0.5d0*(Mass3**2-dU2*(E1+E3))+F2sq/MassNuc**2*0.5d0*JFF
+  cplJ = gvf*dmf/m2*0.5d0*(m3**2-dU2*(E1+xE3))+F2sq/m2**2*0.5d0*JFF
 
-  kFF = -(Mass2+3.0d0*Mass4)*Mass2*0.25d0*Mass3**2 + Qmass**2 + Qmass*0.25d0*Mass3**2-Mass3**4/8.0d0 &
-       +dU2*(0.5d0*Qmass*(3.0d0*E1-E2f+E3+3.0d0*E4f)+0.25d0*Mass3**2*(2.0d0*E2f+E3+&
-       E1)+Mass2*Mass4*(E3-E1)) & 
-       +dU2**2*( 0.25d0*(Mass2**2-Mass2*Mass4-3.0d0*Qmass)+E4f*0.5d0*(2.0d0*E1-E2f+&
-       E3+E4f)+E2f*(0.5d0*E1-E3)+0.5d0*E1**2) & 
-       +dU2**3*0.25d0*( -E1+2.0d0*E2f-E3-2.0d0*E4f ) + 0.125d0*dU2**4
-  cplK = (gasq-gvsq)*Mass2*Mass4+gvf*Mass2/MassNuc*0.5d0*(-3.0d0*Mass3**2+4.0d0*dU2*(E3-&
+  kFF = -(m2f+3.0d0*m4f)*m2f*0.25d0*m3**2 + Qmass**2 + Qmass*0.25d0*m3**2-m3**4/8.0d0 &
+       +dU2*(0.5d0*Qmass*(3.0d0*E1-E2f+xE3+3.0d0*E4f)+0.25d0*m3**2*(2.0d0*E2f+xE3+&
+       E1)+m2f*m4f*(xE3-E1)) & 
+       +dU2**2*( 0.25d0*(m2f**2-m2f*m4f-3.0d0*Qmass)+E4f*0.5d0*(2.0d0*E1-E2f+&
+       xE3+E4f)+E2f*(0.5d0*E1-xE3)+0.5d0*E1**2) & 
+       +dU2**3*0.25d0*( -E1+2.0d0*E2f-xE3-2.0d0*E4f ) + 0.125d0*dU2**4
+  cplK = (gasq-gvsq)*m2f*m4f+gvf*m2f/m2*0.5d0*(-3.0d0*m3**2+4.0d0*dU2*(xE3-&
        E1)-dU2**2 & 
-       +dmf/Mass2*(2.0d0*Qmass+Mass3**2+dU2*(E4f+2.0d0*E1-E3)))&
-       +0.5d0*F2sq/MassNuc**2*KFF
+       +dmf/m2f*(2.0d0*Qmass+m3**2+dU2*(E4f+2.0d0*E1-xE3)))&
+       +0.5d0*F2sq/m2**2*KFF
 
-  LFF = Mass3**2*(Mass2+Mass4)**2-4.0d0*Qmass**2+dU2*(-Mass3**2*(E2f+E4f+E1)-2.0d0*&
-       E3*(Mass2**2+Mass2*Mass4) & 
+  LFF = m3**2*(m2f+m4f)**2-4.0d0*Qmass**2+dU2*(-m3**2*(E2f+E4f+E1)-2.0d0*&
+       xE3*(m2f**2+m2f*m4f) & 
        +2.0d0*Qmass*(E2f-3.0d0*E4f-E1)) &
-       +2.0d0*dU2**2*( E2f*E3+E4f*(E2f-E4f-E1) + Qmass ) + dU2**3*(-E2f+E4f+E1)
+       +2.0d0*dU2**2*( E2f*xE3+E4f*(E2f-E4f-E1) + Qmass ) + dU2**3*(-E2f+E4f+E1)
   LFF = LFF*dU2*E1*0.25d0
-  cplL = gvf*Mass2/MassNuc*dU2*E1*(Mass3**2-dU2*E3-0.5d0*dmf/Mass2*(Qmass+0.5d0*Mass3**&
+  cplL = gvf*m2f/m2*dU2*E1*(m3**2-dU2*xE3-0.5d0*dmf/m2f*(Qmass+0.5d0*m3**&
        2+dU2*E4f-0.5d0*dU2**2))   & 
-       +0.5d0*F2sq/MassNuc**2*LFF
+       +0.5d0*F2sq/m2**2*LFF
 
   Ampsq = max(0.0d0,cplA*Ia+cplB*Ib+cplC*Ic+cplD*Id+cplE*Ie+cplG*Ig+cplH*Ih+&
        cplJ*Ij+cplK*Ik+cplL*Il) 
@@ -391,13 +417,13 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
 !!! adding form-factor dependences
   AmassSq = massA**2
   APmassSq = 2.0d0*AmassSq
-  tm3sq = Mass3**2 + 2.0d0*dU2*(E1-E3) + dU2**2
-  IF(IncludeCorrections(3) .eq. 1) THEN
-    VmassSq = 1.0d0/(1.0d0/massV**2-F2wm0/MassNuc**2/8.0d0)
-    AVmassSq = 1.0d0/(0.5d0/massA**2+0.5d0/massV**2-F2wm0/MassNuc**2/16.0d0)
-    AFmassSq = 1.0d0/(0.5d0/massA**2+0.5d0/massV**2+1.0d0/MassNuc**2/16.0d0)
-    VFmassSq = 1.0d0/(1.0d0/massV**2-(F2wm0-1.0d0)/16.0d0/MassNuc**2)
-    FmassSq = 1.0d0/(1.0d0/massV**2+1.0d0/8.0d0/MassNuc**2)
+  tm3sq = m3**2 + 2.0d0*dU2*(E1-E3) + dU2**2
+  IF(opt_form .eq. 1) THEN
+    VmassSq = 1.0d0/(1.0d0/massV**2-F2wm0/m2**2/8.0d0)
+    AVmassSq = 1.0d0/(0.5d0/massA**2+0.5d0/massV**2-F2wm0/m2**2/16.0d0)
+    AFmassSq = 1.0d0/(0.5d0/massA**2+0.5d0/massV**2+1.0d0/m2**2/16.0d0)
+    VFmassSq = 1.0d0/(1.0d0/massV**2-(F2wm0-1.0d0)/16.0d0/m2**2)
+    FmassSq = 1.0d0/(1.0d0/massV**2+1.0d0/8.0d0/m2**2)
 
     tbet0 = (P1**2-P2**2)*(P4**2-P3**2)/4.0d0
     txi1 = 0.5d0*tm3sq-E1*E3+(P1**2-P2**2+P3**2-P4**2)/4.0d0
@@ -455,23 +481,23 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
     Il2 = 4.0d0*( tm3sq*Il - 2.0d0*Ik )
 
     cplA2 = gvsq/VmassSq+gasq/AmassSq+2.0d0*anti*gva/AVmassSq+anti*2.0d0*&
-        gaf/AFmassSq*Mass2/MassNuc*(1.0d0-dmf/2.0d0/Mass2) 
+        gaf/AFmassSq*m2f/m2*(1.0d0-dmf/2.0d0/m2f) 
     cplB2 = gvsq/VmassSq+gasq/AmassSq-2.0d0*anti*gva/AVmassSq-anti*2.0d0*&
-        gaf/AFmassSq*Mass2/MassNuc*(1.0d0-dmf/2.0d0/Mass2) 
-    cplC2 = F2sq/MassNuc**2/FmassSq
-    cplD2 =-F2sq/MassNuc**2/FmassSq
-    cplE2 = F2sq/FmassSq/MassNuc**2*(-0.5d0*Mass3**2+dU2*(E3-E1)-0.5d0*dU2**2)
-    cplG2 = gvf/VFmassSq*Mass2/MassNuc*(2.0d0-dmf/Mass2)+0.5d0*F2sq/FmassSq/MassNuc**2*&
-        (Mass2*Mass4-Qmass+0.25d0*Mass3**2-dU2*(E1+E2f)-dU2**2/4.0d0) 
-    cplH2 = 0.5d0*F2sq/FmassSq/MassNuc**2*(2.0d0*Qmass+Mass3**2+dU2*(3.0d0*E1-E3+&
+        gaf/AFmassSq*m2f/m2*(1.0d0-dmf/2.0d0/m2f) 
+    cplC2 = F2sq/m2**2/FmassSq
+    cplD2 =-F2sq/m2**2/FmassSq
+    cplE2 = F2sq/FmassSq/m2**2*(-0.5d0*m3**2+dU2*(xE3-E1)-0.5d0*dU2**2)
+    cplG2 = gvf/VFmassSq*m2f/m2*(2.0d0-dmf/m2f)+0.5d0*F2sq/FmassSq/m2**2*&
+        (m2f*m4f-Qmass+0.25d0*m3**2-dU2*(E1+E2f)-dU2**2/4.0d0) 
+    cplH2 = 0.5d0*F2sq/FmassSq/m2**2*(2.0d0*Qmass+m3**2+dU2*(3.0d0*E1-xE3+&
         2.0d0*E4f)) 
-    cplJ2 = gvf/VFmassSq*dmf/MassNuc*0.5d0*(Mass3**2-dU2*(E1+E3))+F2sq/&
-        FmassSq/MassNuc**2*0.5d0*JFF 
-    cplK2 = (gasq/AmassSq-gvsq/VmassSq)*Mass2*Mass4+gvf/VFmassSq*Mass2/MassNuc*&
-        0.5d0*(-3.0d0*Mass3**2+4.0d0*dU2*(E3-E1)-dU2**2+dmf/Mass2*(2.0d0*Qmass+&
-        Mass3**2+dU2*(E4f+2.0d0*E1-E3)))+0.5d0*F2sq/MassNuc**2*KFF/FmassSq 
-    cplL2 = gvf/VFmassSq*Mass2/MassNuc*dU2*E1*(Mass3**2-dU2*E3-0.5d0*dmf/Mass2*&
-        (Qmass+0.5d0*Mass3**2+dU2*E4f-0.5d0*dU2**2))+0.5d0*F2sq/MassNuc**2*LFF/&
+    cplJ2 = gvf/VFmassSq*dmf/m2*0.5d0*(m3**2-dU2*(E1+xE3))+F2sq/&
+        FmassSq/m2**2*0.5d0*JFF 
+    cplK2 = (gasq/AmassSq-gvsq/VmassSq)*m2f*m4f+gvf/VFmassSq*m2f/m2*&
+        0.5d0*(-3.0d0*m3**2+4.0d0*dU2*(xE3-E1)-dU2**2+dmf/m2f*(2.0d0*Qmass+&
+        m3**2+dU2*(E4f+2.0d0*E1-xE3)))+0.5d0*F2sq/m2**2*KFF/FmassSq 
+    cplL2 = gvf/VFmassSq*m2f/m2*dU2*E1*(m3**2-dU2*xE3-0.5d0*dmf/m2f*&
+        (Qmass+0.5d0*m3**2+dU2*E4f-0.5d0*dU2**2))+0.5d0*F2sq/m2**2*LFF/&
         FmassSq 
 
     Ampsq_ff0 = cplA2*Ia2 + cplB2*Ib2 + cplC2*Ic2 + cplD2*Id2 + &
@@ -481,13 +507,13 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
   END IF
 
 !!! adding pseudoscalar terms w/o form factor dependence
-  IF(IncludeCorrections(2) .eq. 1) THEN
+  IF(opt_pseudo .eq. 1) THEN
 
     YAP = 0.25d0*AmassSq+tm3sq-2.0d0*E1*E3+P1**2+P3**2
     ZAP = mpi**2-tm3sq+2.0d0*E1*E3-P1**2-P3**2
     MassMy = 0.25d0*AmassSq+mpi**2
 
-    IF(IncludeCorrections(3) .eq. 0) THEN
+    IF(opt_form .eq. 0) THEN
       IF( ZAP >0.0d0 ) THEN
         Inte1 = ( atan(Pmax3/sqrt(ZAP))-atan(Pmin3/sqrt(ZAP)) )/&
             sqrt(ZAP) 
@@ -518,7 +544,7 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
         +(Pmax3-Pmin3))
       END IF
 
-    ELSE IF(IncludeCorrections(3) .eq. 1) THEN
+    ELSE IF(opt_form .eq. 1) THEN
       IF( ZAP>0.0d0) THEN
         Inte1 = ( atan(Pmax3/sqrt(ZAP))-atan(Pmin3/sqrt(ZAP)) )/sqrt(ZAP)
         Inte2 = 0.5d0*( Pmax3/(Pmax3**2+ZAP)-Pmin3/(Pmin3**2+ZAp) + &
@@ -560,18 +586,18 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
       IjAP = alp1*IlAP+0.5d0*tIkAP+tIjAP
       IgPP = E**2*IlPP+2.0d0*E*tIkPP+tIgPP
 
-      cplLAP = 2.0d0*MassNuc*gasq*dU2*E1*(2.0d0*Mass2*Mass3**2-dmf*(Qmass+0.5d0*Mass3**2)-&
-            dU2*(2.0d0*E3*Mass2+E4f*dmf)+0.5d0*dU2**2*dmf) 
-      cplKAP = 2.0d0*MassNuc*gasq*(Mass2*(dU2**2-Mass3**2)+dmf*dU2*(E2f+E1))
-      cplJAP = 2.0d0*MassNuc*gasq*dmf*(Mass3**2-dU2*(E1+E3))
+      cplLAP = 2.0d0*m2*gasq*dU2*E1*(2.0d0*m2f*m3**2-dmf*(Qmass+0.5d0*m3**2)-&
+            dU2*(2.0d0*E3*m2f+E4f*dmf)+0.5d0*dU2**2*dmf) 
+      cplKAP = 2.0d0*m2*gasq*(m2f*(dU2**2-m3**2)+dmf*dU2*(E2f+E1))
+      cplJAP = 2.0d0*m2*gasq*dmf*(m3**2-dU2*(E1+E3))
 
-      cplLPP = 2.0d0*MassNuc**2*gasq*dU2*E1*(Mass3**4-Mass3**2*dmf**2+dU2*(-Mass3**2*&
-            (3.0d0*E3-2.0d0*E1)+dmf**2*E3)+dU2**2*(Mass3**2+2.0d0*E3*(E3-E1))-&
+      cplLPP = 2.0d0*m2**2*gasq*dU2*E1*(m3**4-m3**2*dmf**2+dU2*(-m3**2*&
+            (3.0d0*E3-2.0d0*E1)+dmf**2*E3)+dU2**2*(m3**2+2.0d0*E3*(E3-E1))-&
             dU2**3*E3) 
-      cplKPP = 2.0d0*MassNuc**2*gasq*(-0.5d0*Mass3**4+0.5d0*dmf**2*Mass3**2+dU2*Mass3**2*&
+      cplKPP = 2.0d0*m2**2*gasq*(-0.5d0*m3**4+0.5d0*dmf**2*m3**2+dU2*m3**2*&
             (E3-3.0d0*E1)+dU2**2*(2.0d0*E1*E3-0.5d0*dmf**2)+dU2**3*(E4f-E2f)-&
             0.5d0*dU2**4)  
-      cplGPP = 2.0d0*MassNuc**2*gasq*(Mass3**2-dU2**2)
+      cplGPP = 2.0d0*m2**2*gasq*(m3**2-dU2**2)
 
       ampsq_pseudo = cplLAP*IlAP+cplKAP*IkAP+cplJAP*IjAP + cplLPP*IlPP +&
             cplKPP*IkPP+cplGPP*IgPP 
@@ -580,32 +606,28 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
 
 END subroutine Calc_Ampsq
 
-SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
+SUBROUTINE Ebounds( xpn3, xq0_min, xq0_max )
 
-  REAL(DP), INTENT(INOUT) :: E2
-  REAL(DP), INTENT(IN)  :: Enu, T, P2, Mass2, Mass3, Mass4, U2, U4
-  REAL(DP), INTENT(OUT) :: xq0_min, xq0_max
-
-  REAL(DP) :: q3_lim(4), tmp1, tmp2, xA, xB, xC, xq3
+  REAL(DP) :: xpn3, q3_lim(4), tmp1,tmp2,xA,xB,xC, xq3
   INTEGER :: i
-  REAL(DP) :: tmp3, tmp4, xq0, xq0_l, xq0_h
+  REAL(DP) :: tmp3,tmp4,xq0_min,xq0_max,xq0, xq0_l,xq0_h
 
-  E2 = SQRT( P2**2 + Mass2**2 ) + U2
+  En = SQRT( xpn3**2 + mn2 ) + Un
 
   q3_lim = 0.0d0
-  tmp1 = U4-E2-Enu
-  tmp2 = Enu**2 + Mass3**2 - Mass4**2 - P2**2
+  tmp1 = Up-En-Enu
+  tmp2 = Enu**2 + ml2 - mp2 - xpn3**2
 
-  xA = 4.d0*( tmp1**2-(Enu-P2)**2 )
-  xB = 4.d0*( (tmp2-tmp1**2)*Enu - (tmp2+tmp1**2)*P2 )
-  xC = 4.d0*tmp1**2*(P2**2+Mass4**2) - (tmp2-tmp1**2)**2
+  xA = 4.d0*( tmp1**2-(Enu-xpn3)**2 )
+  xB = 4.d0*( (tmp2-tmp1**2)*Enu - (tmp2+tmp1**2)*xpn3 )
+  xC = 4.d0*tmp1**2*(xpn3**2+mp2) - (tmp2-tmp1**2)**2
   IF( xB**2 - 4.0d0*xA*xC >= 0.0d0) THEN
     q3_lim(1) = ABS( (xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
     q3_lim(2) = ABS( (-xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
   END IF
 
-  xA = 4.d0*( tmp1**2-(Enu+P2)**2 )
-  xB = 4.d0*( -(tmp2-tmp1**2)*Enu - (tmp2+tmp1**2)*P2 )
+  xA = 4.d0*( tmp1**2-(Enu+xpn3)**2 )
+  xB = 4.d0*( -(tmp2-tmp1**2)*Enu - (tmp2+tmp1**2)*xpn3 )
   IF( xB**2 - 4.0d0*xA*xC >= 0.0d0) THEN
     q3_lim(3) = ABS( (xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
     q3_lim(4) = ABS( (-xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
@@ -616,10 +638,10 @@ SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_ma
   xq0 = 0.0d0
   DO i=1,4
     xq3 = q3_lim(i)
-    tmp1 = Enu - SQRT( (Enu-xq3)**2 + Mass3**2 )
-    tmp2 = Enu - SQRT( (Enu+xq3)**2 + Mass3**2 )
-    tmp3 = SQRT( (P2+xq3)**2+Mass4**2) + U4 - E2
-    tmp4 = SQRT( (P2-xq3)**2+Mass4**2) + U4 - E2
+    tmp1 = Enu - SQRT( (Enu-xq3)**2 + ml2 )
+    tmp2 = Enu - SQRT( (Enu+xq3)**2 + ml2 )
+    tmp3 = SQRT( (xpn3+xq3)**2+mp2) + Up - En
+    tmp4 = SQRT( (xpn3-xq3)**2+mp2) + Up - En
 
     IF( ABS((tmp1-tmp3)/tmp3)<1.d-6 .or. ABS((tmp1-tmp4)/tmp4)<1.d-6 ) THEN
       xq0 = tmp1
@@ -631,38 +653,36 @@ SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_ma
     xq0_max = max( xq0,  xq0_max)
   END DO
 
-  xq0_l = Enu - Mass3
-  tmp1 = SQRT( (P2+Enu)**2+Mass4**2) + U4 - E2
-  tmp2 = SQRT( (P2-Enu)**2+Mass4**2) + U4 - E2
+  xq0_l = Enu - lepton_mass
+  tmp1 = SQRT( (xpn3+Enu)**2+mp2) + Up - En
+  tmp2 = SQRT( (xpn3-Enu)**2+mp2) + Up - En
   IF( xq0_l <= tmp1 .and. xq0_l >= tmp2) THEN
      xq0_max = max( xq0_l, xq0_max)
   END IF
 
-  xq0_h = Mass4 + U4 - E2
-  tmp1 = Enu - SQRT( (Enu-P2)**2 + Mass3**2 )
-  tmp2 = Enu - SQRT( (Enu+P2)**2 + Mass3**2 )
+  xq0_h = proton_mass + Up - En
+  tmp1 = Enu - SQRT( (Enu-xpn3)**2 + ml2 )
+  tmp2 = Enu - SQRT( (Enu+xpn3)**2 + ml2 )
   IF( xq0_h <= tmp1 .and. xq0_h >= tmp2) THEN
      xq0_min = min( xq0_h, xq0_min)
   END IF
 
 END SUBROUTINE Ebounds
 
-SUBROUTINE Range_pn( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max )
+SUBROUTINE Range_pn()
 
-  REAL(DP), INTENT(IN)  :: Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2
-  REAL(DP), INTENT(OUT) :: p2min, p2max
+  REAL(DP) :: tmp,mpt,Epr,Esq,Equ,p2a,p2b,p20,F0,Finf,Fmax,Fmin,pnmax0
 
-  REAL(DP) :: tmp,mpt,Epr,Esq,Equ,p2a,p2b,p20,F0,Finf,Fmax,Fmin
+  pnmin = 0.0d0
+  pnmax = SQRT( (Tfac*T + Mun - Un)**2 - mn2 )
+  pnmax0 = pnmax
 
-  p2min = 0.0d0
-  p2max = SQRT( (Tfac*T + Mu2 - U2)**2 - Mass2**2 )
-
-  mpt = Mass4 + Mass3
-  F0 = SQRT(Enu**2 + mpt**2) + U4 - Mass2 - U2
-  Finf = -Enu + U4 - U2
-  IF(mpt < Mass2) THEN
-    tmp = (1.d0+mpt/Mass2)/(1.d0-mpt**2/Mass2**2)*Enu
-    Fmin = SQRT( (tmp-Enu)**2+mpt**2 )+U4-SQRT(tmp**2+Mass2**2)-U2
+  mpt = proton_mass + lepton_mass
+  F0 = SQRT(Enu**2 + mpt**2) + Up - neutron_mass - Un
+  Finf = -Enu + Up - Un
+  IF(mpt < neutron_mass) THEN
+    tmp = (1.d0+mpt/neutron_mass)/(1.d0-mpt**2/mn2)*Enu
+    Fmin = SQRT( (tmp-Enu)**2+mpt**2 )+Up-SQRT(tmp**2+mn2)-Un
     Fmax = max( F0, Finf )
   ELSE
     Fmin = Finf
@@ -671,54 +691,49 @@ SUBROUTINE Range_pn( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max )
 
   IF( Fmax <= Enu) RETURN
   IF( Fmin >= Enu) THEN
-    p2max = -1000.0d0
+    pnmax = -1000.0d0
     RETURN
   END IF
 
-  Epr = Enu - U4 + U2
-  Esq = Enu**2 + mpt**2 - Mass2**2 - Epr**2
-  Equ = Esq**2 + 4.d0*Mass2**2*( Enu**2-Epr**2 )
+  Epr = Enu - Up + Un
+  Esq = Enu**2 + mpt**2 - mn2 - Epr**2
+  Equ = Esq**2 + 4.d0*mn2*( Enu**2-Epr**2 )
   IF(Equ>0.0d0 .and. Enu**2 .ne. Epr**2) THEN
     p2a = ( Enu*Esq - ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
     p2b = ( Enu*Esq + ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
     IF(Epr<0.d0 .and. p2b>0.d0) THEN
-      p2min=p2b
+      pnmin=p2b
     ELSE IF(Epr>=0.d0 .and. p2a>0.d0) THEN
-      p2min=p2a
+      pnmin=p2a
     END IF
 
   ELSE IF(Enu**2 .eq. Epr**2) THEN
-    p20 = -(4.0d0*Epr**2*Mass2**2-Esq**2)/(4.0d0*Esq*Enu)
-    IF(p20>0.d0) p2min=p20
+    p20 = -(4.0d0*Epr**2*mn2-Esq**2)/(4.0d0*Esq*Enu)
+    IF(p20>0.d0) pnmin=p20
   END IF
 
 END SUBROUTINE Range_pn
 
-SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, ReactionIndex, xq0_min, xq0_max )
-  
-  REAL(DP), INTENT(INOUT) :: E2
-  REAL(DP), INTENT(IN)  :: Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max
-  INTEGER,  INTENT(IN)  :: ReactionIndex
-  REAL(DP), INTENT(OUT) :: xq0_min, xq0_max
-  
-  REAL(DP) :: q3_lim(4), tmp1, tmp2, xA, xB, xC, xq3
-  INTEGER  :: i
-  REAL(DP) :: tmp3, tmp4, xq0, xq0_l,xq0_h
+SUBROUTINE Ebounds_D( xpn3, xq0_min, xq0_max )
 
-  E2 = SQRT( P2**2 + Mass2**2 ) + U2
+  REAL(DP) :: xpn3, q3_lim(4), tmp1,tmp2,xA,xB,xC, xq3
+  INTEGER :: i
+  REAL(DP) :: tmp3,tmp4,xq0_min,xq0_max,xq0, xq0_l,xq0_h
+
+  En = SQRT( xpn3**2 + mn2 ) + Un
 
   q3_lim = 0.0d0
-  tmp1 = U4-E2-Enu
-  tmp2 = Enu**2 + Mass3**2 - Mass4**2 - P2**2
+  tmp1 = Up-En-Enu
+  tmp2 = Enu**2 + ml2 - mp2 - xpn3**2
 
-  xA = 4.d0*( tmp1**2-(Enu+P2)**2 )
-  xB = 4.d0*( (tmp2-tmp1**2)*Enu + (tmp2+tmp1**2)*P2 )
-  xC = 4.d0*tmp1**2*(P2**2+Mass4**2) - (tmp2-tmp1**2)**2
+  xA = 4.d0*( tmp1**2-(Enu+xpn3)**2 )
+  xB = 4.d0*( (tmp2-tmp1**2)*Enu + (tmp2+tmp1**2)*xpn3 )
+  xC = 4.d0*tmp1**2*(xpn3**2+mp2) - (tmp2-tmp1**2)**2
   q3_lim(1) = ABS( (xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
   q3_lim(2) = ABS( (-xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
 
-  xA = 4.d0*( tmp1**2-(Enu-P2)**2 )
-  xB = 4.d0*( -(tmp2-tmp1**2)*Enu + (tmp2+tmp1**2)*P2 )
+  xA = 4.d0*( tmp1**2-(Enu-xpn3)**2 )
+  xB = 4.d0*( -(tmp2-tmp1**2)*Enu + (tmp2+tmp1**2)*xpn3 )
   IF( xB**2 - 4.0d0*xA*xC >= 0 ) THEN
      q3_lim(3) = ABS( (xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
      q3_lim(4) = ABS( (-xB + SQRT(xB**2-4.d0*xA*xC))/(2.d0*xA) )
@@ -728,10 +743,10 @@ SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, R
   xq0_max = -1.d10
   DO i=1,4
     xq3 = q3_lim(i)
-    tmp1 = Enu + SQRT( (Enu+xq3)**2 + Mass3**2 )
-    tmp2 = Enu + SQRT( (Enu-xq3)**2 + Mass3**2 )
-    tmp3 = SQRT( (P2+xq3)**2+Mass4**2) + U4 - E2
-    tmp4 = SQRT( (P2-xq3)**2+Mass4**2) + U4 - E2
+    tmp1 = Enu + SQRT( (Enu+xq3)**2 + ml2 )
+    tmp2 = Enu + SQRT( (Enu-xq3)**2 + ml2 )
+    tmp3 = SQRT( (xpn3+xq3)**2+mp2) + Up - En
+    tmp4 = SQRT( (xpn3-xq3)**2+mp2) + Up - En
     IF( ABS((tmp1-tmp3)/tmp3)<1.d-6 .or. ABS((tmp1-tmp4)/tmp4)<1.d-6 ) THEN
       xq0 = tmp1
     END IF
@@ -742,79 +757,75 @@ SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, R
     xq0_max = max( xq0,  xq0_max)
   END DO
   IF( ABS(xq0_max-xq0_min)<1.d-15 ) THEN
-    IF(ReactionIndex.eq.3) THEN
-      xq0_max = max(Enu + Mu3 + 50.0d0*T, xq0_min + 50.0d0*T)
-    ELSE IF(ReactionIndex.eq.4) THEN
-      xq0_max = max(xq0_min+50.0d0*T, SQRT(p4max**2+Mass4**2)+U4-E2)
+    IF(opt0.eq.3) THEN
+      xq0_max = max(Enu + Mul + 50.0d0*T, xq0_min + 50.0d0*T)
+    ELSE IF(opt0.eq.4) THEN
+      xq0_max = max(xq0_min+50.0d0*T, SQRT(ppmax**2+mp2)+Up-En)
     END IF
   END IF
 
-  xq0_l = Enu + Mass3
-  tmp1 = SQRT( (P2+Enu)**2+Mass4**2) + U4 - E2
-  tmp2 = SQRT( (P2-Enu)**2+Mass4**2) + U4 - E2
+  xq0_l = Enu + lepton_mass
+  tmp1 = SQRT( (xpn3+Enu)**2+mp2) + Up - En
+  tmp2 = SQRT( (xpn3-Enu)**2+mp2) + Up - En
   IF( xq0_l <= tmp1 .and. xq0_l >= tmp2) THEN
      xq0_min = min( xq0_l, xq0_min)
   END IF
 
-  xq0_h = Mass4 + U4 - E2
-  tmp1 = Enu + SQRT( (Enu+P2)**2 + Mass3**2 )
-  tmp2 = Enu + SQRT( (Enu-P2)**2 + Mass3**2 )
+  xq0_h = proton_mass + Up - En
+  tmp1 = Enu + SQRT( (Enu+xpn3)**2 + ml2 )
+  tmp2 = Enu + SQRT( (Enu-xpn3)**2 + ml2 )
   IF( xq0_h <= tmp1 .and. xq0_h >= tmp2) THEN
      xq0_min = min( xq0_h, xq0_min)
   END IF
 
 END SUBROUTINE Ebounds_D
 
-SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIndex, p2min, p2max, p4max )
-
-  REAL(DP), INTENT(IN)  :: Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4
-  INTEGER , INTENT(IN)  :: ReactionIndex
-  REAL(DP), INTENT(OUT) :: p2min, p2max, p4max
+SUBROUTINE Range_pn_D()
 
   REAL(DP) :: tmp,mpt,Epr,Esq,Equ,p2a,p2b,p20
   REAL(DP) :: F0, Fmax
 
-  p2min = 0.0d0
-  p4max = SQRT( (Tfac*T + Mu4 - U4)**2 - Mass4**2 )
-  SELECT CASE(ReactionIndex)
+  pnmin = 0.0d0
+  ppmax = SQRT( (Tfac*T + Mup - Up)**2 - mp2 )
+  SELECT CASE(opt0)
   CASE (3)
-    p2max = SQRT( (Tfac*T + Mu2 - U2)**2 - Mass2**2 )
+    pnmax = SQRT( (Tfac*T + Mun - Un)**2 - mn2 )
   CASE (4)
-    p2min = SQRT( (max(Mass2,Mu2-Tfac*T-U2))**2 - Mass2**2 )
-    p2max = SQRT( (SQRT(p4max**2+Mass4**2)+U4-U2)**2-Mass2**2 )
+    pnmin = SQRT( (max(neutron_mass,Mun-Tfac*T-Un))**2 - mn2 )
+    pnmax = SQRT( (SQRT(ppmax**2+mp2)+Up-Un)**2-mn2 )
   END SELECT
 
-  mpt = Mass4 - Mass3
-  IF( mpt > Mass2) THEN
-    tmp = Mass2/(mpt-Mass2)*Enu
+  mpt = proton_mass - lepton_mass
+  IF( mpt > neutron_mass) THEN
+    tmp = neutron_mass/(mpt-neutron_mass)*Enu
   ELSE
-    tmp = p2max
+    tmp = pnmax
   END IF
-  Fmax = SQRT( (tmp+Enu)**2+mpt**2 )+U4-SQRT(tmp**2+Mass2**2)-U2
+  Fmax = SQRT( (tmp+Enu)**2+mpt**2 )+Up-SQRT(tmp**2+mn2)-Un
 
   IF(Enu>=Fmax) THEN
-    p2max = -1000.0d0
+    pnmax = -1000.0d0
     RETURN
   END IF
 
-  F0 = SQRT(Enu**2 + mpt**2)+U4-Mass2-U2
-  IF( F0 >= Enu .and. U4 >= U2) RETURN
+  F0 = SQRT(Enu**2 + mpt**2)+Up-neutron_mass-Un
+  IF( F0 >= Enu .and. Up >= Un) RETURN
 
-  Epr = Enu - U4 + U2
-  Esq = Enu**2 + mpt**2 - Mass2**2 - Epr**2
-  Equ = Esq**2 + 4.d0*( (Mass2*Enu)**2 - (Epr*Mass2)**2 )
+  Epr = Enu - Up + Un
+  Esq = Enu**2 + mpt**2 - mn2 - Epr**2
+  Equ = Esq**2 + 4.d0*( (neutron_mass*Enu)**2 - (Epr*neutron_mass)**2 )
   IF(Equ>0.0d0.and. Enu**2 .ne. Epr**2) THEN
     p2a = -( Enu*Esq - ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
     p2b = -( Enu*Esq + ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
     IF(Epr<0.d0 .and. p2b>0.d0) THEN
-      p2min=p2b
+      pnmin=p2b
     ELSE IF(Epr>=0.0d0 .and. p2a>0.d0) THEN
-      p2min=p2a
+      pnmin=p2a
     END IF
 
   ELSE IF(Enu**2 .eq. Epr**2) THEN
-    p20 = (4.0d0*Epr**2*Mass2**2-Esq**2)/(4.0d0*Esq*Enu)
-    IF(p20>0.d0) p2min=p20
+    p20 = (4.0d0*Epr**2*mn2-Esq**2)/(4.0d0*Esq*Enu)
+    IF(p20>0.d0) pnmin=p20
   END IF
 
 END SUBROUTINE Range_pn_D
@@ -871,12 +882,5 @@ SUBROUTINE gauleg(x1, x2, x, w, n)
   END DO
   
 END SUBROUTINE gauleg
-
-PURE ELEMENTAL FUNCTION FD(E, mu, T)
-  REAL(DP), INTENT(IN) :: E, mu, T
-  REAL(DP) :: FD
-
-  FD = 1.0d0 / (EXP((E - mu)/T) + 1.0d0)
-END FUNCTION
 
 END MODULE wlSemiLeptonicOpacityModule2D

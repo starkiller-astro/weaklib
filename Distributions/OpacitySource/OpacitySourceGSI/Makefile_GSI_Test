@@ -11,7 +11,7 @@ CUBA_LIB = -L$(CUBA_DIR) -lcuba
 all: wlTestGSI \
      wlTestGSI2D \
      wlTestSpeed \
-     wlTestParallelGSI
+     wlTestParallel2DGSI
 
 wlTestGSI: \
 	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestGSI.o
@@ -31,10 +31,16 @@ wlTestSpeed: \
 	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestSpeed.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestParallelGSI: \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestParallelGSI.o
-	$(FLINKER) $(FLAGS) -o wlTestParallelGSI_$(MACHINE) \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestParallelGSI.o \
+wlTestParallel2DGSI: \
+	$(weaklib) wlTestParallel2DGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestParallel2DGSI_$(MACHINE) \
+	$(weaklib) wlTestParallel2DGSI.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestParallel4DGSI: \
+	$(weaklib) wlTestParallel4DGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestParallel4DGSI_$(MACHINE) \
+	$(weaklib) wlTestParallel4DGSI.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
 clean:
@@ -71,9 +77,12 @@ wlTestSpeed.o: \
 	wlOpacityTableIOModuleHDF.o \
 	wlOpacityFieldsModule.o
 
-wlTestParallelGSI.o: \
+wlTestParallel2DGSI.o: \
 	wlKindModule.o \
 	wlSemiLeptonicOpacityModule2D.o \
+	wlEosConstantsModule.o
+
+wlTestParallel4DGSI.o: \
+	wlKindModule.o \
 	wlSemiLeptonicOpacityModule4D.o \
-	Opacity_SemiLep_2D_GSI.o \
-	Opacity_SemiLep_4D_GSI.o
+	wlEosConstantsModule.o

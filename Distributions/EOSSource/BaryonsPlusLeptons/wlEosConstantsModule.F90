@@ -69,7 +69,7 @@ REAL(dp), PARAMETER  :: gamma_p   =  2.79284734d0 ! proton magnetic moment from 
 
 REAL(dp), PARAMETER  :: gamma_n   = -1.9130427d0  ! neutron magnetic moment from PDG 2024
 
-REAL(dp), PARAMETER  :: massA     = 1014.0d0      ! MeV. dipole axial mass. Poorly constrained
+REAL(dp), PARAMETER  :: massA     = 1014.0d0      ! MeV. dipole axial mass. Poorly constrained. We use 1014.0d
 !                                                   https://www.nature.com/articles/s41586-022-05478-3
 
 REAL(dp), PARAMETER  :: massV     = 840.0d0       ! MeV. dipole vector mass. Very robustly estimated
