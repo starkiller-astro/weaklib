@@ -20,6 +20,7 @@ PROGRAM wlTestElasticOpacity
 
   IMPLICIT NONE
 
+  LOGICAL, PARAMETER :: IncludeElasticWeakMagRecoil = .TRUE.
   INTEGER                        :: i
 #ifdef EOSMODE_3D
     TYPE(EquationOfStateTableType) :: EOSTable
@@ -38,6 +39,7 @@ PROGRAM wlTestElasticOpacity
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: E
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: OpElNue , OpElNueBar
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: OpElNum, OpElNumBar
+  REAL(DP), ALLOCATABLE, DIMENSION(:) :: WeakMagCorrLep, WeakMagCorrLepBar
   REAL(DP) :: Emin, Emax, dE
   INTEGER  :: iE, nE
 
@@ -62,6 +64,8 @@ PROGRAM wlTestElasticOpacity
   ALLOCATE( OpElNum(nE) )
   ALLOCATE( OpElNueBar(nE) )
   ALLOCATE( OpElNumBar(nE) )
+  ALLOCATE( WeakMagCorrLep(nE) )
+  ALLOCATE( WeakMagCorrLepBar(nE) )
 
   DO iE=1,nE
     E(iE) = Emin + (iE-1)*dE
@@ -198,16 +202,28 @@ PROGRAM wlTestElasticOpacity
   WRITE(*,*) 'phip  =', Mup - Mp_eff - Up
 
   ! Initialize Recoil correction!
-  CALL CalculateHorowitzWeakMagRecoil(E, nE)
+  IF (IncludeElasticWeakMagRecoil) THEN
+    CALL CalculateHorowitzWeakMagRecoil(E, nE, WeakMagCorrLep, WeakMagCorrLepBar)
+  ELSE
+    WeakMagCorrLep(:)    = 1.0d0
+    WeakMagCorrLepBar(:) = 1.0d0
+  ENDIF
 
   DO iE=1,nE
-    CALL ElasticAbsorptionOpacityNue (D, T, E(iE), iE, &
+    CALL ElasticAbsorptionOpacityNue (D, T, E(iE), &
       Mun, Mn_eff, Un, Xn, Mup, Mp_eff, Up, Xp, Mue , &
-      OpElNue(iE) , OpElNueBar(iE) , IncludeWeakMagRecoil_Option=.true.)
+      OpElNue(iE) , OpElNueBar(iE))
 
-    CALL ElasticAbsorptionOpacityNum(D, T, E(iE), iE, &
+      OpElNue(iE)    = OpElNue(iE)    * WeakMagCorrLep(iE)
+      OpElNueBar(iE) = OpElNueBar(iE) * WeakMagCorrLepBar(iE)
+
+    CALL ElasticAbsorptionOpacityNum(D, T, E(iE), &
       Mun, Mn_eff, Un, Xn, Mup, Mp_eff, Up, Xp, Mumu, &
-      OpElNum(iE), OpElNumBar(iE), IncludeWeakMagRecoil_Option=.true.)
+      OpElNum(iE), OpElNumBar(iE))
+
+      OpElNum(iE)    = OpElNum(iE)    * WeakMagCorrLep(iE)
+      OpElNumBar(iE) = OpElNumBar(iE) * WeakMagCorrLepBar(iE)
+
   ENDDO
 
   ! Print headers

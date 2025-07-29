@@ -149,7 +149,7 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
   END DO
   !!$omp end parallel do
 
-  res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc*1.0d10
+  res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
 
 END SUBROUTINE Integral_2D
 
@@ -204,9 +204,9 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   !!$omp end parallel do
 
   IF(ReactionIndex.eq.3) THEN
-    res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc*1.0d10
+    res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
   ELSE IF(ReactionIndex.eq.4) THEN
-    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar*1.0d10
+    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
   END IF
 
   res = -res

@@ -220,7 +220,7 @@ REAL(dp) FUNCTION Integration()
     gridno_C, statefile_C, spin_C, &
     neval, fail, integral, error, prob)
 
-  Integration = integral(1)/hbarc*1.0d10*2.d0
+  Integration = integral(1)/hbarc*2.d0
   RETURN
 
 END FUNCTION Integration
@@ -243,9 +243,9 @@ REAL(dp) FUNCTION Integration_D()
     neval, fail, integral, error, prob)
 
   IF(reaction_index .eq. 3) THEN
-     Integration_D = integral(1) / hbarc*1.0d10*2.d0
+     Integration_D = integral(1) / hbarc*2.d0
   ELSE IF(reaction_index .eq. 4) THEN
-     Integration_D = integral(1)*Enu**2 / (2.d0*pi**2)*2.d0 / hbarc**3/hbar*1.0d5
+     Integration_D = integral(1)*Enu**2 / (2.d0*pi**2)*2.d0 / hbarc**3/hbar / 1.0d5
   END IF
 
   RETURN

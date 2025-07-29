@@ -113,7 +113,7 @@ PROGRAM wlTestGSI
         call Opacity_CC_2D_GSI(j-1, k, NP, EnuA, OpaA_2D_OLD(:, i, j, k), &
                         xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
         CALL CPU_TIME(t2)
-        OpaA_2D_OLD(:, i, j, k) = OpaA_2D_OLD(:, i, j, k) * 1.0d5 ! 1/km to 1/cm
+        OpaA_2D_OLD(:, i, j, k) = OpaA_2D_OLD(:, i, j, k) / 1.0d5 ! 1/km to 1/cm
         t_2D_OLD = t_2D_OLD + t2 - t1
 
         CALL CPU_TIME(t1)
@@ -128,7 +128,7 @@ PROGRAM wlTestGSI
         call Opacity_CC_4D_GSI(j-1, k, NP, EnuA, OpaA_4D_OLD(:, i, j, k), &
                           xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
         CALL CPU_TIME(t2)
-        OpaA_4D_OLD(:, i, j, k) = OpaA_4D_OLD(:, i, j, k) * 1.0d5 ! 1/km to 1/cm
+        OpaA_4D_OLD(:, i, j, k) = OpaA_4D_OLD(:, i, j, k) / 1.0d5 ! 1/km to 1/cm
         t_4D_OLD = t_4D_OLD + t2 - t1
 
         ! Check 2D

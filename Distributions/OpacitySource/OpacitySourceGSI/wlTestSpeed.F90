@@ -32,6 +32,7 @@ PROGRAM wlTestSpeed
 
   IMPLICIT NONE
 
+  LOGICAL, PARAMETER  :: IncludeElasticWeakMagRecoil = .TRUE.
   INTEGER , PARAMETER :: NP = 60, nOp = 2, iApprox = 0, nE_2D = 50
   INTEGER , PARAMETER :: nOutTerminal = 100
   REAL(DP), PARAMETER :: masse = me , massm = mmu
@@ -55,6 +56,7 @@ PROGRAM wlTestSpeed
   INTEGER :: iEOS_Rho, iEOS_T, iEOS_Yp
   LOGICAL, PARAMETER :: DoMuons = .true.
 
+  REAL(DP) :: WeakMagCorrLep(NP), WeakMagCorrLepBar(NP)
   REAL(DP), ALLOCATABLE :: OpaA_El(:,:,:), OpaA_Table(:,:,:)
   REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:), OpaA_4D(:,:,:)
   REAL(DP), ALLOCATABLE :: OpaA_2D_OLD(:,:,:), OpaA_4D_OLD(:,:,:)
@@ -81,8 +83,14 @@ PROGRAM wlTestSpeed
     EnuA(l) = l * 5.d0
   END DO
 
-  CALL CalculateHorowitzWeakMagRecoil(EnuA, NP)
-
+  ! Initialize Recoil correction!
+  IF (IncludeElasticWeakMagRecoil) THEN
+    CALL CalculateHorowitzWeakMagRecoil(EnuA, NP, WeakMagCorrLep, WeakMagCorrLepBar)
+  ELSE
+    WeakMagCorrLep(:)    = 1.0d0
+    WeakMagCorrLepBar(:) = 1.0d0
+  ENDIF
+  
   ! READ thermodynamic data
   OPEN(UNIT=123, FILE=trim(adjustl('ThermoConditions.dat')), STATUS='OLD', ACTION='READ')
   READ(123,*) nThermoPoints
@@ -198,14 +206,18 @@ PROGRAM wlTestSpeed
 
       CALL CPU_TIME(t1)
       IF (DoMuons) THEN
-        CALL ElasticAbsorptionOpacityNum (xD(i), xT(i), EnuA(l), l, &
+        CALL ElasticAbsorptionOpacityNum ( xD(i), xT(i), EnuA(l), &
           xMun, xMn_eff, xUn, xXn, xMup, xMp_eff, xUp, xXp, xMumu , &
-          OpaA_El(l, i, 1), OpaA_El(l, i, 2) , IncludeWeakMagRecoil_Option=.true.)
+          OpaA_El(l, i, 1), OpaA_El(l, i, 2) )
       ELSE
-        CALL ElasticAbsorptionOpacityNue (xD(i), xT(i), EnuA(l), l, &
+        CALL ElasticAbsorptionOpacityNue ( xD(i), xT(i), EnuA(l), &
           xMun, xMn_eff, xUn, xXn, xMup, xMp_eff, xUp, xXp, xMue , &
-          OpaA_El(l, i, 1), OpaA_El(l, i, 2), IncludeWeakMagRecoil_Option=.true.)
+          OpaA_El(l, i, 1), OpaA_El(l, i, 2) )
       END IF
+
+      OpaA_El(l, i, 1) = OpaA_El(l, i, 1) * WeakMagCorrLep(l)
+      OpaA_El(l, i, 2) = OpaA_El(l, i, 2) * WeakMagCorrLepBar(l)
+      
       CALL CPU_TIME(t2)
       t_El = t_El + t2 - t1
 

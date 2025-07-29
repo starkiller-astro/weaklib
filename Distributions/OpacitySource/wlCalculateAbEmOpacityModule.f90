@@ -25,31 +25,19 @@ MODULE wlCalculateAbEmOpacityModule
   REAL(dp), PARAMETER  :: Lambda_n = -1.913d0
   REAL(dp), PARAMETER  :: sin2tw = 0.2325d0
 
-  REAL(dp), DIMENSION(:), ALLOCATABLE, PUBLIC :: WeakMagRecNuLep, WeakMagRecNuLepBar
-  LOGICAL :: WeakMagRecoilInitialized = .FALSE.
-
 CONTAINS
 
-  SUBROUTINE ElasticAbsorptionOpacityNum(D, T, Enu, iE, Mun, Mn_eff, Un, Xn, &
-    Mup, Mp_eff, Up, Xp, Mumu, OpElNum, OpElNumBar, IncludeWeakMagRecoil_Option)
+  SUBROUTINE ElasticAbsorptionOpacityNum(D, T, Enu, Mun, Mn_eff, Un, Xn, &
+    Mup, Mp_eff, Up, Xp, Mumu, OpElNum, OpElNumBar)
   
     REAL(DP), INTENT(IN) :: D, T, Enu
     REAL(DP), INTENT(IN) :: Mun, Mn_eff, Un, Xn
     REAL(DP), INTENT(IN) :: Mup, Mp_eff, Up, Xp
     REAL(DP), INTENT(IN) :: Mumu
-    INTEGER,  INTENT(IN) :: iE ! Needed to incldue the recoil corrections!
     REAL(DP), INTENT(OUT) :: OpElNum, OpElNumBar
-    LOGICAL,  OPTIONAL   :: IncludeWeakMagRecoil_Option
 
     ! LOCAL VARIABLES
     REAL(DP) :: n_n, n_p
-    LOGICAL  :: DoWeakMagRec
-    
-    IF ( PRESENT(IncludeWeakMagRecoil_Option) ) THEN
-      DoWeakMagRec = IncludeWeakMagRecoil_Option
-    ELSE
-      DoWeakMagRec = .TRUE.
-    END IF
 
     n_n = Xn * D * cm3fm3 / rmu
     n_p = Xp * D * cm3fm3 / rmu
@@ -65,36 +53,21 @@ CONTAINS
     OpElNum    = OpElNum   
     OpElNumBar = OpElNumBar
 
-    IF (DoWeakMagRec) THEN
-      ! Remember that if you want recoil corrections then somewhere in your code
-      ! you have to precompute CalculateHorowitzWeakMagRecoil(E, nE) somewhere!!!
-      OpElNum    = OpElNum    * WeakMagRecNuLep(iE)
-      OpElNumBar = OpElNumBar * WeakMagRecNuLepBar(iE)
-    ENDIF
-
   END SUBROUTINE ElasticAbsorptionOpacityNum
 
 
-  SUBROUTINE ElasticAbsorptionOpacityNue(D, T, Enu, iE, Mun, Mn_eff, Un, Xn, &
-    Mup, Mp_eff, Up, Xp, Mue, OpElNue, OpElNueBar, IncludeWeakMagRecoil_Option)
+  SUBROUTINE ElasticAbsorptionOpacityNue(D, T, Enu, Mun, Mn_eff, Un, Xn, &
+    Mup, Mp_eff, Up, Xp, Mue, OpElNue, OpElNueBar)
   
     REAL(DP), INTENT(IN)  :: D, T, Enu
     REAL(DP), INTENT(IN)  :: Mun, Mn_eff, Un, Xn
     REAL(DP), INTENT(IN)  :: Mup, Mp_eff, Up, Xp
     REAL(DP), INTENT(IN)  :: Mue
-    INTEGER,  INTENT(IN)  :: iE ! Needed to incldue the recoil corrections!
     REAL(DP), INTENT(OUT) :: OpElNue, OpElNueBar
-    LOGICAL,  OPTIONAL    :: IncludeWeakMagRecoil_Option
 
     ! LOCAL VARIABLES
     REAL(DP) :: n_n, n_p
-    LOGICAL  :: DoWeakMagRec
-    
-    IF ( PRESENT(IncludeWeakMagRecoil_Option) ) THEN
-      DoWeakMagRec = IncludeWeakMagRecoil_Option
-    ELSE
-      DoWeakMagRec = .TRUE.
-    END IF
+
 
     n_n = Xn * D * cm3fm3 / rmu
     n_p = Xp * D * cm3fm3 / rmu
@@ -109,14 +82,6 @@ CONTAINS
 
     OpElNue    = OpElNue   
     OpElNueBar = OpElNueBar
-
-    IF (DoWeakMagRec) THEN
-      ! Remember that if you want recoil corrections then somewhere in your code
-      ! you have to precompute "call CalculateHorowitzWeakMagRecoil(E, nE)" somewhere!!!
-      ! You might have been taken here by a Segmentation fault error. This is the reason
-      OpElNue    = OpElNue    * WeakMagRecNuLep(iE)
-      OpElNueBar = OpElNueBar * WeakMagRecNuLepBar(iE)
-    ENDIF
 
   END SUBROUTINE ElasticAbsorptionOpacityNue
   
@@ -152,26 +117,19 @@ CONTAINS
 
   END SUBROUTINE ElasticAbsorptionOpacity
 
-  SUBROUTINE CalculateHorowitzWeakMagRecoil(E, nE)
+  SUBROUTINE CalculateHorowitzWeakMagRecoil(E, nE, WeakMagRecNuLep, WeakMagRecNuLepBar)
   ! This is Taken from Tobias' Fischer routines. In principle it can be
   ! Precalculated for each energy at the beginning...
 
-    INTEGER , INTENT(in)               :: nE
-    REAL(DP), INTENT(in), DIMENSION(:) :: E(nE)
+    INTEGER , INTENT(in)                :: nE
+    REAL(DP), INTENT(in) , DIMENSION(:) :: E(nE)
+    REAL(DP), INTENT(out), DIMENSION(:) :: WeakMagRecNuLep(nE), WeakMagRecNuLepBar(nE)
 
     ! LOCAL
     REAL(DP) :: small_E, cv, ca, F2
     REAL(DP) :: temp_wm1, temp_wm2, temp_wm3
     INTEGER  :: iE
 
-    ALLOCATE( WeakMagRecNuLep(nE) )
-    ALLOCATE( WeakMagRecNuLepBar(nE) )
-
-#if defined(WEAKLIB_OMP)
-    !$OMP PARALLEL DO &
-    !$OMP PRIVATE( iE, small_E, cv, ca, F2, &
-    !$OMP          temp_wm1, temp_wm2, temp_wm3 )
-#endif
     DO iE=1, nE
 
       ! Now for absorption of neutrinos on neutrons
@@ -204,9 +162,6 @@ CONTAINS
 
       WeakMagRecNuLepBar(iE) = (temp_wm1 - temp_wm2)/temp_wm3
     ENDDO
-#if defined(WEAKLIB_OMP)
-    !$OMP END PARALLEL DO
-#endif
 
   END SUBROUTINE CalculateHorowitzWeakMagRecoil
 

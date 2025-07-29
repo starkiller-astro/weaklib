@@ -3,7 +3,6 @@ include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 
-CUBA_DIR = /home/lbocciol/MuonProject/CUBA/Cuba-4.2.2
 CUBA_LIB = -L$(CUBA_DIR) -lcuba
 
 .DEFAULT_GOAL := all
