@@ -1,0 +1,25 @@
+## Makefile definitions for Linux with GNU compiler
+
+FORTRAN = mpif90 -cpp
+FLINKER = mpif90
+
+DEBUG    = -g -fbacktrace -ffpe-trap=invalid,zero -ffpe-summary=invalid,zero -fbounds-check
+OPTIMIZE = -O2
+
+SUFFIX_f90 =
+
+MDEFS =
+PP    = -D
+
+ifeq ($(USE_OMP),TRUE)
+  OPENMP = -fopenmp
+else ifeq ($(USE_OMP_OL),TRUE)
+  OPENMP = -fopenmp
+endif
+
+ifeq ($(USE_OACC),TRUE)
+  OPENACC = -fopenacc
+endif
+
+INCLUDE_HDF5   = -I/usr/include/hdf5/serial
+LIBRARIES_HDF5 = -L/usr/lib/x86_64-linux-gnu/hdf5/serial/lib -lhdf5_fortran -lhdf5
