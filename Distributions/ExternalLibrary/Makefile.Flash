@@ -1,10 +1,3 @@
-GIT_HASH := $(shell git --no-pager describe --tags --always --dirty --exclude '*')
-GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" --name-only))
-GIT_BRANCH := $(shell git branch | grep "^\*" | sed 's/^..//')
-GIT_URL :=$(shell git config --get remote.origin.url)
-
-VERSION_FLAGS := -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_DATE="\"$(GIT_DATE)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\"" -DGIT_URL="\"$(GIT_URL)\""
-
 # name of the library -- make sure it is in the object directory
 LIBNAME = libweaklib.a
 LIBDIR = ../../../object
@@ -21,8 +14,8 @@ include ../../../Makefile.h
 # Import thornado Makefiles
 WEAKLIB_DIR = ../../
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_GPU
-include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Defines
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 
@@ -46,8 +39,6 @@ endif
 ifeq ($(USE_OMP),TRUE)
   FFLAGS += $(OPENMP)
 endif
-
-FFLAGS += $(VERSION_FLAGS)
 
 # command for generating a library
 MKLIB = ar -r
