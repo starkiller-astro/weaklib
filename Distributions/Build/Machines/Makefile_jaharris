@@ -1,0 +1,25 @@
+## Makefile definitions for Mac with GNU compiler
+
+FORTRAN = mpif90 -cpp
+FLINKER = mpif90
+
+DEBUG    = -g -fbacktrace -ffpe-trap=invalid,zero -ffpe-summary=invalid,zero -fbounds-check
+OPTIMIZE = -g -O3 -march=native
+
+SUFFIX_f90 =
+
+MDEFS =
+PP    = -D
+
+ifeq ($(USE_OMP),TRUE)
+  OPENMP = -fopenmp
+else ifeq ($(USE_OMP_OL),TRUE)
+  OPENMP = -fopenmp
+endif
+
+ifeq ($(USE_OACC),TRUE)
+  OPENACC = -fopenacc
+endif
+
+INCLUDE_HDF5   = -I$(HDF5_DIR)/include
+LIBRARIES_HDF5 = -L$(HDF5_DIR)/lib -lhdf5_fortran -lhdf5
