@@ -18,3 +18,24 @@ else
       DEFINES   += $(MDEFS)$(PP)WEAKLIB_OMP
    endif
 endif
+
+WL_GIT_HASH \
+  := $(shell \
+     git -C $(WEAKLIB_DIR) --no-pager describe --tags --always --dirty --exclude '*')
+DEFINES += $(MDEFS)$(PP)WL_GIT_HASH=\"$(WL_GIT_HASH)\"
+
+WL_GIT_DATE \
+  := $(firstword \
+     $(shell \
+     git -C $(WEAKLIB_DIR) --no-pager show --date=short --format="%ad" --name-only))
+DEFINES += $(MDEFS)$(PP)WL_GIT_DATE=\"$(WL_GIT_DATE)\"
+
+WL_GIT_BRANCH \
+  := $(shell \
+     git -C $(WEAKLIB_DIR) rev-parse --abbrev-ref HEAD)
+DEFINES += $(MDEFS)$(PP)WL_GIT_BRANCH=\"$(WL_GIT_BRANCH)\"
+
+WL_GIT_URL \
+  := $(shell \
+     git -C $(WEAKLIB_DIR) config --get remote.origin.url)
+DEFINES += $(MDEFS)$(PP)WL_GIT_URL=\"$(WL_GIT_URL)\"

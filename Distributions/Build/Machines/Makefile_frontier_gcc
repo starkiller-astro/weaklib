@@ -1,0 +1,29 @@
+## Makefile definitions for Frontier with GCC compiler
+
+C       = CC
+FORTRAN = ftn
+FLINKER = ftn
+
+DEBUG    = -g -Og -ggdb -ftrapv -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -finit-real=snan -fbacktrace -fallow-argument-mismatch
+OPTIMIZE = -g -O3 -fallow-argument-mismatch
+
+SUFFIX_f90 =
+
+MDEFS =
+PP    = -D
+
+ifeq ($(USE_OMP),TRUE)
+  OPENMP = -fopenmp
+else ifeq ($(USE_OMP_OL),TRUE)
+  OPENMP = -fopenmp
+endif
+
+ifeq ($(USE_OACC),TRUE)
+  OPENACC = -fopenacc# --amdgpu-target=gfx90a
+endif
+
+INCLUDE_HDF5     =
+INCLUDE_ROCM     = -I$(ROCM_PATH)/include
+
+LIBRARIES_HDF5     = -lhdf5_fortran -lhdf5
+LIBRARIES_ROCM     = -L$(ROCM_PATH)/lib -lamdhip64
