@@ -117,51 +117,47 @@ CONTAINS
 
   END SUBROUTINE ElasticAbsorptionOpacity
 
-  SUBROUTINE CalculateHorowitzWeakMagRecoil(E, nE, WeakMagRecNuLep, WeakMagRecNuLepBar)
+  SUBROUTINE CalculateHorowitzWeakMagRecoil(E, WeakMagRecNuLep, WeakMagRecNuLepBar)
   ! This is Taken from Tobias' Fischer routines. In principle it can be
   ! Precalculated for each energy at the beginning...
 
-    INTEGER , INTENT(in)                :: nE
-    REAL(DP), INTENT(in) , DIMENSION(:) :: E(nE)
-    REAL(DP), INTENT(out), DIMENSION(:) :: WeakMagRecNuLep(nE), WeakMagRecNuLepBar(nE)
+    REAL(DP), INTENT(in) :: E
+    REAL(DP), INTENT(out) :: WeakMagRecNuLep, WeakMagRecNuLepBar
 
     ! LOCAL
     REAL(DP) :: small_E, cv, ca, F2
     REAL(DP) :: temp_wm1, temp_wm2, temp_wm3
     INTEGER  :: iE
 
-    DO iE=1, nE
+    ! Now for absorption of neutrinos on neutrons
+    small_E = E/mn
 
-      ! Now for absorption of neutrinos on neutrons
-      small_E = E(iE)/mn
+    CALL CalculateNucleonFormFactors(small_E, 3, ca, cv, F2)
 
-      CALL CalculateNucleonFormFactors(small_E, 3, ca, cv, F2)
+    temp_wm1 = cv*cv*(1.0d0 + 4.0d0*small_E + 16.0d0/3.0d0*small_E*small_E) &
+      + 3.0d0*ca*ca*(1.0d0 + 4.0d0/3.0d0*small_E)**2 &
+      + 8.0d0/3.0d0*cv*F2*small_E*small_E &
+      + 5.0d0/3.0d0*small_E*small_E*(1.0d0 + 2.0d0/5.0d0*small_E)*F2*F2
 
-      temp_wm1 = cv*cv*(1.0d0 + 4.0d0*small_E + 16.0d0/3.0d0*small_E*small_E) &
-        + 3.0d0*ca*ca*(1.0d0 + 4.0d0/3.0d0*small_E)**2 &
-        + 8.0d0/3.0d0*cv*F2*small_E*small_E &
-        + 5.0d0/3.0d0*small_E*small_E*(1.0d0 + 2.0d0/5.0d0*small_E)*F2*F2
+    temp_wm2 = 4.0d0*(cv + F2)*ca*small_E*(1. + 4./3.0d0*small_E)
+    temp_wm3 = (cv*cv + 3.00d0*ca*ca)*(1.0d0 + 2.0d0*small_E)**3
 
-      temp_wm2 = 4.0d0*(cv + F2)*ca*small_E*(1. + 4./3.0d0*small_E)
-      temp_wm3 = (cv*cv + 3.00d0*ca*ca)*(1.0d0 + 2.0d0*small_E)**3
+    WeakMagRecNuLep    = (temp_wm1 + temp_wm2)/temp_wm3
 
-      WeakMagRecNuLep(iE)    = (temp_wm1 + temp_wm2)/temp_wm3
+    ! Now for absorption of antineutrinos on protons
+    small_E = E/mp
 
-      ! Now for absorption of antineutrinos on protons
-      small_E = E(iE)/mp
+    CALL CalculateNucleonFormFactors(small_E, 4, ca, cv, F2)
 
-      CALL CalculateNucleonFormFactors(small_E, 4, ca, cv, F2)
+    temp_wm1 = cv*cv*(1.0d0 + 4.0d0*small_E + 16.0d0/3.0d0*small_E*small_E) &
+      + 3.0d0*ca*ca*(1.0d0 + 4.0d0/3.0d0*small_E)**2 &
+      + 8.0d0/3.0d0*cv*F2*small_E*small_E &
+      + 5.0d0/3.0d0*small_E*small_E*(1.0d0 + 2.0d0/5.0d0*small_E)*F2*F2
 
-      temp_wm1 = cv*cv*(1.0d0 + 4.0d0*small_E + 16.0d0/3.0d0*small_E*small_E) &
-        + 3.0d0*ca*ca*(1.0d0 + 4.0d0/3.0d0*small_E)**2 &
-        + 8.0d0/3.0d0*cv*F2*small_E*small_E &
-        + 5.0d0/3.0d0*small_E*small_E*(1.0d0 + 2.0d0/5.0d0*small_E)*F2*F2
+    temp_wm2 = 4.0d0*(cv + F2)*ca*small_E*(1. + 4./3.0d0*small_E)
+    temp_wm3 = (cv*cv + 3.00d0*ca*ca)*(1.0d0 + 2.0d0*small_E)**3
 
-      temp_wm2 = 4.0d0*(cv + F2)*ca*small_E*(1. + 4./3.0d0*small_E)
-      temp_wm3 = (cv*cv + 3.00d0*ca*ca)*(1.0d0 + 2.0d0*small_E)**3
-
-      WeakMagRecNuLepBar(iE) = (temp_wm1 - temp_wm2)/temp_wm3
-    ENDDO
+    WeakMagRecNuLepBar = (temp_wm1 - temp_wm2)/temp_wm3
 
   END SUBROUTINE CalculateHorowitzWeakMagRecoil
 

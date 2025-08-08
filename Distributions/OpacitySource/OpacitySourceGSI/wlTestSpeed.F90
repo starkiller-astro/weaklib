@@ -81,16 +81,15 @@ PROGRAM wlTestSpeed
   ! Initialize neutrino energies
   DO l = 1, NP
     EnuA(l) = l * 5.d0
+    ! Initialize Recoil correction!
+    IF (IncludeElasticWeakMagRecoil) THEN
+      CALL CalculateHorowitzWeakMagRecoil(EnuA(l), WeakMagCorrLep(l), WeakMagCorrLepBar(l))
+    ELSE
+      WeakMagCorrLep(l)    = 1.0d0
+      WeakMagCorrLepBar(l) = 1.0d0
+    ENDIF
   END DO
 
-  ! Initialize Recoil correction!
-  IF (IncludeElasticWeakMagRecoil) THEN
-    CALL CalculateHorowitzWeakMagRecoil(EnuA, NP, WeakMagCorrLep, WeakMagCorrLepBar)
-  ELSE
-    WeakMagCorrLep(:)    = 1.0d0
-    WeakMagCorrLepBar(:) = 1.0d0
-  ENDIF
-  
   ! READ thermodynamic data
   OPEN(UNIT=123, FILE=trim(adjustl('ThermoConditions.dat')), STATUS='OLD', ACTION='READ')
   READ(123,*) nThermoPoints

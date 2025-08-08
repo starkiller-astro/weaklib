@@ -201,15 +201,15 @@ PROGRAM wlTestElasticOpacity
   WRITE(*,*) 'phin  =', Mun - Mn_eff - Un
   WRITE(*,*) 'phip  =', Mup - Mp_eff - Up
 
-  ! Initialize Recoil correction!
-  IF (IncludeElasticWeakMagRecoil) THEN
-    CALL CalculateHorowitzWeakMagRecoil(E, nE, WeakMagCorrLep, WeakMagCorrLepBar)
-  ELSE
-    WeakMagCorrLep(:)    = 1.0d0
-    WeakMagCorrLepBar(:) = 1.0d0
-  ENDIF
-
   DO iE=1,nE
+    ! Initialize Recoil correction!
+    IF (IncludeElasticWeakMagRecoil) THEN
+      CALL CalculateHorowitzWeakMagRecoil(E(iE), WeakMagCorrLep(iE), WeakMagCorrLepBar(iE))
+    ELSE
+      WeakMagCorrLep(iE)    = 1.0d0
+      WeakMagCorrLepBar(iE) = 1.0d0
+    ENDIF
+
     CALL ElasticAbsorptionOpacityNue (D, T, E(iE), &
       Mun, Mn_eff, Un, Xn, Mup, Mp_eff, Up, Xp, Mue , &
       OpElNue(iE) , OpElNueBar(iE))

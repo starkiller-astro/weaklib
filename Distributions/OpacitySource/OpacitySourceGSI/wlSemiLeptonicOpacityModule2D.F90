@@ -36,7 +36,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   !========================================================================
 ! Routine to calculate the neutrino CC opacity via 2D integrals
 ! Inputs:
-! (1) WhicCorrection=0,1,2,3 for LO, LO+weak magnetism(WM),
+! (1) WhichCorrection=0,1,2,3 for LO, LO+weak magnetism(WM),
 ! LO+WM+pseduoscalar(PS), LO+WM+PS+form factor dependencies
 ! (2) ReactionIndex=ReactionIndex=1,2,3,4 for nu capture on n, nub capture on p, inverse
 ! neutron decay, neutron decay emissivity
@@ -58,17 +58,17 @@ MODULE wlSemiLeptonicOpacityModule2D
 
 CONTAINS
 
-SUBROUTINE Opacity_CC_2D(WhicCorrection, ReactionIndex, Enu, OpaA, xT, xMul, xMun, xMup, &
+SUBROUTINE Opacity_CC_2D(WhichCorrection, ReactionIndex, Enu, OpaA, xT, xMul, xMun, xMup, &
      xml, xmn, xmp, xUn, xUp, nE) 
 
-  INTEGER , INTENT(IN)  :: ReactionIndex, WhicCorrection, nE
+  INTEGER , INTENT(IN)  :: ReactionIndex, WhichCorrection, nE
   REAL(DP), INTENT(IN)  :: Enu,xT,xMul,xMun,xMup,xml,xmn,xmp,xUn,xUp 
   REAL(DP), INTENT(OUT) :: OpaA
 
   REAL(DP) :: anti
   INTEGER  :: IncludeCorrections(3)
 
-  SELECT CASE(WhicCorrection)
+  SELECT CASE(WhichCorrection)
   CASE (0)
      IncludeCorrections(1) = 0
      IncludeCorrections(2) = 0
