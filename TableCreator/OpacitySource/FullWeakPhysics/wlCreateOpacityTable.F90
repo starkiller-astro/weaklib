@@ -1453,6 +1453,8 @@ print*, '>>> NES eta', eta
     REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
                                      phi0_nub_Iso, phi1_nub_Iso
 
+   FourPi  =  4.0d0 * acos ( -1.0d0 )
+    
    ASSOCIATE(  &
        iRho    => OpacityTable % TS % Indices % iRho                           , &
        nRho    => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho) , &
@@ -1467,27 +1469,27 @@ print*, '>>> NES eta', eta
 
   WRITE (*,*)
 
-  WRITE (*,*)
-  WRITE (*,*) '>>> Rho values'
-  DO j_rho = 1, nRho
-    rho = OpacityTable % TS % States (iRho) % Values (j_rho)
-    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
-  END DO
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> Rho values'
+  ! DO j_rho = 1, nRho
+  !   rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+  ! END DO
 
-  WRITE (*,*)
-  WRITE (*,*) '>>> T values'
-  DO k_t = 1, nT
-    T = OpacityTable % TS % States (iT) % Values (k_t)
-    TMeV = T * kMeV
-    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
-  END DO
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> T values'
+  ! DO k_t = 1, nT
+  !   T = OpacityTable % TS % States (iT) % Values (k_t)
+  !   TMeV = T * kMeV
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+  ! END DO
 
-  WRITE (*,*)
-  WRITE (*,*) '>>> Ye values'
-  DO l_ye = 1, nYe
-    ye = OpacityTable % TS % States (iYe) % Values (l_ye)
-    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
-  END DO
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> Ye values'
+  ! DO l_ye = 1, nYe
+  !   ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+  ! END DO
 
     !-- Bruenn et al. (2020) Fig. 28
 
