@@ -70,7 +70,8 @@ PROGRAM wlCreateOpacityTable
       DeAllocateOpacityTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
       WriteOpacityTableHDF
-  USE wlExtPhysicalConstantsModule, ONLY: kMeV, dmnp, mn_wl => mn, mp_wl => mp
+  USE wlExtPhysicalConstantsModule, ONLY: &
+      kMeV, dmnp, mn_wl => mn, mp_wl => mp, rmu
   USE wlExtNumericalModule, ONLY: epsilon
   USE HR98_Bremsstrahlung
   USE prb_cntl_module, ONLY: &
@@ -1448,6 +1449,7 @@ print*, '>>> NES eta', eta
   QuickDirty: BLOCK
 
     INTEGER :: iE
+    REAL(dp) :: FourPi
     REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
                                      phi0_nub_Iso, phi1_nub_Iso
 
@@ -1465,52 +1467,62 @@ print*, '>>> NES eta', eta
 
   WRITE (*,*)
 
-  ! WRITE (*,*)
-  ! WRITE (*,*) '>>> Rho values'
-  ! DO j_rho = 1, nRho
-  !   rho = OpacityTable % TS % States (iRho) % Values (j_rho)
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
-  ! END DO
+  WRITE (*,*)
+  WRITE (*,*) '>>> Rho values'
+  DO j_rho = 1, nRho
+    rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+  END DO
 
-  ! WRITE (*,*)
-  ! WRITE (*,*) '>>> T values'
-  ! DO k_t = 1, nT
-  !   T = OpacityTable % TS % States (iT) % Values (k_t)
-  !   TMeV = T * kMeV
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
-  ! END DO
+  WRITE (*,*)
+  WRITE (*,*) '>>> T values'
+  DO k_t = 1, nT
+    T = OpacityTable % TS % States (iT) % Values (k_t)
+    TMeV = T * kMeV
+    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+  END DO
 
-  ! WRITE (*,*)
-  ! WRITE (*,*) '>>> Ye values'
-  ! DO l_ye = 1, nYe
-  !   ye = OpacityTable % TS % States (iYe) % Values (l_ye)
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
-  ! END DO
+  WRITE (*,*)
+  WRITE (*,*) '>>> Ye values'
+  DO l_ye = 1, nYe
+    ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+  END DO
+
+    !-- Bruenn et al. (2020) Fig. 28
 
     j_rho = 118
     rho = OpacityTable % TS % States (iRho) % Values (j_rho)
-    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+    WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3)', j_rho, '    ', rho
 
     k_t = 25
     T = OpacityTable % TS % States (iT) % Values (k_t)
     TMeV = T * kMeV
-    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+    WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'T (MeV)      ', k_t, '    ', TMeV
 
     l_ye = 20
     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
-    WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+    WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
 
     A   = 10**DVar(Indices % iHeavyMassNumber) % &
           Values(j_rho, k_t, l_ye) &
           - DVOffs(Indices % iHeavyMassNumber)   &
           - epsilon
-    WRITE (*,*) 'A', A
+    WRITE (*,*) 'A          ', A
 
     Z   = 10**DVar(Indices % iHeavyChargeNumber) % &
           Values(j_rho, k_t, l_ye) &
           - DVOffs(Indices % iHeavyChargeNumber)   &
           - epsilon
-    WRITE (*,*) 'Z', Z
+    WRITE (*,*) 'Z          ', Z
+
+    xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
+              Values(j_rho, k_t, l_ye) &
+              - DVOffs(Indices % iHeavyMassFraction)   &
+              - epsilon
+    WRITE (*,*) 'X_A        ', xheavy
+    WRITE (*,*) 'n_A (cm^-3)', ( xheavy / A ) * rho/rmu
+    WRITE (*,*) 'n_A (fm^-3)', ( xheavy / A ) * rho/rmu * ( 1.e-13 )**3
 
     phi0_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
                        ( :, 1, j_rho, k_t, l_ye )
@@ -1523,23 +1535,27 @@ print*, '>>> NES eta', eta
                        ( :, 2, j_rho, k_t, l_ye )
 
     WRITE (*,*)
-    WRITE (*,*) '>>> Nu Iso: E, Phi0, Phi1, Phi0 - Phi1'
+    WRITE (*,*) '>>> Pi', acos(-1.0d0) 
+    WRITE (*,*)
+    WRITE (*,*) '>>> Nu Iso: E, Phi0, Phi1, 1/Lambda'
     DO iE = 1, nPointsE
       WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
         E_Cells ( iE ),     '    ', &
         phi0_nu_Iso ( iE ), '    ', &
         phi1_nu_Iso ( iE ), '    ', &
-        phi0_nu_Iso ( iE )  -  phi1_nu_Iso ( iE )
+        FourPi * ( E_Cells ( iE ) ** 2 ) &
+          * ( phi0_nu_Iso ( iE )  -  (1.d0/3.d0) * phi1_nu_Iso ( iE ) )
     END DO
 
     WRITE (*,*)
-    WRITE (*,*) '>>> NuB Iso: E, Phi0, Phi1, Phi0 - Phi1'
+    WRITE (*,*) '>>> NuB Iso: E, Phi0, Phi1, 1/Lambda'
     DO iE = 1, nPointsE
       WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
-        E_Cells ( iE ),      '    ', &
+        E_Cells ( iE ),     '    ', &
         phi0_nub_Iso ( iE ), '    ', &
         phi1_nub_Iso ( iE ), '    ', &
-        phi0_nub_Iso ( iE )  -  phi1_nub_Iso ( iE )
+        FourPi * ( E_Cells ( iE ) ** 2 ) &
+          * ( phi0_nub_Iso ( iE )  -  (1.d0/3.d0) * phi1_nub_Iso ( iE ) )
     END DO
 
   WRITE (*,*)
