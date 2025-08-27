@@ -65,15 +65,15 @@ end module CUBA
 module global_4D
   implicit none
   real*8,parameter :: pi=3.1415927d0,Gf=1.166d-11,Vud=&
-       0.97427d0, gA0 =1.2723d0,gV0=1.d0, Mpi=139.57d0,Mnp=938.919d0,&
-       Dnp=1.293d0, MA=1.0d3,MV=840.d0 
+       0.97427d0, gA0 =1.2723d0,gV0=1.d0, Mpi=139.57,Mnp=938.919d0,&
+       Dnp=1.293, MA=1.0d3,MV=840.d0 
   real*8:: me=0.511d0,mn=939.565d0,mp=938.272d0,&
            Un=-20.546d0,Up=-36.853d0
   real*8:: pe(0:3),pv(0:3),pn(0:3),pp(0:3),q(0:3),Enu,pn3,En,cthe,&
        q3,Jacob
   real*8:: ye,rho,Tem,nden,mun,mup,mue
   real*8:: jVA=1.d0,JAF=1.d0
-  real*8:: pnmax, pnmin, Tfac=100.0d0
+  real*8:: pnmax, pnmin, Tfac=100.
   real*8:: ppmax,ppmin,pemax,pemin
   integer,parameter:: opt_pn=1
   integer:: opt_form,opt_pseudo,opt_wm,opt0
@@ -110,6 +110,9 @@ subroutine Opacity_CC_4D_GSI(opt_had,opt,NP,EnuA,OpaA,xTem,cheme,chemn,&
       xUn,xUp
   real*8,external:: Integration,integration_D
 
+  ! CAREFUL. IN THIS ROUTINE A LOT OF NUMBERS ARE DEFINED AS REAL(4) INSTEAD OF REAL(8)
+  ! E.G. 1.0 INSTEAD OF 1.0d0
+
   Tem = xTem
   mn = massn
   mp = massp
@@ -141,8 +144,8 @@ subroutine Opacity_CC_4D_GSI(opt_had,opt,NP,EnuA,OpaA,xTem,cheme,chemn,&
      opt_form = 1
   end select
 
-  Tfac = 100.0d0
-  OpaA = 0.0d0
+  Tfac = 100
+  OpaA = 0.0
   opt0 = opt
   select case(opt0)
   case (1)
@@ -208,7 +211,7 @@ function Integration_D()
   implicit none
   real*8:: Integration_D,tmp,tmp1,At,tmp2,tmp3,del,mpt
 
-  Integration_D = 0.0d0
+  Integration_D = 0.0
 
   call Range_pn_dec_4D()
   if( pnmin > pnmax ) goto 12
@@ -222,10 +225,9 @@ function Integration_D()
   if(opt0.eq.3) then
      Integration_D = integral(1)/197.327d-18*2.d0
   else if(opt0.eq.4) then
-     Integration_D = integral(1)*Enu**2/(2.d0*pi**2)*2.d0 &
-	  *(1.d13/197.327d0)**3*(3.d23/197.327d0)
+     Integration_D = integral(1)*Enu**2/(2.d0*pi**2)*2.d0&
+	  *(1.d13/197.327)**3*(3.d23/197.327)
   end if
-
 12  continue
   return
 end function Integration_D
@@ -241,9 +243,9 @@ integer function integrand(ndim, xx, ncomp, ff)
 
   call initmomentum(xx)
   ff(1)=amp_4D()*q3*pn3/(16.d0*(2.d0*pi)**4*Enu**2*pp(0))*Jacob
-  xf2 = 1.0d0/( exp((pn(0)+Un-mun)/Tem) + 1.0d0 )
-  xf3 = 1.0d0/( exp((pe(0)-mue)/Tem) + 1.0d0 )
-  xf4 = 1.0d0/( exp((pp(0)+Up-mup)/Tem) + 1.0d0 )
+  xf2 = 1.0/( exp((pn(0)+Un-mun)/Tem) + 1.0 )
+  xf3 = 1.0/( exp((pe(0)-mue)/Tem) + 1.0 )
+  xf4 = 1.0/( exp((pp(0)+Up-mup)/Tem) + 1.0 )
   ff(1) = ff(1)*xf2*(1.d0-xf4)*(1.d0-xf3)
   integrand = 0
 end function integrand
@@ -276,11 +278,11 @@ subroutine initmomentum(x)
   q0_max = min(tmp1,tmp3)
   q0_min = max(tmp2,tmp4)
 
-  tmp = mup-50.0d0*Tem-En
+  tmp = mup-50.0*Tem-En
   if( tmp < q0_max ) then
      q0_min = max(q0_min, tmp)
   end if
-  tmp = Enu-max(me,mue-50.0d0*Tem)
+  tmp = Enu-max(me,mue-50.0*Tem)
   if( q0_min<tmp ) then
      q0_max = min(q0_max, tmp)
   end if
@@ -364,7 +366,7 @@ subroutine Range_pn_4D()
 
   if( Fmax .le. Enu) goto 12
   if( Fmin .ge. Enu) then
-     pnmax = -1000.0d0
+     pnmax = -1000.0
      goto 12
   end if
 
@@ -381,7 +383,7 @@ subroutine Range_pn_4D()
      end if
 
   else if(Enu**2 .eq. Epr**2) then
-     p20 = -(4.0d0*Epr**2*mn**2-Esq**2)/(4.0d0*Esq*Enu)
+     p20 = -(4.0*Epr**2*mn**2-Esq**2)/(4.0*Esq*Enu)
      if(p20>0.d0) pnmin=p20
   end if
 
@@ -418,13 +420,13 @@ integer function integrand_D(ndim, xx, ncomp, ff)
   real*8:: xf2,xf3,xf4
   call initmomentum_D(xx)
   ff(1)=amp_4D()*q3*pn3/(16.d0*(2.d0*pi)**4*Enu**2*pp(0))*Jacob
-  xf2 = 1.0d0/( exp((pn(0)+Un-mun)/Tem) + 1.0d0 )
-  xf3 = 1.0d0/( exp((pe(0)-mue)/Tem) + 1.0d0 )
-  xf4 = 1.0d0/( exp((pp(0)+Up-mup)/Tem) + 1.0d0 )
+  xf2 = 1.0/( exp((pn(0)+Un-mun)/Tem) + 1.0 )
+  xf3 = 1.0/( exp((pe(0)-mue)/Tem) + 1.0 )
+  xf4 = 1.0/( exp((pp(0)+Up-mup)/Tem) + 1.0 )
   if(opt0.eq.3) then
      ff(1) = ff(1)*xf2*(1.d0-xf4)*xf3
   else if(opt0.eq.4) then
-     ff(1) = ff(1)*(1.0d0-xf2)*xf4*(1.0d0-xf3)
+     ff(1) = ff(1)*(1.0-xf2)*xf4*(1.0-xf3)
   end if
   integrand_D = 0
 end function integrand_D
@@ -535,7 +537,7 @@ subroutine Range_pn_dec_4D()
      end if
 
   else if(Enu**2 .eq. Epr**2) then
-     p20 = (4.0d0*Epr**2*mn**2-Esq**2)/(4.0d0*Esq*Enu)
+     p20 = (4.0*Epr**2*mn**2-Esq**2)/(4.0*Esq*Enu)
      if(p20>0.d0) pnmin=p20
   end if
 12  continue
@@ -548,8 +550,8 @@ subroutine q3_sol_D(xPn3, q3_lim)
   real*8:: xPn3,q3_lim(1:2),tmp1,tmp2,xA,xB,xC,xqmax,q3_lim2(1:2)
   real*8:: tmp3,tmp4,tmp5,tmp6
 
-  q3_lim = 0.0d0
-  q3_lim2 = 0.0d0
+  q3_lim = 0.0
+  q3_lim2 = 0.0
 
   tmp1 = Up-En-Enu
   tmp2 = Enu**2 + me**2 - mp**2 - xpn3**2
@@ -569,10 +571,10 @@ subroutine q3_sol_D(xPn3, q3_lim)
     -(sqrt( (xpn3-q3_lim(2))**2+mp**2) + Up - En)
 
   if(abs(tmp3)>1.d-10 .and. abs(tmp5)>1.d-10) then
-   q3_lim(1)=0.0d0
+   q3_lim(1)=0.0
   end if
   if(abs(tmp4)>1.d-10 .and. abs(tmp6)>1.d-10) then
-   q3_lim(2)=max( q3_lim(1) + 20.0d0*Tem, Enu + (20.0d0*Tem + mue) )
+   q3_lim(2)=max( q3_lim(1) + 20.*Tem, Enu + (20.0*Tem + mue) )
   end if
 
   return
@@ -603,10 +605,10 @@ function amp_4D()
   d9 = cdot4(pp,q)
   d10 = cdot4(q,q)
 
-  gv = 1.0d0
-  f2 = 3.706d0
+  gv = 1.0
+  f2 = 3.706
   ga = ga0
-  gp = 0.0d0 
+  gp = 0.0 
   if(opt_form .eq. 1) then
      gv=( 1.d0-4.706d0*d10/(4.d0*Mnp**2) )/( 1.d0 - d10/(4.d0*Mnp**2))&
 	/( 1.d0 - d10/MV**2 )**2

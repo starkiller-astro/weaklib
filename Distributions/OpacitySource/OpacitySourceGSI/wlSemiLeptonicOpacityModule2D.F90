@@ -30,7 +30,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   !      ga =1.2723d0,gv=1.d0, Mpi=139.57d0, Mnp=938.919d0, &
   !      Dnp=1.293d0, massA=1.0d3,massV=840.d0 , GfVud2 = (Gw_MeV*Vud)**2
 
-  REAL(DP), PARAMETER :: Tfac = 300.0d0
+  REAL(DP), PARAMETER :: Tfac = 150.0d0
   REAL(DP), PARAMETER :: gasq = ga**2, gvsq = gv**2, gva = gv*ga
 
   !========================================================================

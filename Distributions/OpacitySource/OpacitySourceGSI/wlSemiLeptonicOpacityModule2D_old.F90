@@ -12,7 +12,7 @@
 !!! quadrature for each dimention
 !!! seems Ngrids needs be >~30 to reach an accuracy of 5%
 
-MODULE wlSemiLeptonicOpacityModule2D
+MODULE wlSemiLeptonicOpacityModule2D_old
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
@@ -883,4 +883,4 @@ SUBROUTINE gauleg(x1, x2, x, w, n)
   
 END SUBROUTINE gauleg
 
-END MODULE wlSemiLeptonicOpacityModule2D
+END MODULE wlSemiLeptonicOpacityModule2D_old

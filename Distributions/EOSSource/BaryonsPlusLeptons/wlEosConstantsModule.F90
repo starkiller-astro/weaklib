@@ -60,7 +60,7 @@ REAL(dp), PARAMETER  :: asol      = 4.0d0 * sigma_sb / cvel
 ! Weak Interactions Parameters
 REAL(dp), PARAMETER  :: Gw        = 1.027d-5      ! weak interaction constant (proton mass).
 
-REAL(dp), PARAMETER  :: Gw_MeV    = 1.16636d-11   ! weak interaction constant [MeV].
+REAL(dp), PARAMETER  :: Gw_MeV    = 1.1663787d-11   ! weak interaction constant [MeV].
 
 REAL(dp), PARAMETER  :: sin2W     = 0.23147d+00   ! weak mixing angle.
 !                                                   https://link.springer.com/article/10.1007/JHEP12(2024)026
@@ -85,7 +85,7 @@ REAL(dp), PARAMETER  :: ga        = 1.2723d+00    ! Gamow-Teller beta decay cons
 !                                                   not unity as the oupling for Gamow-Teller
 !                                                   decay is renormalized. 
 
-REAL(dp), PARAMETER  :: cv        = 0.96d+00      ! weak interaction constant, which in the 
+REAL(dp), PARAMETER  :: cv        = 0.5d+00 + 2*sin2W      ! weak interaction constant, which in the 
 !                                                       standard model is given by
 !                                                               1       2
 !                                                          cv = _ + 2sin (W)

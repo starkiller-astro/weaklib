@@ -1,3 +1,9 @@
-WL_OPACITYSOURCE_GSI = \
-  wlSemiLeptonicOpacityModule2D.o \
-  wlSemiLeptonicOpacityModule4D.o
+
+ifeq ($(USE_CUBA),TRUE)
+  WL_OPACITYSOURCE_GSI = \
+    wlSemiLeptonicOpacityModule2D.o \
+    wlSemiLeptonicOpacityModule4D.o
+else
+  WL_OPACITYSOURCE_GSI = \
+    wlSemiLeptonicOpacityModule2D.o
+endif

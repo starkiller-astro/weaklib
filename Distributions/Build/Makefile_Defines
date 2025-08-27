@@ -19,6 +19,7 @@ else
    endif
 endif
 
+USE_CUBA ?= FALSE
 ifeq ($(USE_CUBA),TRUE)
   DEFINES   += $(MDEFS)$(PP)WEAKLIB_CUBA
 endif

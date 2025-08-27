@@ -17,7 +17,7 @@ PROGRAM wlTestGSI
   REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl
   INTEGER :: i, j, k, l, nThermoPoints
   INTEGER :: nDone, total, lastPrint
-  LOGICAL, PARAMETER :: DoMuons = .true.
+  LOGICAL, PARAMETER :: DoMuons = .false.
 
   REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:,:)
   REAL(DP), ALLOCATABLE :: T(:), Rho(:), Ye(:), Ym(:), &
@@ -92,6 +92,9 @@ PROGRAM wlTestGSI
         DO l=1, NP
           call Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
                 xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp, nE_2D)
+          WRITE(*,*) j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
+                  xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp, nE_2D
+          STOP
         END DO
         CALL CPU_TIME(t2)
         t_2D = t_2D + t2 - t1

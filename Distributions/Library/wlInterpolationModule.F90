@@ -1802,11 +1802,11 @@ INTEGER FUNCTION Index1D( x, xx, n )
 
 #if defined(WEAKLIB_OMP_OL)
   !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD &
-  !$OMP MAP( to: LogD, LogDs, LogT, LogTs, Ye, Yes, Ym, Yms, OS, Table ) &
+  !$OMP MAP( to: LogD, LogDs, LogT, LogTs, Ye, Yes, LogYm, LogYms, OS, Table ) &
   !$OMP MAP( from: Interpolant )
 #elif defined(WEAKLIB_OACC)
   !$ACC PARALLEL LOOP GANG VECTOR &
-  !$ACC COPYIN( to: LogD, LogDs, LogT, LogTs, Ye, Yes, Ym, Yms, OS, Table ) &
+  !$ACC COPYIN( to: LogD, LogDs, LogT, LogTs, Ye, Yes, LogYm, LogYms, OS, Table ) &
   !$ACC COPYOUT( Interpolant )
 #elif defined(WEAKLIB_OMP)
   !$OMP PARALLEL DO

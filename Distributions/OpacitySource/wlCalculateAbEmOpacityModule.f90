@@ -2,8 +2,8 @@ MODULE wlCalculateAbEmOpacityModule
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
-    Gw, hbar, cvel, pi, ga, gv, &
-    rmu, mp, me, mn, mmu, cm3fm3, kmev
+    Gw, hbar, cvel, pi, ga, gv, Gw_MeV, &
+    Vud, rmu, mp, me, mn, mmu, kmev
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable
   USE wlInterpolationUtilitiesModule, ONLY: &
@@ -17,8 +17,9 @@ MODULE wlCalculateAbEmOpacityModule
   PUBLIC :: ElasticAbsorptionOpacityNue
   PUBLIC :: CalculateHorowitzWeakMagRecoil
 
-  REAL(dp), PARAMETER  :: g2      = ( Gw/mp**2 )**2 * ( hbar * cvel )**2   ! square of the Fermi constant in units of cm^{2} MeV^{-2}
-  REAL(dp), PARAMETER  :: C_Op_el = g2/pi*(gv**2 + 3*ga**2)/cm3fm3
+  ! REAL(dp), PARAMETER  :: g2      = ( Gw/mp**2 )**2 * ( hbar * cvel )**2   ! square of the Fermi constant in units of cm^{2} MeV^{-2}
+  ! REAL(dp), PARAMETER  :: C_Op_el = g2/pi*(gv**2 + 3*ga**2)
+  REAL(dp), PARAMETER  :: C_Op_el = Gw_MeV**2 * Vud**2 * ( hbar * cvel )**2/pi*(gv**2 + 3*ga**2)
 
   ! Constants for Weak Magnetism Corrections
   REAL(dp), PARAMETER  :: Lambda_p = 1.793d0
@@ -29,7 +30,7 @@ CONTAINS
 
   SUBROUTINE ElasticAbsorptionOpacityNum(D, T, Enu, Mun, Mn_eff, Un, Xn, &
     Mup, Mp_eff, Up, Xp, Mumu, OpElNum, OpElNumBar)
-  
+    
     REAL(DP), INTENT(IN) :: D, T, Enu
     REAL(DP), INTENT(IN) :: Mun, Mn_eff, Un, Xn
     REAL(DP), INTENT(IN) :: Mup, Mp_eff, Up, Xp
@@ -39,8 +40,8 @@ CONTAINS
     ! LOCAL VARIABLES
     REAL(DP) :: n_n, n_p
 
-    n_n = Xn * D * cm3fm3 / rmu
-    n_p = Xp * D * cm3fm3 / rmu
+    n_n = Xn * D / rmu
+    n_p = Xp * D / rmu
 
     ! num   + n -> mu- + p
     CALL ElasticAbsorptionOpacity(T, Enu, Mun, mn, Mn_eff, Un, n_n, &
@@ -49,9 +50,6 @@ CONTAINS
     ! numbar + p -> mu+ + n
     CALL ElasticAbsorptionOpacity(T, Enu, Mup, mp, Mp_eff, Up, n_p, &
       -Mumu, mmu, Mun, mn, Mn_eff, Un, n_n, OpElNumBar)
-
-    OpElNum    = OpElNum   
-    OpElNumBar = OpElNumBar
 
   END SUBROUTINE ElasticAbsorptionOpacityNum
 
@@ -68,9 +66,8 @@ CONTAINS
     ! LOCAL VARIABLES
     REAL(DP) :: n_n, n_p
 
-
-    n_n = Xn * D * cm3fm3 / rmu
-    n_p = Xp * D * cm3fm3 / rmu
+    n_n = Xn * D / rmu
+    n_p = Xp * D / rmu
 
     ! nue   + n -> e- + p
     CALL ElasticAbsorptionOpacity(T, Enu, Mun, mn, Mn_eff, Un, n_n, &
@@ -80,16 +77,14 @@ CONTAINS
     CALL ElasticAbsorptionOpacity(T, Enu, Mup, mp, Mp_eff, Up, n_p, &
       -Mue, me, Mun, mn, Mn_eff, Un, n_n, OpElNueBar)
 
-    OpElNue    = OpElNue   
-    OpElNueBar = OpElNueBar
-
   END SUBROUTINE ElasticAbsorptionOpacityNue
   
   SUBROUTINE ElasticAbsorptionOpacity(T, E1, Mu2, M2, M2_eff, U2, n2, &
     Mu3, M3, Mu4, M4, M4_eff, U4, n4, OpEl)
 
-  ! For absorptivity of neutrinos we have: 
-  ! 1 is neutrino, 2 is neutron, 3 is lepton, 4 is proton
+    ! For absorptivity of neutrinos we have: 
+    ! 1 is neutrino, 2 is neutron, 3 is lepton, 4 is proton
+    ! Notice that 
     REAL(DP), INTENT(IN)  :: T, E1
     REAL(DP), INTENT(IN)  :: Mu2, M2, M2_eff, U2, n2
     REAL(DP), INTENT(IN)  :: Mu3, M3
@@ -97,7 +92,7 @@ CONTAINS
     REAL(DP), INTENT(OUT) :: OpEl
 
     ! LOCAL
-    REAL(DP) :: fmu, baryons_term, phase_space_term, E3, phi2, phi4
+    REAL(DP) :: f3, baryons_term, phase_space_term, E3, phi2, phi4
 
     E3 = E1 + (M2-M4) + (U2-U4)
 
@@ -111,9 +106,9 @@ CONTAINS
 
     baryons_term = (n2 - n4)/( 1.0d0 - EXP((phi4 - phi2)/T/kmev))
     phase_space_term = E3**2 * SQRT(1.0d0 - (M3/E3)**2)
-    fmu = 1.0d0/(EXP((E3 - Mu3)/T/kmev) + 1.0d0)
+    f3 = 1.0d0/(EXP((E3 - Mu3)/T/kmev) + 1.0d0)
 
-    OpEl = C_Op_el * baryons_term * phase_space_term * (1.0d0 - fmu)
+    OpEl = C_Op_el * baryons_term * phase_space_term * (1.0d0 - f3)
 
   END SUBROUTINE ElasticAbsorptionOpacity
 

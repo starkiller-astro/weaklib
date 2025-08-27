@@ -44,7 +44,7 @@ CONTAINS
 
   REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, y, OS )
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
+!    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -63,7 +63,7 @@ CONTAINS
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+!  !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
   !$ACC ROUTINE SEQ
 #endif
@@ -372,7 +372,7 @@ CONTAINS
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+!  !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
   !$ACC ROUTINE SEQ
 #endif
@@ -600,7 +600,7 @@ CONTAINS
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+!  !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
   !$ACC ROUTINE SEQ
 #endif
@@ -898,7 +898,7 @@ CONTAINS
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+!  !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
   !$ACC ROUTINE SEQ
 #endif
@@ -1115,7 +1115,7 @@ CONTAINS
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+!  !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
   !$ACC ROUTINE SEQ
 #endif
@@ -1425,7 +1425,7 @@ CONTAINS
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error )
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+!  !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
   !$ACC ROUTINE SEQ
 #endif

@@ -1,9 +1,9 @@
-PROGRAM wlTestSpeed
+PROGRAM wlCompareOpacities
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
-   pi, Gw_MeV, ga, gv, mn, mp, me, mmu, mpi, &
-   Vud, massA, massV, gamma_p, gamma_n
+   pi, Gw_MeV, ga, gv, mn, mp, me, mmu, mpi, kmev, &
+   Vud, massA, massV, gamma_p, gamma_n, kmev_inv
   USE HDF5
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable
@@ -32,9 +32,11 @@ PROGRAM wlTestSpeed
 
   IMPLICIT NONE
 
-  LOGICAL, PARAMETER  :: IncludeElasticWeakMagRecoil = .TRUE.
-  INTEGER , PARAMETER :: NP = 60, nOp = 2, iApprox = 0, nE_2D = 50
+  INTEGER , PARAMETER :: NP = 60, nOp = 2, nApprox = 4, nE_2D = 50
   INTEGER , PARAMETER :: nOutTerminal = 100
+  LOGICAL , PARAMETER :: UseReddy = .TRUE.
+  LOGICAL , PARAMETER :: IncldudeGSI_2D = .TRUE.
+  LOGICAL , PARAMETER :: IncldudeGSI_4D = .FALSE.
   REAL(DP), PARAMETER :: masse = me , massm = mmu
   REAL(DP), PARAMETER :: massn = mn, massp = mp
 
@@ -52,21 +54,21 @@ PROGRAM wlTestSpeed
   TYPE(OpacityTableType) :: OpacityTable
   REAL(dp), DIMENSION(2) :: Offset_Em
 
-  INTEGER :: i, k, l, iCount, nThermoPoints, ierr
+  INTEGER :: i, k, l, j, iCount, nThermoPoints, ierr
   INTEGER :: iEOS_Rho, iEOS_T, iEOS_Yp
-  LOGICAL, PARAMETER :: DoMuons = .true.
+  LOGICAL, PARAMETER :: DoMuons = .false.
 
   REAL(DP) :: WeakMagCorrLep(NP), WeakMagCorrLepBar(NP)
-  REAL(DP), ALLOCATABLE :: OpaA_El(:,:,:), OpaA_Table(:,:,:)
-  REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:), OpaA_4D(:,:,:)
-  REAL(DP), ALLOCATABLE :: OpaA_2D_OLD(:,:,:), OpaA_4D_OLD(:,:,:)
+  REAL(DP), ALLOCATABLE :: OpaA_El(:,:,:,:), OpaA_El_bare(:,:,:,:), OpaA_Table(:,:,:)
+  REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:,:), OpaA_4D(:,:,:,:), OpaA_2D_OLD(:,:,:,:)
   REAL(DP), ALLOCATABLE :: xT(:), xD(:), xYe(:), xYm(:)
 
-  REAL(DP) :: xMumu, xMue, xMun, xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff, xMl, xMul
+  REAL(DP) :: xYp, xMumu, xMue, xMun, xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff, xMl, xMul
 
   REAL(DP) :: buffer
-  REAL(DP) :: t1, t2, t_start, t_end, t_2D, t_4D, t_El, t_Tab
-  REAL(DP) :: t_2D_OLD, t_4D_OLD, err
+  REAL(DP) :: t1, t2, t_start, t_end, t_2D_OLD, t_2D, t_4D, t_El, t_Tab
+  REAL(DP) :: err
+  CHARACTER(len=128) :: FileName_EmAb
 
   CALL MPI_INIT( ierr )
 
@@ -80,14 +82,9 @@ PROGRAM wlTestSpeed
 
   ! Initialize neutrino energies
   DO l = 1, NP
-    EnuA(l) = l * 5.d0
-    ! Initialize Recoil correction!
-    IF (IncludeElasticWeakMagRecoil) THEN
-      CALL CalculateHorowitzWeakMagRecoil(EnuA(l), WeakMagCorrLep(l), WeakMagCorrLepBar(l))
-    ELSE
-      WeakMagCorrLep(l)    = 1.0d0
-      WeakMagCorrLepBar(l) = 1.0d0
-    ENDIF
+    EnuA(l) = DBLE(l) * 5.d0
+    CALL CalculateHorowitzWeakMagRecoil(EnuA(l), WeakMagCorrLep(l), WeakMagCorrLepBar(l))
+    WRITE(*,*) WeakMagCorrLep(l), WeakMagCorrLepBar(l)
   END DO
 
   ! READ thermodynamic data
@@ -96,12 +93,12 @@ PROGRAM wlTestSpeed
   READ(123,*)
 
   ! You can also set nThermoPoints to a smaller value for quick checks
-  nThermoPoints = 50
-  ALLOCATE(OpaA_El(NP, nThermoPoints, nOp))
-  ALLOCATE(OpaA_2D(NP, nThermoPoints, nOp))
-  ALLOCATE(OpaA_4D(NP, nThermoPoints, nOp))
-  ALLOCATE(OpaA_2D_OLD(NP, nThermoPoints, nOp))
-  ALLOCATE(OpaA_4D_OLD(NP, nThermoPoints, nOp))
+  ! nThermoPoints = 100
+  ALLOCATE(OpaA_El(NP, nThermoPoints, 2, nOp))
+  ALLOCATE(OpaA_El_bare(NP, nThermoPoints, 2, nOp))
+  ALLOCATE(OpaA_2D_OLD(NP, nThermoPoints, nApprox, nOp))
+  ALLOCATE(OpaA_2D(NP, nThermoPoints, nApprox, nOp))
+  ALLOCATE(OpaA_4D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(OpaA_Table(NP, nThermoPoints, nOp))
   ALLOCATE(xT(nThermoPoints) , xD(nThermoPoints), &
            xYe(nThermoPoints), xYm(nThermoPoints))
@@ -109,15 +106,20 @@ PROGRAM wlTestSpeed
   DO i = 1, nThermoPoints
     READ(123,*) xT(i), xD(i), xYe(i), xYm(i), &
       buffer, buffer, buffer, buffer, buffer, buffer
+    xT(i) = xT(i) * kmev_inv
   END DO
   CLOSE(123)
-
-    
+  
   ! Read Opacity Table
   CALL InitializeHDF( )
+  IF (UseReddy) THEN
+    FileName_EmAb = "wl-Op-SFHo-15-25-50-E40-EmAb-Reddy.h5"
+  ELSE
+    FileName_EmAb = "wl-Op-SFHo-15-25-50-E40-EmAb.h5"
+  ENDIF
   CALL ReadOpacityTableHDF( OpacityTable,   &
        FileName_EmAb_Option                 &
-       = "wl-Op-SFHo-15-25-50-E40-EmAb.h5", &
+       = FileName_EmAb, &
        EquationOfStateTableName_Option      &
        = "BaryonsPlusHelmPlusMuonsEOS.h5",  &
        Verbose_Option = .TRUE. )
@@ -135,22 +137,22 @@ PROGRAM wlTestSpeed
   CALL CPU_TIME(t_start)
 
   OpaA_El = 0.d0
+  OpaA_El_bare = 0.d0
   OpaA_2D = 0.d0
-  OpaA_2D_OLD = 0.d0
   OpaA_4D = 0.d0
-  OpaA_4D_OLD = 0.d0
 
   t_El  = 0.0d0
   t_Tab = 0.0d0
   t_2D  = 0.0d0
   t_4D  = 0.0d0
-  t_2D_OLD = 0.0d0
-  t_4D_OLD = 0.0d0
   iCount = 0
   DO i = 1, nThermoPoints
 
+    xYm(i) = 0.0d0
     CALL ApplyEOS(xT(i), xD(i), xYe(i), xYm(i), &
           xMumu, xMue, xMun, xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff)
+
+    xYp = xYe(i) + xYm(i)
 
     IF (DoMuons) THEN
       xMul = xMumu
@@ -160,31 +162,13 @@ PROGRAM wlTestSpeed
       xMl = masse
     END IF
 
-    DO k = 1, nOp
-
-      CALL CPU_TIME(t1)
-      CALL Opacity_CC_2D_GSI(iApprox, k, NP, EnuA, OpaA_2D_OLD(:, i, k), &
-              xT(i), xMul, xMun, xMup, xMl, massn, massp, xUn, xUp)
-      CALL CPU_TIME(t2)
-      OpaA_2D_OLD(:, i, k) = OpaA_2D_OLD(:, i, k) * 1.0d5 ! 1/km to 1/cm
-      t_2D_OLD = t_2D_OLD + t2 - t1
-
-      CALL CPU_TIME(t1)
-      CALL Opacity_CC_4D_GSI(iApprox, k, NP, EnuA, OpaA_4D_OLD(:, i, k), &
-              xT(i), xMul, xMun, xMup, xMl, massn, massp, xUn, xUp)
-      CALL CPU_TIME(t2)
-      OpaA_4D_OLD(:, i, k) = OpaA_4D_OLD(:, i, k) * 1.0d5 ! 1/km to 1/cm
-      t_4D_OLD = t_4D_OLD + t2 - t1
-    
-    END DO
-
     DO l=1, NP
 
       CALL CPU_TIME(t1)
       ! interpolate electron neutrino EmAb opacity
       CALL LogInterpolateSingleVariable & 
             ( LOG10( EnuA(l) ), LOG10( xD(i) ),  &
-              LOG10( xT(i) ), xYe(i),            & 
+              LOG10( xT(i) ), xYp,            & 
               LOG10( OpacityTable % EnergyGrid % Values ),        &
               LOG10( OpacityTable % TS % States(iRho_Op) % Values ), &
               LOG10( OpacityTable % TS % States(iT_Op) % Values ),   &
@@ -194,7 +178,7 @@ PROGRAM wlTestSpeed
       ! interpolate electron antineutrino EmAb opacity
       CALL LogInterpolateSingleVariable & 
             ( LOG10( EnuA(l) ), LOG10( xD(i) ),  &
-              LOG10( xT(i) ), xYe(i),            & 
+              LOG10( xT(i) ), xYp,            & 
               LOG10( OpacityTable % EnergyGrid % Values ),        &
               LOG10( OpacityTable % TS % States(iRho_Op) % Values ), &
               LOG10( OpacityTable % TS % States(iT_Op) % Values ),   &
@@ -207,36 +191,70 @@ PROGRAM wlTestSpeed
       IF (DoMuons) THEN
         CALL ElasticAbsorptionOpacityNum ( xD(i), xT(i), EnuA(l), &
           xMun, xMn_eff, xUn, xXn, xMup, xMp_eff, xUp, xXp, xMumu , &
-          OpaA_El(l, i, 1), OpaA_El(l, i, 2) )
+          OpaA_El(l, i, 1, 1), OpaA_El(l, i, 1, 2) )
+          
+        CALL ElasticAbsorptionOpacityNum ( xD(i), xT(i), EnuA(l), &
+          xMun, mn, 0.0d0, xXn, xMup, mp, 0.0d0, xXp, xMumu , &
+          OpaA_El_bare(l, i, 1, 1), OpaA_El_bare(l, i, 1, 2) )
       ELSE
         CALL ElasticAbsorptionOpacityNue ( xD(i), xT(i), EnuA(l), &
           xMun, xMn_eff, xUn, xXn, xMup, xMp_eff, xUp, xXp, xMue , &
-          OpaA_El(l, i, 1), OpaA_El(l, i, 2) )
+          OpaA_El(l, i, 1, 1), OpaA_El(l, i, 1, 2) )
+
+        CALL ElasticAbsorptionOpacityNue ( xD(i), xT(i), EnuA(l), &
+          xMun, mn, 0.0d0, xXn, xMup, mp, 0.0d0, xXp, xMue , &
+          OpaA_El_bare(l, i, 1, 1), OpaA_El_bare(l, i, 1, 2) )
       END IF
 
-      OpaA_El(l, i, 1) = OpaA_El(l, i, 1) * WeakMagCorrLep(l)
-      OpaA_El(l, i, 2) = OpaA_El(l, i, 2) * WeakMagCorrLepBar(l)
+      OpaA_El(l, i, 2, 1) = OpaA_El(l, i, 1, 1) * WeakMagCorrLep(l)
+      OpaA_El(l, i, 2, 2) = OpaA_El(l, i, 1, 2) * WeakMagCorrLepBar(l)
+      
+      OpaA_El_bare(l, i, 2, 1) = OpaA_El_bare(l, i, 1, 1) * WeakMagCorrLep(l)
+      OpaA_El_bare(l, i, 2, 2) = OpaA_El_bare(l, i, 1, 2) * WeakMagCorrLepBar(l)
       
       CALL CPU_TIME(t2)
       t_El = t_El + t2 - t1
 
-      DO k = 1, nOp
-        CALL CPU_TIME(t1)
-        CALL Opacity_CC_2D(iApprox, k, EnuA(l), OpaA_2D(l, i, k), &
-              xT(i), xMul, xMun, xMup, xMl, massn, massp, xUn, xUp, nE_2D)
-        CALL CPU_TIME(t2)
-        t_2D = t_2D + t2 - t1
-
-        CALL CPU_TIME(t1)
-        CALL Opacity_CC_4D(iApprox, k, EnuA(l), OpaA_4D(l, i, k), &
-              xT(i), xMul, xMun, xMup, xMl, massn, massp, xUn, xUp)
-        CALL CPU_TIME(t2)
-        t_4D = t_4D + t2 - t1
-      END DO
+      IF (IncldudeGSI_2D) THEN
+        DO k = 1, nOp
+          DO j = 1, nApprox
+            CALL CPU_TIME(t1)
+            CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
+                  xT(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp, nE_2D)
+            CALL CPU_TIME(t2)
+            t_2D = t_2D + t2 - t1
+          END DO
+        END DO
+      END IF
+            
+      IF (IncldudeGSI_4D) THEN
+        DO k = 1, nOp
+          DO j = 1, nApprox
+              CALL CPU_TIME(t1)
+              CALL Opacity_CC_4D(j-1, k, EnuA(l), OpaA_4D(l, i, j, k), &
+                    xT(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp)
+              CALL CPU_TIME(t2)
+              t_4D = t_4D + t2 - t1
+          END DO
+        END DO
+      ENDIF
 
       iCount = iCount + 1
       IF (MOD(iCount, nOutTerminal) == 0) WRITE(*,*) 'Done with', iCount
     END DO
+
+    ! DO k = 1, nOp
+    !   DO j = 1, nApprox
+    !     CALL CPU_TIME(t1)
+    !     call Opacity_CC_2D_GSI(j-1, k, NP, EnuA, OpaA_2D_OLD(:, i, j, k), &
+    !           xT(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp)
+    !     CALL CPU_TIME(t2)
+    !     OpaA_2D_OLD(:, i, j, k) = OpaA_2D_OLD(:, i, j, k) / 1.0d5 ! 1/km to 1/cm
+    !     t_2D_OLD = t_2D_OLD + t2 - t1
+
+    !   END DO
+    ! END DO
+
   END DO
   
   END ASSOCIATE
@@ -246,32 +264,38 @@ PROGRAM wlTestSpeed
   WRITE(*,'(/,A,f13.6)') 'Total wall‑clock time :', t_end - t_start
   WRITE(*,'(A,f13.6)')   ' Elastic Opacity      :', t_El
   WRITE(*,'(A,f13.6)')   ' Table   Opacity      :', t_Tab
-  WRITE(*,'(A,f13.6)')   ' OLD 2D kernels       :', t_2D_old
   WRITE(*,'(A,f13.6)')   ' NEW 2D kernels       :', t_2D
-  WRITE(*,'(A,f13.6)')   ' OLD 4D kernels       :', t_4D_old
   WRITE(*,'(A,f13.6)')   ' NEW 4D kernels       :', t_4D
   
   OPEN (200, file='OpaA_El.bin', status='replace', form='unformatted', access='stream')
-  WRITE(200) OpaA_2D
+  WRITE(200) OpaA_El
   CLOSE(200)
 
-  OPEN (201, file='OpaA_2D.bin', status='replace', form='unformatted', access='stream')
-  WRITE(201) OpaA_2D
-  CLOSE(201)
+  OPEN (200, file='OpaA_El_bare.bin', status='replace', form='unformatted', access='stream')
+  WRITE(200) OpaA_El_bare
+  CLOSE(200)
 
-  OPEN (202, file='OpaA_2D_OLD.bin', status='replace', form='unformatted', access='stream')
-  WRITE(202) OpaA_2D_OLD
-  CLOSE(202)
+  IF (IncldudeGSI_2D) THEN
+    OPEN (200, file='OpaA_2D.bin', status='replace', form='unformatted', access='stream')
+    WRITE(200) OpaA_2D
+    CLOSE(200)
+  ENDIF
 
-  OPEN (203, file='OpaA_4D.bin', status='replace', form='unformatted', access='stream')
-  WRITE(203) OpaA_4D
-  CLOSE(203)
+  IF (IncldudeGSI_4D) THEN
+    OPEN (200, file='OpaA_4D.bin', status='replace', form='unformatted', access='stream')
+    WRITE(200) OpaA_4D
+    CLOSE(200)
+  ENDIF
 
-  OPEN (204, file='OpaA_4D_OLD.bin', status='replace', form='unformatted', access='stream')
-  WRITE(204) OpaA_4D_OLD
-  CLOSE(204)
+  IF (UseReddy) THEN
+    OPEN (200, file='OpaA_Table_Reddy.bin', status='replace', form='unformatted', access='stream')
+  ELSE
+    OPEN (200, file='OpaA_Table.bin', status='replace', form='unformatted', access='stream')
+  ENDIF
+  WRITE(200) OpaA_Table
+  CLOSE(200)
 
-  DEALLOCATE(OpaA_2D, OpaA_2D_OLD, OpaA_4D, OpaA_4D_OLD, OpaA_El, OpaA_Table)
+  DEALLOCATE(OpaA_2D_OLD, OpaA_2D, OpaA_4D, OpaA_El, OpaA_Table)
   DEALLOCATE(xT, xD, xYe, xYm)
 
 CONTAINS
@@ -367,6 +391,17 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
         EOSTable % DV % Offsets(iDV), &
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Xn )
 
+#ifdef EOSMODE_3D
+  Mumu = 0.0d0
+  iDV = EOSTable % DV % Indices % iElectronChemicalPotential
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mue )
+#else
   ! Muons
   MuonState % t     = T
   MuonState % rhoym = D * Ym
@@ -379,9 +414,10 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
   ElectronPhotonState % ye  = Ye
   CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
   Mue = ElectronPhotonState % mue
+#endif
 
 END SUBROUTINE ApplyEOS
 
-END PROGRAM wlTestSpeed
+END PROGRAM wlCompareOpacities
 
 

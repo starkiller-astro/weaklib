@@ -3,13 +3,23 @@ include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_Dependencies
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera: \
+
 CUBA_LIB = -L$(CUBA_DIR) -lcuba
 
 .DEFAULT_GOAL := all
 
 all: wlTestGSI \
      wlTestGSI2D \
-     wlTestSpeed \
+     wlCompareOpacities \
+     wlCompareOpacitiesTable \
      wlTestParallel2DGSI
 
 wlTestGSI: \
@@ -24,10 +34,16 @@ wlTestGSI2D: \
 	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestGSI2D.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestSpeed: \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestSpeed.o
-	$(FLINKER) $(FLAGS) -o wlTestSpeed_$(MACHINE) \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestSpeed.o \
+wlCompareOpacities: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlCompareOpacities.o
+	$(FLINKER) $(FLAGS) -o wlCompareOpacities_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlCompareOpacities.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlCompareOpacitiesTable: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o cc_weak_mag_weaklib.o wlCompareOpacitiesTable.o
+	$(FLINKER) $(FLAGS) -o wlCompareOpacitiesTable_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o cc_weak_mag_weaklib.o wlCompareOpacitiesTable.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
 wlTestParallel2DGSI: \
@@ -48,6 +64,12 @@ clean:
 clobber: clean
 	rm -f *_$(MACHINE)
 
+cc_weak_mag_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
 wlTestGSI.o: \
 	wlKindModule.o \
 	wlSemiLeptonicOpacityModule2D.o \
@@ -60,7 +82,7 @@ wlTestGSI2D.o: \
 	wlSemiLeptonicOpacityModule2D.o \
 	Opacity_SemiLep_2D_GSI.o
 
-wlTestSpeed.o: \
+wlCompareOpacities.o: \
 	wlKindModule.o \
   wlKindModule.o \
   wlEosConstantsModule.o \
@@ -70,6 +92,21 @@ wlTestSpeed.o: \
   wlEOSIOModuleHDF.o \
   wlLeptonEOSModule.o \
   wlMuonEOS.o \
+  wlElectronPhotonEOS.o \
+  wlHelmMuonIOModuleHDF.o \
+	wlOpacityTableModule.o \
+	wlOpacityTableIOModuleHDF.o \
+	wlOpacityFieldsModule.o
+
+wlCompareOpacitiesTable.o: \
+	wlKindModule.o \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlInterpolationModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
   wlElectronPhotonEOS.o \
   wlHelmMuonIOModuleHDF.o \
 	wlOpacityTableModule.o \

@@ -59,11 +59,11 @@ MODULE wlEOSComponentsCombinedInversionModule
   
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET( &
-    !$OMP   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$OMP   InversionComponentsInitialized, MinD, MaxD, MinT, MaxT, &
     !$OMP   MinYp, MaxYp, MinE, MaxE, MinP, MaxP, MinS, MaxS )
 #elif defined(WEAKLIB_OACC)
     !$ACC DECLARE CREATE( &
-    !$ACC   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$ACC   InversionComponentsInitialized, MinD, MaxD, MinT, MaxT, &
     !$ACC   MinYp, MaxYp, MinE, MaxE, MinP, MaxP, MinS, MaxS )
 #endif
 
@@ -184,11 +184,11 @@ CONTAINS
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET UPDATE TO( &
-    !$OMP   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$OMP   InversionComponentsInitialized, MinD, MaxD, MinT, MaxT, &
     !$OMP   MinYp, MaxYp, MinE, MaxE, MinP, MaxP, MinS, MaxS )
 #elif defined(WEAKLIB_OACC)
     !$ACC UPDATE DEVICE( &
-    !$ACC   InversionInitialized, MinD, MaxD, MinT, MaxT, &
+    !$ACC   InversionComponentsInitialized, MinD, MaxD, MinT, MaxT, &
     !$ACC   MinYp, MaxYp, MinE, MaxE, MinP, MaxP, MinS, MaxS )
 #endif
 
