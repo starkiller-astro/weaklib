@@ -2,6 +2,10 @@ wlSemiLeptonicOpacityModule2D.o: \
   wlKindModule.o \
   wlEosConstantsModule.o
 
+wlSemiLeptonicOpacityIntegrationModule2D.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
 ifeq ($(USE_CUBA),TRUE)
   wlSemiLeptonicOpacityModule4D.o: \
     wlKindModule.o \

@@ -2,8 +2,10 @@
 ifeq ($(USE_CUBA),TRUE)
   WL_OPACITYSOURCE_GSI = \
     wlSemiLeptonicOpacityModule2D.o \
+    wlSemiLeptonicOpacityIntegrationModule2D.o \
     wlSemiLeptonicOpacityModule4D.o
 else
   WL_OPACITYSOURCE_GSI = \
-    wlSemiLeptonicOpacityModule2D.o
+    wlSemiLeptonicOpacityModule2D.o \
+    wlSemiLeptonicOpacityIntegrationModule2D.o
 endif
