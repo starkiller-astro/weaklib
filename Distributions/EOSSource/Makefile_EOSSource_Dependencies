@@ -25,4 +25,5 @@ wlEOSIOModuleHDF.o: \
   wlDependentVariablesModule.o \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
+  wlLeptonEOSModule.o \
   wlEOSIOModuleHDF.f90

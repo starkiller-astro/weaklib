@@ -5,6 +5,7 @@ MODULE wlEOSIOModuleHDF
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
+  USE wlLeptonEOSModule
 
   USE HDF5 
 
@@ -18,6 +19,9 @@ MODULE wlEOSIOModuleHDF
   PUBLIC DescribeEquationOfStateTable
   PUBLIC BroadcastEquationOfStateTableParallel
   PUBLIC MatchTableStructure
+
+  PUBLIC BroadcastHelmTableParallel
+  PUBLIC BroadcastMuonTableParallel
 
   PUBLIC TransferDependentVariables
   PUBLIC EOSVertexQuery
@@ -795,6 +799,139 @@ CONTAINS
 
   END SUBROUTINE BroadcastEquationOfStateCompOSETableParallel
 
+  SUBROUTINE BroadcastHelmTableParallel( HelmTable, rootproc, myid, ierr, COMMUNICATOR )
+    
+    USE MPI
+    
+    implicit none
+
+    INTEGER, INTENT(in) :: rootproc
+    INTEGER, INTENT(in) :: COMMUNICATOR
+    INTEGER, INTENT(out) :: ierr
+    INTEGER, INTENT(in) :: myid
+    
+    TYPE(HelmTableType), INTENT(inout) :: HelmTable
+    
+    INTEGER, DIMENSION(2) :: helm_dims
+    REAL(dp), DIMENSION(4) :: min_max_helm
+    INTEGER :: i_count, nStates
+
+    IF ( myid == rootproc ) THEN
+        helm_dims(1) = HelmTable % nPointsDen
+        helm_dims(2) = HelmTable % nPointsTemp
+        min_max_helm(1) = HelmTable % mintemp
+        min_max_helm(2) = HelmTable % maxtemp
+        min_max_helm(3) = HelmTable % mindens
+        min_max_helm(4) = HelmTable % maxdens
+    END IF
+
+    CALL MPI_BCAST( helm_dims, 2, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( min_max_helm, 4, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    IF ( myid /= rootproc ) THEN
+        HelmTable % nPointsDen = helm_dims(1)
+        HelmTable % nPointsTemp = helm_dims(2)
+        HelmTable % mintemp = min_max_helm(1)
+        HelmTable % maxtemp = min_max_helm(2)
+        HelmTable % mindens = min_max_helm(3)
+        HelmTable % maxdens = min_max_helm(4)
+        CALL AllocateHelmholtzTable(HelmTable, helm_dims)
+    END IF
+    
+    ! 1D arrays in density
+    i_count = HelmTable % nPointsDen  
+    CALL MPI_BCAST( HelmTable % d, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dd, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dd2, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % ddi, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dd2i, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    ! 1D arrays in temperature
+    i_count = HelmTable % nPointsTemp
+    CALL MPI_BCAST( HelmTable % t, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dt, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dt2, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dti, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dt2i, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    i_count = HelmTable % nPointsDen * HelmTable % nPointsTemp
+    CALL MPI_BCAST( HelmTable % f,     i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % fd,    i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % ft,    i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % fdd,   i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % ftt,   i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % fdt,   i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % fddt,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % fdtt,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % fddtt, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    CALL MPI_BCAST( HelmTable % dpdf,   i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dpdfd,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dpdft,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % dpdfdt, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    CALL MPI_BCAST( HelmTable % ef,   i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % efd,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % eft,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % efdt, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    CALL MPI_BCAST( HelmTable % xf,   i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % xfd,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % xft,  i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % xfdt, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+  END SUBROUTINE BroadcastHelmTableParallel
+
+  SUBROUTINE BroadcastMuonTableParallel( MuonTable, rootproc, myid, ierr, COMMUNICATOR )
+    
+    USE MPI
+    
+    implicit none
+
+    INTEGER, INTENT(in)  :: rootproc
+    INTEGER, INTENT(in)  :: COMMUNICATOR
+    INTEGER, INTENT(out) :: ierr
+    INTEGER, INTENT(in)  :: myid
+    
+    TYPE(MuonTableType), INTENT(inout) :: MuonTable
+    
+    INTEGER, DIMENSION(2) :: muon_dims
+    INTEGER :: i_count
+
+    ! Broadcast dimensions first
+    IF ( myid == rootproc ) THEN
+        muon_dims(1) = MuonTable % nPointsDen
+        muon_dims(2) = MuonTable % nPointsTemp
+    END IF
+    
+    CALL MPI_BCAST( muon_dims, 2, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+    
+    ! Allocate arrays on receiving processes
+    IF ( myid /= rootproc ) THEN
+        MuonTable % nPointsDen = muon_dims(1)
+        MuonTable % nPointsTemp = muon_dims(2)
+        CALL AllocateMuonTable(MuonTable, muon_dims)
+    END IF
+    
+    ! Broadcast 1D arrays
+    CALL MPI_BCAST( MuonTable % t, muon_dims(2), MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % rhoym, muon_dims(1), MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    ! Broadcast 2D arrays
+    i_count = MuonTable % nPointsDen * MuonTable % nPointsTemp
+    CALL MPI_BCAST( MuonTable % mu, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % p, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % e, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % s, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % dlnPdlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % dlnPdlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % dlnsdlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % dlnsdlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % dlnedlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( MuonTable % dlnedlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+  END SUBROUTINE BroadcastMuonTableParallel
+
   SUBROUTINE TransferCompOSEDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
 
     TYPE(DependentVariablesCompOSEType), INTENT(in)     :: OldDV
@@ -816,13 +953,12 @@ CONTAINS
 
   END SUBROUTINE TransferCompOSEDependentVariables
 
-
   SUBROUTINE MatchCompOSETableStructure( EOSTableIn, EOSTableOut, NewDVID, NewnVariables )
 
     TYPE(EquationOfStateCompOSETableType), INTENT(in)    :: EOSTableIn
     TYPE(EquationOfStateCompOSETableType), INTENT(out)   :: EOSTableOut
     TYPE(DVIDCompOSEType), INTENT(in)                    :: NewDVID
-    INTEGER, INTENT(in)                           :: NewnVariables
+    INTEGER, INTENT(in)                                  :: NewnVariables
 
     CALL AllocateEquationOfStateTable( EOSTableOut, EOSTableIn % nPoints, &
                                      NewnVariables )

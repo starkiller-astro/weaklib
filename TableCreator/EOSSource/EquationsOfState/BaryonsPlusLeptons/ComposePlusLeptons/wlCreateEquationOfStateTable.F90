@@ -14,7 +14,7 @@ PROGRAM wlCreateEquationOfStateTable
         nTempMuon, nDenMuon, &
         ReadHelmEOSdat, ReadMuonEOSdat, &
         AllocateHelmholtzTable, DeallocateHelmholtzTable, &
-        AllocateMuonEOS, DeAllocateMuonEOS 
+        AllocateMuonTable, DeAllocateMuonTable 
     USE wlEosConstantsModule, ONLY: cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp
 
     IMPLICIT NONE
@@ -24,8 +24,8 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsDenon
     INTEGER                        :: nVariables
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
-    TYPE(HelmTableType) :: HelmEOSTable
-    TYPE(MuonTableType) :: MuonEOSTable
+    TYPE(HelmTableType) :: HelmTable
+    TYPE(MuonTableType) :: MuonTable
     
     CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &
         HelmDatFilePath, MuonDatFilePath, &
@@ -248,18 +248,18 @@ PROGRAM wlCreateEquationOfStateTable
     ! ------------- NOW DO ELECTRON EOS ------------------ !
     nPointsHelm = (/ iTempMax, iDenMax /)
     PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmEOSTable, nPointsHelm )
+    CALL AllocateHelmholtzTable( HelmTable, nPointsHelm )
     
     HelmDatFilePath = '../helm_table.dat'
-    CALL ReadHelmEOSdat( HelmDatFilePath, HelmEOSTable )
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTable )
     
     ! ------------- NOW DO MUON EOS ------------------ !
     nPointsDenon = (/ nTempMuon, nDenMuon /)
     PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonEOS( MuonEOSTable, nPointsDenon )
+    CALL AllocateMuonTable( MuonTable, nPointsDenon )
     
     MuonDatFilePath = '../muons_fixedrho.dat'
-    CALL ReadMuonEOSdat( MuonDatFilePath, MuonEOSTable )
+    CALL ReadMuonEOSdat( MuonDatFilePath, MuonTable )
     
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
@@ -270,20 +270,20 @@ PROGRAM wlCreateEquationOfStateTable
     ! NOW ADD Helmholtz EOS TO PREVIOUSLY CREATED H5 FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Appending Helmholtz EOS to HDF file"
-    CALL WriteHelmholtzTableHDF( HelmEOSTable, HelmEOSTableName, ReadFullTable )
+    CALL WriteHelmholtzTableHDF( HelmTable, HelmEOSTableName, ReadFullTable )
     CALL FinalizeHDF( )
     
     ! NOW ADD Muon EOS TO PREVIOUSLY CREATED H5 FILE
     CALL InitializeHDF( )
     WRITE (*,*) "Appending Muon EOS to HDF file"
-    CALL WriteMuonTableHDF( MuonEOSTable, MuonEOSTableName, ReadFullTable )
+    CALL WriteMuonTableHDF( MuonTable, MuonEOSTableName, ReadFullTable )
     CALL FinalizeHDF( )
     
     WRITE (*,*) "HDF write successful"
     
     CALL DeAllocateEquationOfStateTable( EOSTable )
-    CALL DeallocateHelmholtzTable( HelmEOSTable )
-    CALL DeAllocateMuonEOS( MuonEOSTable )
+    CALL DeallocateHelmholtzTable( HelmTable )
+    CALL DeAllocateMuonTable( MuonTable )
 
     ! Now Create Electron EOS
 

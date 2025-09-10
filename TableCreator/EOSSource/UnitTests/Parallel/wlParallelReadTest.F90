@@ -7,12 +7,9 @@ PROGRAM wlParallelReadTest
 
   USE wlKindModule, ONLY: dp 
   USE HDF5
-  USE wlExtEOSWrapperModule, ONLY: wlGetFullEOS
   USE wlEquationOfStateTableModule
-  USE wlInterpolationModule
-  USE wlExtTableFinishingModule
+  USE wlDependentVariablesModule
   USE wlParallelModule, ONLY: myid, ierr
-  USE wlExtNumericalModule, ONLY: epsilon, zero
   USE wlIOModuleHDF, ONLY: InitializeHDF, FinalizeHDF
   USE wlEOSIOModuleHDF, ONLY: ReadEquationOfStateTableHDF,         & 
                               WriteEquationOfStateTableHDF,        &

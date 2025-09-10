@@ -1,0 +1,49 @@
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Path
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
+
+.DEFAULT_GOAL := all
+
+all: wlParallelReadTest \
+     wlParallelReadTestCompose
+
+wlParallelReadTest: \
+	$(weaklib) wlParallelReadTest.o
+	$(FLINKER) $(FLAGS) -o wlParallelReadTest_$(MACHINE) \
+	$(weaklib) wlParallelReadTest.o \
+	$(LIBRARIES)
+
+wlParallelReadTestCompose: \
+	$(weaklib) wlParallelReadTestCompose.o
+	$(FLINKER) $(FLAGS) -o wlParallelReadTestCompose_$(MACHINE) \
+	$(weaklib) wlParallelReadTestCompose.o \
+	$(LIBRARIES)
+	
+clean:
+	rm -f *.o *.mod *.ld *.acc.s
+
+clobber: clean
+	rm -f *_$(MACHINE)
+
+wlParallelReadTest.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+	wlDependentVariablesModule.o \
+  wlParallelModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlParallelReadTest.F90
+
+wlParallelReadTestCompose.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+	wlDependentVariablesModule.o \
+  wlParallelModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+	wlHelmMuonIOModuleHDF.o \
+	wlLeptonEOSModule.o \
+  wlParallelReadTestCompose.F90

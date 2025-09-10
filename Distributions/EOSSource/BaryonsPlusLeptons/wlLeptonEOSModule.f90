@@ -90,8 +90,8 @@ MODULE wlLeptonEOSModule
   PUBLIC DeallocateHelmholtzTable
   PUBLIC ReadHelmEOSdat
 
-  PUBLIC AllocateMuonEOS
-  PUBLIC DeAllocateMuonEOS
+  PUBLIC AllocateMuonTable
+  PUBLIC DeAllocateMuonTable
   PUBLIC ReadMuonEOSdat
   
 CONTAINS
@@ -188,47 +188,47 @@ CONTAINS
   
   END SUBROUTINE DeallocateHelmholtzTable
 
-  SUBROUTINE AllocateMuonEOS( MuonEOS, nPoints )
+  SUBROUTINE AllocateMuonTable( MuonTable, nPoints )
     
-    TYPE(MuonTableType)      :: MuonEOS
+    TYPE(MuonTableType)      :: MuonTable
     INTEGER, DIMENSION(2), INTENT(IN) :: nPoints
 
-    MuonEOS % nPointsTemp  = nPoints(1)
-    MuonEOS % nPointsDen   = nPoints(2)
+    MuonTable % nPointsTemp  = nPoints(1)
+    MuonTable % nPointsDen   = nPoints(2)
 
-    ALLOCATE( MuonEOS % t( nPoints(1) ) )
-    ALLOCATE( MuonEOS % rhoym( nPoints(2) ) )
-    ALLOCATE( MuonEOS % mu( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % p( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % e( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % s( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % dlnPdlnrho( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % dlnPdlnT( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % dlnsdlnrho( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % dlnsdlnT( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % dlnedlnrho( nPoints(1), nPoints(2) ) )
-    ALLOCATE( MuonEOS % dlnedlnT( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % t( nPoints(1) ) )
+    ALLOCATE( MuonTable % rhoym( nPoints(2) ) )
+    ALLOCATE( MuonTable % mu( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % p( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % e( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % s( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % dlnPdlnrho( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % dlnPdlnT( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % dlnsdlnrho( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % dlnsdlnT( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % dlnedlnrho( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % dlnedlnT( nPoints(1), nPoints(2) ) )
 
-  END SUBROUTINE AllocateMuonEOS
+  END SUBROUTINE AllocateMuonTable
 
-  SUBROUTINE DeAllocateMuonEOS( MuonEOS )
+  SUBROUTINE DeAllocateMuonTable( MuonTable )
     
-    TYPE(MuonTableType)      :: MuonEOS
+    TYPE(MuonTableType)      :: MuonTable
 
-    DEALLOCATE( MuonEOS % t )
-    DEALLOCATE( MuonEOS % rhoym )
-    DEALLOCATE( MuonEOS % mu )
-    DEALLOCATE( MuonEOS % p )
-    DEALLOCATE( MuonEOS % e )
-    DEALLOCATE( MuonEOS % s )
-    DEALLOCATE( MuonEOS % dlnPdlnrho )
-    DEALLOCATE( MuonEOS % dlnPdlnT )
-    DEALLOCATE( MuonEOS % dlnsdlnrho )
-    DEALLOCATE( MuonEOS % dlnsdlnT )
-    DEALLOCATE( MuonEOS % dlnedlnrho )
-    DEALLOCATE( MuonEOS % dlnedlnT )
+    DEALLOCATE( MuonTable % t )
+    DEALLOCATE( MuonTable % rhoym )
+    DEALLOCATE( MuonTable % mu )
+    DEALLOCATE( MuonTable % p )
+    DEALLOCATE( MuonTable % e )
+    DEALLOCATE( MuonTable % s )
+    DEALLOCATE( MuonTable % dlnPdlnrho )
+    DEALLOCATE( MuonTable % dlnPdlnT )
+    DEALLOCATE( MuonTable % dlnsdlnrho )
+    DEALLOCATE( MuonTable % dlnsdlnT )
+    DEALLOCATE( MuonTable % dlnedlnrho )
+    DEALLOCATE( MuonTable % dlnedlnT )
 
-  END SUBROUTINE DeAllocateMuonEOS
+  END SUBROUTINE DeAllocateMuonTable
 
   SUBROUTINE ReadHelmEOSdat(HelmDatFilePath, HelmTable)
     
@@ -324,9 +324,9 @@ CONTAINS
     
   END  SUBROUTINE ReadHelmEOSdat
 
-  SUBROUTINE ReadMuonEOSdat(MuonDatFilePath, MuonEOS)
+  SUBROUTINE ReadMuonEOSdat(MuonDatFilePath, MuonTable)
     
-    TYPE(MuonTableType), INTENT(INOUT) :: MuonEOS 
+    TYPE(MuonTableType), INTENT(INOUT) :: MuonTable 
     CHARACTER(len=128), INTENT(IN) :: MuonDatFilePath
     
     ! Local variables
@@ -336,50 +336,50 @@ CONTAINS
         !..   read the muon table with Tobias' format
     OPEN(UNIT=1234,FILE=TRIM(ADJUSTL(MuonDatFilePath)), STATUS='old', IOSTAT=istat)
     IF (istat .ne. 0) THEN
-      WRITE(*,*) 'Cannot open MuonEOS table.dat!'
+      WRITE(*,*) 'Cannot open Muon table.dat!'
       STOP
     ENDIF
     
-    DO iT=1,MuonEOS % nPointsTemp
+    DO iT=1,MuonTable % nPointsTemp
       IF (iT .eq. (nDenMuon+1)*iT) THEN
         READ(1234,*)
       ENDIF
-      DO iDen=1,MuonEOS % nPointsDen
-        READ(1234,*) MuonEOS % t(iT), MuonEOS % rhoym(iDen), &
-          MuonEOS % p(iT,iDen), MuonEOS % e(iT,iDen), &
-          MuonEOS % s(iT,iDen), MuonEOS % mu(iT,iDen)
+      DO iDen=1,MuonTable % nPointsDen
+        READ(1234,*) MuonTable % t(iT), MuonTable % rhoym(iDen), &
+          MuonTable % p(iT,iDen), MuonTable % e(iT,iDen), &
+          MuonTable % s(iT,iDen), MuonTable % mu(iT,iDen)
       ENDDO
     ENDDO
     
     ! DO UNIT CONVERSION
     ! Based on Tobias's code, the chemical potential includes the muon rest mass
-    MuonEOS % t = MuonEOS % t * kmev_inv !MeV to kelvin
-    MuonEOS % rhoym = MuonEOS % rhoym * rmu/cm3fm3 !baryon number to g/cm^3
-    MuonEOS % p = MuonEOS % p * ergmev / cm3fm3 !MeV/fm^3 to dyn
-    MuonEOS % e = MuonEOS % e * ergmev / rmu 
-    MuonEOS % s = MuonEOS % s / (kmev * ergmev / rmu)
+    MuonTable % t = MuonTable % t * kmev_inv !MeV to kelvin
+    MuonTable % rhoym = MuonTable % rhoym * rmu/cm3fm3 !baryon number to g/cm^3
+    MuonTable % p = MuonTable % p * ergmev / cm3fm3 !MeV/fm^3 to dyn
+    MuonTable % e = MuonTable % e * ergmev / rmu 
+    MuonTable % s = MuonTable % s / (kmev * ergmev / rmu)
     
     ! NOW CALCULATE DERIVATIVES AT CONSTANT RHO
-    DO iDen=1,MuonEOS % nPointsDen
-      MuonEOS % dlnsdlnT(:,iDen) = Gradient3pts( LOG10(MuonEOS % s(:,iDen)), LOG10(MuonEOS % t), MuonEOS % nPointsTemp)
-      MuonEOS % dlnPdlnT(:,iDen) = Gradient3pts( LOG10(MuonEOS % p(:,iDen)), LOG10(MuonEOS % t), MuonEOS % nPointsTemp)
-      MuonEOS % dlnedlnT(:,iDen) = Gradient3pts( LOG10(MuonEOS % e(:,iDen)), LOG10(MuonEOS % t), MuonEOS % nPointsTemp)
+    DO iDen=1,MuonTable % nPointsDen
+      MuonTable % dlnsdlnT(:,iDen) = Gradient3pts( LOG10(MuonTable % s(:,iDen)), LOG10(MuonTable % t), MuonTable % nPointsTemp)
+      MuonTable % dlnPdlnT(:,iDen) = Gradient3pts( LOG10(MuonTable % p(:,iDen)), LOG10(MuonTable % t), MuonTable % nPointsTemp)
+      MuonTable % dlnedlnT(:,iDen) = Gradient3pts( LOG10(MuonTable % e(:,iDen)), LOG10(MuonTable % t), MuonTable % nPointsTemp)
     ENDDO
 
     ! NOW CALCULATE DERIVATIVES AT CONSTANT T
-    DO iT=1,MuonEOS % nPointsTemp
-      MuonEOS % dlnsdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % s(iT,:)), LOG10(MuonEOS % rhoym), MuonEOS % nPointsDen)
-      MuonEOS % dlnPdlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % p(iT,:)), LOG10(MuonEOS % rhoym), MuonEOS % nPointsDen)
-      MuonEOS % dlnedlnrho(iT,:) = Gradient3pts( LOG10(MuonEOS % e(iT,:)), LOG10(MuonEOS % rhoym), MuonEOS % nPointsDen)
+    DO iT=1,MuonTable % nPointsTemp
+      MuonTable % dlnsdlnrho(iT,:) = Gradient3pts( LOG10(MuonTable % s(iT,:)), LOG10(MuonTable % rhoym), MuonTable % nPointsDen)
+      MuonTable % dlnPdlnrho(iT,:) = Gradient3pts( LOG10(MuonTable % p(iT,:)), LOG10(MuonTable % rhoym), MuonTable % nPointsDen)
+      MuonTable % dlnedlnrho(iT,:) = Gradient3pts( LOG10(MuonTable % e(iT,:)), LOG10(MuonTable % rhoym), MuonTable % nPointsDen)
     ENDDO
     
     WRITE(*,*) 'Bounds of the Muon Table'
-    WRITE(*,*) MAXVAL(MuonEOS % t), MINVAL(MuonEOS % t)
-    WRITE(*,*) MAXVAL(MuonEOS % rhoym), MINVAL(MuonEOS % rhoym)
-    WRITE(*,*) MAXVAL(MuonEOS % p), MINVAL(MuonEOS % p)
-    WRITE(*,*) MAXVAL(MuonEOS % e), MINVAL(MuonEOS % e)
-    WRITE(*,*) MAXVAL(MuonEOS % s), MINVAL(MuonEOS % s)
-    WRITE(*,*) MAXVAL(MuonEOS % mu), MINVAL(MuonEOS % mu)
+    WRITE(*,*) MAXVAL(MuonTable % t), MINVAL(MuonTable % t)
+    WRITE(*,*) MAXVAL(MuonTable % rhoym), MINVAL(MuonTable % rhoym)
+    WRITE(*,*) MAXVAL(MuonTable % p), MINVAL(MuonTable % p)
+    WRITE(*,*) MAXVAL(MuonTable % e), MINVAL(MuonTable % e)
+    WRITE(*,*) MAXVAL(MuonTable % s), MINVAL(MuonTable % s)
+    WRITE(*,*) MAXVAL(MuonTable % mu), MINVAL(MuonTable % mu)
     
   END SUBROUTINE ReadMuonEOSdat
 

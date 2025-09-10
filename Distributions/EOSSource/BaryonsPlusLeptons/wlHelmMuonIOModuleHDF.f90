@@ -5,7 +5,7 @@ MODULE wlHelmMuonIOModuleHDF
         HelmTableType, &
         AllocateHelmholtzTable, DeallocateHelmholtzTable, &
         MuonTableType, &
-        AllocateMuonEOS, DeAllocateMuonEOS
+        AllocateMuonTable, DeAllocateMuonTable
     USE wlIOModuleHDF
     USE HDF5
     
@@ -277,7 +277,7 @@ CONTAINS
         CALL CloseGroupHDF( group_id )
         
         ! Allocate Muon EOS
-        CALL AllocateMuonEOS( MuonTable, nPoints )
+        CALL AllocateMuonTable( MuonTable, nPoints )
 
         CALL OpenGroupHDF( "MuonTable", .false., file_id, group_id )
 

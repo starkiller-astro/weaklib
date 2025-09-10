@@ -17,7 +17,7 @@ PROGRAM wlCreateEquationOfStateTable
         nTempMuon, nDenMuon, &
         ReadHelmEOSdat, ReadMuonEOSdat, &
         AllocateHelmholtzTable, DeallocateHelmholtzTable, &
-        AllocateMuonEOS, DeAllocateMuonEOS 
+        AllocateMuonTable, DeAllocateMuonTable 
     USE wlElectronPhotonEOS, ONLY: &
       ElectronPhotonEOS, ElectronPhotonStateType
     USE wlMuonEOS, ONLY: &
@@ -96,7 +96,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! ------------- NOW DO MUON EOS ------------------ !
     nPoints2D = (/ nTempMuon, nDenMuon /)
     PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonEOS( MuonTable, nPoints2D )
+    CALL AllocateMuonTable( MuonTable, nPoints2D )
     
     MuonDatFilePath = '../muons_fixedrho.dat'
     CALL ReadMuonEOSdat( MuonDatFilePath, MuonTable )
@@ -719,7 +719,7 @@ PROGRAM wlCreateEquationOfStateTable
     
     CALL DeAllocateEquationOfStateTable( EOSTable )
     CALL DeallocateHelmholtzTable( HelmTable )
-    CALL DeAllocateMuonEOS( MuonTable )
+    CALL DeAllocateMuonTable( MuonTable )
 
     ! Now Create Electron EOS
 
