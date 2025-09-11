@@ -1491,18 +1491,27 @@ print*, '>>> NES eta', eta
   !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
   ! END DO
 
-    !-- Bruenn et al. (2020) Fig. 28
+    !-- Bruenn et al. (2020) Isoenergetic scattering figures
 
-    j_rho = 118
+!    j_rho = 118 !-- 10^11 g cm^-3 
+!    j_rho = 103 !-- 10^10 g cm^-3 
+!    j_rho = 133 !-- 10^12 g cm^-3 
+    j_rho = 163 !-- 10^14 g cm^-3 
     rho = OpacityTable % TS % States (iRho) % Values (j_rho)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3)', j_rho, '    ', rho
 
-    k_t = 25
+!    k_t = 25  !--  0.9 MeV
+!    k_t = 38  !--  3.0 MeV
+!    k_t = 51  !-- 10.0 MeV
+    k_t = 53  !-- 12.0 MeV
     T = OpacityTable % TS % States (iT) % Values (k_t)
     TMeV = T * kMeV
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'T (MeV)      ', k_t, '    ', TMeV
 
-    l_ye = 20
+!    l_ye = 20  !-- 0.4
+!    l_ye = 13  !-- 0.25
+!    l_ye =  5  !-- 0.1
+    l_ye = 14  !-- 0.27
     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
 
@@ -1536,8 +1545,6 @@ print*, '>>> NES eta', eta
     phi1_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
                        ( :, 2, j_rho, k_t, l_ye )
 
-    WRITE (*,*)
-    WRITE (*,*) '>>> Pi', acos(-1.0d0) 
     WRITE (*,*)
     WRITE (*,*) '>>> Nu Iso: E, Phi0, Phi1, 1/Lambda'
     DO iE = 1, nPointsE
