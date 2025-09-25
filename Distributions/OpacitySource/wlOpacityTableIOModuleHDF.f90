@@ -2066,7 +2066,77 @@ CONTAINS
 
         CALL h5eset_auto_f( 1, hdferr )
 
-      TYPE IS ( OpacityTypeScatNES )
+     TYPE IS ( OpacityTypeScatNNS )
+
+        CALL h5fget_name_f( group_id, FileName, flength, hdferr )
+          
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "weak_magnetism_corr", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset weak_magnetism_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+            
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "weak_magnetism_corr", buffer, group_id, datasize1d )
+          Scat % weak_magnetism_corrections = buffer(1)
+
+        ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "many_body_corr", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset many_body_corr not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "many_body_corr", buffer, group_id, datasize1d )
+          Scat % many_body_corrections = buffer(1)
+        ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
+
+        CALL h5eset_auto_f( 0, hdferr )
+ 
+        CALL h5dopen_f( group_id, "ga_strange", dataset_id, hdferr )
+
+        IF( hdferr .ne. 0 ) THEN
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+            WRITE(*,*) 'Dataset ga_strange not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+          ENDIF
+
+          CALL h5eclear_f( hdferr )
+        ELSE
+          datasize1d(1) = 1
+          CALL ReadHDF( "ga_strange", bufferReal, group_id, datasize1d )
+          Scat % ga_strange = bufferReal(1)
+        ENDIF
+
+        CALL h5eset_auto_f( 1, hdferr )
+
+     TYPE IS ( OpacityTypeScatNES )
 
         CALL h5fget_name_f( group_id, FileName, flength, hdferr )
           
