@@ -437,8 +437,8 @@ END IF
    OpacityTable % Scat_NNS % nPoints(5) = nPointsMuB
 
    OpacityTable % Scat_NNS % Names = (/'Nu on Neutron   ', &
-                                       'Nu on Proton    ', &
                                        'NuBar on Neutron', &
+                                       'Nu on Proton    ', &
                                        'NuBar on Proton '/)
 
    OpacityTable % Scat_NNS % Units = (/'TBD', &

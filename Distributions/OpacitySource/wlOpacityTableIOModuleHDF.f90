@@ -1730,6 +1730,72 @@ CONTAINS
     END IF
 
 
+    IF( ReadOpacity(iNNS) ) THEN
+
+      IF( Verbose )THEN
+
+        WRITE(*,'(A6,A9,A)') '', 'Reading: ', TRIM( FileName(iNNS) )
+
+      END IF
+
+      CALL OpenFileHDF( FileName(iNNS), .FALSE., file_id )
+
+      CALL OpenGroupHDF &
+             ( "Scat_NNS_Kernels", .FALSE., file_id, group_id )
+
+      datasize2d(1) = OpacityTable % Scat_NNS % nOpacities
+      datasize2d(2) = OpacityTable % Scat_NNS % nMoments
+
+      CALL ReadHDF &
+             ( "Offsets", OpacityTable % Scat_NNS % Offsets, &
+               group_id, datasize2d )
+
+      datasize1d = OpacityTable % Scat_NNS % nOpacities
+      CALL ReadHDF &
+             ( "Units",   OpacityTable % Scat_NNS % Units,   &
+               group_id, datasize1d )
+
+      datasize5d(1:2) = OpacityTable % EnergyGrid % nPoints
+      datasize5d(3)   = OpacityTable % Scat_NNS % nMoments
+      datasize5d(4)   = &
+        OpacityTable % TS % nPoints(OpacityTable % TS % Indices % iT)
+      datasize5d(5)   = OpacityTable % MuBGrid % nPoints
+
+      OpacityTable % Scat_NNS % Names(1) = "Nu on Neutron"
+
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_NNS % Names(1) ), &
+               OpacityTable % Scat_NNS % Kernel(1) % Values, &
+               group_id, datasize5d )
+
+      OpacityTable % Scat_NNS % Names(2) = "NuBar on Neutron"
+
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_NNS % Names(2) ), &
+               OpacityTable % Scat_NNS % Kernel(2) % Values, &
+               group_id, datasize5d )
+
+      OpacityTable % Scat_NNS % Names(3) = "Nu on Proton"
+
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_NNS % Names(3) ), &
+               OpacityTable % Scat_NNS % Kernel(3) % Values, &
+               group_id, datasize5d )
+
+      OpacityTable % Scat_NNS % Names(4) = "NuBar on Proton"
+
+      CALL ReadHDF &
+             ( TRIM( OpacityTable % Scat_NNS % Names(4) ), &
+               OpacityTable % Scat_NNS % Kernel(4) % Values, &
+               group_id, datasize5d )
+
+      CALL CloseGroupHDF( group_id )
+
+      CALL CloseFileHDF( file_id )
+
+    END IF
+
+
     IF( ReadOpacity(iNES) ) THEN
 
       IF( Verbose )THEN
