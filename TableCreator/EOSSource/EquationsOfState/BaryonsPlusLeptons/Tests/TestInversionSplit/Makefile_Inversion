@@ -19,12 +19,18 @@ wlInversion = \
 	$(SHAREDMODULES) \
   $(COMMON_MODS_OBJ)
   
-all: wlEOSComposeInversionTest
+all: wlEOSComposeInversionTest wlEOSComposeInversionTestOnePointEnergy
 
 wlEOSComposeInversionTest: \
 	$(wlInversion) wlEOSComposeInversionTest.o
 	$(FLINKER) $(FLAGS) -o wlEOSComposeInversionTest_$(MACHINE) \
 	$(wlInversion) wlEOSComposeInversionTest.o \
+	$(LIBRARIES)
+
+wlEOSComposeInversionTestOnePointEnergy: \
+	$(wlInversion) wlEOSComposeInversionTestOnePointEnergy.o
+	$(FLINKER) $(FLAGS) -o wlEOSComposeInversionTestOnePointEnergy_$(MACHINE) \
+	$(wlInversion) wlEOSComposeInversionTestOnePointEnergy.o \
 	$(LIBRARIES)
 
 clean:
@@ -47,4 +53,21 @@ wlEOSComposeInversionTest.o: \
   wlHelmMuonIOModuleHDF.o \
   wlExtPhysicalConstantsModule.o \
   wlEOSComposeInversionTest.F90
+
+
+wlEOSComposeInversionTestOnePointEnergy.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlEOSComponentsCombinedInversionModule.o \
+  wlEOSInversionModule.o \
+  wlLeptonEOSModule.o \
+  wlElectronPhotonEOS.o \
+  wlMuonEOS.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlExtPhysicalConstantsModule.o \
+  wlEOSComposeInversionTestOnePointEnergy.F90
 

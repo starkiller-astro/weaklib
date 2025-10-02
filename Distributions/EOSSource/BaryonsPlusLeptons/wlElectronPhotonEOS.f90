@@ -42,7 +42,12 @@ MODULE wlElectronPhotonEOS
 CONTAINS
 
   SUBROUTINE ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-     
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
     !..input arguments
     TYPE(HelmTableType), INTENT(IN) :: HelmTable
     TYPE (ElectronPhotonStateType), INTENT(INOUT) :: ElectronPhotonState

@@ -19,7 +19,6 @@ MODULE wlEosTemperatureSeparateInversionModule
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: InitializeLeptonTables
   PUBLIC :: InvertTemperatureWith_DEYpYl_Guess
   PUBLIC :: InvertTemperatureWith_DEYpYl_NoGuess
   PUBLIC :: InvertTemperatureWith_DPYpYl_Guess
@@ -27,24 +26,11 @@ MODULE wlEosTemperatureSeparateInversionModule
   PUBLIC :: InvertTemperatureWith_DSYpYl_Guess
   PUBLIC :: InvertTemperatureWith_DSYpYl_NoGuess
   
-  TYPE(HelmTableType), POINTER :: HelmTable 
-  TYPE(MuonTableType), POINTER :: MuonTable
-  
 CONTAINS
-
-  SUBROUTINE InitializeLeptonTables( HelmTable_In, MuonTable_In )
-
-    TYPE(HelmTableType), POINTER, INTENT(IN) :: HelmTable_In
-    TYPE(MuonTableType), POINTER, INTENT(IN) :: MuonTable_In
-
-    HelmTable => HelmTable_In
-    MuonTable => MuonTable_In
-
-  END SUBROUTINE InitializeLeptonTables
 
   REAL(dp) FUNCTION InverseLogInterp( x_a, x_b, y_a, y_b, y, OS )
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+   !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -59,10 +45,10 @@ CONTAINS
   END FUNCTION InverseLogInterp
   
   SUBROUTINE InvertTemperatureWith_DEYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, T_Guess, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, T_Guess, Error, HelmTable, MuonTable )
 
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -91,6 +77,8 @@ CONTAINS
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
@@ -314,10 +302,10 @@ CONTAINS
   END SUBROUTINE InvertTemperatureWith_DEYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DEYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
 
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -344,6 +332,8 @@ CONTAINS
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
@@ -510,10 +500,10 @@ CONTAINS
 
   
   SUBROUTINE InvertTemperatureWith_DPYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
 
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -542,6 +532,8 @@ CONTAINS
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
@@ -802,10 +794,10 @@ CONTAINS
   END SUBROUTINE InvertTemperatureWith_DPYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DPYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
 
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -833,6 +825,8 @@ CONTAINS
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
 
     ! Electron and Muon quantities
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
@@ -1022,10 +1016,10 @@ CONTAINS
 
   
   SUBROUTINE InvertTemperatureWith_DSYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
 
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -1053,6 +1047,8 @@ CONTAINS
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
 
     ! Electron and Muon quantities
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 
@@ -1274,10 +1270,10 @@ CONTAINS
   END SUBROUTINE InvertTemperatureWith_DSYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, Error )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, Error, HelmTable, MuonTable )
 
 #if defined(WEAKLIB_OMP_OL)
-!    !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
@@ -1304,6 +1300,8 @@ CONTAINS
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    TYPE(MuonTableType), INTENT(IN) :: MuonTable
     TYPE(ElectronPhotonStateType) :: ElectronPhotonState
     TYPE(MuonStateType) :: MuonState
 

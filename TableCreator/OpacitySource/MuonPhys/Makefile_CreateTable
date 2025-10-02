@@ -1,0 +1,40 @@
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
+
+Weaklib_EOSTableCreator = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(WL_EOSSOURCE_SPLIT) \
+	$(WL_EOSSOURCE_4D) \
+  $(WL_OPACITYSOURCE) \
+	$(WL_OPACITYSOURCE_GSI)
+
+all: wlCreate4DAbEmOpacityTable
+ 
+wlCreate4DAbEmOpacityTable: \
+	$(Weaklib_EOSTableCreator) wlCreate4DAbEmOpacityTable.o
+	$(FLINKER) $(FLAGS) -o wlCreate4DAbEmOpacityTable_$(MACHINE) \
+	$(Weaklib_EOSTableCreator) wlCreate4DAbEmOpacityTable.o \
+	$(LIBRARIES)
+
+wlCreate4DAbEmOpacityTable.o: \
+  wlKindModule.o \
+	wlEosConstantsModule.o \
+	wlInterpolationModule.o \
+  wlIOModuleHDF.o \
+	wlEquationOfStateTableModule.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSModule.o \
+  wlMuonEOS.o \
+  wlElectronPhotonEOS.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlSemiLeptonicOpacityModule2D.o \
+	wlCalculateAbEmOpacityModule.o \
+	wlOpacityTableModule.o \
+	wlOpacityTableIOModuleHDF.o \
+	wlOpacityFieldsModule.o
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm wlCreateEOSTable_$(MACHINE)

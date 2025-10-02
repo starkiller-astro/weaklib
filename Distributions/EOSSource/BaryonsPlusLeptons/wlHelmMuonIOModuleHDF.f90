@@ -283,13 +283,14 @@ CONTAINS
 
         datasize1d = MuonTable % nPointsTemp
         CALL ReadHDF( "Temperature", MuonTable % t, group_id, datasize1d )
+        datasize1d = MuonTable % nPointsDen
         CALL ReadHDF( "Density", MuonTable % rhoym, group_id, datasize1d )
 
         datasize2d = (/ MuonTable % nPointsTemp, MuonTable % nPointsDen /) 
         CALL ReadHDF( "Pressure", MuonTable % p(:,:),     group_id, datasize2d )
         CALL ReadHDF( "InternalEnergy", MuonTable % e(:,:),    group_id, datasize2d )
         CALL ReadHDF( "Entropy", MuonTable % s(:,:),    group_id, datasize2d )
-        CALL ReadHDF( "Mu", MuonTable % mu, group_id, datasize2d )
+        CALL ReadHDF( "Mu", MuonTable % mu(:,:), group_id, datasize2d )
 
         CALL CloseGroupHDF( group_id )
         CALL CloseFileHDF( file_id )

@@ -33,7 +33,11 @@ CONTAINS
     
     ! INTERPOLATION ROUTINES FROM TOBIAS
     SUBROUTINE FullMuonEOS(MuonTable, MuonState, CalculateDerivatives_Option)
-        
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
         TYPE(MuonTableType), INTENT(IN) :: MuonTable
         TYPE (MuonStateType), INTENT(INOUT) :: MuonState
         LOGICAL, DIMENSION(3), OPTIONAL, INTENT(IN)  :: CalculateDerivatives_Option

@@ -426,7 +426,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
            ( D(iP), E(iP), Ye(iP), Ym(iP), &
            Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, &
-           T_E(iP), T_Guess, Error_E(iP) )
+           T_E(iP), T_Guess, Error_E(iP), HelmTable, MuonTable )
   END DO
   
   CALL CPU_TIME( tEnd )
@@ -493,7 +493,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
            ( D(iP), E(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), T_Guess, &
-             Error_E(iP) )
+             Error_E(iP), HelmTable, MuonTable )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -542,7 +542,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DEYpYl_Single_NoGuess &
            ( D(iP), E(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), &
-             Error_E(iP) )
+             Error_E(iP), HelmTable, MuonTable )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -605,7 +605,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
            ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             Error_S(iP) )
+             Error_S(iP), HelmTable, MuonTable )
   END DO
   WRITE(*,*) 1, MAXVAL(Error_S), MAXVAL(T_S)
 
@@ -668,7 +668,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
            ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             Error_S(iP) )
+             Error_S(iP), HelmTable, MuonTable )
   END DO
   
   CALL CPU_TIME( tEnd )
@@ -718,7 +718,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DSYpYl_Single_NoGuess &
            ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), &
-             Error_S(iP) )
+             Error_S(iP), HelmTable, MuonTable )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -787,7 +787,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
            ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             Error_P(iP) )
+             Error_P(iP), HelmTable, MuonTable )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -852,7 +852,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
            ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             Error_P(iP) )
+             Error_P(iP), HelmTable, MuonTable )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -902,7 +902,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DPYpYl_Single_NoGuess &
            ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), &
-             Error_P(iP) )
+             Error_P(iP), HelmTable, MuonTable )
   END DO
 
   CALL CPU_TIME( tEnd )
