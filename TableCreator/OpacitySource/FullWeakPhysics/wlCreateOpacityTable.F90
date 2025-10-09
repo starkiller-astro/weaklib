@@ -785,6 +785,7 @@ PRINT*, 'Filling OpacityTable ...'
 
          OpacityTable % EmAb % EC_table_Ye(l_ye) = OpacityTable % TS % States (iYe) % Values (iYe_EOS)
          ye = OpacityTable % EmAb % EC_table_Ye(l_ye)
+print*, '>>> EmAb nuclei table Ye', Ye 
 
          DO k_t = 1, nPointsT
 
@@ -878,7 +879,7 @@ PRINT*, 'Filling OpacityTable ...'
      CALL init_quad_abem
      CALL load_polylog_weaklib
 
-   END IF
+   END IF !-- EmAb_nuclei_EC_table .gt. 0
 
    !these are multiplicative corrections
    xi_n_wm  = 1.0d0
@@ -893,6 +894,7 @@ PRINT*, 'Filling OpacityTable ...'
    DO l_ye = 1, nYe
 
      ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+print*, '>>> EmAb nucleons Ye', Ye 
 
      DO k_t = 1, nT
 
@@ -1358,6 +1360,7 @@ print*, '>>> NES eta', eta
       DO i_eta = 1, nPointsEta
 
         eta = OpacityTable % EtaGrid % Values(i_eta)
+print*, '>>> Pair eta', eta 
 
         DO k_t = 1, OpacityTable % nPointsTS(iT)
 
@@ -1413,9 +1416,11 @@ print*, '>>> NES eta', eta
 
    DO k_t = 1, OpacityTable % nPointsTS(iT)
 
+     T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
+print*, '>>> Brem T', T 
+
     DO j_rho = 1, OpacityTable % nPointsTS(iRho)
 
-      T = OpacityTable % EOSTable % TS % States (iT) % Values (k_t)
       rho = OpacityTable % EOSTable % TS % States (iRho) % Values (j_rho)
 
        CALL bremcal_weaklib &
@@ -1443,7 +1448,7 @@ print*, '>>> NES eta', eta
   CALL DescribeOpacityTable( OpacityTable )
 
 !----------------------------------------------------------
-!           Quick and dirty output
+!           Quick and dirty NNS output
 !----------------------------------------------------------
 
   QuickDirty: BLOCK
