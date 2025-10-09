@@ -30,7 +30,8 @@ PROGRAM wlReadOpacityTableTest
            FileName_Brem_Option &
            = "wl-Op-SFHo-15-25-50-E40-Brem.h5", &
            EquationOfStateTableName_Option &
-           = "wl-EOS-SFHo-15-25-50.h5" )
+           = "wl-EOS-SFHo-15-25-50.h5", &
+           Verbose_Option = .true. )
 
   CALL DescribeOpacityTable( OpacityTable )
 
