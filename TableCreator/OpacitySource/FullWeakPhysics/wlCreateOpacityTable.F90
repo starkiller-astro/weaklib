@@ -184,8 +184,8 @@ IMPLICIT NONE
                               !Horowitz et al 2017
 
    REAL(DP), PARAMETER     :: Scat_ga_strange &
-!                              = -0.1d0
-                              = 0.0d0
+                              = -0.1d0
+!                              = 0.0d0
                               !Include strange-quark contributions to the axial vector coupling constant ga
                               !Value from Hobbs et al 2016
 
@@ -204,17 +204,17 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
    INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
-   INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
    INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
 
-   INTEGER, PARAMETER      :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: nOpac_Brem = 0  !Only S_sigma(eps+eps') is needed for all
+   INTEGER, PARAMETER      :: nOpac_Brem = 1  !Only S_sigma(eps+eps') is needed for all
    INTEGER, PARAMETER      :: nMom_Brem  = 1  !species and moments
 
 !---------------------------------------------------------------------

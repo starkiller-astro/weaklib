@@ -19,3 +19,8 @@ wlCreateOpacityTable.o: \
   ec_table_module.o \
   scat_n_module_weaklib.o \
   wlExtEOSWrapperModule.o
+
+wlReadOpacityTableTest.o: \
+  wlIOModuleHDF.o \
+  wlOpacityTableModule.o \
+  wlOpacityTableIOModuleHDF.o

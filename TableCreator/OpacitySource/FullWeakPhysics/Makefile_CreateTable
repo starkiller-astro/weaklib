@@ -30,7 +30,7 @@ Weaklib_TableCreator = \
   $(EOS_OBJ) \
   $(FULL_KINEMATICS)
 
-all: wlCreateOpacityTable 
+all: wlCreateOpacityTable wlReadOpacityTableTest
 
 wlCreateOpacityTable: \
 	$(Weaklib_TableCreator) wlCreateOpacityTable.o
@@ -38,8 +38,15 @@ wlCreateOpacityTable: \
 	$(Weaklib_TableCreator) wlCreateOpacityTable.o \
 	$(LIBRARIES)
 
+wlReadOpacityTableTest: \
+	$(Weaklib_TableCreator) wlReadOpacityTableTest.o
+	$(FLINKER) $(FLAGS) -o wlReadOpacityTableTest_$(MACHINE) \
+	$(Weaklib_TableCreator) wlReadOpacityTableTest.o \
+	$(LIBRARIES)
+
 clean:
 	rm -f *.o *.mod *.ld
 
 clobber: clean
 	rm wlCreateOpacityTable_$(MACHINE)
+	rm wlReadOpacityTableTest_$(MACHINE)
