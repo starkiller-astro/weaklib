@@ -179,7 +179,7 @@ IMPLICIT NONE
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
    INTEGER, PARAMETER      :: Scat_many_body_corrections &
-                              = 1
+                              = 0
                               !Modification to neutral current scattering due to many-body effects
                               !Horowitz et al 2017
 
