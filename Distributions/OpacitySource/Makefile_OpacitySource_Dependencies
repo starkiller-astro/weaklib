@@ -10,7 +10,7 @@ wlOpacityTableModule.o: \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlEquationOfStateTableModule.o \
-  wlOpacityTableModule.f90
+  wlOpacityTableModule.F90
 
 wlOpacityTableIOModuleHDF.o: \
   wlKindModule.o \
