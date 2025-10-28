@@ -50,6 +50,7 @@ CONTAINS
         real(dp) :: temp, rhoym, logt, logrhoymu
         real(dp) :: dt,dd
         real(dp) :: rd,rt
+        real(dp) :: sign_ym
         integer :: it, it_1, iDen, it_max, iDen_max
         
         IF ( PRESENT(CalculateDerivatives_Option) ) THEN
@@ -65,6 +66,8 @@ CONTAINS
         !....convert input variables to log scale .............................
         temp  = MuonState % t
         rhoym = MuonState % rhoym
+        sign_ym = SIGN(1.0d0,rhoym)
+        rhoym = ABS(rhoym) 
 
         IF(  rhoym < MuonTable % rhoym(1) &
         .OR. temp  < MuonTable % t(1) &
@@ -118,6 +121,7 @@ CONTAINS
              +  rt *(1.-rd) * MuonTable % mu(it+1,iDen  ) &
              +     rt * rd  * MuonTable % mu(it+1,iDen+1) &
              + (1.-rt)* rd  * MuonTable % mu(it  ,iDen+1)
+        MuonState % mu = MuonState % mu * sign_ym
              
         MuonState % p = & ! pressure              [MeV/fm^3]
             (1.-rt)*(1.-rd) * MuonTable % p(it  ,iDen  ) &
