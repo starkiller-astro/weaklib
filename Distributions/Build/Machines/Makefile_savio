@@ -1,0 +1,25 @@
+## Makefile definitions for Savio
+
+FORTRAN = mpiifort -cpp
+FLINKER = mpiifort
+
+DEBUG    = -g -Og -ggdb -ftrapv -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -fbacktrace
+OPTIMIZE = -g -O2
+
+SUFFIX_f90 =
+
+MDEFS =
+PP    = -D
+
+ifeq ($(USE_OMP),TRUE)
+  OPENMP = -fopenmp
+else ifeq ($(USE_OMP_OL),TRUE)
+  OPENMP = -fopenmp
+endif
+
+ifeq ($(USE_OACC),TRUE)
+  OPENACC = -fopenacc
+endif
+
+INCLUDE_HDF5   = -I$(HDF5DIR)/include
+LIBRARIES_HDF5 = -L$(HDF5DIR)/lib -lhdf5_fortran -lhdf5
