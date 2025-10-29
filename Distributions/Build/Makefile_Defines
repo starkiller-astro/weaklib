@@ -1,5 +1,5 @@
-MDEFS 	?=
-PP 			?= -D
+MDEFS ?=
+PP ?= -D
 
 ifeq ($(USE_GPU),TRUE)
    DEFINES      += $(MDEFS)$(PP)WEAKLIB_GPU
@@ -21,10 +21,30 @@ endif
 
 USE_CUBA ?= FALSE
 ifeq ($(USE_CUBA),TRUE)
-  DEFINES   += $(MDEFS)$(PP)WEAKLIB_CUBA
+   DEFINES      += $(MDEFS)$(PP)WEAKLIB_CUBA
 endif
 
 EOSMODE	?= 3D # Possible are 4D, 3D, COMPOSE. 3D is the "old" weaklib table
 
-DEFINES += \
-	$(MDEFS)$(PP)EOSMODE_$(EOSMODE)
+DEFINES += $(MDEFS)$(PP)EOSMODE_$(EOSMODE)
+
+WL_GIT_HASH \
+  := $(shell \
+     git -C $(WEAKLIB_DIR) --no-pager describe --tags --always --dirty --exclude '*')
+DEFINES += $(MDEFS)$(PP)WL_GIT_HASH=\"$(WL_GIT_HASH)\"
+
+WL_GIT_DATE \
+  := $(firstword \
+     $(shell \
+     git -C $(WEAKLIB_DIR) --no-pager show --date=short --format="%ad" --name-only))
+DEFINES += $(MDEFS)$(PP)WL_GIT_DATE=\"$(WL_GIT_DATE)\"
+
+WL_GIT_BRANCH \
+  := $(shell \
+     git -C $(WEAKLIB_DIR) rev-parse --abbrev-ref HEAD)
+DEFINES += $(MDEFS)$(PP)WL_GIT_BRANCH=\"$(WL_GIT_BRANCH)\"
+
+WL_GIT_URL \
+  := $(shell \
+     git -C $(WEAKLIB_DIR) config --get remote.origin.url)
+DEFINES += $(MDEFS)$(PP)WL_GIT_URL=\"$(WL_GIT_URL)\"
