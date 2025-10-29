@@ -243,11 +243,11 @@ CONTAINS
         !..   read the helmholtz free energy table
         tlo   = 3.0d0
         thi   = 13.0d0
-        tstp  = (thi - tlo)/float(HelmTable % nPointsTemp-1)
+        tstp  = (thi - tlo)/real(HelmTable % nPointsTemp-1, dp)
         tstpi = 1.0d0/tstp
         dlo   = -12.0d0
         dhi   = 15.0d0
-        dstp  = (dhi - dlo)/float(HelmTable % nPointsDen-1)
+        dstp  = (dhi - dlo)/real(HelmTable % nPointsDen-1,  dp)
         dstpi = 1.0d0/dstp
     
         do iT=1,HelmTable % nPointsTemp

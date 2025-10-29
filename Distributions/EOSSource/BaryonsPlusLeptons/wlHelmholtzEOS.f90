@@ -194,8 +194,8 @@ CONTAINS
     hight = HelmTable % maxtemp
     highd = HelmTable % maxdens
         
-    tstp  = (LOG10(hight) - LOG10(smallt))/float(HelmTable % nPointsTemp -1)
-    dstp  = (LOG10(highd) - LOG10(smalld))/float(HelmTable % nPointsDen -1)
+    tstp  = (LOG10(hight) - LOG10(smallt))/real(HelmTable % nPointsTemp -1, dp)
+    dstp  = (LOG10(highd) - LOG10(smalld))/real(HelmTable % nPointsDen -1,  dp)
     
     tstpi = 1.0_dp / tstp
     dstpi = 1.0_dp / dstp
