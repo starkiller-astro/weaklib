@@ -6,4 +6,5 @@ include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_Object
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI/Makefile_OpacitySourceGSI_ObjectFiles
 
 weaklib = \
-	$(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(WL_OPACITYSOURCE_GSI) $(WL_EOSSOURCE_SPLIT) $(WL_EOSSOURCE_4D)
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) \
+  $(WL_OPACITYSOURCE_GSI) $(WL_EOSSOURCE_SPLIT) $(WL_EOSSOURCE_4D)
