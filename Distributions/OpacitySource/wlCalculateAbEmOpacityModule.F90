@@ -30,6 +30,11 @@ CONTAINS
 
   SUBROUTINE ElasticAbsorptionOpacityNum(D, T, Enu, Mun, Mn_eff, Un, Xn, &
     Mup, Mp_eff, Up, Xp, Mumu, OpElNum, OpElNumBar)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
     
     REAL(DP), INTENT(IN) :: D, T, Enu
     REAL(DP), INTENT(IN) :: Mun, Mn_eff, Un, Xn
@@ -56,6 +61,11 @@ CONTAINS
 
   SUBROUTINE ElasticAbsorptionOpacityNue(D, T, Enu, Mun, Mn_eff, Un, Xn, &
     Mup, Mp_eff, Up, Xp, Mue, OpElNue, OpElNueBar)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
   
     REAL(DP), INTENT(IN)  :: D, T, Enu
     REAL(DP), INTENT(IN)  :: Mun, Mn_eff, Un, Xn
@@ -81,6 +91,11 @@ CONTAINS
   
   SUBROUTINE ElasticAbsorptionOpacity(T, E1, Mu2, M2, M2_eff, U2, n2, &
     Mu3, M3, Mu4, M4, M4_eff, U4, n4, OpEl)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     ! For absorptivity of neutrinos we have: 
     ! 1 is neutrino, 2 is neutron, 3 is lepton, 4 is proton
