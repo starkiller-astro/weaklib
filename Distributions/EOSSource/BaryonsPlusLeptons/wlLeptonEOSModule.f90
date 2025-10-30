@@ -8,7 +8,7 @@ MODULE wlLeptonEOSModule
   PRIVATE
   
     INTEGER, PARAMETER, PUBLIC :: iTempMax=541, iDenMax=201 
-    INTEGER, PARAMETER, PUBLIC :: nTempMuon=270, nDenMuon=1501 
+    INTEGER, PARAMETER, PUBLIC :: nTempMuon=270, nDenMuon=1301 
   
    TYPE, PUBLIC :: HelmTableType
     
@@ -72,8 +72,8 @@ MODULE wlLeptonEOSModule
     INTEGER :: nPointsTemp
     
     REAL(dp), DIMENSION(:),   ALLOCATABLE :: t
-    REAL(dp), DIMENSION(:),   ALLOCATABLE :: rhoym
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: mu
+    REAL(dp), DIMENSION(:,:), ALLOCATABLE :: rhoym
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: p
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: e
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: s
@@ -194,11 +194,11 @@ CONTAINS
     INTEGER, DIMENSION(2), INTENT(IN) :: nPoints
 
     MuonTable % nPointsTemp  = nPoints(1)
-    MuonTable % nPointsDen   = nPoints(2)
+    MuonTable % nPointsDen    = nPoints(2)
 
     ALLOCATE( MuonTable % t( nPoints(1) ) )
-    ALLOCATE( MuonTable % rhoym( nPoints(2) ) )
     ALLOCATE( MuonTable % mu( nPoints(1), nPoints(2) ) )
+    ALLOCATE( MuonTable % rhoym( nPoints(1), nPoints(2) ) )
     ALLOCATE( MuonTable % p( nPoints(1), nPoints(2) ) )
     ALLOCATE( MuonTable % e( nPoints(1), nPoints(2) ) )
     ALLOCATE( MuonTable % s( nPoints(1), nPoints(2) ) )
@@ -345,7 +345,7 @@ CONTAINS
         READ(1234,*)
       ENDIF
       DO iDen=1,MuonTable % nPointsDen
-        READ(1234,*) MuonTable % t(iT), MuonTable % rhoym(iDen), &
+        READ(1234,*) MuonTable % t(iT), MuonTable % rhoym(iT,iDen), &
           MuonTable % p(iT,iDen), MuonTable % e(iT,iDen), &
           MuonTable % s(iT,iDen), MuonTable % mu(iT,iDen)
       ENDDO
@@ -360,7 +360,7 @@ CONTAINS
     MuonTable % s = MuonTable % s / (kmev * ergmev / rmu)
     
     ! NOW CALCULATE DERIVATIVES AT CONSTANT RHO
-    DO iDen=1,MuonTable % nPointsDen
+    DO iDen=1, MuonTable % nPointsDen
       MuonTable % dlnsdlnT(:,iDen) = Gradient3pts( LOG10(MuonTable % s(:,iDen)), LOG10(MuonTable % t), MuonTable % nPointsTemp)
       MuonTable % dlnPdlnT(:,iDen) = Gradient3pts( LOG10(MuonTable % p(:,iDen)), LOG10(MuonTable % t), MuonTable % nPointsTemp)
       MuonTable % dlnedlnT(:,iDen) = Gradient3pts( LOG10(MuonTable % e(:,iDen)), LOG10(MuonTable % t), MuonTable % nPointsTemp)

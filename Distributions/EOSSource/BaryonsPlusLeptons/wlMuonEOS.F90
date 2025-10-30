@@ -47,11 +47,11 @@ CONTAINS
         !----locals ------------------------------------------------------------
         integer :: i
         
-        real(dp) :: temp, rhoym, logt, logrhoymu
+        real(dp) :: temp, rhoym, logt, logrhoym
         real(dp) :: dt,dd
         real(dp) :: rd,rt
         real(dp) :: sign_ym
-        integer :: it, it_1, iDen, it_max, iDen_max
+        integer :: iT, iDen, iT_Max, iDen_Max
         
         IF ( PRESENT(CalculateDerivatives_Option) ) THEN
             CalculatePressureDerivatives = CalculateDerivatives_Option(1)
@@ -66,13 +66,25 @@ CONTAINS
         !....convert input variables to log scale .............................
         temp  = MuonState % t
         rhoym = MuonState % rhoym
-        sign_ym = SIGN(1.0d0,rhoym)
+        sign_ym = SIGN(1.0d0, rhoym)
         rhoym = ABS(rhoym) 
 
-        IF(  rhoym < MuonTable % rhoym(1) &
-        .OR. temp  < MuonTable % t(1) &
-        .OR. rhoym > MuonTable % rhoym(ubound(MuonTable % rhoym,1)) &
-        .OR. temp  > MuonTable % t    (ubound(MuonTable % t,    1)) ) THEN
+        iT_Max = MuonTable % nPointsTemp
+        iDen_Max = MuonTable % nPointsDen
+
+        IF(  temp  < MuonTable % t(1) &
+        .OR. temp  > MuonTable % t(iT_Max) ) THEN
+            MuonState % p  = 0.0d0
+            MuonState % e  = 0.0d0
+            MuonState % s  = 0.0d0
+            MuonState % mu = 0.0d0
+            RETURN
+        ENDIF
+
+        iT = Index1D_Log( temp, MuonTable % t(:) )
+
+        IF(  rhoym  < MuonTable % rhoym(iT,1) &
+        .OR. rhoym  > MuonTable % rhoym(iT,iDen_Max) ) THEN
             MuonState % p  = 0.0d0
             MuonState % e  = 0.0d0
             MuonState % s  = 0.0d0
@@ -81,108 +93,90 @@ CONTAINS
         ENDIF
 
         logt  = log10(temp)
-        logrhoymu = log10(rhoym)
+        logrhoym = log10(rhoym)
         
-        it_max = MuonTable % nPointsTemp
-        iDen_max = MuonTable % nPointsDen
-
-        it = Index1D_Log( temp, MuonTable % t(:) )
-
-        ! At these low temperatures muons don't really matter
-        IF (it .eq. 1) THEN
-            MuonState % p = 0.0d0
-            MuonState % e = 0.0d0
-            MuonState % s = 0.0d0
-            MuonState % mu = 0.0d0
-            RETURN
-        ENDIF
-        
-        iDen = Index1D_Log( rhoym, MuonTable % rhoym(:) )
-
-        ! At these low densities muons don't really matter
-        IF (iDen .eq. 1) THEN
-            MuonState % p = 0.0d0
-            MuonState % e = 0.0d0
-            MuonState % s = 0.0d0
-            MuonState % mu = 0.0d0
-            RETURN
-        ENDIF
+        DO i = 1, iDen_Max
+          IF (MuonTable % rhoym(iT,i) >= rhoym) THEN
+            iDen = i
+            EXIT
+          ENDIF 
+        END DO
         
         !.....determine interpolation weights ..................................
-        dt = LOG10( MuonTable % t(it+1) ) - LOG10( MuonTable % t(it) )
-        dd = LOG10( MuonTable % rhoym(iDen+1) ) - LOG10( MuonTable % rhoym(iDen) )
+        dt = LOG10( MuonTable % t(iT+1) ) - LOG10( MuonTable % t(iT) )
+        dd = LOG10( MuonTable % rhoym(iT,iDen+1) ) - LOG10( MuonTable % rhoym(iT,iDen) )
         
-        rt = (logt - LOG10( MuonTable % t(it) ))/dt
-        rd = (logrhoymu - LOG10( MuonTable % rhoym(iDen) ))/dd
+        rt = (logt - LOG10( MuonTable % t(iT) ))/dt
+        rd = (logrhoym - LOG10( MuonTable % rhoym(iT,iDen) ))/dd
                 
         !.....interpolation scheme.............................................
         MuonState % mu = & ! muon chemical potential (including rest mass)  [MeV]
-            (1.-rt)*(1.-rd) * MuonTable % mu(it  ,iDen  ) &
-             +  rt *(1.-rd) * MuonTable % mu(it+1,iDen  ) &
-             +     rt * rd  * MuonTable % mu(it+1,iDen+1) &
-             + (1.-rt)* rd  * MuonTable % mu(it  ,iDen+1)
+            (1.-rt)*(1.-rd) * MuonTable % mu(iT  ,iDen  ) &
+             +  rt *(1.-rd) * MuonTable % mu(iT+1,iDen  ) &
+             +     rt * rd  * MuonTable % mu(iT+1,iDen+1) &
+             + (1.-rt)* rd  * MuonTable % mu(iT  ,iDen+1)
         MuonState % mu = MuonState % mu * sign_ym
              
         MuonState % p = & ! pressure              [MeV/fm^3]
-            (1.-rt)*(1.-rd) * MuonTable % p(it  ,iDen  ) &
-             +  rt *(1.-rd) * MuonTable % p(it+1,iDen  ) &
-             +     rt * rd  * MuonTable % p(it+1,iDen+1) &
-             + (1.-rt)* rd  * MuonTable % p(it  ,iDen+1)
+            (1.-rt)*(1.-rd) * MuonTable % p(iT  ,iDen  ) &
+             +  rt *(1.-rd) * MuonTable % p(iT+1,iDen  ) &
+             +     rt * rd  * MuonTable % p(iT+1,iDen+1) &
+             + (1.-rt)* rd  * MuonTable % p(iT  ,iDen+1)
              
         MuonState % e = & ! internal energy       [MeV/fm^3]
-            (1.-rt)*(1.-rd) * MuonTable % e(it  ,iDen  ) &
-             +  rt *(1.-rd) * MuonTable % e(it+1,iDen  ) &
-             +     rt * rd  * MuonTable % e(it+1,iDen+1) &
-             + (1.-rt)* rd  * MuonTable % e(it  ,iDen+1)
+            (1.-rt)*(1.-rd) * MuonTable % e(iT  ,iDen  ) &
+             +  rt *(1.-rd) * MuonTable % e(iT+1,iDen  ) &
+             +     rt * rd  * MuonTable % e(iT+1,iDen+1) &
+             + (1.-rt)* rd  * MuonTable % e(iT  ,iDen+1)
              
         MuonState % s = & ! entropy
-            (1.-rt)*(1.-rd) * MuonTable % s(it  ,iDen  ) &
-             +  rt *(1.-rd) * MuonTable % s(it+1,iDen  ) &
-             +     rt * rd  * MuonTable % s(it+1,iDen+1) &
-             + (1.-rt)* rd  * MuonTable % s(it  ,iDen+1)
+            (1.-rt)*(1.-rd) * MuonTable % s(iT  ,iDen  ) &
+             +  rt *(1.-rd) * MuonTable % s(iT+1,iDen  ) &
+             +     rt * rd  * MuonTable % s(iT+1,iDen+1) &
+             + (1.-rt)* rd  * MuonTable % s(iT  ,iDen+1)
              
         IF (CalculatePressureDerivatives) THEN
             MuonState % dlnPdlnT = & ! Pressure derivatives
-                (1.-rt)*(1.-rd) * MuonTable % dlnPdlnT(it  ,iDen  ) &
-                 +  rt *(1.-rd) * MuonTable % dlnPdlnT(it+1,iDen  ) &
-                 +     rt * rd  * MuonTable % dlnPdlnT(it+1,iDen+1) &
-                 + (1.-rt)* rd  * MuonTable % dlnPdlnT(it  ,iDen+1)         
+                (1.-rt)*(1.-rd) * MuonTable % dlnPdlnT(iT  ,iDen  ) &
+                 +  rt *(1.-rd) * MuonTable % dlnPdlnT(iT+1,iDen  ) &
+                 +     rt * rd  * MuonTable % dlnPdlnT(iT+1,iDen+1) &
+                 + (1.-rt)* rd  * MuonTable % dlnPdlnT(iT  ,iDen+1)         
 
             MuonState % dlnPdlnrho = & ! Pressure derivatives
-                (1.-rt)*(1.-rd) * MuonTable % dlnPdlnrho(it  ,iDen  ) &
-                 +  rt *(1.-rd) * MuonTable % dlnPdlnrho(it+1,iDen  ) &
-                 +     rt * rd  * MuonTable % dlnPdlnrho(it+1,iDen+1) &
-                 + (1.-rt)* rd  * MuonTable % dlnPdlnrho(it  ,iDen+1)       
+                (1.-rt)*(1.-rd) * MuonTable % dlnPdlnrho(iT  ,iDen  ) &
+                 +  rt *(1.-rd) * MuonTable % dlnPdlnrho(iT+1,iDen  ) &
+                 +     rt * rd  * MuonTable % dlnPdlnrho(iT+1,iDen+1) &
+                 + (1.-rt)* rd  * MuonTable % dlnPdlnrho(iT  ,iDen+1)       
         
         ENDIF
              
         IF (CalculateEnergyDerivatives) THEN
             MuonState % dlnedlnT = & ! Energy derivatives
-                (1.-rt)*(1.-rd) * MuonTable % dlnedlnT(it  ,iDen  ) &
-                 +  rt *(1.-rd) * MuonTable % dlnedlnT(it+1,iDen  ) &
-                 +     rt * rd  * MuonTable % dlnedlnT(it+1,iDen+1) &
-                 + (1.-rt)* rd  * MuonTable % dlnedlnT(it  ,iDen+1)         
+                (1.-rt)*(1.-rd) * MuonTable % dlnedlnT(iT  ,iDen  ) &
+                 +  rt *(1.-rd) * MuonTable % dlnedlnT(iT+1,iDen  ) &
+                 +     rt * rd  * MuonTable % dlnedlnT(iT+1,iDen+1) &
+                 + (1.-rt)* rd  * MuonTable % dlnedlnT(iT  ,iDen+1)         
 
             MuonState % dlnedlnrho = & ! Energy derivatives
-                (1.-rt)*(1.-rd) * MuonTable % dlnedlnrho(it  ,iDen  ) &
-                 +  rt *(1.-rd) * MuonTable % dlnedlnrho(it+1,iDen  ) &
-                 +     rt * rd  * MuonTable % dlnedlnrho(it+1,iDen+1) &
-                 + (1.-rt)* rd  * MuonTable % dlnedlnrho(it  ,iDen+1)       
+                (1.-rt)*(1.-rd) * MuonTable % dlnedlnrho(iT  ,iDen  ) &
+                 +  rt *(1.-rd) * MuonTable % dlnedlnrho(iT+1,iDen  ) &
+                 +     rt * rd  * MuonTable % dlnedlnrho(iT+1,iDen+1) &
+                 + (1.-rt)* rd  * MuonTable % dlnedlnrho(iT  ,iDen+1)       
         
         ENDIF
 
         IF (CalculateEntropyDerivatives) THEN
             MuonState % dlnsdlnT = & ! Entropy derivatives
-                (1.-rt)*(1.-rd) * MuonTable % dlnsdlnT(it  ,iDen  ) &
-                 +  rt *(1.-rd) * MuonTable % dlnsdlnT(it+1,iDen  ) &
-                 +     rt * rd  * MuonTable % dlnsdlnT(it+1,iDen+1) &
-                 + (1.-rt)* rd  * MuonTable % dlnsdlnT(it  ,iDen+1)         
+                (1.-rt)*(1.-rd) * MuonTable % dlnsdlnT(iT  ,iDen  ) &
+                 +  rt *(1.-rd) * MuonTable % dlnsdlnT(iT+1,iDen  ) &
+                 +     rt * rd  * MuonTable % dlnsdlnT(iT+1,iDen+1) &
+                 + (1.-rt)* rd  * MuonTable % dlnsdlnT(iT  ,iDen+1)         
 
             MuonState % dlnsdlnrho = & ! Entropy derivatives
-                (1.-rt)*(1.-rd) * MuonTable % dlnsdlnrho(it  ,iDen  ) &
-                 +  rt *(1.-rd) * MuonTable % dlnsdlnrho(it+1,iDen  ) &
-                 +     rt * rd  * MuonTable % dlnsdlnrho(it+1,iDen+1) &
-                 + (1.-rt)* rd  * MuonTable % dlnsdlnrho(it  ,iDen+1)       
+                (1.-rt)*(1.-rd) * MuonTable % dlnsdlnrho(iT  ,iDen  ) &
+                 +  rt *(1.-rd) * MuonTable % dlnsdlnrho(iT+1,iDen  ) &
+                 +     rt * rd  * MuonTable % dlnsdlnrho(iT+1,iDen+1) &
+                 + (1.-rt)* rd  * MuonTable % dlnsdlnrho(iT  ,iDen+1)       
         
         ENDIF
 

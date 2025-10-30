@@ -61,13 +61,9 @@ CONTAINS
     REAL(DP) :: P_PhotLep(2,2,2), E_PhotLep(2,2,2), S_PhotLep(2,2,2)
     REAL(DP) :: Ptot_T   (2,2,2), Etot_T(2,2,2)   , Stot_T(2,2,2)
 
-    REAL(DP) :: P_PhotLep_Ott(3,3,3), E_PhotLep_Ott(3,3,3), S_PhotLep_Ott(3,3,3)
-    REAL(DP) :: Ptot_T_Ott   (3,3,3), Etot_T_Ott   (3,3,3), Stot_T_Ott   (3,3,3)
-    REAL(DP), ALLOCATABLE :: cs2_temp(:,:,:), gamma_temp(:,:,:)
-
     REAL(DP) :: dPdD, dPdT, dEdD, dEdT, dSdD, dSdT
     INTEGER  :: iD, iT, iYp, iL_D, iL_T, iL_Yp
-    REAL(DP) :: eos_table(3,3,3,3)
+    REAL(DP) :: eos_table(3,3,3,3), cs2_temp(3,3,3), gamma_temp(3,3,3)
 
     REAL(DP) :: LocalOffset
 
@@ -129,7 +125,7 @@ CONTAINS
           dSbarydD, dSbarydT )
 
       ! MUON PART -----------------------------------------------------
-      IF (( D * Ym .lt. MuonTable % rhoym(1) ) .or. (T .lt. MuonTable % t(1))) THEN
+      IF ( T .lt. MuonTable % t(1) ) THEN
       
         Pmu    = 0.0d0
         dPmudD = 0.0d0
@@ -145,26 +141,42 @@ CONTAINS
 
       ELSE
       
-        CALL GetIndexAndDelta_Log( D, MuonTable % rhoym(:)/Ym, iD, dD )
         CALL GetIndexAndDelta_Log( T, MuonTable % t(:), iT, dT )
+        IF ( ( D * Ym .lt. MuonTable % rhoym(iT,1) ) )  THEN
         
-        aD = 1.0_dp / ( D * LOG10( MuonTable % rhoym(iD+1) / MuonTable % rhoym(iD) ) )
-        aT = 1.0_dp / ( T * LOG10( MuonTable % t(iT+1) / MuonTable % t(iT) ) )
+          Pmu    = 0.0d0
+          dPmudD = 0.0d0
+          dPmudT = 0.0d0
 
-        CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % p (iT:iT+1,iD:iD+1)), Pmu, &
-            dPmudT, dPmudD )
+          Emu    = 0.0d0
+          dEmudD = 0.0d0
+          dEmudT = 0.0d0
 
-        CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % e (iT:iT+1,iD:iD+1)), Emu, &
-            dEmudT, dEmudD )
+          Smu    = 0.0d0
+          dSmudD = 0.0d0
+          dSmudT = 0.0d0
+
+        ELSE
+          CALL GetIndexAndDelta_Log( D, MuonTable % rhoym(iT,:)/Ym, iD, dD )
           
-        CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % s (iT:iT+1,iD:iD+1)), Smu, &
-            dSmudT, dSmudD )
-          
+          aD = 1.0_dp / ( D * LOG10( MuonTable % rhoym(iT,iD+1) / MuonTable % rhoym(iT,iD) ) )
+          aT = 1.0_dp / ( T * LOG10( MuonTable % t(iT+1) / MuonTable % t(iT) ) )
+
+          CALL LinearInterpDeriv_Array_Point &
+            ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % p (iT:iT+1,iD:iD+1)), Pmu, &
+              dPmudT, dPmudD )
+
+          CALL LinearInterpDeriv_Array_Point &
+            ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % e (iT:iT+1,iD:iD+1)), Emu, &
+              dEmudT, dEmudD )
+            
+          CALL LinearInterpDeriv_Array_Point &
+            ( 1, 1, dT, dD, aT, aD, 0.0_dp, LOG10(MuonTable % s (iT:iT+1,iD:iD+1)), Smu, &
+              dSmudT, dSmudD )
+            
+        ENDIF
       ENDIF
-      
+
       ! D and T in front take care of the derivative 
       ! wr2 logrho and logT. The rho multiplying the denominator in the second 
       ! one makes sure that you have erg/cm^3 instead of erg/g
@@ -237,13 +249,43 @@ CONTAINS
       Gamma = (D*dPdD + T*dPdT**2.0_DP / &
           (D*dEdT) ) / Ptot
 
-      ! Another way of doing it
+      ! ! Another way of doing it
       ! Gamma = D/Ptot * ( dPdD - (dSdD*dPdT/dSdT) )
 
       ! relativistic definition with enthalpy
       h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
       Cs = SQRT(Gamma * Ptot / (D*h))
       Cs = SQRT(Gamma * Ptot / (D))
+
+      ! -----
+      DO iL_T=-1,1
+        DO iL_D=-1,1
+          DO iL_Yp=-1,1
+            ElectronPhotonState % t   = T_T(iT+iL_T)
+            ElectronPhotonState % rho = D_T(iD+iL_D)
+            ElectronPhotonState % ye  = Yp_T(iYp+iL_Yp) * Ye_over_Yp
+            CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+
+            MuonState % t = T_T(iT+iL_T)
+            MuonState % rhoym = D_T(iD+iL_D) * Yp_T(iYp+iL_Yp) * Ym_over_Yp
+            CALL FullMuonEOS(MuonTable, MuonState)
+            
+            eos_table(iL_D+2,iL_T+2,iL_Yp+2,1) = &
+              LOG10(P_T(iD+iL_D,iT+iL_T,iYp+iL_Yp) + ElectronPhotonState % p + MuonState % p)
+            eos_table(iL_D+2,iL_T+2,iL_Yp+2,2) = &
+              LOG10(10.00**S_T(iD+iL_D,iT+iL_T,iYp+iL_Yp) + ElectronPhotonState % s + MuonState % s)
+            eos_table(iL_D+2,iL_T+2,iL_Yp+2,3) = &
+              LOG10(10.00**E_T(iD+iL_D,iT+iL_T,iYp+iL_Yp) + ElectronPhotonState % e + MuonState % e)
+          END DO
+        END DO
+      END DO
+
+      call derivatives_production(2, 3, 3, 3, &
+          LOG10(D_T(iD-1:iD+1)), LOG10(T_T(iT-1:iT+1)), Yp_T(iYp-1:iYp+1), &
+          eos_table, OS_E, cs2_temp, gamma_temp)
+      Cs = SQRT(cs2_temp(2,2,2))
+      ! WRITE(*,*) gamma_temp(2,2,2), Gamma
+      Gamma = gamma_temp(2,2,2)
 
     ENDIF
 
@@ -259,23 +301,23 @@ CONTAINS
     real(dp), intent(in) :: eos_table(nrho,ntemp,nye,3)
     real(dp), intent(in) :: energy_shift
     real(dp), intent(in) :: logrho(nrho), logtemp(ntemp), ye(nye)
-    real(dp), allocatable, intent(out) :: cs2(:,:,:)
-    real(dp), allocatable, intent(out) :: gamma(:,:,:)
+    real(dp), intent(out) :: cs2(nrho, ntemp, nye)
+    real(dp), intent(out) :: gamma(nrho, ntemp, nye)
     
     integer i,j,k
     real(dp) :: dx,x1,x2,f1,f2,z,zz,h,cp,cv,beta_v,gamma_ad,kappa_t
     
-    real(dp), allocatable :: dedT(:,:,:)
-    real(dp), allocatable :: dsdlnT(:,:,:)
-    real(dp), allocatable :: dsdlnrho(:,:,:)
-    real(dp), allocatable :: dpdrhoT(:,:,:)
-    real(dp), allocatable :: dedrhoT(:,:,:)
-    real(dp), allocatable :: dpdT(:,:,:)
-    real(dp), allocatable :: dpdrho(:,:,:)
-    real(dp), allocatable :: dpde(:,:,:)
-    integer :: ipress = 1
-    integer :: ientropy = 2
-    integer :: ienergy = 3
+    real(dp) :: dedT(nrho, ntemp, nye)
+    real(dp) :: dsdlnT(nrho, ntemp, nye)
+    real(dp) :: dsdlnrho(nrho, ntemp, nye)
+    real(dp) :: dpdrhoT(nrho, ntemp, nye)
+    real(dp) :: dedrhoT(nrho, ntemp, nye)
+    real(dp) :: dpdT(nrho, ntemp, nye)
+    real(dp) :: dpdrho(nrho, ntemp, nye)
+    real(dp) :: dpde(nrho, ntemp, nye)
+    integer  :: ipress = 1
+    integer  :: ientropy = 2
+    integer  :: ienergy = 3
     
     ! igamma: There are multiple ways to compute gamma1, via the entropy
     !         turns out to be pretty good.
@@ -287,7 +329,6 @@ CONTAINS
     
     !###########################################################################  
     ! dedT, e is erg in log10, T is in MeV in log 10
-    allocate(dedT(nrho,ntemp,nye))
     dedT = 0.0d0
     
     do k=1,nye
@@ -321,8 +362,6 @@ CONTAINS
     
     !dpdT, p is in dyn/cm^2 in log10, T is in MeV in log 10
     !dsdlnT, s is in k_B/baryon not in log 10, T is in meV in log 10
-    allocate(dpdT(nrho,ntemp,nye))
-    allocate(dsdlnT(nrho,ntemp,nye))
     dpdT = 0.0d0
     dsdlnT = 0.0d0
     
@@ -383,11 +422,6 @@ CONTAINS
       ! dp/drho|e = dp/drho|T + dp/dT * (-de/drho|T) / de/dT
     ! dp/de|rho = dp/dT / de/dT
     
-    allocate(dpdrho(nrho,ntemp,nye))
-    allocate(dpde(nrho,ntemp,nye))
-    allocate(dsdlnrho(nrho,ntemp,nye))
-    allocate(dpdrhoT(nrho,ntemp,nye))
-    allocate(dedrhoT(nrho,ntemp,nye))
     dpdrho   = 0.0d0
     dpde     = 0.0d0
     dsdlnrho = 0.0d0
@@ -470,8 +504,6 @@ CONTAINS
     enddo
     
     !########################################################################### 
-    allocate(gamma(nrho,ntemp,nye))
-    allocate(cs2(nrho,ntemp,nye))
     cs2 = 0.0d0
     gamma = 0.0d0
     
@@ -523,16 +555,7 @@ CONTAINS
         enddo
       enddo
     enddo
-    
-    DEALLOCATE(dedT)
-    DEALLOCATE(dsdlnT)
-    DEALLOCATE(dsdlnrho)
-    DEALLOCATE(dpdrhoT)
-    DEALLOCATE(dedrhoT)
-    DEALLOCATE(dpdT)
-    DEALLOCATE(dpdrho)
-    DEALLOCATE(dpde)
-    
+
   end subroutine derivatives_production
 
 END MODULE wlSoundSpeedModule
