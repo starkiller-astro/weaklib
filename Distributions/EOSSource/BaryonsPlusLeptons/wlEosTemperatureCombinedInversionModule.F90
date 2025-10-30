@@ -47,11 +47,10 @@ CONTAINS
 
   SUBROUTINE InvertTemperatureWith_DEYpYl_Guess &
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
-
 #if defined(WEAKLIB_OMP_OL)
- !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
@@ -358,11 +357,10 @@ CONTAINS
 
   SUBROUTINE InvertTemperatureWith_DEYpYl_NoGuess &
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
-
 #if defined(WEAKLIB_OMP_OL)
-!  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
@@ -588,11 +586,10 @@ CONTAINS
 
   SUBROUTINE InvertTemperatureWith_DPYpYl_Guess &
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
-
 #if defined(WEAKLIB_OMP_OL)
-!  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
@@ -888,11 +885,10 @@ CONTAINS
 
   SUBROUTINE InvertTemperatureWith_DPYpYl_NoGuess &
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
-
 #if defined(WEAKLIB_OMP_OL)
-!  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
@@ -1107,11 +1103,10 @@ CONTAINS
 
   SUBROUTINE InvertTemperatureWith_DSYpYl_Guess &
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
-
 #if defined(WEAKLIB_OMP_OL)
-!  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
@@ -1419,11 +1414,10 @@ CONTAINS
 
   SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess &
     ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
-
 #if defined(WEAKLIB_OMP_OL)
-!  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
     REAL(dp), INTENT(in)  :: D     , X     , Ye, Ym
