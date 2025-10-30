@@ -267,6 +267,12 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
   Ye = 0.43603993
   Ym = 0.0d0
 
+  ! This crashes
+  D  = 1.6079E+14
+  E  = 6.0164E+19
+  Ye = 0.43639
+  Ym = 0.0d0
+
   ! This does not 
   T_Guess = 3.894870830e+10
 

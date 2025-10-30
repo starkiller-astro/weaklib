@@ -10,6 +10,6 @@ USE_OMP_OL ?= FALSE
 USE_OACC   ?= FALSE
 USE_OMP    ?= TRUE
 
-EOSMODE = COMPOSE
+EOSMODE = 3D
 
 include ../Makefile_Inversion

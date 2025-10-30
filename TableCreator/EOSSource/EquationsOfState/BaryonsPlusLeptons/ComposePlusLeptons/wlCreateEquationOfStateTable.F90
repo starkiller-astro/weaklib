@@ -258,7 +258,7 @@ PROGRAM wlCreateEquationOfStateTable
     PRINT*, "Allocate Muon EOS"
     CALL AllocateMuonTable( MuonTable, nPointsDenon )
     
-    MuonDatFilePath = '../muons_fixedrho.dat'
+    MuonDatFilePath = '../muons.dat'
     CALL ReadMuonEOSdat( MuonDatFilePath, MuonTable )
     
     ! NOW CREATE BARYONIC FILE

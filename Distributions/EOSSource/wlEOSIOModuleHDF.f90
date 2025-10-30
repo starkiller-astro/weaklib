@@ -915,10 +915,10 @@ CONTAINS
     
     ! Broadcast 1D arrays
     CALL MPI_BCAST( MuonTable % t, muon_dims(1), MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST( MuonTable % rhoym, muon_dims(2), MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
     ! Broadcast 2D arrays
     i_count = MuonTable % nPointsDen * MuonTable % nPointsTemp
+    CALL MPI_BCAST( MuonTable % rhoym, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( MuonTable % p, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( MuonTable % e, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( MuonTable % s, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
