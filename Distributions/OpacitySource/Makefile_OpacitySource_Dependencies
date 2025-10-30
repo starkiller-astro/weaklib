@@ -20,7 +20,7 @@ wlOpacityTableIOModuleHDF.o: \
   wlEOSIOModuleHDF.o \
   wlIOModuleHDF.o \
   wlParallelModule.o \
-  wlOpacityTableIOModuleHDF.f90
+  wlOpacityTableIOModuleHDF.F90
 
 wlCalculateAbEmOpacityModule.o: \
   wlKindModule.o \
