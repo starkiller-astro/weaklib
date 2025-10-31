@@ -127,7 +127,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         
         CALL FullMuonEOS(MuonTable, MuonState)
         
@@ -156,7 +157,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
           
         MuonState % t     = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
@@ -193,7 +195,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         CALL FullMuonEOS(MuonTable, MuonState)
           
         E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -222,7 +225,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         CALL FullMuonEOS(MuonTable, MuonState)
 
         E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -255,7 +259,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = T_c
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
 
             E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -307,7 +312,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = T_i
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
 
             E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -432,8 +438,9 @@ CONTAINS
         ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
           
-        MuonState % t = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp       
+        MuonState % t     = T_a
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp       
         CALL FullMuonEOS(MuonTable, MuonState)
           
         E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -460,8 +467,9 @@ CONTAINS
         ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp       
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-        MuonState % t = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp        
+        MuonState % t     = T_b
+        MuonState % rho   = Ds(iD+iL_D-1) 
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp        
         CALL FullMuonEOS(MuonTable, MuonState)
           
         E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -492,8 +500,9 @@ CONTAINS
             ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-            MuonState % t = T_c
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % t     = T_c
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
               
             E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -538,8 +547,9 @@ CONTAINS
             ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-            MuonState % t = T_i
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % t     = T_i
+            MuonState % rho   = Ds(iD+iL_D-1) 
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
               
             E_LeptPhot = ElectronPhotonState % e + MuonState % e
@@ -665,7 +675,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         
         CALL FullMuonEOS(MuonTable, MuonState)
                 
@@ -694,7 +705,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
           
         MuonState % t     = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         
         CALL FullMuonEOS(MuonTable, MuonState)
         
@@ -729,7 +741,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         CALL FullMuonEOS(MuonTable, MuonState)
                   
         Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -756,7 +769,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         CALL FullMuonEOS(MuonTable, MuonState)
         
         Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -787,7 +801,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = T_c
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
             
             Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -837,7 +852,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = T_i
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
             
             Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -957,8 +973,9 @@ CONTAINS
         ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
           
-        MuonState % t = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp       
+        MuonState % t     = T_a
+        MuonState % rho   = Ds(iD+iL_D-1) 
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp       
         CALL FullMuonEOS(MuonTable, MuonState)
                   
         Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -983,8 +1000,9 @@ CONTAINS
         ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp       
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-        MuonState % t = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp        
+        MuonState % t     = T_b
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp        
         CALL FullMuonEOS(MuonTable, MuonState)
                   
         Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -1013,8 +1031,9 @@ CONTAINS
             ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-            MuonState % t = T_c
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % t     = T_c
+            MuonState % rho   = Ds(iD+iL_D-1) 
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
                           
             Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -1057,8 +1076,9 @@ CONTAINS
             ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-            MuonState % t = T_i
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % t     = T_i
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
                           
             Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + ElectronPhotonState % p + MuonState % p
@@ -1183,7 +1203,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         
         CALL FullMuonEOS(MuonTable, MuonState)
         
@@ -1213,7 +1234,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
           
         MuonState % t     = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
@@ -1250,7 +1272,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         CALL FullMuonEOS(MuonTable, MuonState)
           
         S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1279,7 +1302,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t     = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
         CALL FullMuonEOS(MuonTable, MuonState)
 
         S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1312,7 +1336,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = T_c
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
 
             S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1364,7 +1389,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = T_i
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
 
             S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1487,8 +1513,9 @@ CONTAINS
         ElectronPhotonState % ye = Yps(iYp+iL_Y-1) * Ye_over_Yp
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
           
-        MuonState % t = T_a
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp       
+        MuonState % t     = T_a
+        MuonState % rho   = Ds(iD+iL_D-1) 
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp       
         CALL FullMuonEOS(MuonTable, MuonState)
           
         S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1516,7 +1543,8 @@ CONTAINS
         CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
         MuonState % t = T_b
-        MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp        
+        MuonState % rho   = Ds(iD+iL_D-1)
+        MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp        
         CALL FullMuonEOS(MuonTable, MuonState)
     
         S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1548,7 +1576,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t = T_c
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
               
             S_LeptPhot = ElectronPhotonState % s + MuonState % s
@@ -1594,7 +1623,8 @@ CONTAINS
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t = T_i
-            MuonState % rhoym = Ds(iD+iL_D-1) * Yps(iYp+iL_Y-1) * Ym_over_Yp
+            MuonState % rho   = Ds(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yps(iYp+iL_Y-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
 
             S_LeptPhot = ElectronPhotonState % s + MuonState % s

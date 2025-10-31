@@ -404,7 +404,8 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 #else
   ! Muons
   MuonState % t     = T
-  MuonState % rhoym = D * Ym
+  MuonState % rho   = D
+  MuonState % rhoym = MuonState % rho * Ym
   CALL FullMuonEOS(MuonTable, MuonState)
   Mumu = MuonState % mu
 

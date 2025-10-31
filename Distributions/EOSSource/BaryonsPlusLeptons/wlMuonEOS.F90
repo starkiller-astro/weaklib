@@ -14,6 +14,7 @@ MODULE wlMuonEOS
         
         REAL(dp) :: t
         REAL(dp) :: rhoym
+        REAL(dp) :: rho
         REAL(dp) :: mu
         REAL(dp) :: p
         REAL(dp) :: e
@@ -63,6 +64,17 @@ CONTAINS
             CalculateEntropyDerivatives = .FALSE.
         END IF
         
+        !....exit early if the density is below a threshold that is consistent 
+        !....with the EmAb on nucleons opacities .............................
+        IF ( MuonState % rho < MuonTable % eos_minD ) THEN 
+            MuonState % p  = 0.0d0
+            MuonState % e  = 0.0d0
+            MuonState % s  = 0.0d0
+            MuonState % mu = 0.0d0
+            RETURN
+        END If
+
+
         !....convert input variables to log scale .............................
         temp  = MuonState % t
         rhoym = MuonState % rhoym
@@ -78,6 +90,8 @@ CONTAINS
             MuonState % e  = 0.0d0
             MuonState % s  = 0.0d0
             MuonState % mu = 0.0d0
+!write(*,*) 'muon eos out of T table bounds'
+!write(*,*) temp, MuonTable % t(1), MuonTable % t(iT_Max)
             RETURN
         ENDIF
 
@@ -89,6 +103,8 @@ CONTAINS
             MuonState % e  = 0.0d0
             MuonState % s  = 0.0d0
             MuonState % mu = 0.0d0
+!write(*,*) 'muon eos out of rhoym table bounds'
+!write(*,*) rhoym, MuonTable % rhoym(iT,1), MuonTable % rhoym(iT,iDen_Max)
             RETURN
         ENDIF
 

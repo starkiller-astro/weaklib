@@ -180,7 +180,8 @@ PROGRAM wlComposeNewInversionTest
 
         ! calculate muon quantities 
         MuonState % t = Ts_bary(iT)
-        MuonState % rhoym = Ds_bary(iD) * Ymu_temp
+        MuonState % rho   = Ds_bary(iD)
+        MuonState % rhoym = MuonState % rho * Ymu_temp
         
         CALL FullMuonEOS(MuonTable, MuonState)
 
@@ -340,7 +341,8 @@ PROGRAM wlComposeNewInversionTest
 
     ! calculate muon quantities 
     MuonState % t = T(iP)
-    MuonState % rhoym = D(iP) * Ym(iP)
+    MuonState % rho   = D(iP)
+    MuonState % rhoym = MuonState % rho * Ym(iP)
     
     CALL FullMuonEOS(MuonTable, MuonState)
 

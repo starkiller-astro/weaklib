@@ -195,7 +195,8 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
 
         ! calculate muon quantities 
         MuonState % t = Ts_bary(iT)
-        MuonState % rhoym = Ds_bary(iD) * Ymu_temp
+        MuonState % rho   = Ds_bary(iD)
+        MuonState % rhoym = MuonState % rho * Ymu_temp
         
         CALL FullMuonEOS(MuonTable, MuonState)
 

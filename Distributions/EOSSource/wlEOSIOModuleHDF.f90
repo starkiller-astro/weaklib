@@ -905,6 +905,8 @@ CONTAINS
     END IF
     
     CALL MPI_BCAST( muon_dims, 2, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+
+    CALL MPI_BCAST( MuonTable % eos_MinD, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     
     ! Allocate arrays on receiving processes
     IF ( myid /= rootproc ) THEN

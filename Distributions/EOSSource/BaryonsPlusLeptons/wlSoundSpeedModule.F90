@@ -219,8 +219,9 @@ CONTAINS
             ElectronPhotonState % ye  = Yp_T(iYp+iL_Yp-1) * Ye_over_Yp
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-            MuonState % t = T_T(iT+iL_T-1)
-            MuonState % rhoym = D_T(iD+iL_D-1) * Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
+            MuonState % t     = T_T(iT+iL_T-1)
+            MuonState % rho   = D_T(iD+iL_D-1)
+            MuonState % rhoym = MuonState % rho * Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
             
             P_PhotLep(iL_D,iL_T,iL_Yp) = ElectronPhotonState % p + MuonState % p
@@ -266,8 +267,9 @@ CONTAINS
             ElectronPhotonState % ye  = Yp_T(iYp+iL_Yp) * Ye_over_Yp
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
-            MuonState % t = T_T(iT+iL_T)
-            MuonState % rhoym = D_T(iD+iL_D) * Yp_T(iYp+iL_Yp) * Ym_over_Yp
+            MuonState % t     = T_T(iT+iL_T)
+            MuonState % rho   = D_T(iD+iL_D)
+            MuonState % rhoym = MuonState % rho * Yp_T(iYp+iL_Yp) * Ym_over_Yp
             CALL FullMuonEOS(MuonTable, MuonState)
             
             eos_table(iL_D+2,iL_T+2,iL_Yp+2,1) = &

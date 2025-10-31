@@ -84,6 +84,8 @@ MODULE wlLeptonEOSModule
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnedlnrho
     REAL(dp), DIMENSION(:,:), ALLOCATABLE :: dlnedlnT
 
+    REAL(DP) :: eos_MinD
+
   END TYPE MuonTableType
 
   PUBLIC AllocateHelmholtzTable
@@ -188,10 +190,18 @@ CONTAINS
   
   END SUBROUTINE DeallocateHelmholtzTable
 
-  SUBROUTINE AllocateMuonTable( MuonTable, nPoints )
+  SUBROUTINE AllocateMuonTable( MuonTable, nPoints, eos_MinD )
     
     TYPE(MuonTableType)      :: MuonTable
     INTEGER, DIMENSION(2), INTENT(IN) :: nPoints
+    REAL(DP), INTENT(in), OPTIONAL :: eos_MinD
+
+
+    IF ( PRESENT (eos_MinD) ) THEN
+      MuonTable % eos_MinD = eos_MinD
+    ELSE
+      MuonTable % eos_MinD = 0.0d0
+    END IF
 
     MuonTable % nPointsTemp  = nPoints(1)
     MuonTable % nPointsDen    = nPoints(2)

@@ -266,7 +266,8 @@ PROGRAM wlCreateEquationOfStateTable
             CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
 
             MuonState % t     = EOSTable % TS % States(2) % Values(iTemp)
-            MuonState % rhoym = EOSTable % TS % States(1) % Values(iRho) * Ym
+            MuonState % rho   = EOSTable % TS % States(1) % Values(iRho)
+            MuonState % rhoym = MuonState % rho * Ym
             CALL FullMuonEOS(MuonTable, MuonState)
 
             ! PRESSURE

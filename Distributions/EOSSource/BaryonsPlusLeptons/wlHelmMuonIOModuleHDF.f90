@@ -254,10 +254,11 @@ CONTAINS
     END SUBROUTINE WriteMuonTableHDF
         
         
-    SUBROUTINE ReadMuonTableHDF( MuonTable, FileName )
+    SUBROUTINE ReadMuonTableHDF( MuonTable, FileName, eos_minD )
     
         TYPE(MuonTableType), INTENT(INOUT)  :: MuonTable
         CHARACTER(len=*), INTENT(IN) :: FileName
+        REAL(DP), INTENT(in), OPTIONAL :: eos_minD
         
         INTEGER(HID_T) :: file_id
         INTEGER(HID_T) :: group_id
@@ -275,7 +276,7 @@ CONTAINS
         CALL CloseGroupHDF( group_id )
         
         ! Allocate Muon EOS
-        CALL AllocateMuonTable( MuonTable, nPoints )
+        CALL AllocateMuonTable( MuonTable, nPoints, eos_minD = eos_minD )
 
         CALL OpenGroupHDF( "MuonTable", .false., file_id, group_id )
 
