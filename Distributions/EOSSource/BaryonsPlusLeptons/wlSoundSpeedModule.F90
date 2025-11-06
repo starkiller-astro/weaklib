@@ -257,6 +257,9 @@ CONTAINS
       h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
       Cs = SQRT(Gamma * Ptot / (D*h))
       Cs = SQRT(Gamma * Ptot / (D))
+      
+      RETURN
+      ! Below is how stellarcollapse does it...
 
       ! -----
       DO iL_T=-1,1
