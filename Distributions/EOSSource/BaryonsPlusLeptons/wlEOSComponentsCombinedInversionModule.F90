@@ -252,7 +252,7 @@ CONTAINS
     ErrorString(13) = 'Unable to Find Any Root'
 
     WRITE(*,*)
-    WRITE(*,*) '  wlEOSSplitInversionModule ERROR: ' // TRIM( ErrorString(Error) )
+    WRITE(*,*) '  wlEOSCombinedInversionModule ERROR: ' // TRIM( ErrorString(Error) )
     WRITE(*,*)
 
   END SUBROUTINE DescribeEOSComponentsInversionError

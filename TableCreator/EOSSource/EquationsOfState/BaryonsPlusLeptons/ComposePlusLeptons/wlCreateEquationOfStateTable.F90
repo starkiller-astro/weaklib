@@ -36,7 +36,7 @@ PROGRAM wlCreateEquationOfStateTable
     INTEGER  :: iLepton, iRho, iTemp, iYe
 
     ReadFullTable = .false.
-    RedHDF5Table = .false.
+    RedHDF5Table = .true.
     ResetNegativePressure = .false.
     nVariables = 19
     

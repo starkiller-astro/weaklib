@@ -366,7 +366,7 @@ CONTAINS
     MuonTable % t = MuonTable % t * kmev_inv !MeV to kelvin
     MuonTable % rhoym = MuonTable % rhoym * rmu/cm3fm3 !baryon number to g/cm^3
     MuonTable % p = MuonTable % p * ergmev / cm3fm3 !MeV/fm^3 to dyn
-    MuonTable % e = MuonTable % e * ergmev / rmu 
+    MuonTable % e = MuonTable % e * ergmev / cm3fm3 / MuonTable % rhoym
     MuonTable % s = MuonTable % s / (kmev * ergmev / rmu)
     
     ! NOW CALCULATE DERIVATIVES AT CONSTANT RHO

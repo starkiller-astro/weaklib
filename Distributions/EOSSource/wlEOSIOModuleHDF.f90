@@ -576,7 +576,7 @@ CONTAINS
     ASSOCIATE( TS => EOSTable % TS )
 
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfState3DTable'
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfStateCompOSETable'
     DO i = 1, 3
 
       WRITE(*,*)
@@ -1090,7 +1090,7 @@ CONTAINS
     ASSOCIATE( TS => EOSTable % TS )
 
     WRITE(*,*)
-    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfState3DTable'
+    WRITE(*,'(A2,A)') ' ', 'DescribeEquationOfState4DTable'
     DO i = 1, 4
 
       WRITE(*,*)
