@@ -10,7 +10,7 @@ PROGRAM wlCompareOpacities
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  USE wlLeptonEOSModule
+  USE wlLeptonEOSTableModule
   USE wlMuonEOS
   USE wlElectronPhotonEOS
   USE wlHelmMuonIOModuleHDF
@@ -305,8 +305,8 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
   REAL(DP), INTENT(IN)  :: T, D, Ye, Ym
   REAL(DP), INTENT(OUT) :: Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, Mp_eff
 
-  TYPE(MuonStateType) :: MuonState
-  TYPE(ElectronPhotonStateType) :: ElectronPhotonState
+  TYPE(MuonGasStateType) :: MuonGasState
+  TYPE(ElectronPhotonStateType) :: ElectronPhotonGasState
   REAL(DP) :: Yp
   INTEGER  :: iDV
 
@@ -403,18 +403,18 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Mue )
 #else
   ! Muons
-  MuonState % t     = T
-  MuonState % rho   = D
-  MuonState % rhoym = MuonState % rho * Ym
-  CALL FullMuonEOS(MuonTable, MuonState)
-  Mumu = MuonState % mu
+  MuonGasState % t     = T
+  MuonGasState % rho   = D
+  MuonGasState % rhoym = MuonGasState % rho * Ym
+  CALL FullMuonEOS(MuonTable, MuonGasState)
+  Mumu = MuonGasState % mu
 
   ! Electrons
-  ElectronPhotonState % t   = T
-  ElectronPhotonState % rho = D
-  ElectronPhotonState % ye  = Ye
-  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-  Mue = ElectronPhotonState % mue
+  ElectronPhotonGasState % t   = T
+  ElectronPhotonGasState % rho = D
+  ElectronPhotonGasState % ye  = Ye
+  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonGasState)
+  Mue = ElectronPhotonGasState % mue
 #endif
 
 END SUBROUTINE ApplyEOS

@@ -47,13 +47,12 @@ wlEOSComposeInversionTest.o: \
   wlInterpolationModule.o \
   wlInterpolationUtilitiesModule.o \
   wlEOSComponentsCombinedInversionModule.o \
-  wlLeptonEOSModule.o \
-  wlElectronPhotonEOS.o \
-  wlMuonEOS.o \
-  wlHelmMuonIOModuleHDF.o \
+  wlEOSComponentsSeparateInversionModule.o \
+	wlHelmIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
   wlExtPhysicalConstantsModule.o \
   wlEOSComposeInversionTest.F90
-
 
 wlEOSComposeInversionTestOnePointEnergy.o: \
   wlKindModule.o \
@@ -63,11 +62,10 @@ wlEOSComposeInversionTestOnePointEnergy.o: \
   wlInterpolationModule.o \
   wlInterpolationUtilitiesModule.o \
   wlEOSComponentsCombinedInversionModule.o \
-  wlEOSInversionModule.o \
-  wlLeptonEOSModule.o \
-  wlElectronPhotonEOS.o \
-  wlMuonEOS.o \
-  wlHelmMuonIOModuleHDF.o \
+  wlEOSComponentsSeparateInversionModule.o \
+	wlHelmIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
   wlExtPhysicalConstantsModule.o \
   wlEOSComposeInversionTestOnePointEnergy.F90
 

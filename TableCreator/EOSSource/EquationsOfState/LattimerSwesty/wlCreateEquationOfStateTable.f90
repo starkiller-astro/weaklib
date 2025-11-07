@@ -159,7 +159,7 @@ PRINT*, "Allocate Dependent Variable Logical "
   EOSTable % DV % Repaired(:,:,:) = 0
   
 PRINT*, "Begin Associate" 
-  ASSOCIATE(&
+  ASSOCIATE( &
     Density     => EOSTable % TS % States(1) % Values, &
     Temperature => EOSTable % TS % States(2) % Values, &
     Ye          => EOSTable % TS % States(3) % Values, &

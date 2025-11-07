@@ -7,36 +7,53 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlIOModuleHDF
     USE wlEOSIOModuleHDF
     USE wlInterpolationUtilitiesModule, ONLY: &
-    LinearInterp_Array_Point, &
-    GetIndexAndDelta_Lin, GetIndexAndDelta_Log
+      LinearInterp_Array_Point, &
+      GetIndexAndDelta_Lin
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
-        ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
-    USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
-    USE wlLeptonEOSModule, ONLY: HelmTableType, MuonTableType, &
-        iTempMax, iDenMax, &
-        nTempMuon, nDenMuon, &
-        ReadHelmEOSdat, ReadMuonEOSdat, &
-        AllocateHelmholtzTable, DeallocateHelmholtzTable, &
-        AllocateMuonTable, DeAllocateMuonTable 
-    USE wlElectronPhotonEOS, ONLY: &
-      ElectronPhotonEOS, ElectronPhotonStateType
-    USE wlMuonEOS, ONLY: &
-      FullMuonEOS, MuonStateType
-    USE wlEosConstantsModule, ONLY: cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp
+      ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
+    USE wlLeptonEOSTableModule, ONLY: &
+      HelmTableType, &
+      ReadHelmEOSdat, &
+      AllocateHelmholtzTable, DeallocateHelmholtzTable
+    USE wlLeptonPhotonGasEOS, ONLY: &
+      PhotonGasType, LeptonGasType, &
+      PhotonGasEOS , LeptonGasEOS , &
+      GetPhotonLeptonGasEOS
+    USE wlEosConstantsModule, ONLY: &
+      cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp, mmu
     USE wlSoundSpeedModule
 
     IMPLICIT NONE
     
+    ! PARAMETERS OF MUON TABLE, NEED TO KNOW THIS IN ADVANCE
+    INTEGER, PARAMETER  :: nTempMuons = 270
+    REAL(DP), PARAMETER :: tlo_Muons  =  9.763597279797683_dp
+    REAL(DP), PARAMETER :: thi_Muons  = 12.45359726262338_dp
+
+    INTEGER, PARAMETER  :: nDenMuons  = 1501
+    REAL(DP), PARAMETER :: dlo_Muons  =  3.220259248823259_dp
+    REAL(DP), PARAMETER :: dhi_Muons  = 15.85594401137048_dp
+
+    ! PARAMETERS OF ELECTRON TABLE, NEED TO KNOW THIS IN ADVANCE
+    INTEGER, PARAMETER  :: nTempElectrons = 541
+    REAL(DP), PARAMETER :: tlo_Electrons  = 3.0_dp
+    REAL(DP), PARAMETER :: thi_Electrons  = 13.0_dp 
+
+    INTEGER, PARAMETER  :: nDenElectrons  = 201
+    REAL(DP), PARAMETER :: dlo_Electrons  = -12.0_dp
+    REAL(DP), PARAMETER :: dhi_Electrons  = 15.0_dp
+
     INTEGER                          :: iVars
-    INTEGER, DIMENSION(2)            :: nPoints2D
+    INTEGER, DIMENSION(2)            :: nPointsHelm
     INTEGER, DIMENSION(3)            :: nPointsCompose
     INTEGER, DIMENSION(4)            :: nPoints
     INTEGER                          :: nVariables
     TYPE(EquationOfState4DTableType) :: EOSTable
-    TYPE(HelmTableType)         :: HelmTable
-    TYPE(MuonTableType)                :: MuonTable
-    TYPE(ElectronPhotonStateType)    :: ElectronPhotonState
-    TYPE(MuonStateType)              :: MuonState
+    TYPE(HelmTableType)              :: HelmTableElectrons
+    TYPE(HelmTableType)              :: HelmTableMuons
+    TYPE(PhotonGasType)              :: PhotonGasState
+    TYPE(LeptonGasType)              :: ElectronGasState
+    TYPE(LeptonGasType)              :: MuonGasState
     
     CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &
         HelmDatFilePath, MuonDatFilePath, &
@@ -86,20 +103,22 @@ PROGRAM wlCreateEquationOfStateTable
 
     ! At this point you have filled the Compose EOS, now read in the Helmholtz and Muon EOS
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPoints2D = (/ iTempMax, iDenMax /)
-    PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmTable, nPoints2D )
+    nPointsHelm = (/ nTempElectrons, nDenElectrons /)
+    PRINT*, "Allocate Helmholtz EOS for Electrons"
+    CALL AllocateHelmholtzTable( HelmTableElectrons, nPointsHelm )
     
-    HelmDatFilePath = '../helm_table.dat'
-    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTable )
+    HelmDatFilePath = '../electron_table_p256_q800.dat'
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableElectrons, me, &
+       tlo_Electrons, thi_Electrons, dlo_Electrons, dhi_Electrons )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPoints2D = (/ nTempMuon, nDenMuon /)
-    PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonTable( MuonTable, nPoints2D )
+    nPointsHelm = (/ nTempMuons, nDenMuons /)
+    PRINT*, "Allocate Helmholtz EOS for Muons"
+    CALL AllocateHelmholtzTable( HelmTableMuons, nPointsHelm )
     
-    MuonDatFilePath = '../muons_fixedrho.dat'
-    CALL ReadMuonEOSdat( MuonDatFilePath, MuonTable )
+    HelmDatFilePath = '../muon_table_p256_q800.dat'
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableMuons, mmu, &
+       tlo_Muons, thi_Muons, dlo_Muons, dhi_Muons )
 
     ! Set up desired grid
     nPoints(1) = nPointsCompose(1)
@@ -231,7 +250,7 @@ PROGRAM wlCreateEquationOfStateTable
     ! and typically MAXVAL(YpCompOSE) ~ 0.55 so you should be quite safe.
 
     iCount = 0
-    !$OMP PARALLEL DO PRIVATE(ElectronPhotonState, MuonState, Ye, Ym, Yp, iYp, dYp, LocalOffset, Xbary) &
+    !$OMP PARALLEL DO PRIVATE(ElectronGasState, PhotonGasState, MuonGasState, Ye, Ym, Yp, iYp, dYp, LocalOffset, Xbary) &
     !$OMP SHARED(iCount) &
     !$OMP COLLAPSE(3)
     DO iRho=1,nPoints(1)
@@ -260,15 +279,21 @@ PROGRAM wlCreateEquationOfStateTable
             ! Now get index for baryonic table
             CALL GetIndexAndDelta_Lin( Yp, YpCompOSE, iYp, dYp )
 
-            ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
-            ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
-            ElectronPhotonState % ye  = Ye
-            CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+            PhotonGasState % T   = EOSTable % TS % States(2) % Values(iTemp)
+            PhotonGasState % rho = EOSTable % TS % States(1) % Values(iRho)
+            CALL PhotonGasEOS(PhotonGasState)
+                
+            ElectronGasState % T    = EOSTable % TS % States(2) % Values(iTemp)
+            ElectronGasState % rho  = EOSTable % TS % States(1) % Values(iRho)
+            ElectronGasState % yL   = Ye
 
-            MuonState % t     = EOSTable % TS % States(2) % Values(iTemp)
-            MuonState % rho   = EOSTable % TS % States(1) % Values(iRho)
-            MuonState % rhoym = MuonState % rho * Ym
-            CALL FullMuonEOS(MuonTable, MuonState)
+            CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+
+            MuonGasState % T    = EOSTable % TS % States(2) % Values(iTemp)
+            MuonGasState % rho  = EOSTable % TS % States(1) % Values(iRho)
+            MuonGasState % yL   = Ym
+
+            CALL LeptonGasEOS(HelmTableMuons, MuonGasState)
 
             ! PRESSURE
             LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,1) )
@@ -283,10 +308,10 @@ PROGRAM wlCreateEquationOfStateTable
               LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,1) + LocalOffset), Xbary )
           
             EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe,iYm) = &
-            Xbary + MuonState % p + ElectronPhotonState % p
+              Xbary + MuonGasState % p + PhotonGasState % p + ElectronGasState % p
 
             IF (EOSTable % DV % Variables(1) % Values(iRho,iTemp,iYe,iYm) < 0.0d0) THEN
-              WRITE(*,*) iYe, iYp, Ye, Ym, Yp, dYp, Xbary, MuonState % p, ElectronPhotonState % p
+              WRITE(*,*) iYe, iYp, Ye, Ym, Yp, dYp, Xbary, MuonGasState % p, PhotonGasState % p + ElectronGasState % p
               STOP
             ENDIF
 
@@ -303,7 +328,7 @@ PROGRAM wlCreateEquationOfStateTable
               LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,2) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(2) % Values(iRho,iTemp,iYe,iYm) = &
-              Xbary + MuonState % s + ElectronPhotonState % s
+              Xbary + MuonGasState % s + PhotonGasState % s + ElectronGasState % s
 
             ! ENERGY
             LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,3) )
@@ -318,15 +343,15 @@ PROGRAM wlCreateEquationOfStateTable
               LOG10(EOSCompOSE(iRho,iTemp,iYp:iYp+1,3) + LocalOffset), Xbary )
             
             EOSTable % DV % Variables(3) % Values(iRho,iTemp,iYe,iYm) = &
-              Xbary + MuonState % e + ElectronPhotonState % e + Add_to_energy
+              Xbary + MuonGasState % e + PhotonGasState % e + ElectronGasState % e + Add_to_energy
 
             ! ELECTRON CHEMICAL POTENTIAL
             EOSTable % DV % Variables(4) % Values(iRho,iTemp,iYe,iYm) = &
-              ElectronPhotonState % mue
+              ElectronGasState % mu
 
             ! MUON CHEMICAL POTENTIAL
             EOSTable % DV % Variables(5) % Values(iRho,iTemp,iYe,iYm) = &
-              MuonState % mu
+              MuonGasState % mu
 
             ! PROTON CHEMICAL POTENTIAL
             LocalOffset = MINVAL( EOSCompOSE(iRho,iTemp,iYp:iYp+1,5) )
@@ -543,21 +568,35 @@ PROGRAM wlCreateEquationOfStateTable
       DO iTemp=1,nPoints(2)
         DO iYm=1,nPoints(4)
 
-          ElectronPhotonState % rho = EOSTable % TS % States(1) % Values(iRho)
-          ElectronPhotonState % t   = EOSTable % TS % States(2) % Values(iTemp)
-          ElectronPhotonState % ye  = EOSTable % TS % States(3) % Values(nPoints(3))
-          CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+          PhotonGasState % T   = EOSTable % TS % States(2) % Values(iTemp)
+          PhotonGasState % rho = EOSTable % TS % States(1) % Values(iRho)
+          CALL PhotonGasEOS(PhotonGasState)
+              
+          ElectronGasState % T    = EOSTable % TS % States(2) % Values(iTemp)
+          ElectronGasState % rho  = EOSTable % TS % States(1) % Values(iRho)
+          ElectronGasState % yL   = EOSTable % TS % States(3) % Values(nPoints(3))
 
+          CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+
+          MuonGasState % T    = EOSTable % TS % States(2) % Values(iTemp)
+          MuonGasState % rho  = EOSTable % TS % States(1) % Values(iRho)
+          MuonGasState % yL   = EOSTable % TS % States(4) % Values(iYm)
+
+          CALL LeptonGasEOS(HelmTableMuons, MuonGasState)
+          
           EOSTable % DV % Variables(1) % Values(iRho,iTemp,nPoints(3),iYm) = &
-            EOSCompOSE(iRho,iTemp,nPoints(3),1) + ElectronPhotonState % p
+            EOSCompOSE(iRho,iTemp,nPoints(3),1) + &
+            ElectronGasState % p + MuonGasState % p + PhotonGasState % p
           EOSTable % DV % Variables(2) % Values(iRho,iTemp,nPoints(3),iYm) = &
-            EOSCompOSE(iRho,iTemp,nPoints(3),2) + ElectronPhotonState % s
+            EOSCompOSE(iRho,iTemp,nPoints(3),2) + &
+            ElectronGasState % s + MuonGasState % s + PhotonGasState % s
           EOSTable % DV % Variables(3) % Values(iRho,iTemp,nPoints(3),iYm) = &
-            EOSCompOSE(iRho,iTemp,nPoints(3),3) + ElectronPhotonState % e
+            EOSCompOSE(iRho,iTemp,nPoints(3),3) + &
+            ElectronGasState % e + MuonGasState % e + PhotonGasState % e + Add_to_energy
           EOSTable % DV % Variables(4) % Values(iRho,iTemp,nPoints(3),iYm) = &
-            ElectronPhotonState % mue
+            ElectronGasState % mu
           EOSTable % DV % Variables(5) % Values(iRho,iTemp,nPoints(3),iYm) = &
-            MuonState % mu
+            MuonGasState % mu
           EOSTable % DV % Variables(6) % Values(iRho,iTemp,nPoints(3),iYm) = &
             EOSCompOSE(iRho,iTemp,nPoints(3),5)
           EOSTable % DV % Variables(7) % Values(iRho,iTemp,nPoints(3),iYm) = &
@@ -622,7 +661,7 @@ PROGRAM wlCreateEquationOfStateTable
     iCount = 0
     !$OMP PARALLEL DO PRIVATE(D, T, Ye, Ym, Gamma, Cs) &
     !$OMP SHARED(EOSTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE, &
-    !$OMP LogEnergy, LogEntropy, OS_P, OS_E, OS_S, HelmTable, MuonTable, iCount) &
+    !$OMP LogEnergy, LogEntropy, OS_P, OS_E, OS_S, HelmTableElectrons, HelmTableMuons, iCount) &
     !$OMP COLLAPSE(3)
     DO iRho=1,nPoints(1)
       DO iTemp=1,nPoints(2)
@@ -653,7 +692,7 @@ PROGRAM wlCreateEquationOfStateTable
                   EOSCompOSE(:,:,:,1), OS_P, &
                   LogEnergy (:,:,:), OS_E, &
                   LogEntropy(:,:,:), OS_S, &
-                  HelmTable, MuonTable, Gamma, Cs, .FALSE.)
+                  HelmTableElectrons, HelmTableMuons, Gamma, Cs, .FALSE.)
 
             EOSTable % DV % Variables(15) % Values(iRho,iTemp,iYe,iYm) = Gamma
           ENDDO
@@ -719,8 +758,8 @@ PROGRAM wlCreateEquationOfStateTable
     WRITE (*,*) "HDF write successful"
     
     CALL DeAllocateEquationOfStateTable( EOSTable )
-    CALL DeallocateHelmholtzTable( HelmTable )
-    CALL DeAllocateMuonTable( MuonTable )
+    CALL DeallocateHelmholtzTable( HelmTableElectrons )
+    CALL DeallocateHelmholtzTable( HelmTableMuons )
 
     ! Now Create Electron EOS
 

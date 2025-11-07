@@ -7,7 +7,7 @@ PROGRAM wlTestElasticOpacity
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  USE wlLeptonEOSModule
+  USE wlLeptonEOSTableModule
   USE wlMuonEOS
   USE wlElectronPhotonEOS
   USE wlHelmMuonIOModuleHDF
@@ -30,10 +30,10 @@ PROGRAM wlTestElasticOpacity
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
 #endif
   TYPE(MuonTableType) :: MuonTable
-  TYPE(MuonStateType) :: MuonState
+  TYPE(MuonGasStateType) :: MuonGasState
 
   TYPE(HelmTableType) :: HelmTable
-  TYPE(ElectronPhotonStateType) :: ElectronPhotonState
+  TYPE(ElectronPhotonStateType) :: ElectronPhotonGasState
 
   REAL(DP) :: D, T, Ye, Ym
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: E
@@ -170,17 +170,17 @@ PROGRAM wlTestElasticOpacity
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Xn )
 
   ! Muons
-  MuonState % t     = T
-  MuonState % rhoym = D * Ym
-  CALL FullMuonEOS(MuonTable, MuonState)
-  Mumu = MuonState % mu
+  MuonGasState % t     = T
+  MuonGasState % rhoym = D * Ym
+  CALL FullMuonEOS(MuonTable, MuonGasState)
+  Mumu = MuonGasState % mu
 
   ! Electrons
-  ElectronPhotonState % t   = T
-  ElectronPhotonState % rho = D
-  ElectronPhotonState % ye  = Ye
-  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-  Mue = ElectronPhotonState % mue
+  ElectronPhotonGasState % t   = T
+  ElectronPhotonGasState % rho = D
+  ElectronPhotonGasState % ye  = Ye
+  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonGasState)
+  Mue = ElectronPhotonGasState % mue
 
   WRITE(*,*) 't     =', T * kmev
   WRITE(*,*) 'ye    =', ye

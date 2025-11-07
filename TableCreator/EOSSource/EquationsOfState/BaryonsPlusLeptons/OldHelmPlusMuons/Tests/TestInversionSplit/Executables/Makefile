@@ -1,0 +1,15 @@
+MACHINE = $(WEAKLIB_MACHINE)
+
+OPT_LEVEL = OPTIMIZE
+FLAGS     = $(FLAGS_$(OPT_LEVEL))
+
+USE_GPU    ?= FALSE
+USE_CUDA   ?= FALSE
+USE_HIP    ?= FALSE
+USE_OMP_OL ?= FALSE
+USE_OACC   ?= FALSE
+USE_OMP    ?= TRUE
+
+EOSMODE = 3D
+
+include ../Makefile_Inversion

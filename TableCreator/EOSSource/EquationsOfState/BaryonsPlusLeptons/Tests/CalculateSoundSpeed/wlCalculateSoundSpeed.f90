@@ -5,23 +5,22 @@ PROGRAM wlCalculateSoundSpeed
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
-  USE wlLeptonEOSModule, ONLY: &
-    HelmTableType, MuonTableType
-  USE wlHelmMuonIOModuleHDF, ONLY: &
-    ReadHelmholtzTableHDF, ReadMuonTableHDF
-  USE wlElectronPhotonEOS, ONLY: &
-    ElectronPhotonEOS, ElectronPhotonStateType
-  USE wlMuonEOS, ONLY: &
-    FullMuonEOS, MuonStateType
+  USE wlLeptonEOSTableModule, ONLY: &
+    HelmTableType
+  USE wlHelmIOModuleHDF, ONLY: &
+    ReadHelmholtzTableHDF
+  USE wlLeptonPhotonGasEOS, ONLY: &
+    PhotonGasType, LeptonGasType, &
+    PhotonGasEOS , LeptonGasEOS , &
+    GetPhotonLeptonGasEOS
   USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, cvel
   USE wlSoundSpeedModule
     
     IMPLICIT NONE
     
-    TYPE(HelmTableType) :: HelmTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonTableType) :: MuonTable
-    TYPE(MuonStateType) :: MuonState
+    TYPE(HelmTableType) :: HelmTableElectrons
+    TYPE(HelmTableType) :: HelmTableMuons
+    TYPE(LeptonGasType) :: ElectronGasState
     TYPE(EquationOfStateTableType) :: EOSBaryonTable, EOSFullTable, EOSBaryonPlusEleTable
     
     INTEGER :: nRho, nTemp, nYp, iAbar, iZbar, iBE, iPressure, iRho, iTemp, iYp, iXp, iXa, iXn, iXh, &
@@ -32,6 +31,7 @@ PROGRAM wlCalculateSoundSpeed
     REAL(dp) :: eps_baryons, eps_electrons, eps_total
     REAL(dp) :: mue_baryons, mue_electrons, mue_total
     REAL(dp) :: mup_baryons, mup_total, mun_baryons, mun_total
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     
     REAL(DP) :: OS_P, OS_E, OS_S
     REAL(DP) :: D, T, Yp, Ye, Ym, cs2, Gamma
@@ -51,23 +51,23 @@ PROGRAM wlCalculateSoundSpeed
     
     IF (RedHDF5Table) THEN
         FullEOSTableName = 'FullEOS_interpolated.h5'
-        BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
+        BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS_interpolated.h5'
     ELSE
         FullEOSTableName = 'FullEOS.h5'
-        BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+        BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
     ENDIF
     
     BaryonPlusEleName = 'csBaryonPlusEle.h5'
-    
-    ! read in helmholtz table
-    CALL ReadHelmholtzTableHDF( HelmTable, BaryonEOSTableName )
     
     ! read in baryon table -------------------------------
     CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
 
     ! read in muon table
-    CALL ReadMuonTableHDF( MuonTable, BaryonEOSTableName )
+    CALL ReadHelmholtzTableHDF( HelmTableMuons, BaryonEOSTableName, "HelmTableMuons" )
 
+    ! read in helmholtz table
+    CALL ReadHelmholtzTableHDF( HelmTableElectrons, BaryonEOSTableName, "HelmTableElectrons" )
+    
     ! read in full table -------------------------------
     CALL ReadEquationOfStateTableHDF( EOSFullTable, FullEOSTableName )
     
@@ -108,73 +108,79 @@ PROGRAM wlCalculateSoundSpeed
         DO iTemp=1,nTemp
             DO iYp=1,nYp
                 
-                ! Initialize temperature, density, ye
-                ElectronPhotonState % t = EOSBaryonTable % TS % States(2) % Values(iTemp)
-                ElectronPhotonState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
-                ElectronPhotonState % ye = EOSBaryonTable % TS % States(3) % Values(iYp)
-                
-                ! calculate electron quantities
-                CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+              D  = EOSBaryonTable % TS % States(1) % Values(iRho)
+              T  = EOSBaryonTable % TS % States(1) % Values(iTemp)
+              Ye = EOSBaryonTable % TS % States(1) % Values(iYp)
+              Ym = 0.0_dp
 
-                Ee(iRho,iTemp,iYp) = ElectronPhotonState % e
-                Pe(iRho,iTemp,iYp) = ElectronPhotonState % p
-                
-                press_baryons = (EOSBaryonTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
-                    EOSBaryonTable % DV % Offsets(iPressure)
-                press_electrons = ElectronPhotonState % p
-                press_total = (EOSFullTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
-                    EOSFullTable % DV % Offsets(iPressure)
-                
-                s_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
-                    EOSBaryonTable % DV % Offsets(iEntropy)
-                s_electrons = ElectronPhotonState % s * rmu * kmev_inv / ergmev
-                s_total = 10.0d0**(EOSFullTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
-                    EOSFullTable % DV % Offsets(iEntropy)
-                
-                eps_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
-                    EOSBaryonTable % DV % Offsets(iEnergy)
-                eps_electrons = ElectronPhotonState % e
-                eps_total = 10.0d0**(EOSFullTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
-                    EOSFullTable % DV % Offsets(iEnergy)
-                
-                mue_baryons = EOSBaryonTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
-                    EOSBaryonTable % DV % Offsets(iMue)
-                mue_electrons = ElectronPhotonState % mue
-                mue_total = EOSFullTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
-                    EOSFullTable % DV % Offsets(iMue)
-                
-                mup_baryons = EOSBaryonTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &
-                    EOSBaryonTable % DV % Offsets(iMup)
-                mup_total = EOSFullTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &
-                    EOSFullTable % DV % Offsets(iMup)
-                
-                mun_baryons = EOSBaryonTable % DV % Variables(imun) % Values(iRho,iTemp,iYp) - &
-                    EOSBaryonTable % DV % Offsets(imun)
-                mun_total = EOSFullTable % DV % Variables(imun) % Values(iRho,iTemp,iYp) - &
-                    EOSFullTable % DV % Offsets(imun)
-                
-                EOSBaryonPlusEleTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp) = press_baryons + press_electrons
-                EOSBaryonPlusEleTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp) = s_baryons + s_electrons
-                EOSBaryonPlusEleTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp) = eps_baryons + eps_electrons
-                EOSBaryonPlusEleTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) = mue_electrons
-                EOSBaryonPlusEleTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) = mup_baryons
-                EOSBaryonPlusEleTable % DV % Variables(iMun) % Values(iRho,iTemp,iYp) = mun_baryons
-                EOSBaryonPlusEleTable % DV % Variables(iXp) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iXp) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(iXn) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iXn) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(iXa) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iXa) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(iXh) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iXh) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(iAbar) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iAbar) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(iZbar) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iZbar) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(iBE) % Values(iRho,iTemp,iYp) = & 
-                    EOSBaryonTable % DV % Variables(iBE) % Values(iRho,iTemp,iYp)
-                EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = 0.0d0
-                EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = 0.0d0
+              ElectronGasState % T    = T
+              ElectronGasState % rho  = D
+              ElectronGasState % yL   = Ye
+
+              CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+
+              CALL GetPhotonLeptonGasEOS(D, T, Ye, 0.0_dp, &
+                  HelmTableElectrons, HelmTableMuons, P_LeptPhot, E_LeptPhot, S_LeptPhot)
+
+              Ee(iRho,iTemp,iYp) = E_LeptPhot
+              Pe(iRho,iTemp,iYp) = P_LeptPhot
+              
+              press_baryons = (EOSBaryonTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
+                  EOSBaryonTable % DV % Offsets(iPressure)
+              press_electrons = P_LeptPhot
+              press_total = (EOSFullTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
+                  EOSFullTable % DV % Offsets(iPressure)
+              
+              s_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
+                  EOSBaryonTable % DV % Offsets(iEntropy)
+              s_electrons = S_LeptPhot * rmu * kmev_inv / ergmev
+              s_total = 10.0d0**(EOSFullTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
+                  EOSFullTable % DV % Offsets(iEntropy)
+              
+              eps_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
+                  EOSBaryonTable % DV % Offsets(iEnergy)
+              eps_electrons = E_LeptPhot
+              eps_total = 10.0d0**(EOSFullTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
+                  EOSFullTable % DV % Offsets(iEnergy)
+              
+              mue_baryons = EOSBaryonTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
+                  EOSBaryonTable % DV % Offsets(iMue)
+              mue_electrons = ElectronGasState % mu
+              mue_total = EOSFullTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
+                  EOSFullTable % DV % Offsets(iMue)
+              
+              mup_baryons = EOSBaryonTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &
+                  EOSBaryonTable % DV % Offsets(iMup)
+              mup_total = EOSFullTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &
+                  EOSFullTable % DV % Offsets(iMup)
+              
+              mun_baryons = EOSBaryonTable % DV % Variables(imun) % Values(iRho,iTemp,iYp) - &
+                  EOSBaryonTable % DV % Offsets(imun)
+              mun_total = EOSFullTable % DV % Variables(imun) % Values(iRho,iTemp,iYp) - &
+                  EOSFullTable % DV % Offsets(imun)
+              
+              EOSBaryonPlusEleTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp) = press_baryons + press_electrons
+              EOSBaryonPlusEleTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp) = s_baryons + s_electrons
+              EOSBaryonPlusEleTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp) = eps_baryons + eps_electrons
+              EOSBaryonPlusEleTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) = mue_electrons
+              EOSBaryonPlusEleTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) = mup_baryons
+              EOSBaryonPlusEleTable % DV % Variables(iMun) % Values(iRho,iTemp,iYp) = mun_baryons
+              EOSBaryonPlusEleTable % DV % Variables(iXp) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iXp) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(iXn) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iXn) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(iXa) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iXa) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(iXh) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iXh) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(iAbar) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iAbar) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(iZbar) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iZbar) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(iBE) % Values(iRho,iTemp,iYp) = & 
+                  EOSBaryonTable % DV % Variables(iBE) % Values(iRho,iTemp,iYp)
+              EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = 0.0d0
+              EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = 0.0d0
 
             END DO
         END DO
@@ -239,7 +245,7 @@ PROGRAM wlCalculateSoundSpeed
                 Ym = 1.0d-2
                 
                 CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, S_T, OS_S, &
-                    HelmTable, MuonTable, Gamma, cs2, SeparateContributions)
+                    HelmTableElectrons, HelmTableMuons, Gamma, cs2, SeparateContributions)
 
                 EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2
                 EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = Gamma			

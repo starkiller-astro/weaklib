@@ -39,8 +39,8 @@ wlCreateEquationOfStateTable.o: \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlCompOSEInterface.o \
-  wlHelmMuonIOModuleHDF.o \
-  wlLeptonEOSModule.o \
+  wlHelmIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
 	wlEosConstantsModule.o
 
 wlCreate4DEquationOfStateTable.o: \
@@ -51,11 +51,9 @@ wlCreate4DEquationOfStateTable.o: \
   wlEOSIOModuleHDF.o \
 	wlInterpolationUtilitiesModule.o \
   wlCompOSEInterface.o \
-  wlHelmMuonIOModuleHDF.o \
-  wlLeptonEOSModule.o \
-	wlElectronPhotonEOS.o \
-	wlMuonEOS.o \
-  wlEosConstantsModule.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+	wlEosConstantsModule.o \
 	wlSoundSpeedModule.o
 
 wlCreate3DEquationOfStateTable.o: \
@@ -66,11 +64,9 @@ wlCreate3DEquationOfStateTable.o: \
   wlEOSIOModuleHDF.o \
 	wlInterpolationUtilitiesModule.o \
   wlCompOSEInterface.o \
-  wlHelmMuonIOModuleHDF.o \
-  wlLeptonEOSModule.o \
-	wlElectronPhotonEOS.o \
-	wlMuonEOS.o \
-  wlEosConstantsModule.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+	wlEosConstantsModule.o \
 	wlSoundSpeedModule.o
 
 clean:

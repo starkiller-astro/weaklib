@@ -18,7 +18,7 @@ PROGRAM wlParallelReadTestCompose
                               BroadcastMuonTableParallel
   USE wlHelmMuonIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF,  ReadMuonTableHDF
-  USE wlLeptonEOSModule, ONLY: &
+  USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType, MuonTableType, &
     AllocateHelmholtzTable, AllocateMuonTable
 

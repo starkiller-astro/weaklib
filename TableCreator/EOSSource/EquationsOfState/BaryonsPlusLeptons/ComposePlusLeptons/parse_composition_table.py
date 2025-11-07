@@ -248,20 +248,24 @@ def read_micro(file_micro, dict_micro):
 charge_tol = 1e-7
 mfrac_tol = 1e-7
 
-file_yq = 'Executables/SFHo_no_ele/eos.yq'
-file_compo = 'Executables/SFHo_no_ele/eos.compo'
+main_dir = 'SFHo_no_ele'
+main_dir = 'SFHo'
+
+file_yq    = 'Executables/' + main_dir + '/eos.yq'
+file_compo = 'Executables/' + main_dir + '/eos.compo'
 file_micro = 'Executables/SFHo/eos.micro'
 # Sometimes file_micro needs to be the full table 
 # since effective mass and nuclear potentials are 
 # not always included in the table without electrons
 
-file_WL_format = 'Executables/SFHo_no_ele/eos.compomicro.wl'
+file_WL_format = 'Executables/' + main_dir + '/eos.compomicro.wl'
 
 # you find this in the specific eos.pdf file from the CompOSE database
 # 10 and 11 are always neutron and proton. Each element of the dictionary is:
 # 'index' : (charge, baryon number). Technically you can infer from the index 
 # the charge and baryon numbers, but then if there are mesons it gets tricky I think.
-dict_pairs = { '10'  : (0,1), \
+dict_pairs = { '0'   : (0,0), \
+               '10'  : (0,1), \
                '11'  : (1,1), \
                '4002': (2,4), \
                '3002': (2,3), \

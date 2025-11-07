@@ -7,14 +7,10 @@ MODULE wlEosTemperatureSeparateInversionModule
   USE wlInterpolationUtilitiesModule, ONLY: &
     Index1D_Lin, &
     Index1D_Log
-  USE wlMuonEOS, ONLY: &
-    MuonStateType, FullMuonEOS
-  USE wlElectronPhotonEOS, ONLY: &
-    ElectronPhotonStateType, ElectronPhotonEOS
-  USE wlLeptonEOSModule, ONLY: &
-    HelmTableType, MuonTableType
-  USE wlHelmMuonIOModuleHDF, ONLY: &
-    ReadHelmholtzTableHDF, ReadMuonTableHDF
+  USE wlLeptonEOSTableModule, ONLY: &
+    HelmTableType
+  USE wlLeptonPhotonGasEOS, ONLY: &
+    GetPhotonLeptonGasEOS
 
   IMPLICIT NONE
   PRIVATE
@@ -45,7 +41,7 @@ CONTAINS
   END FUNCTION InverseLogInterp
   
   SUBROUTINE InvertTemperatureWith_DEYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, T_Guess, Error, HelmTable, MuonTable )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -74,13 +70,12 @@ CONTAINS
     REAL(dp) :: f_a, f_b, f_c
     REAL(dp) :: LogD
     REAL(dp) :: LogDs_i(2), Yps_i(2)
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonStateType) :: MuonState
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     Yp = Ye + Ym
     
@@ -112,18 +107,13 @@ CONTAINS
     
     CALL LogInterpolateSingleVariable &
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
-
-    ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
      
-    X_a = Xb_a + ElectronPhotonState % e + MuonState % e
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
+
+    X_a = Xb_a + E_LeptPhot
     f_a = X - X_a
     
     i_b = i_a + 1
@@ -134,17 +124,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
     
-    X_b = Xb_b + ElectronPhotonState % e + MuonState % e 
-
+    X_b = Xb_b + E_LeptPhot 
     f_b = X - X_b
     
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -162,17 +147,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
     
-    X_a = Xb_a + ElectronPhotonState % e + MuonState % e
-
+    X_a = Xb_a + E_LeptPhot
     f_a = X - X_a
     
     i_b = SizeTs
@@ -183,17 +163,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_b = Xb_b + ElectronPhotonState % e + ElectronPhotonState % e
-
+    X_b = Xb_b + E_LeptPhot
     f_b = X - X_b
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -208,17 +183,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t   = T_c
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye  = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_c, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t     = T_c
-        MuonState % rhoym = D * Ym
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_c = Xb_c + ElectronPhotonState % e + MuonState % e 
-
+        X_c = Xb_c + E_LeptPhot 
         f_c = X - X_c
 
         IF ( f_a * f_c <= 0.0_dp ) THEN
@@ -253,17 +223,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_i
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-        MuonState % t     = T_i
-        MuonState % rhoym = D * Ym
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_i, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
         
-        CALL FullMuonEOS(MuonTable, MuonState)
-        
-        X_i = Xb_i + ElectronPhotonState % e + MuonState % e 
+        X_i = Xb_i + E_LeptPhot 
 
         f_c = X - X_c
         f_b = X - X_i
@@ -302,7 +267,7 @@ CONTAINS
   END SUBROUTINE InvertTemperatureWith_DEYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DEYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -329,13 +294,12 @@ CONTAINS
     REAL(dp) :: f_a, f_b, f_c
     REAL(dp) :: LogD
     REAL(dp) :: LogDs_i(2), Yps_i(2)
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonStateType) :: MuonState
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     Yp = Ye + Ym
 
@@ -366,18 +330,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_a = Xb_a + ElectronPhotonState % e + MuonState % e 
-
+    X_a = Xb_a + E_LeptPhot 
     f_a = X - X_a
 
     i_b = SizeTs
@@ -388,17 +346,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
     
-    CALL FullMuonEOS(MuonTable, MuonState)
-    
-    X_b = Xb_b + ElectronPhotonState % e + MuonState % e 
+    X_b = Xb_b + E_LeptPhot 
 
     f_b = X - X_b
 
@@ -414,18 +367,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_c
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_c, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_c
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
- 
-        X_c = Xb_c + ElectronPhotonState % e + MuonState % e 
-
+        X_c = Xb_c + E_LeptPhot 
         f_c = X - X_c
 
         IF ( f_a * f_c <= 0.0_dp ) THEN
@@ -454,17 +401,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_i
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_i, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_i
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_i = Xb_i + ElectronPhotonState % e + MuonState % e 
+        X_i = Xb_i + E_LeptPhot 
 
         f_a = X - X_i
         f_b = X - X_b
@@ -500,7 +442,7 @@ CONTAINS
 
   
   SUBROUTINE InvertTemperatureWith_DPYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -529,13 +471,12 @@ CONTAINS
     REAL(dp) :: f_a, f_b, f_c
     REAL(dp) :: LogD
     REAL(dp) :: LogDs_i(2), Yps_i(2)
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonStateType) :: MuonState
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     Yp = Ye + Ym
     
@@ -576,17 +517,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
     
-    X_a = Xb_a + ElectronPhotonState % p + MuonState % p
-
+    X_a = Xb_a + P_LeptPhot
     f_a = X - X_a
     
     i_b = i_a + 1
@@ -603,17 +539,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_b = Xb_b + ElectronPhotonState % p + MuonState % p
-
+    X_b = Xb_b + P_LeptPhot
     f_b = X - X_b
     
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -637,17 +568,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_a = Xb_a + ElectronPhotonState % p + MuonState % p
-
+    X_a = Xb_a + P_LeptPhot
     f_a = X - X_a
     
     i_b = SizeTs
@@ -664,17 +590,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_b = Xb_b + ElectronPhotonState % p + MuonState % p
-
+    X_b = Xb_b + P_LeptPhot
     f_b = X - X_b
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -695,17 +616,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t   = T_c
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye  = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_c, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t     = T_c
-        MuonState % rhoym = D * Ym
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_c = Xb_c + ElectronPhotonState % p + MuonState % p
-
+        X_c = Xb_c + P_LeptPhot
         f_c = X - X_c
 
         IF ( f_a * f_c <= 0.0_dp ) THEN
@@ -746,17 +662,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_i
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_i, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_i
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_i = Xb_i + ElectronPhotonState % p + MuonState % p
+        X_i = Xb_i + P_LeptPhot
 
         f_c = X - X_c
         f_b = X - X_i
@@ -794,7 +705,7 @@ CONTAINS
   END SUBROUTINE InvertTemperatureWith_DPYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DPYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTable, MuonTable )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -822,14 +733,12 @@ CONTAINS
     REAL(dp) :: f_a, f_b, f_c
     REAL(dp) :: LogD
     REAL(dp) :: LogDs_i(2), Yps_i(2)
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
 
     ! Electron and Muon quantities
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonStateType) :: MuonState
-
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     Yp = Ye + Ym
 
     Error = 0
@@ -865,18 +774,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    
-    CALL FullMuonEOS(MuonTable, MuonState)
-   
-    X_a = Xb_a + ElectronPhotonState % p + MuonState % p
-
+    X_a = Xb_a + P_LeptPhot
     f_a = X - X_a
 
     i_b = SizeTs
@@ -893,18 +796,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    
-    CALL FullMuonEOS(MuonTable, MuonState)
-  
-    X_b = Xb_b + ElectronPhotonState % p + MuonState % p
-
+    X_b = Xb_b + P_LeptPhot
     f_b = X - X_b
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -925,18 +822,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_c
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_c, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_c
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_c = Xb_c + ElectronPhotonState % p + MuonState % p
-
+        X_c = Xb_c + P_LeptPhot
         f_c = X - X_c
 
         IF ( f_a * f_c <= 0.0_dp ) THEN
@@ -971,17 +862,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i, OS_local, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_i
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_i, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_i
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_i = Xb_i + ElectronPhotonState % p + MuonState % p
+        X_i = Xb_i + P_LeptPhot
 
         f_a = X - X_i
         f_b = X - X_b
@@ -1016,7 +902,7 @@ CONTAINS
 
   
   SUBROUTINE InvertTemperatureWith_DSYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTable, MuonTable )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -1044,14 +930,12 @@ CONTAINS
     REAL(dp) :: f_a, f_b, f_c
     REAL(dp) :: LogD
     REAL(dp) :: LogDs_i(2), Yps_i(2)
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
 
     ! Electron and Muon quantities
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonStateType) :: MuonState
-
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     Yp = Ye + Ym
     
     T = 0.0_dp
@@ -1084,17 +968,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_a = Xb_a + ElectronPhotonState % s + MuonState % s
-
+    X_a = Xb_a + S_LeptPhot
     f_a = X - X_a
     
     i_b = i_a + 1
@@ -1105,17 +984,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_b = Xb_b + ElectronPhotonState % s + MuonState % s
-
+    X_b = Xb_b + S_LeptPhot
     f_b = X - X_b
     
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -1133,17 +1007,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_a = Xb_a + ElectronPhotonState % s + MuonState % s
-
+    X_a = Xb_a + S_LeptPhot
     f_a = X - X_a
     
     i_b = SizeTs
@@ -1154,17 +1023,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    X_b = Xb_b + ElectronPhotonState % s + MuonState % s
-
+    X_b = Xb_b + S_LeptPhot
     f_b = X - X_b
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -1179,17 +1043,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t   = T_c
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye  = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_c, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t     = T_c
-        MuonState % rhoym = D * Ym
-        CALL FullMuonEOS(MuonTable, MuonState)
-    
-        X_c = Xb_c + ElectronPhotonState % s + MuonState % s
-
+        X_c = Xb_c + S_LeptPhot
         f_c = X - X_c
 
         IF ( f_a * f_c <= 0.0_dp ) THEN
@@ -1224,17 +1083,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_i
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_i, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_i
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_i = Xb_i + ElectronPhotonState % s + MuonState % s
+        X_i = Xb_i + S_LeptPhot
 
         f_c = X - X_c
         f_b = X - X_i
@@ -1270,7 +1124,7 @@ CONTAINS
   END SUBROUTINE InvertTemperatureWith_DSYpYl_Guess
   
   SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, Error, HelmTable, MuonTable )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs,  OS, T, Error, HelmTableElectrons, HelmTableMuons )
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
@@ -1297,14 +1151,13 @@ CONTAINS
     REAL(dp) :: f_a, f_b, f_c
     REAL(dp) :: LogD
     REAL(dp) :: LogDs_i(2), Yps_i(2)
+    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
     REAL(dp) :: Xbs_a(2,2), Xbs_b(2,2), Xbs_c(2,2), Xbs_i(2,2)
     
     ! Electron and Muon quantities
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
-    TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-    TYPE(MuonStateType) :: MuonState
-
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    
     Yp = Ye + Ym
 
     Error = 0
@@ -1334,18 +1187,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_a, Xb_a )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_a
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_a, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_a
-    MuonState % rhoym = D * Ym
-    
-    CALL FullMuonEOS(MuonTable, MuonState)
-   
-    X_a = Xb_a + ElectronPhotonState % s + MuonState % s
-
+    X_a = Xb_a + S_LeptPhot
     f_a = X - X_a
 
     i_b = SizeTs
@@ -1356,18 +1203,12 @@ CONTAINS
            ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_b, Xb_b )
 
     ! Calculate electron and muon contribution
-    ElectronPhotonState % t = T_b
-    ElectronPhotonState % rho = D
-    ElectronPhotonState % ye = Ye
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+    CALL GetPhotonLeptonGasEOS( &
+      D, T_b, Ye, Ym, &
+      HelmTableElectrons, HelmTableMuons, &
+      P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-    MuonState % t = T_b
-    MuonState % rhoym = D * Ym
-    
-    CALL FullMuonEOS(MuonTable, MuonState)
-  
-    X_b = Xb_b + ElectronPhotonState % s + MuonState % s
-
+    X_b = Xb_b + S_LeptPhot
     f_b = X - X_b
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
@@ -1382,18 +1223,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_c, Xb_c )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_c
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_c, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_c
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_c = Xb_c + ElectronPhotonState % s + MuonState % s
-
+        X_c = Xb_c + S_LeptPhot
         f_c = X - X_c
 
         IF ( f_a * f_c <= 0.0_dp ) THEN
@@ -1422,17 +1257,12 @@ CONTAINS
                ( LogD, Yp, LogDs_i, Yps_i,  OS, Xbs_i, Xb_i )
 
         ! Calculate electron and muon contribution
-        ElectronPhotonState % t = T_i
-        ElectronPhotonState % rho = D
-        ElectronPhotonState % ye = Ye
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+        CALL GetPhotonLeptonGasEOS( &
+          D, T_i, Ye, Ym, &
+          HelmTableElectrons, HelmTableMuons, &
+          P_LeptPhot, E_LeptPhot, S_LeptPhot)
 
-        MuonState % t = T_i
-        MuonState % rhoym = D * Ym
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        X_i = Xb_i + ElectronPhotonState % s + MuonState % s
+        X_i = Xb_i + S_LeptPhot
 
         f_a = X - X_i
         f_b = X - X_b

@@ -1,25 +1,28 @@
 PROGRAM wlCompareToFullEOS
 	
-	USE wlKindModule, ONLY: dp
+  USE wlKindModule, ONLY: dp
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
-	USE wlEOSIOModuleHDF	
-  USE wlLeptonEOSModule, ONLY: &
-    HelmTableType, MuonTableType
-  USE wlElectronPhotonEOS, ONLY: &
-    ElectronPhotonEOS, ElectronPhotonStateType
+  USE wlEOSIOModuleHDF
+  USE wlLeptonEOSTableModule, ONLY: &
+    HelmTableType
   USE wlHelmholtzEOS, ONLY: &
     FullHelmEOS, HelmholtzStateType
-  USE wlHelmMuonIOModuleHDF, ONLY: &
+  USE wlHelmIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF
-	USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me
-	USE wlExtEOSWrapperModule, ONLY : wlGetElectronEOS
+  USE wlLeptonPhotonGasEOS, ONLY: &
+    PhotonGasType, LeptonGasType, &
+    PhotonGasEOS , LeptonGasEOS
+  USE wlExtPhysicalConstantsModule, ONLY: &
+    kmev, rmu, kmev_inv, ergmev, me
+  USE wlExtEOSWrapperModule, ONLY : wlGetElectronEOS
 
-	IMPLICIT NONE
+  IMPLICIT NONE
 	
-	TYPE(ElectronPhotonStateType) :: ElectronPhotonState
 	TYPE(HelmholtzStateType) :: HelmholtzState
-	TYPE(HelmTableType) :: HelmTable
+	TYPE(HelmTableType)      :: HelmTableElectrons
+  TYPE(LeptonGasType)      :: ElectronGasState
+  TYPE(PhotonGasType)      :: PhotonGasState
   TYPE(EquationOfStateTableType) :: EOSBaryonTable, EOSFullTable, EOSBaryonPlusEleTable, EOSEleTable
 	
 	INTEGER :: nRho, nTemp, nYp, iAbar, iZbar, iBE, iPressure, iRho, iTemp, iYp, iXp, iXa, iXn, iXh, &
@@ -43,14 +46,14 @@ PROGRAM wlCompareToFullEOS
 	
 	IF (RedHDF5Table) THEN
 		FullEOSTableName = 'FullEOS_interpolated.h5'
-		BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
+		BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS_interpolated.h5'
 	ELSE
 		FullEOSTableName = 'FullEOS.h5'
-		BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+		BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
 	ENDIF
 
 	! read in helmholtz table
-	CALL ReadHelmholtzTableHDF( HelmTable, BaryonEOSTableName )
+	CALL ReadHelmholtzTableHDF( HelmTableElectrons, BaryonEOSTableName, "HelmTableElectrons" )
 	
 	! read in baryon table -------------------------------
   CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
@@ -97,40 +100,52 @@ PROGRAM wlCompareToFullEOS
 				zbar_total = zbar * heavy_frac + p_frac + 2.0d0*alpha_frac
 				
 				! Initialize temperature, density, yp, Zbar and Abar
-				ElectronPhotonState % t = EOSBaryonTable % TS % States(2) % Values(iTemp)
-				ElectronPhotonState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
-				ElectronPhotonState % ye = EOSBaryonTable % TS % States(3) % Values(iYp)
+				ElectronGasState % t   = EOSBaryonTable % TS % States(2) % Values(iTemp)
+				ElectronGasState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
+				ElectronGasState % yL  = EOSBaryonTable % TS % States(3) % Values(iYp)
 				
+        PhotonGasState % T   = EOSBaryonTable % TS % States(2) % Values(iTemp)
+        PhotonGasState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
+
         HelmholtzState % t = EOSBaryonTable % TS % States(2) % Values(iTemp)
 				HelmholtzState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
 				HelmholtzState % ye = EOSBaryonTable % TS % States(3) % Values(iYp)
 				HelmholtzState % abar = abar_total
 				HelmholtzState % zbar = zbar_total
 
-				! calculate electron quantities
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-        CALL FullHelmEOS(1, HelmTable, HelmholtzState)
-        CALL wlGetElectronEOS(ElectronPhotonState % rho, &
-            ElectronPhotonState % t, ElectronPhotonState % ye, &
+				! calculate electron  and photon quantities
+        PhotonGasState % T   = EOSBaryonTable % TS % States(2) % Values(iTemp)
+        PhotonGasState % rho = EOSBaryonTable % TS % States(1) % Values(iRho)
+        CALL PhotonGasEOS(PhotonGasState)
+            
+        ElectronGasState % T    = EOSBaryonTable % TS % States(2) % Values(iTemp)
+        ElectronGasState % rho  = EOSBaryonTable % TS % States(1) % Values(iRho)
+        ElectronGasState % yL   = EOSBaryonTable % TS % States(3) % Values(iYp)
+
+        CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+
+        CALL FullHelmEOS(1, HelmTableElectrons, HelmholtzState)
+        CALL wlGetElectronEOS(ElectronGasState % rho, &
+            ElectronGasState % t, ElectronGasState % yL, &
             press_e_BCK, entrop_e_BCK, energ_e_BCK, chem_e_BCK)
 
         entrop_e_BCK = entrop_e_BCK
 				press_baryons = EOSBaryonTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp) - &
 				EOSBaryonTable % DV % Offsets(iPressure)
-				press_electrons = ElectronPhotonState % pele
+				press_electrons = ElectronGasState % p
         press_electrons_helm = HelmholtzState % pele
 
 				s_baryons = EOSBaryonTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp) - &
 				EOSBaryonTable % DV % Offsets(iEntropy)
-				s_electrons = ElectronPhotonState % sele
+				s_electrons = ElectronGasState % s
 		
 				eps_baryons = EOSBaryonTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp) - &
 				EOSBaryonTable % DV % Offsets(iEnergy)
-				eps_electrons = ElectronPhotonState % eele
+				eps_electrons = ElectronGasState % e
 
 				mue_baryons = EOSBaryonTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
 				EOSBaryonTable % DV % Offsets(iMue)
-				mue_electrons = ElectronPhotonState % mue
+				mue_electrons = ElectronGasState % mu
 
         IF ( ( ABS(entrop_e_BCK - s_electrons)/entrop_e_BCK > 3.0d-2 ) &
              .AND. (HelmholtzState % rho < 1.0d15) ) THEN

@@ -8,35 +8,52 @@ PROGRAM wlCreateEquationOfStateTable
     USE wlEOSIOModuleHDF
     USE wlCompOSEInterface, ONLY : ReadnPointsFromCompOSE, ReadCompOSETable, &
         ReadCompOSEHDFTable, RhoCompOSE, TempCompOSE, YpCompOSE, EOSCompOSE
-    USE wlHelmMuonIOModuleHDF, ONLY : WriteHelmholtzTableHDF, WriteMuonTableHDF
-    USE wlLeptonEOSModule, ONLY: HelmTableType, MuonTableType, &
+    USE wlHelmIOModuleHDF, ONLY : WriteHelmholtzTableHDF
+    USE wlLeptonEOSTableModule, ONLY: &
+        HelmTableType, &
         iTempMax, iDenMax, &
-        nTempMuon, nDenMuon, &
-        ReadHelmEOSdat, ReadMuonEOSdat, &
-        AllocateHelmholtzTable, DeallocateHelmholtzTable, &
-        AllocateMuonTable, DeAllocateMuonTable 
-    USE wlEosConstantsModule, ONLY: cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp
+        ReadHelmEOSdat, &
+        AllocateHelmholtzTable, DeallocateHelmholtzTable
+    USE wlEosConstantsModule, ONLY: &
+      cvel, ergmev, cm3fm3, kmev_inv, rmu, mn, me, mp, mmu
 
     IMPLICIT NONE
     
+    ! PARAMETERS OF MUON TABLE, NEED TO KNOW THIS IN ADVANCE
+    INTEGER, PARAMETER  :: nTempMuons = 270
+    REAL(DP), PARAMETER :: tlo_Muons  =  9.763597279797683_dp
+    REAL(DP), PARAMETER :: thi_Muons  = 12.45359726262338_dp
+
+    INTEGER, PARAMETER  :: nDenMuons  = 1501
+    REAL(DP), PARAMETER :: dlo_Muons  =  3.220259248823259_dp
+    REAL(DP), PARAMETER :: dhi_Muons  = 15.85594401137048_dp
+
+    ! PARAMETERS OF ELECTRON TABLE, NEED TO KNOW THIS IN ADVANCE
+    INTEGER, PARAMETER  :: nTempElectrons = 541
+    REAL(DP), PARAMETER :: tlo_Electrons  = 3.0_dp
+    REAL(DP), PARAMETER :: thi_Electrons  = 13.0_dp 
+
+    INTEGER, PARAMETER  :: nDenElectrons  = 201
+    REAL(DP), PARAMETER :: dlo_Electrons  = -12.0_dp
+    REAL(DP), PARAMETER :: dhi_Electrons  = 15.0_dp
+
     INTEGER                        :: iVars
     INTEGER, DIMENSION(3)          :: nPointsBaryon
     INTEGER, DIMENSION(2)          :: nPointsHelm, nPointsDenon
     INTEGER                        :: nVariables
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
-    TYPE(HelmTableType) :: HelmTable
-    TYPE(MuonTableType) :: MuonTable
+    TYPE(HelmTableType) :: HelmTableElectrons
+    TYPE(HelmTableType) :: HelmTableMuons
     
-    CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, &
-        HelmDatFilePath, MuonDatFilePath, &
-        BaryonEOSTableName, HelmEOSTableName, MuonEOSTableName
+    CHARACTER(len=128) :: CompOSEFilePath, CompOSEFHDF5Path, BaryonEOSTableName, &
+        HelmDatFilePath, HelmEOSTableName, MuonEOSTableName
     
     REAL(dp) :: Minimum_Value, Add_to_energy
     LOGICAL  :: ReadFullTable, RedHDF5Table, ResetNegativePressure
     INTEGER  :: iLepton, iRho, iTemp, iYe
 
     ReadFullTable = .false.
-    RedHDF5Table = .false.
+    RedHDF5Table  = .false.
     ResetNegativePressure = .false.
     nVariables = 19
     
@@ -64,9 +81,9 @@ PROGRAM wlCreateEquationOfStateTable
         CompOSEFilePath = 'SFHo_no_ele/'
         CompOSEFHDF5Path = 'SFHo_no_ele/eoscompose.h5'
         IF (RedHDF5Table) THEN
-            BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
+            BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS_interpolated.h5'
         ELSE
-            BaryonEOSTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
+            BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
         ENDIF
         HelmEOSTableName = BaryonEOSTableName
         MuonEOSTableName = BaryonEOSTableName
@@ -246,20 +263,22 @@ PROGRAM wlCreateEquationOfStateTable
     END DO
                   
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPointsHelm = (/ iTempMax, iDenMax /)
-    PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmTable, nPointsHelm )
+    nPointsHelm = (/ nTempElectrons, nDenElectrons /)
+    PRINT*, "Allocate Helmholtz EOS for Electrons"
+    CALL AllocateHelmholtzTable( HelmTableElectrons, nPointsHelm )
     
-    HelmDatFilePath = '../helm_table.dat'
-    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTable )
+    HelmDatFilePath = '../electron_table_p256_q800.dat'
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableElectrons, me, &
+       tlo_Electrons, thi_Electrons, dlo_Electrons, dhi_Electrons )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPointsDenon = (/ nTempMuon, nDenMuon /)
-    PRINT*, "Allocate Muon EOS"
-    CALL AllocateMuonTable( MuonTable, nPointsDenon )
+    nPointsHelm = (/ nTempMuons, nDenMuons /)
+    PRINT*, "Allocate Helmholtz EOS for Muons"
+    CALL AllocateHelmholtzTable( HelmTableMuons, nPointsHelm )
     
-    MuonDatFilePath = '../muons.dat'
-    CALL ReadMuonEOSdat( MuonDatFilePath, MuonTable )
+    HelmDatFilePath = '../muon_table_p256_q800.dat'
+    CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableMuons, mmu, &
+       tlo_Muons, thi_Muons, dlo_Muons, dhi_Muons)
     
     ! NOW CREATE BARYONIC FILE
     CALL InitializeHDF( )
@@ -269,21 +288,21 @@ PROGRAM wlCreateEquationOfStateTable
     
     ! NOW ADD Helmholtz EOS TO PREVIOUSLY CREATED H5 FILE
     CALL InitializeHDF( )
-    WRITE (*,*) "Appending Helmholtz EOS to HDF file"
-    CALL WriteHelmholtzTableHDF( HelmTable, HelmEOSTableName, ReadFullTable )
+    WRITE (*,*) "Appending Helmholtz EOS for Electrons to HDF file"
+    CALL WriteHelmholtzTableHDF( HelmTableElectrons, HelmEOSTableName, "HelmTableElectrons", ReadFullTable )
     CALL FinalizeHDF( )
     
     ! NOW ADD Muon EOS TO PREVIOUSLY CREATED H5 FILE
     CALL InitializeHDF( )
-    WRITE (*,*) "Appending Muon EOS to HDF file"
-    CALL WriteMuonTableHDF( MuonTable, MuonEOSTableName, ReadFullTable )
+    WRITE (*,*) "Appending Helmholtz EOS for Muons to HDF file"
+    CALL WriteHelmholtzTableHDF( HelmTableMuons, MuonEOSTableName, "HelmTableMuons", ReadFullTable )
     CALL FinalizeHDF( )
     
     WRITE (*,*) "HDF write successful"
     
     CALL DeAllocateEquationOfStateTable( EOSTable )
-    CALL DeallocateHelmholtzTable( HelmTable )
-    CALL DeAllocateMuonTable( MuonTable )
+    CALL DeallocateHelmholtzTable( HelmTableElectrons )
+    CALL DeallocateHelmholtzTable( HelmTableMuons )
 
     ! Now Create Electron EOS
 

@@ -2,7 +2,6 @@ include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Build
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
 include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
 
-
 VPATH += \
 $(WEAKLIB_DIR)/TableCreator/SharedModules: \
 ..
@@ -34,9 +33,9 @@ wlCalculateSoundSpeed.o: \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
-  wlLeptonEOSModule.o \
-  wlHelmMuonIOModuleHDF.o \
-  wlElectronPhotonEOS.o \
-  wlMuonEOS.o \
+  wlLeptonEOSTableModule.o \
+  wlHelmIOModuleHDF.o \
+  wlHelmIOModuleHDF.o \
+  wlLeptonPhotonGasEOS.o \
   wlExtPhysicalConstantsModule.o \
   wlSoundSpeedModule.o

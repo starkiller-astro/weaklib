@@ -4,4 +4,6 @@ OPT_LEVEL = DEBUG
 OPT_LEVEL = OPTIMIZE
 FLAGS     = $(FLAGS_$(OPT_LEVEL))
 
+EOSMODE   = COMPOSE
+
 include ../Makefile_CompareToFullEOS

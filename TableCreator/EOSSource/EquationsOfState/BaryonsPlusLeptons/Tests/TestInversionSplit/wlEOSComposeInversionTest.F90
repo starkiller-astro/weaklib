@@ -1,9 +1,9 @@
-PROGRAM wlComposeNewInversionTest
+PROGRAM wlEOSComposeInversionTest
 
   USE wlKindModule, ONLY: &
     dp
   USE wlEquationOfStateTableModule, ONLY: &
-    EquationOfStateTableType
+    EquationOfStateCompOSETableType
   USE wlIOModuleHDF, ONLY: &
     InitializeHDF, &
     FinalizeHDF
@@ -20,20 +20,16 @@ PROGRAM wlComposeNewInversionTest
 #else
   USE wlEOSComponentsSeparateInversionModule
 #endif
-  USE wlLeptonEOSModule, ONLY: &
-    HelmTableType, MuonTableType
-  USE wlElectronPhotonEOS, ONLY: &
-    ElectronPhotonEOS, ElectronPhotonStateType
-  USE wlMuonEOS, ONLY: &
-    FullMuonEOS, MuonStateType
-  USE wlHelmMuonIOModuleHDF, ONLY: &
-    ReadHelmholtzTableHDF, ReadMuonTableHDF
+  USE wlHelmIOModuleHDF, ONLY: &
+    ReadHelmholtzTableHDF
+  USE wlLeptonEOSTableModule, ONLY: &
+    HelmTableType
+  USE wlLeptonPhotonGasEOS, ONLY: &
+    GetPhotonLeptonGasEOS
   USE wlExtPhysicalConstantsModule, ONLY: &
     kmev, rmu, kmev_inv, ergmev, cvel
     
   IMPLICIT NONE
-
-  INCLUDE 'mpif.h'
 
   INTEGER :: &
     n_rndm, &
@@ -41,7 +37,7 @@ PROGRAM wlComposeNewInversionTest
     iMaxError, &
     ierr
   INTEGER, PARAMETER :: &
-    nPoints = 2**16
+    nPoints = 2**12
   INTEGER, DIMENSION(nPoints) :: &
     Error_E, &
     Error_P, &
@@ -60,14 +56,10 @@ PROGRAM wlComposeNewInversionTest
     rndm_T, &
     rndm_Yp, &
     Error
-  TYPE(EquationOfStateTableType) :: &
+  TYPE(EquationOfStateCompOSETableType) :: &
     EOSBaryonTable
-  TYPE(HelmTableType), TARGET, SAVE :: HelmTable
-  TYPE(HelmTableType), POINTER :: HelmTable_point
-  TYPE(ElectronPhotonStateType) :: ElectronPhotonState
-  TYPE(MuonTableType), TARGET, SAVE :: MuonTable
-  TYPE(MuonTableType), POINTER :: MuonTable_point
-  TYPE(MuonStateType) :: MuonState
+  TYPE(HelmTableType) :: HelmTableElectrons
+  TYPE(HelmTableType) :: HelmTableMuons
   REAL(DP), DIMENSION(:), ALLOCATABLE :: &
     Ds_bary, Ts_bary, Yps_bary, &
     Ds_full, Ts_full, Yps_full
@@ -82,34 +74,33 @@ PROGRAM wlComposeNewInversionTest
   INTEGER  :: iD, iT, iYp, iwrong
   REAL(DP) :: LocalOffset
   REAL(DP) :: P_bary, E_bary, S_bary
-  REAL(DP) :: Ps_Helm, Es_Helm, Ss_Helm
-  REAL(DP) :: Ymu_temp, Ps_muon, Es_muon, Ss_muon, Yp_over_Ymu
+  REAL(DP) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
+  REAL(DP) :: Ymu_temp, Yp_over_Ymu
 
   CHARACTER(len=128) :: BaryonPlusHelmTableName
-    
-  CALL MPI_INIT( ierr )
-
-! #if defined(WEAKLIB_OMP_OL)
-! #elif defined(WEAKLIB_OACC)
-!   !!$ACC INIT
-! #endif
-  
-  BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS_interpolated.h5'
-  BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS.h5'
-  ! BaryonPlusHelmTableName = 'BaryonsPlusHelmPlusMuonsEOS_shifted.h5'
-  Yp_over_Ymu = 0.0d0
   
   CALL InitializeHDF( )
-  
+  Yp_over_Ymu = 1.0d0
+
+#ifdef EOSMODE_COMPOSE
+  BaryonPlusHelmTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
+
   ! read in helmholtz table
-  CALL ReadHelmholtzTableHDF( HelmTable, BaryonPlusHelmTableName )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, BaryonPlusHelmTableName, "HelmTableElectrons" )
 
   ! read in muon table
-  CALL ReadMuonTableHDF( MuonTable, BaryonPlusHelmTableName )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons, BaryonPlusHelmTableName, "HelmTableMuons" )
 
   ! read in baryon table -------------------------------
   CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonPlusHelmTableName )
   
+#else
+
+  WRITE(*,*) 'Cannot work sorry'
+  stop
+  
+#endif
+
   CALL FinalizeHDF( )
 
   iD_bary  = EOSBaryonTable % TS % Indices % iRho
@@ -152,7 +143,7 @@ PROGRAM wlComposeNewInversionTest
   Ds_full = Ds_bary
   Ts_full = Ts_bary
   Yps_full = Yps_bary
-  
+    
   ALLOCATE( Ps_full(SizeDs, SizeTs, SizeYps) )
   ALLOCATE( Ss_full(SizeDs, SizeTs, SizeYps) )
   ALLOCATE( Es_full(SizeDs, SizeTs, SizeYps) )
@@ -165,60 +156,42 @@ PROGRAM wlComposeNewInversionTest
         Ymu_temp = Yps_bary(iYp) / Yp_over_Ymu
         Ymu_temp = 0.0d0
 
-        ! Now add electron component
-        ! Initialize temperature, DensitY, Ye
-        ElectronPhotonState % t = Ts_bary(iT)
-        ElectronPhotonState % rho = Ds_bary(iD)
-        ElectronPhotonState % ye = Yps_bary(iYp) - Ymu_temp
-        
-        ! calculate electron quantities
-        CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-        Es_helm = ElectronPhotonState % e
-        Ps_helm = ElectronPhotonState % p
-        Ss_helm = ElectronPhotonState % s
-
-        ! calculate muon quantities 
-        MuonState % t = Ts_bary(iT)
-        MuonState % rho   = Ds_bary(iD)
-        MuonState % rhoym = MuonState % rho * Ymu_temp
-        
-        CALL FullMuonEOS(MuonTable, MuonState)
-
-        Es_muon = MuonState % e
-        Ps_muon = MuonState % p
-        Ss_muon = MuonState % s
+        ! Now add electron photon and muon component
+        CALL GetPhotonLeptonGasEOS( &
+          Ds_bary(iD), Ts_bary(iT), Yps_bary(iYp) - Ymu_temp, Ymu_temp, &
+          HelmTableElectrons, HelmTableMuons, P_LeptPhot, E_LeptPhot, S_LeptPhot)
                 
-        Es_full(iD,iT,iYp) = LOG10( 10.0d0**( Es_bary(iD,iT,iYp) ) + Es_helm + Es_muon)
-        Ps_full(iD,iT,iYp) = LOG10( Ps_bary(iD,iT,iYp) + Ps_helm + Ps_muon)
-        Ss_full(iD,iT,iYp) = LOG10( 10.0d0**( Ss_bary(iD,iT,iYp) ) + Ss_helm + Ss_muon)
+        Es_full(iD,iT,iYp) = LOG10( 10.0d0**( Es_bary(iD,iT,iYp) ) + E_LeptPhot)
+        Ps_full(iD,iT,iYp) = LOG10( Ps_bary(iD,iT,iYp) + P_LeptPhot)
+        Ss_full(iD,iT,iYp) = LOG10( 10.0d0**( Ss_bary(iD,iT,iYp) ) + S_LeptPhot)
 
         IF (Es_full(iD,iT,iYp) .NE. Es_full(iD,iT,iYp)) THEN
-            WRITE(*,*) 'E', iD,iT,iYp, Es_bary(iD,iT,iYp), Es_helm, Es_muon
+            WRITE(*,*) 'E', iD,iT,iYp, Es_bary(iD,iT,iYp), E_LeptPhot
           STOP
         ENDIF
         IF (Ps_full(iD,iT,iYp) .NE. Ps_full(iD,iT,iYp)) THEN
-          WRITE(*,*) 'P', iD,iT,iYp, Ps_bary(iD,iT,iYp), Ps_helm, Ps_muon
+          WRITE(*,*) 'P', iD,iT,iYp, Ps_bary(iD,iT,iYp), P_LeptPhot
           STOP
         ENDIF
 
         IF (Ss_full(iD,iT,iYp) .NE. Ss_full(iD,iT,iYp)) THEN
-          WRITE(*,*) 'S', iD,iT,iYp, Ss_bary(iD,iT,iYp), Ss_helm, Ss_muon
+          WRITE(*,*) 'S', iD,iT,iYp, Ss_bary(iD,iT,iYp), S_LeptPhot
           STOP
         ENDIF
                 
       ENDDO
     ENDDO
   ENDDO
-
+  
   CALL InitializeEOSComponentsInversion &
          ( Ds_bary, Ts_bary, Yps_bary, &
            10.0d0**( Es_full ) - OS_E, &
            10.0d0**( Ps_full ) - OS_P, &
            10.0d0**( Ss_full ) - OS_S, &
-           HelmTable, &
-           MuonTable, &
+           HelmTableElectrons, &
+           HelmTableMuons, &
            Verbose_Option = .TRUE. )
+
 
 ! #if defined(WEAKLIB_OMP_OL)
 !   !$OMP TARGET ENTER DATA &
@@ -326,39 +299,20 @@ PROGRAM wlComposeNewInversionTest
     CALL LogInterpolateSingleVariable_3D_Custom_Point &
            ( D(iP), T(iP), Yp(iP), Ds_bary, Ts_bary, Yps_bary, OS_S, Ss_bary, S_bary )
            
-    ! Now add electron component
-    ! Initialize temperature, DensitY, Ye
-    ElectronPhotonState % t = T(iP)
-    ElectronPhotonState % rho = D(iP)
-    ElectronPhotonState % ye = Ye(iP)
-    
-    ! calculate electron quantities
-    CALL ElectronPhotonEOS(HelmTable, ElectronPhotonState)
-
-    Es_helm = ElectronPhotonState % e
-    Ps_helm = ElectronPhotonState % p
-    Ss_helm = ElectronPhotonState % s
-
-    ! calculate muon quantities 
-    MuonState % t = T(iP)
-    MuonState % rho   = D(iP)
-    MuonState % rhoym = MuonState % rho * Ym(iP)
-    
-    CALL FullMuonEOS(MuonTable, MuonState)
-
-    Es_muon = MuonState % e
-    Ps_muon = MuonState % p
-    Ss_muon = MuonState % s
+    ! Now add electron photon and muon component
+    CALL GetPhotonLeptonGasEOS( &
+      D(iP), T(iP), Ye(iP), Ym(iP), &
+      HelmTableElectrons, HelmTableMuons, P_LeptPhot, E_LeptPhot, S_LeptPhot)
            
-    E_int_error(iP) = ABS( E_bary + Es_helm + Es_muon - E(iP))/ABS(E(iP))
-    P_int_error(iP) = ABS( P_bary + Ps_helm + Ps_muon - P(iP))/ABS(P(iP))
-    S_int_error(iP) = ABS( S_bary + Ss_helm + Ss_muon - S(iP))/ABS(S(iP))
+    E_int_error(iP) = ABS( E_bary + E_LeptPhot - E(iP))/ABS(E(iP))
+    P_int_error(iP) = ABS( P_bary + P_LeptPhot - P(iP))/ABS(P(iP))
+    S_int_error(iP) = ABS( S_bary + S_LeptPhot - S(iP))/ABS(S(iP))
 
 #ifdef INTERPOLATION_SPLIT_TABLE_COMBINED
 #else
-    E(iP) = E_bary + Es_helm + Es_muon
-    P(iP) = P_bary + Ps_helm + Ps_muon
-    S(iP) = S_bary + Ss_helm + Ss_muon
+    E(iP) = E_bary + E_LeptPhot
+    P(iP) = P_bary + P_LeptPhot
+    S(iP) = S_bary + S_LeptPhot
 #endif
 
   END DO
@@ -428,7 +382,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
            ( D(iP), E(iP), Ye(iP), Ym(iP), &
            Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, &
-           T_E(iP), T_Guess, Error_E(iP), HelmTable, MuonTable )
+           T_E(iP), T_Guess, Error_E(iP), HelmTableElectrons, HelmTableMuons )
   END DO
   
   CALL CPU_TIME( tEnd )
@@ -495,7 +449,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DEYpYl_Single_Guess &
            ( D(iP), E(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), T_Guess, &
-             Error_E(iP), HelmTable, MuonTable )
+             Error_E(iP), HelmTableElectrons, HelmTableMuons )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -544,7 +498,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DEYpYl_Single_NoGuess &
            ( D(iP), E(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Es_bary, OS_E, T_E(iP), &
-             Error_E(iP), HelmTable, MuonTable )
+             Error_E(iP), HelmTableElectrons, HelmTableMuons )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -607,7 +561,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
            ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             Error_S(iP), HelmTable, MuonTable )
+             Error_S(iP), HelmTableElectrons, HelmTableMuons )
   END DO
   WRITE(*,*) 1, MAXVAL(Error_S), MAXVAL(T_S)
 
@@ -670,7 +624,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DSYpYl_Single_Guess &
            ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), T_Guess, &
-             Error_S(iP), HelmTable, MuonTable )
+             Error_S(iP), HelmTableElectrons, HelmTableMuons )
   END DO
   
   CALL CPU_TIME( tEnd )
@@ -720,7 +674,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DSYpYl_Single_NoGuess &
            ( D(iP), S(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ss_bary, OS_S, T_S(iP), &
-             Error_S(iP), HelmTable, MuonTable )
+             Error_S(iP), HelmTableElectrons, HelmTableMuons )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -789,7 +743,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
            ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             Error_P(iP), HelmTable, MuonTable )
+             Error_P(iP), HelmTableElectrons, HelmTableMuons )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -854,7 +808,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DPYpYl_Single_Guess &
            ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), T_Guess, &
-             Error_P(iP), HelmTable, MuonTable )
+             Error_P(iP), HelmTableElectrons, HelmTableMuons )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -904,7 +858,7 @@ PROGRAM wlComposeNewInversionTest
     CALL ComputeTemperatureWith_DPYpYl_Single_NoGuess &
            ( D(iP), P(iP), Ye(iP), Ym(iP), &
              Ds_bary, Ts_bary, Yps_bary, Ps_bary, OS_P, T_P(iP), &
-             Error_P(iP), HelmTable, MuonTable )
+             Error_P(iP), HelmTableElectrons, HelmTableMuons )
   END DO
 
   CALL CPU_TIME( tEnd )
@@ -949,6 +903,4 @@ PROGRAM wlComposeNewInversionTest
 !   !$ACC SHUTDOWN
 ! #endif
 
-  CALL MPI_FINALIZE( ierr )
-
-END PROGRAM wlComposeNewInversionTest
+END PROGRAM wlEOSComposeInversionTest

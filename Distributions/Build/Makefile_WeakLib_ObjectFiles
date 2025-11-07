@@ -1,6 +1,8 @@
 include $(WEAKLIB_DIR)/Distributions/Library/Makefile_Library_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/Makefile_EOSSource_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBaryLep_ObjectFiles
+# If you want to use the old helmholtz plus Tobias tables use this
+# include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/OldHelmPlusMuons/Makefile_EosBaryLep_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/4DTable/Makefile_4DEOS_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI/Makefile_OpacitySourceGSI_ObjectFiles

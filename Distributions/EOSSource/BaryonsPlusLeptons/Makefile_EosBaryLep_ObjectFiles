@@ -1,10 +1,9 @@
 WL_EOSSOURCE_SPLIT  = \
   wlEosConstantsModule.o \
-  wlLeptonEOSModule.o \
-  wlHelmMuonIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlHelmIOModuleHDF.o \
   wlHelmholtzEOS.o \
-  wlElectronPhotonEOS.o \
-  wlMuonEOS.o \
+  wlLeptonPhotonGasEOS.o \
   wlSoundSpeedModule.o \
   wlEosTemperatureCombinedInversionModule.o \
   wlEosTemperatureSeparateInversionModule.o \

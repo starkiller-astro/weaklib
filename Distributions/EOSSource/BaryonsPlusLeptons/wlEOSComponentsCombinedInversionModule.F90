@@ -9,14 +9,8 @@ MODULE wlEOSComponentsCombinedInversionModule
     InvertTemperatureWith_DPYpYl_NoGuess, &
     InvertTemperatureWith_DSYpYl_Guess, &
     InvertTemperatureWith_DSYpYl_NoGuess
-  USE wlMuonEOS, ONLY: &
-    MuonStateType, FullMuonEOS
-  USE wlElectronPhotonEOS, ONLY: &
-    ElectronPhotonStateType, ElectronPhotonEOS
-  USE wlLeptonEOSModule, ONLY: &
-    HelmTableType, MuonTableType
-  USE wlHelmMuonIOModuleHDF, ONLY: &
-    ReadHelmholtzTableHDF, ReadMuonTableHDF
+  USE wlLeptonEOSTableModule, ONLY: &
+    HelmTableType
     
   IMPLICIT NONE
   PRIVATE
@@ -141,12 +135,12 @@ MODULE wlEOSComponentsCombinedInversionModule
 CONTAINS
 
   SUBROUTINE InitializeEOSComponentsInversion( Ds, Ts, Yps, Es, Ps, Ss, &
-      HelmTable, MuonTable, Verbose_Option )
+      HelmTableElectrons, HelmTableMuons, Verbose_Option )
 
     REAL(dp), INTENT(in) :: Ds(1:)      , Ts(1:)      , Yps(1:)
     REAL(dp), INTENT(in) :: Es(1:,1:,1:), Ps(1:,1:,1:), Ss(1:,1:,1:)
-    TYPE(HelmTableType), POINTER, INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), POINTER, INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     LOGICAL,  INTENT(in), OPTIONAL :: Verbose_Option
     LOGICAL :: Verbose
 
@@ -258,7 +252,7 @@ CONTAINS
   END SUBROUTINE DescribeEOSComponentsInversionError
   
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error &
-   ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, Error, HelmTable, MuonTable )
+   ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -272,21 +266,21 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_Guess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, T_Guess, Error, HelmTable, MuonTable )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
     END IF
     
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError &
-    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, HelmTable, MuonTable )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -299,8 +293,8 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     INTEGER  :: Error
     
@@ -309,14 +303,14 @@ CONTAINS
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_Guess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, T_Guess, Error, HelmTable, MuonTable )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error &
-    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, Error, HelmTable, MuonTable )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, Error, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -329,22 +323,22 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     
     T = 0.0_dp
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_NoGuess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, Error, HelmTable, MuonTable )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError &
-    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, HelmTable, MuonTable )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -356,8 +350,8 @@ CONTAINS
     REAL(dp), INTENT(in)    :: Es(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     INTEGER  :: Error
     
@@ -366,13 +360,13 @@ CONTAINS
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_NoGuess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, Error, HelmTable, MuonTable )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_Error &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, Error, HelmTable, MuonTable )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -386,22 +380,22 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     
     T = 0.0_dp
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_Guess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, T_Guess, Error, HelmTable, MuonTable )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_NoError &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, HelmTable, MuonTable )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -414,8 +408,8 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     INTEGER  :: Error
     
@@ -424,14 +418,14 @@ CONTAINS
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_Guess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, T_Guess, Error, HelmTable, MuonTable )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_Error &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, Error, HelmTable, MuonTable )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, Error, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -444,22 +438,22 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     T = 0.0_dp
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_NoGuess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, Error, HelmTable, MuonTable )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, HelmTable, MuonTable )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -471,8 +465,8 @@ CONTAINS
     REAL(dp), INTENT(in)    :: Ps(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     INTEGER  :: Error
 
@@ -481,13 +475,13 @@ CONTAINS
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_NoGuess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, Error, HelmTable, MuonTable )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_Error &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, Error, HelmTable, MuonTable )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -501,22 +495,22 @@ CONTAINS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
     INTEGER,  INTENT(out) :: Error
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     
     T = 0.0_dp
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_Guess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, T_Guess, Error, HelmTable, MuonTable )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_NoError &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, HelmTable, MuonTable )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -529,8 +523,8 @@ CONTAINS
     REAL(dp), INTENT(in)  :: OS
     REAL(dp), INTENT(out) :: T
     REAL(dp), INTENT(in)  :: T_Guess
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     INTEGER  :: Error
     
@@ -539,14 +533,14 @@ CONTAINS
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_Guess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, T_Guess, Error, HelmTable, MuonTable )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, Error, HelmTable, MuonTable )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, Error, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -559,22 +553,22 @@ CONTAINS
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
     INTEGER,  INTENT(out)   :: Error
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     
     T = 0.0_dp
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_NoGuess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, Error, HelmTable, MuonTable )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, HelmTable, MuonTable )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, HelmTableElectrons, HelmTableMuons )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -586,8 +580,8 @@ CONTAINS
     REAL(dp), INTENT(in)    :: Ss(1:,1:,1:)
     REAL(dp), INTENT(in)    :: OS
     REAL(dp), INTENT(out)   :: T
-    TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE(MuonTableType), INTENT(IN) :: MuonTable
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
 
     INTEGER  :: Error
     
@@ -596,7 +590,7 @@ CONTAINS
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_NoGuess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, Error, HelmTable, MuonTable )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError

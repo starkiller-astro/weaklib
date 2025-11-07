@@ -5,7 +5,7 @@ MODULE wlEOSIOModuleHDF
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
-  USE wlLeptonEOSModule
+  USE wlLeptonEOSTableModule
 
   USE HDF5 
 
@@ -21,7 +21,9 @@ MODULE wlEOSIOModuleHDF
   PUBLIC MatchTableStructure
 
   PUBLIC BroadcastHelmTableParallel
-  PUBLIC BroadcastMuonTableParallel
+  ! Uncomment BroadcastMuonTableParallel if you want to use 
+  ! The old Tobias stuff
+  ! PUBLIC BroadcastMuonTableParallel
 
   PUBLIC TransferDependentVariables
   PUBLIC EOSVertexQuery
@@ -882,58 +884,58 @@ CONTAINS
 
   END SUBROUTINE BroadcastHelmTableParallel
 
-  SUBROUTINE BroadcastMuonTableParallel( MuonTable, rootproc, myid, ierr, COMMUNICATOR )
+  ! SUBROUTINE BroadcastMuonTableParallel( MuonTable, rootproc, myid, ierr, COMMUNICATOR )
     
-    USE MPI
+  !   USE MPI
     
-    implicit none
+  !   implicit none
 
-    INTEGER, INTENT(in)  :: rootproc
-    INTEGER, INTENT(in)  :: COMMUNICATOR
-    INTEGER, INTENT(out) :: ierr
-    INTEGER, INTENT(in)  :: myid
+  !   INTEGER, INTENT(in)  :: rootproc
+  !   INTEGER, INTENT(in)  :: COMMUNICATOR
+  !   INTEGER, INTENT(out) :: ierr
+  !   INTEGER, INTENT(in)  :: myid
     
-    TYPE(MuonTableType), INTENT(inout) :: MuonTable
+  !   TYPE(MuonTableType), INTENT(inout) :: MuonTable
     
-    INTEGER, DIMENSION(2) :: muon_dims
-    INTEGER :: i_count
+  !   INTEGER, DIMENSION(2) :: muon_dims
+  !   INTEGER :: i_count
 
-    ! Broadcast dimensions first
-    IF ( myid == rootproc ) THEN
-        muon_dims(1) = MuonTable % nPointsTemp
-        muon_dims(2) = MuonTable % nPointsDen
-    END IF
+  !   ! Broadcast dimensions first
+  !   IF ( myid == rootproc ) THEN
+  !       muon_dims(1) = MuonTable % nPointsTemp
+  !       muon_dims(2) = MuonTable % nPointsDen
+  !   END IF
     
-    CALL MPI_BCAST( muon_dims, 2, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
+  !   CALL MPI_BCAST( muon_dims, 2, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
 
-    CALL MPI_BCAST( MuonTable % eos_MinD, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   CALL MPI_BCAST( MuonTable % eos_MinD, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     
-    ! Allocate arrays on receiving processes
-    IF ( myid /= rootproc ) THEN
-        MuonTable % nPointsTemp = muon_dims(1)
-        MuonTable % nPointsDen = muon_dims(2)
-        CALL AllocateMuonTable(MuonTable, muon_dims)
-    END IF
+  !   ! Allocate arrays on receiving processes
+  !   IF ( myid /= rootproc ) THEN
+  !       MuonTable % nPointsTemp = muon_dims(1)
+  !       MuonTable % nPointsDen = muon_dims(2)
+  !       CALL AllocateMuonTable(MuonTable, muon_dims)
+  !   END IF
     
-    ! Broadcast 1D arrays
-    CALL MPI_BCAST( MuonTable % t, muon_dims(1), MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! Broadcast 1D arrays
+  !   CALL MPI_BCAST( MuonTable % t, muon_dims(1), MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
-    ! Broadcast 2D arrays
-    i_count = MuonTable % nPointsDen * MuonTable % nPointsTemp
-    CALL MPI_BCAST( MuonTable % rhoym, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST( MuonTable % p, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST( MuonTable % e, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST( MuonTable % s, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    CALL MPI_BCAST( MuonTable % mu, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    ! These are not actually read/written/used
-    ! CALL MPI_BCAST( MuonTable % dlnPdlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    ! CALL MPI_BCAST( MuonTable % dlnPdlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    ! CALL MPI_BCAST( MuonTable % dlnsdlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    ! CALL MPI_BCAST( MuonTable % dlnsdlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    ! CALL MPI_BCAST( MuonTable % dlnedlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-    ! CALL MPI_BCAST( MuonTable % dlnedlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! Broadcast 2D arrays
+  !   i_count = MuonTable % nPointsDen * MuonTable % nPointsTemp
+  !   CALL MPI_BCAST( MuonTable % rhoym, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   CALL MPI_BCAST( MuonTable % p, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   CALL MPI_BCAST( MuonTable % e, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   CALL MPI_BCAST( MuonTable % s, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   CALL MPI_BCAST( MuonTable % mu, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! These are not actually read/written/used
+  !   ! CALL MPI_BCAST( MuonTable % dlnPdlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! CALL MPI_BCAST( MuonTable % dlnPdlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! CALL MPI_BCAST( MuonTable % dlnsdlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! CALL MPI_BCAST( MuonTable % dlnsdlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! CALL MPI_BCAST( MuonTable % dlnedlnrho, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+  !   ! CALL MPI_BCAST( MuonTable % dlnedlnT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
-  END SUBROUTINE BroadcastMuonTableParallel
+  ! END SUBROUTINE BroadcastMuonTableParallel
 
   SUBROUTINE TransferCompOSEDependentVariables( OldDV, NewDV, NewLocation, OldLocation )
 

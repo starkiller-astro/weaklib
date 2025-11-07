@@ -1,7 +1,7 @@
 MODULE wlHelmholtzEOS
   
   USE wlKindModule, ONLY: dp
-  USE wlLeptonEOSModule, ONLY: &
+  USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType
   USE wlEosConstantsModule, ONLY: &
     pi, rmu, kerg, h_cgs, avn, cvel, qe, &

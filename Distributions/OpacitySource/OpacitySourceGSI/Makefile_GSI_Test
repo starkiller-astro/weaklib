@@ -90,7 +90,7 @@ wlCompareOpacities.o: \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
-  wlLeptonEOSModule.o \
+  wlLeptonEOSTableModule.o \
   wlMuonEOS.o \
   wlElectronPhotonEOS.o \
   wlHelmMuonIOModuleHDF.o \
@@ -106,7 +106,7 @@ wlCompareOpacitiesTable.o: \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
-  wlLeptonEOSModule.o \
+  wlLeptonEOSTableModule.o \
   wlElectronPhotonEOS.o \
   wlHelmMuonIOModuleHDF.o \
 	wlOpacityTableModule.o \

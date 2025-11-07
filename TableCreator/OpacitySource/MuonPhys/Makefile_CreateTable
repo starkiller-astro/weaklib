@@ -23,7 +23,7 @@ wlCreate4DAbEmOpacityTable.o: \
   wlIOModuleHDF.o \
 	wlEquationOfStateTableModule.o \
   wlEOSIOModuleHDF.o \
-  wlLeptonEOSModule.o \
+  wlLeptonEOSTableModule.o \
   wlMuonEOS.o \
   wlElectronPhotonEOS.o \
   wlHelmMuonIOModuleHDF.o \

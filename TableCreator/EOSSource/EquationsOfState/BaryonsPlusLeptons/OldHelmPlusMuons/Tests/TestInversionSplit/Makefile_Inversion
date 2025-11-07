@@ -1,0 +1,73 @@
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/SharedModules/Makefile_SharedModules_ObjectFiles
+
+INTERPOLATION_SPLIT_TABLE = COMBINED
+DEFINES   += $(MDEFS)$(PP)INTERPOLATION_SPLIT_TABLE_$(INTERPOLATION_SPLIT_TABLE)
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/SharedModules: \
+..
+
+wlInversion = \
+  $(WL_LIBRARY) \
+  $(WL_EOSSOURCE) \
+  $(WL_EOSSOURCE_SPLIT) \
+	$(SHAREDMODULES) \
+  $(COMMON_MODS_OBJ)
+  
+all: wlEOSComposeInversionTest wlEOSComposeInversionTestOnePointEnergy
+
+wlEOSComposeInversionTest: \
+	$(wlInversion) wlEOSComposeInversionTest.o
+	$(FLINKER) $(FLAGS) -o wlEOSComposeInversionTest_$(MACHINE) \
+	$(wlInversion) wlEOSComposeInversionTest.o \
+	$(LIBRARIES)
+
+wlEOSComposeInversionTestOnePointEnergy: \
+	$(wlInversion) wlEOSComposeInversionTestOnePointEnergy.o
+	$(FLINKER) $(FLAGS) -o wlEOSComposeInversionTestOnePointEnergy_$(MACHINE) \
+	$(wlInversion) wlEOSComposeInversionTestOnePointEnergy.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f wlEOSComposeInversionTest_$(MACHINE)
+
+wlEOSComposeInversionTest.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlEOSComponentsCombinedInversionModule.o \
+  wlLeptonEOSTableModule.o \
+  wlElectronPhotonEOS.o \
+  wlMuonEOS.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlExtPhysicalConstantsModule.o \
+  wlEOSComposeInversionTest.F90
+
+
+wlEOSComposeInversionTestOnePointEnergy.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlEOSComponentsCombinedInversionModule.o \
+  wlEOSInversionModule.o \
+  wlLeptonEOSTableModule.o \
+  wlElectronPhotonEOS.o \
+  wlMuonEOS.o \
+  wlHelmMuonIOModuleHDF.o \
+  wlExtPhysicalConstantsModule.o \
+  wlEOSComposeInversionTestOnePointEnergy.F90
+
