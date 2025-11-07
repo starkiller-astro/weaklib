@@ -22,8 +22,8 @@ wlElectronPhotonEOS.o: \
 
 wlMuonEOS.o: \
   wlKindModule.o \
-  wlInterpolationUtilitiesModule.o \
-  wlLeptonEOSModule.o
+  wlLeptonEOSModule.o \
+	wlEosConstantsModule.o
 
 wlSoundSpeedModule.o: \
   wlKindModule.o \

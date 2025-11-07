@@ -41,7 +41,7 @@ MODULE wlElectronPhotonEOS
   
 CONTAINS
 
-  SUBROUTINE ElectronPhotonEOS(HelmTable, ElectronPhotonState)
+  SUBROUTINE ElectronPhotonEOS(HelmTable, ElectronPhotonGasState)
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -50,7 +50,7 @@ CONTAINS
 
     !..input arguments
     TYPE(HelmTableType), INTENT(IN) :: HelmTable
-    TYPE (ElectronPhotonStateType), INTENT(INOUT) :: ElectronPhotonState
+    TYPE (ElectronPhotonStateType), INTENT(INOUT) :: ElectronPhotonGasState
 
   !..declare local variables
 
@@ -89,9 +89,9 @@ CONTAINS
   tstpi = 1.0_dp / tstp
   dstpi = 1.0_dp / dstp
 
-  temp = ElectronPhotonState % T
-  den  = ElectronPhotonState % rho
-  ye   = ElectronPhotonState % ye
+  temp = ElectronPhotonGasState % T
+  den  = ElectronPhotonGasState % rho
+  ye   = ElectronPhotonGasState % ye
               
   din   = ye * den
 
@@ -410,30 +410,30 @@ CONTAINS
   ! dpe = (denerdd*x + temp*dpresdt)/pres - 1.0d0
   ! dsp = -dentrdd*x/dpresdt - 1.0d0
 
-  ElectronPhotonState % T    = temp
-  ElectronPhotonState % rho  = den
-  ElectronPhotonState % ye   = ye
+  ElectronPhotonGasState % T    = temp
+  ElectronPhotonGasState % rho  = den
+  ElectronPhotonGasState % ye   = ye
 
-  ElectronPhotonState % p    = pres
-  ElectronPhotonState % pele = pele
-  ElectronPhotonState % prad = prad
-  ElectronPhotonState % dpdT = dpresdt
-  ElectronPhotonState % dpdr = dpresdd
+  ElectronPhotonGasState % p    = pres
+  ElectronPhotonGasState % pele = pele
+  ElectronPhotonGasState % prad = prad
+  ElectronPhotonGasState % dpdT = dpresdt
+  ElectronPhotonGasState % dpdr = dpresdd
 
-  ElectronPhotonState % e    = ener !+ me / rmu * ergmev * ye
-  ElectronPhotonState % eele = eele !+ me / rmu * ergmev * ye
-  ElectronPhotonState % erad = erad
-  ElectronPhotonState % dedT = denerdt
-  ElectronPhotonState % dedr = denerdd
+  ElectronPhotonGasState % e    = ener + me / rmu * ergmev * ye
+  ElectronPhotonGasState % eele = eele + me / rmu * ergmev * ye
+  ElectronPhotonGasState % erad = erad
+  ElectronPhotonGasState % dedT = denerdt
+  ElectronPhotonGasState % dedr = denerdd
 
-  ElectronPhotonState % s    = entr    / (kmev * ergmev / rmu)
-  ElectronPhotonState % sele = sele    / (kmev * ergmev / rmu)
-  ElectronPhotonState % srad = srad    / (kmev * ergmev / rmu)
-  ElectronPhotonState % dsdT = dentrdt / (kmev * ergmev / rmu)
-  ElectronPhotonState % dsdr = dentrdd / (kmev * ergmev / rmu)
+  ElectronPhotonGasState % s    = entr    / (kmev * ergmev / rmu)
+  ElectronPhotonGasState % sele = sele    / (kmev * ergmev / rmu)
+  ElectronPhotonGasState % srad = srad    / (kmev * ergmev / rmu)
+  ElectronPhotonGasState % dsdT = dentrdt / (kmev * ergmev / rmu)
+  ElectronPhotonGasState % dsdr = dentrdd / (kmev * ergmev / rmu)
 
   ! do not forget to add back mass of the electron!
-  ElectronPhotonState % mue = etaele*temp*kmev + me
+  ElectronPhotonGasState % mue = etaele*temp*kmev + me
 
 END SUBROUTINE ElectronPhotonEOS
 
