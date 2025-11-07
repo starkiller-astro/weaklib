@@ -11,8 +11,8 @@ PROGRAM wlCompareOpacities
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE wlLeptonEOSTableModule
-  USE wlElectronPhotonEOS
-  USE wlHelmMuonIOModuleHDF
+  USE wlLeptonPhotonGasEOS
+  USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
     Opacity_CC_2D
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
@@ -47,7 +47,8 @@ PROGRAM wlCompareOpacities
 #elif defined(EOSMODE_COMPOSE)
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
 #endif
-  TYPE(HelmTableType) :: HelmTable
+  TYPE(HelmTableType) :: HelmTableElectrons
+  TYPE(HelmTableType) :: HelmTableMuons
 
   TYPE(OpacityTableType) :: OpacityTable
   REAL(dp), DIMENSION(2) :: Offset_Em
@@ -82,9 +83,9 @@ PROGRAM wlCompareOpacities
   FileName_EOS = "wl-EOS-SFHo-15-25-50.h5"
   CALL ReadEquationOfStateTableHDF( EOSTable, FileName_EOS )
 #else
-  FileName_EOS = "BaryonsPlusHelmPlusMuonsEOS.h5"
+  FileName_EOS = "BaryonsPlusPhotonsPlusLeptonsEOS.h5"
   CALL ReadEquationOfStateTableHDF( EOSTable, FileName_EOS )
-  CALL ReadHelmholtzTableHDF( HelmTable, FileName_EOS  )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, FileName_EOS, "HelmTableElectrons"  )
 #endif 
 
   ! Read Opacity Table
@@ -307,7 +308,8 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
   REAL(DP), INTENT(OUT) :: Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, Mp_eff
   REAL(DP), PARAMETER   :: dmnp = 1.29333922d0
 
-  TYPE(ElectronPhotonStateType) :: ElectronPhotonGasState
+  TYPE(LeptonGasType) :: ElectronGasState
+  TYPE(LeptonGasType) :: MuonGasState
   REAL(DP) :: Yp, min_M, OS_M_new
   INTEGER  :: iDV
 
@@ -453,12 +455,21 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
         EOSTable % DV % Offsets(iDV), &
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Mue )
 #else
+
   ! Electrons
-  ElectronPhotonGasState % t   = T
-  ElectronPhotonGasState % rho = D
-  ElectronPhotonGasState % ye  = Ye
-  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonGasState)
-  Mue = ElectronPhotonGasState % mue
+  ElectronGasState % t   = T
+  ElectronGasState % rho = D
+  ElectronGasState % yL  = Ye
+  CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+  Mue = ElectronGasState % mu
+
+  ! Electrons
+  MuonGasState % t   = T
+  MuonGasState % rho = D
+  MuonGasState % yL  = Ye
+  CALL LeptonGasEOS(HelmTableMuons, MuonGasState)
+  Mumu = MuonGasState % mu
+
 #endif
 
 END SUBROUTINE ApplyEOS

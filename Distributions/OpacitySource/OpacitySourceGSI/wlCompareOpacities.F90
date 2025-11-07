@@ -11,9 +11,11 @@ PROGRAM wlCompareOpacities
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE wlLeptonEOSTableModule
-  USE wlMuonEOS
-  USE wlElectronPhotonEOS
-  USE wlHelmMuonIOModuleHDF
+  USE wlLeptonPhotonGasEOS, ONLY: &
+    LeptonGasType, PhotonGasType, &
+    LeptonGasEOS,  PhotonGasEOS , &
+    GetPhotonLeptonGasEOS
+  USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
     Opacity_CC_2D
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
@@ -48,8 +50,8 @@ PROGRAM wlCompareOpacities
 #elif defined(EOSMODE_COMPOSE)
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
 #endif
-  TYPE(MuonTableType) :: MuonTable
-  TYPE(HelmTableType) :: HelmTable
+  TYPE(HelmTableType) :: HelmTableMuons
+  TYPE(HelmTableType) :: HelmTableElectrons
 
   TYPE(OpacityTableType) :: OpacityTable
   REAL(dp), DIMENSION(2) :: Offset_Em
@@ -72,9 +74,9 @@ PROGRAM wlCompareOpacities
 
   CALL MPI_INIT( ierr )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
-  CALL ReadHelmholtzTableHDF( HelmTable, "BaryonsPlusHelmPlusMuonsEOS.h5"  )
-  CALL ReadMuonTableHDF( MuonTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "BaryonsPlusPhotonsPlusLeptonsEOS.h5" )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5", "HelmTableElectrons" )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5", "HelmTableMuons" )
 
   iEOS_Rho = EOSTable % TS % Indices % iRho
   iEOS_T   = EOSTable % TS % Indices % iT
@@ -121,7 +123,7 @@ PROGRAM wlCompareOpacities
        FileName_EmAb_Option                 &
        = FileName_EmAb, &
        EquationOfStateTableName_Option      &
-       = "BaryonsPlusHelmPlusMuonsEOS.h5",  &
+       = "BaryonsPlusPhotonsPlusLeptonsEOS.h5",  &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
   WRITE(*,*) 'Done Reading Tables'
@@ -305,8 +307,8 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
   REAL(DP), INTENT(IN)  :: T, D, Ye, Ym
   REAL(DP), INTENT(OUT) :: Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, Mp_eff
 
-  TYPE(MuonGasStateType) :: MuonGasState
-  TYPE(ElectronPhotonStateType) :: ElectronPhotonGasState
+  TYPE(LeptonGasType) :: MuonGasState
+  TYPE(LeptonGasType) :: ElectronGasState
   REAL(DP) :: Yp
   INTEGER  :: iDV
 
@@ -402,19 +404,19 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
         EOSTable % DV % Offsets(iDV), &
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Mue )
 #else
-  ! Muons
-  MuonGasState % t     = T
-  MuonGasState % rho   = D
-  MuonGasState % rhoym = MuonGasState % rho * Ym
-  CALL FullMuonEOS(MuonTable, MuonGasState)
+
+  ElectronGasState % t   = T
+  ElectronGasState % rho = D
+  ElectronGasState % yL  = Ye
+  CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+  Mue = ElectronGasState % mu
+
+  MuonGasState % t   = T
+  MuonGasState % rho = D
+  MuonGasState % yL  = Ym
+  CALL LeptonGasEOS(HelmTableMuons, MuonGasState)
   Mumu = MuonGasState % mu
 
-  ! Electrons
-  ElectronPhotonGasState % t   = T
-  ElectronPhotonGasState % rho = D
-  ElectronPhotonGasState % ye  = Ye
-  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonGasState)
-  Mue = ElectronPhotonGasState % mue
 #endif
 
 END SUBROUTINE ApplyEOS

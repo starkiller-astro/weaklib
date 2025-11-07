@@ -44,6 +44,6 @@ wlParallelReadTestCompose.o: \
   wlParallelModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
-	wlHelmMuonIOModuleHDF.o \
+	wlHelmIOModuleHDF.o \
 	wlLeptonEOSTableModule.o \
   wlParallelReadTestCompose.F90

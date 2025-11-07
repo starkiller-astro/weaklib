@@ -16,7 +16,7 @@ PROGRAM wlParallelReadTestCompose
                               BroadcastEquationOfStateTableParallel, &
                               BroadcastHelmTableParallel,            &
                               BroadcastMuonTableParallel
-  USE wlHelmMuonIOModuleHDF, ONLY: &
+  USE wlHelmIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF,  ReadMuonTableHDF
   USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType, MuonTableType, &
@@ -30,7 +30,7 @@ PROGRAM wlParallelReadTestCompose
   TYPE(EquationOfStateTableType) :: EOSTable
   TYPE(EquationOfStateTableType) :: OldEOSTable
   TYPE(MuonTableType)            :: MuonTable
-  TYPE(HelmTableType)            :: HelmTable
+  TYPE(HelmTableType)            :: HelmTableElectrons
   TYPE(DVIDType)                 :: NewDVID
   INTEGER                        :: NewnVariables
 
@@ -45,7 +45,7 @@ PROGRAM wlParallelReadTestCompose
 IF ( myid == 0 ) THEN
   CALL InitializeHDF( )
 
-  CALL ReadEquationOfStateTableHDF( OldEOSTable, 'BaryonsPlusHelmPlusMuonsEOS.h5' )
+  CALL ReadEquationOfStateTableHDF( OldEOSTable, 'BaryonsPlusPhotonsPlusLeptonsEOS.h5' )
 
   NewnVariables = 14
 
@@ -67,13 +67,13 @@ IF ( myid == 0 ) THEN
   
   CALL MatchTableStructure( OldEOSTable, EOSTable, NewDVID, NewnVariables )
 
-  CALL ReadHelmholtzTableHDF( HelmTable, "BaryonsPlusHelmPlusMuonsEOS.h5"  )
-  CALL ReadMuonTableHDF( MuonTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5"  )
+  CALL ReadMuonTableHDF( MuonTable, "BaryonsPlusPhotonsPlusLeptonsEOS.h5" )
 
 END IF
 
   CALL BroadcastEquationOfStateTableParallel( EOSTable, 0, myid, ierr, MPI_COMM_WORLD )
-  CALL BroadcastHelmTableParallel( HelmTable, 0, myid, ierr, MPI_COMM_WORLD )
+  CALL BroadcastHelmTableParallel( HelmTableElectrons, 0, myid, ierr, MPI_COMM_WORLD )
   CALL BroadcastMuonTableParallel( MuonTable, 0, myid, ierr, MPI_COMM_WORLD )
 
 IF ( myid == 0 ) THEN

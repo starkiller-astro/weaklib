@@ -48,39 +48,39 @@ wlTestElasticOpacity: \
 	$(LIBRARIES)
 
 wlInterpolateAb: \
-        $(weaklib) wlInterpolateAb.o
+	$(weaklib) wlInterpolateAb.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateAb_$(MACHINE) \
-        $(weaklib) wlInterpolateAb.o \
-        $(LIBRARIES)
+	$(weaklib) wlInterpolateAb.o \
+	$(LIBRARIES)
 
 wlInterpolateIso: \
-        $(Weaklib_TableCreator) wlInterpolateIso.o
+	$(Weaklib_TableCreator) wlInterpolateIso.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateIso_$(MACHINE) \
-        $(weaklib) wlInterpolateIso.o \
-        $(LIBRARIES)
+	$(weaklib) wlInterpolateIso.o \
+	$(LIBRARIES)
 
 wlInterpolateNES: \
 	$(Weaklib_TableCreator) wlInterpolateNES.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateNES_$(MACHINE) \
-        $(Weaklib_TableCreator) wlInterpolateNES.o \
-        $(LIBRARIES)
+	$(weaklib) wlInterpolateNES.o \
+	$(LIBRARIES)
 
 wlInterpolatePair: \
-        $(Weaklib_TableCreator) wlInterpolatePair.o
+	$(Weaklib_TableCreator) wlInterpolatePair.o
 	$(FLINKER) $(FLAGS) -o wlInterpolatePair_$(MACHINE) \
-        $(Weaklib_TableCreator) wlInterpolatePair.o \
-        $(LIBRARIES)
+	$(weaklib) wlInterpolatePair.o \
+	$(LIBRARIES)
 
 wlInterpolateBrem: \
-        $(Weaklib_TableCreator) wlInterpolateBrem.o
+	$(Weaklib_TableCreator) wlInterpolateBrem.o
 	$(FLINKER) $(FLAGS) -o wlInterpolateBrem_$(MACHINE) \
-	$(Weaklib_TableCreator) wlInterpolateBrem.o \
+	$(weaklib) wlInterpolateBrem.o \
 	$(LIBRARIES)
 
 wlQueryTables: \
-        $(Weaklib_TableCreator) wlQueryTables.o
+	$(Weaklib_TableCreator) wlQueryTables.o
 	$(FLINKER) $(FLAGS) -o wlQueryTables_$(MACHINE) \
-	$(Weaklib_TableCreator) wlQueryTables.o \
+	$(weaklib) wlQueryTables.o \
 	$(LIBRARIES)
 
 clean:

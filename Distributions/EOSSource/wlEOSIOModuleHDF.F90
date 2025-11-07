@@ -5,7 +5,9 @@ MODULE wlEOSIOModuleHDF
   USE wlDependentVariablesModule
   USE wlEquationOfStateTableModule
   USE wlIOModuleHDF
-  USE wlLeptonEOSTableModule
+  USE wlLeptonEOSTableModule, ONLY: &
+    AllocateHelmholtzTable, &
+    HelmTableType
 
   USE HDF5 
 

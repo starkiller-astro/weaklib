@@ -8,9 +8,8 @@ PROGRAM wlTestElasticOpacity
   USE wlIOModuleHDF
   USE wlEOSIOModuleHDF
   USE wlLeptonEOSTableModule
-  USE wlMuonEOS
-  USE wlElectronPhotonEOS
-  USE wlHelmMuonIOModuleHDF
+  USE wlLeptonPhotonGasEOS
+  USE wlHelmIOModuleHDF
   USE wlEosConstantsModule, ONLY: &
     rmu, mp, me, mn, mmu, cm3fm3, kmev
   USE wlCalculateAbEmOpacityModule, ONLY: &
@@ -29,11 +28,11 @@ PROGRAM wlTestElasticOpacity
 #elif defined(EOSMODE_COMPOSE)
     TYPE(EquationOfStateCompOSETableType) :: EOSTable
 #endif
-  TYPE(MuonTableType) :: MuonTable
-  TYPE(MuonGasStateType) :: MuonGasState
+  TYPE(HelmTableType) :: HelmTableMuons
+  TYPE(LeptonGasType) :: MuonGasState
 
-  TYPE(HelmTableType) :: HelmTable
-  TYPE(ElectronPhotonStateType) :: ElectronPhotonGasState
+  TYPE(HelmTableType) :: HelmTableElectrons
+  TYPE(LeptonGasType) :: ElectronGasState
 
   REAL(DP) :: D, T, Ye, Ym
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: E
@@ -49,9 +48,9 @@ PROGRAM wlTestElasticOpacity
   REAL(DP) :: Mp_eff, Mn_eff, Up, Un, n_n, n_p
   INTEGER  :: iEOS_Rho, iEOS_T, iEOS_Yp, iDV
   
-  CALL ReadEquationOfStateTableHDF( EOSTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
-  CALL ReadHelmholtzTableHDF( HelmTable, "BaryonsPlusHelmPlusMuonsEOS.h5"  )
-  CALL ReadMuonTableHDF( MuonTable, "BaryonsPlusHelmPlusMuonsEOS.h5" )
+  CALL ReadEquationOfStateTableHDF( EOSTable, "BaryonsPlusPhotonsPlusLeptonsEOS.h5" )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5", "HelmTableElectrons" )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5", "HelmTableMuons" )
 
   ! See Fischer 2020 Table II for Thermo State and Figure 1 for opacity
   nE = 100
@@ -169,18 +168,18 @@ PROGRAM wlTestElasticOpacity
         EOSTable % DV % Offsets(iDV), &
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Xn )
 
-  ! Muons
-  MuonGasState % t     = T
-  MuonGasState % rhoym = D * Ym
-  CALL FullMuonEOS(MuonTable, MuonGasState)
-  Mumu = MuonGasState % mu
 
-  ! Electrons
-  ElectronPhotonGasState % t   = T
-  ElectronPhotonGasState % rho = D
-  ElectronPhotonGasState % ye  = Ye
-  CALL ElectronPhotonEOS(HelmTable, ElectronPhotonGasState)
-  Mue = ElectronPhotonGasState % mue
+  ElectronGasState % t   = T
+  ElectronGasState % rho = D
+  ElectronGasState % yL  = Ye
+  CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+  Mue = ElectronGasState % mu
+
+  MuonGasState % t   = T
+  MuonGasState % rho = D
+  MuonGasState % yL  = Ym
+  CALL LeptonGasEOS(HelmTableMuons, MuonGasState)
+  Mumu = MuonGasState % mu
 
   WRITE(*,*) 't     =', T * kmev
   WRITE(*,*) 'ye    =', ye

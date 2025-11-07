@@ -22,6 +22,11 @@ wlSoundSpeedModule.o: \
   wlLeptonPhotonGasEOS.o \
   wlInterpolationUtilitiesModule.o
 
+wlLeptonPhotonGasEOS.o: \
+  wlKindModule.o \
+  wlLeptonEOSTableModule.o \
+  wlEosConstantsModule.o
+
 wlEosTemperatureCombinedInversionModule.o: \
   wlKindModule.o \
   wlInterpolationModule.o \
