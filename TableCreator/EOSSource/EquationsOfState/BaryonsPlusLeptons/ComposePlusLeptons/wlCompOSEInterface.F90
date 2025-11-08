@@ -231,7 +231,7 @@ MODULE wlCompOSEInterface
             ! This is how it should be done I think
             !EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = Q7 * ergmev / rmu
             EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
-              (Q7 + 1.0_dp) * NeutronMass * ergmev / rmu ! Do not include rest mass- cvel**2.0_dp
+              (Q7 + 1.0_dp) * NeutronMass * ergmev / rmu - cvel**2.0_dp ! Do not include rest mass
 
             ! now handle the chemical potentials. This is the relativistic expression including the 
             ! nucleon mass. Be careful because some opacities need the NR version, or shifted to a reference
@@ -498,7 +498,7 @@ MODULE wlCompOSEInterface
                     !    ThermoTable(iRho,iT,iYp,iEps_in_Table) * ergmev / rmu
                     EOSCompOSE(iRho,iT,iYp,iInternalEnergyDensityCompOSE) = &
                         (ThermoTable(iRho,iT,iYp,iEps_in_Table) + 1.0_dp) * &
-                         NeutronMass * ergmev / rmu ! Do not include rest mass- cvel**2.0_dp
+                         NeutronMass * ergmev / rmu - cvel**2.0_dp ! Do not include rest mass 
           
                     ! now handle the chemical potentials. These include rest mass already.
                     EOSCompOSE(iRho,iT,iYp,iNeutronChemPotCompOSE) = ThermoTable(iRho,iT,iYp,iMub_in_Table)

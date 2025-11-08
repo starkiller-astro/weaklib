@@ -89,7 +89,7 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
   CHARACTER(len=128) :: BaryonPlusHelmTableName
   
   CALL InitializeHDF( )
-  Yp_over_Ymu = 0.0d0
+  Yp_over_Ymu = 1.0d-10
 
 #ifdef EOSMODE_COMPOSE
   BaryonPlusHelmTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
@@ -98,7 +98,8 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
   CALL ReadHelmholtzTableHDF( HelmTableElectrons, BaryonPlusHelmTableName, "HelmTableElectrons" )
 
   ! read in muon table
-  CALL ReadHelmholtzTableHDF( HelmTableMuons, BaryonPlusHelmTableName, "HelmTableMuons" )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons, BaryonPlusHelmTableName, &
+      "HelmTableMuons", eos_MinD = 1.0d12 )
 
   ! read in baryon table -------------------------------
   CALL ReadEquationOfStateTableHDF( EOSTable, BaryonPlusHelmTableName )
@@ -169,9 +170,9 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
 
         ! Now add electron photon and muon component
         CALL GetPhotonLeptonGasEOS( &
-          Ds_bary(iD), Ts_bary(iT), Yps_bary(iYp) - Ymu_temp, Ymu_temp, &
+          Ds_bary(iD), Ts_bary(iT),  Yps_bary(iYp) - Ymu_temp, Ymu_temp, &
           HelmTableElectrons, HelmTableMuons, P_LeptPhot, E_LeptPhot, S_LeptPhot)
-                
+        
         Es_full(iD,iT,iYp) = LOG10( 10.0d0**( Es_bary(iD,iT,iYp) ) + E_LeptPhot)
         Ps_full(iD,iT,iYp) = LOG10( Ps_bary(iD,iT,iYp) + P_LeptPhot)
         Ss_full(iD,iT,iYp) = LOG10( 10.0d0**( Ss_bary(iD,iT,iYp) ) + S_LeptPhot)
@@ -241,6 +242,12 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
   E  = 6.0164E+19
   Ye = 0.43639
   Ym = 0.0d0
+
+  ! This crashes
+  D  = 9.669405706285288E+09
+  E  = 1.256144409343513E+18
+  Ye = 4.360399289999997E-01
+  Ym = 9.999999999999998E-11
 
   ! This does not 
   T_Guess = 3.894870830e+10

@@ -71,12 +71,10 @@ CONTAINS
     P = 0.0_dp
     E = 0.0_dp
     S = 0.0_dp
-    ! Initialize your states
-    PhotonGasState % T   = T
-    PhotonGasState % rho = D
 
-    LeptonGasState % T   = T
-    LeptonGasState % rho = D
+    ! Initialize your states
+    PhotonGasState % rho = D
+    PhotonGasState % T   = T
 
     ! Do photons first 
     CALL PhotonGasEOS(PhotonGasState)
@@ -86,6 +84,8 @@ CONTAINS
     S = S + PhotonGasState % s
 
     ! Then electrons
+    LeptonGasState % rho = D
+    LeptonGasState % T   = T
     LeptonGasState % yL  = Ye
 
     CALL LeptonGasEOS(HelmTableElectrons, LeptonGasState)
@@ -95,6 +95,8 @@ CONTAINS
     S = S + LeptonGasState % s
 
     ! Then muons
+    LeptonGasState % rho = D
+    LeptonGasState % T   = T
     LeptonGasState % yL  = Ym
 
     CALL LeptonGasEOS(HelmTableMuons, LeptonGasState)
@@ -102,7 +104,7 @@ CONTAINS
     P = P + LeptonGasState % p
     E = E + LeptonGasState % e
     S = S + LeptonGasState % s
-  
+
   END SUBROUTINE GetPhotonLeptonGasEOS
 
   SUBROUTINE PhotonGasEOS(PhotonGasState)
@@ -187,9 +189,16 @@ CONTAINS
     temp = LeptonGasState % T
     den  = LeptonGasState % rho
     yL   = LeptonGasState % yL
-      
+    
     ! You might enter here with muons, if you have none then exit
-    IF ( yL*den < HelmTable % mindens ) THEN
+    IF ( yL*den < HelmTable % mindens .OR. &
+         temp   < HelmTable % mintemp .OR. &
+         den    < HelmTable % eos_minD ) THEN
+
+      LeptonGasState % p    = 0.0_dp
+      LeptonGasState % dpdT = 0.0_dp
+      LeptonGasState % dpdr = 0.0_dp
+
       LeptonGasState % e    = 0.0_dp
       LeptonGasState % dedT = 0.0_dp
       LeptonGasState % dedr = 0.0_dp
@@ -200,6 +209,27 @@ CONTAINS
 
       LeptonGasState % mu   = 0.0_dp
       RETURN
+
+    ENDIF
+
+    IF ( yL*den > HelmTable % maxdens .OR. &
+         temp   > HelmTable % maxtemp ) THEN
+
+      LeptonGasState % p    = 0.0_dp
+      LeptonGasState % dpdT = 0.0_dp
+      LeptonGasState % dpdr = 0.0_dp
+
+      LeptonGasState % e    = 0.0_dp
+      LeptonGasState % dedT = 0.0_dp
+      LeptonGasState % dedr = 0.0_dp
+
+      LeptonGasState % s    = 0.0_dp
+      LeptonGasState % dsdT = 0.0_dp
+      LeptonGasState % dsdr = 0.0_dp
+
+      LeptonGasState % mu   = 0.0_dp
+      RETURN
+
     ENDIF
 
     smallt = HelmTable % mintemp
@@ -463,7 +493,7 @@ CONTAINS
     LeptonGasState % dpdT = dplep_dt
     LeptonGasState % dpdr = dplep_dd
 
-    LeptonGasState % e    = elep + HelmTable % lepton_mass / rmu * ergmev * yL
+    LeptonGasState % e    = elep !+ HelmTable % lepton_mass / rmu * ergmev * yL
     LeptonGasState % dedT = delep_dt
     LeptonGasState % dedr = delep_dd
 
@@ -473,6 +503,27 @@ CONTAINS
 
     ! do not forget to add back mass of the lepton!
     LeptonGasState % mu   = etalep*temp*kmev + HelmTable % lepton_mass
+
+    ! There are some negatives in the table
+    IF (LeptonGasState % p < 0.0_dp .OR. &
+        LeptonGasState % e < 0.0_dp .OR. & 
+        LeptonGasState % s < 0.0_dp ) THEN
+
+      LeptonGasState % p    = 0.0_dp
+      LeptonGasState % dpdT = 0.0_dp
+      LeptonGasState % dpdr = 0.0_dp
+
+      LeptonGasState % e    = 0.0_dp
+      LeptonGasState % dedT = 0.0_dp
+      LeptonGasState % dedr = 0.0_dp
+
+      LeptonGasState % s    = 0.0_dp
+      LeptonGasState % dsdT = 0.0_dp
+      LeptonGasState % dsdr = 0.0_dp
+
+      LeptonGasState % mu   = 0.0_dp
+      
+    ENDIF
 
   END SUBROUTINE LeptonGasEOS
 
