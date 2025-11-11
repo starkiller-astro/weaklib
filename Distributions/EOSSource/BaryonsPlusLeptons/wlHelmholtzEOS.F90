@@ -86,7 +86,8 @@ MODULE wlHelmholtzEOS
     REAL(dp) :: eta
     REAL(dp) :: detadt
     REAL(dp) :: pele
-    REAL(dp) :: ppos
+    REAL(dp) :: eele
+    REAL(dp) :: sele
     REAL(dp) :: mue
     REAL(dp) :: ye
     REAL(dp) :: gam1
@@ -1023,7 +1024,8 @@ CONTAINS
     HelmholtzState % dhdT = dht_row
     
     HelmholtzState % pele = pele_row
-    HelmholtzState % ppos = ppos_row
+    HelmholtzState % eele = eele
+    HelmholtzState % sele = sele
     
     HelmholtzState % xne = xne_row
     HelmholtzState % xnp = xnp_row
@@ -1038,11 +1040,6 @@ CONTAINS
     HelmholtzState % cs   = cs_row
     
     ! Take care of final housekeeping.
-    
-    ! Count the positron contribution in the electron quantities.
-    
-    HelmholtzState % xne  = HelmholtzState % xne  + HelmholtzState % xnp
-    HelmholtzState % pele = HelmholtzState % pele + HelmholtzState % ppos
     
     ! Use the non-relativistic version of the sound speed, cs = SQRT(gam_1 * P / rho).
     ! This replaces the relativistic version that comes out of helmeos.

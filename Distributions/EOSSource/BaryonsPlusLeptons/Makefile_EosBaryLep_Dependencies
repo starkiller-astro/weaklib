@@ -25,6 +25,7 @@ wlSoundSpeedModule.o: \
 wlLeptonPhotonGasEOS.o: \
   wlKindModule.o \
   wlLeptonEOSTableModule.o \
+  wlHelmholtzEOS.o \
   wlEosConstantsModule.o
 
 wlEosTemperatureCombinedInversionModule.o: \

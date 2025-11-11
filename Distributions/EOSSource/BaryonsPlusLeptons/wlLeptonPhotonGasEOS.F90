@@ -3,6 +3,7 @@ MODULE wlLeptonPhotonGasEOS
   USE wlKindModule, ONLY: dp
   USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType
+  USE wlHelmholtzEOS
   USE wlEosConstantsModule, ONLY: &
     pi, rmu, kerg, cvel, &
     kmev, ergmev, sigma_sb, asol
@@ -185,10 +186,16 @@ CONTAINS
     ! extra variables I added that were previously allocated
     REAL(DP) :: smallt, smalld, hight, highd
     REAL(DP) :: tstp, dstp, dstpi, tstpi
+    TYPE(HelmholtzStateType) :: HelmState
+    REAL(DP) :: sign_yL
 
     temp = LeptonGasState % T
     den  = LeptonGasState % rho
     yL   = LeptonGasState % yL
+
+    ! Handle negative Ym case
+    yL = SIGN(1.0d0, yL)
+    yL = ABS(yL)
     
     ! You might enter here with muons, if you have none then exit
     IF ( yL*den < HelmTable % mindens .OR. &
@@ -493,22 +500,36 @@ CONTAINS
     LeptonGasState % dpdT = dplep_dt
     LeptonGasState % dpdr = dplep_dd
 
-    LeptonGasState % e    = elep !+ HelmTable % lepton_mass / rmu * ergmev * yL
+    LeptonGasState % e    = elep + HelmTable % lepton_mass / rmu * ergmev * yL
     LeptonGasState % dedT = delep_dt
     LeptonGasState % dedr = delep_dd
 
-    LeptonGasState % s    = slep   / (kmev * ergmev / rmu)
+    LeptonGasState % s    = slep     / (kmev * ergmev / rmu)
     LeptonGasState % dsdT = dslep_dt / (kmev * ergmev / rmu)
     LeptonGasState % dsdr = dslep_dd / (kmev * ergmev / rmu)
 
     ! do not forget to add back mass of the lepton!
-    LeptonGasState % mu   = etalep*temp*kmev + HelmTable % lepton_mass
-
+    LeptonGasState % mu = etalep*temp*kmev + HelmTable % lepton_mass
+    LeptonGasState % mu = sign_yL * LeptonGasState % mu
+    
     ! There are some negatives in the table
     IF (LeptonGasState % p < 0.0_dp .OR. &
         LeptonGasState % e < 0.0_dp .OR. & 
         LeptonGasState % s < 0.0_dp ) THEN
 
+      HelmState % rho = LeptonGasState % rho
+      HelmState % T   = LeptonGasState % T
+      HelmState % ye  = LeptonGasState % yL
+      CALL FullHelmEOS(1, HelmTable, HelmState)
+      WRITE(*,*) 'Something is negative, and it should not be'
+      WRITE(*,*) 'Setting everything to zero for simplicity'
+      WRITE(*,*) LeptonGasState % rho, LeptonGasState % T, LeptonGasState % yL
+      WRITE(*,*) den, temp, yL
+      WRITE(*,*) LeptonGasState % p  , LeptonGasState % e, LeptonGasState % s
+      WRITE(*,*) HelmState % pele  , HelmState % eele, HelmState % sele
+      WRITE(*,*) -df_t, yL
+      STOP
+                 
       LeptonGasState % p    = 0.0_dp
       LeptonGasState % dpdT = 0.0_dp
       LeptonGasState % dpdr = 0.0_dp
