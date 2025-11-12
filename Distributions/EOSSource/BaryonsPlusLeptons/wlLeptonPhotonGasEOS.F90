@@ -194,7 +194,7 @@ CONTAINS
     yL   = LeptonGasState % yL
 
     ! Handle negative Ym case
-    yL = SIGN(1.0d0, yL)
+    sign_yL = SIGN(1.0d0, yL)
     yL = ABS(yL)
     
     ! You might enter here with muons, if you have none then exit
