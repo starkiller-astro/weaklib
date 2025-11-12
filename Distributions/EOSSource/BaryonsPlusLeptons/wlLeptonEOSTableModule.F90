@@ -8,7 +8,7 @@ MODULE wlLeptonEOSTableModule
   PRIVATE
   
   ! nPoints for classic HelmTable
-  INTEGER, PARAMETER, PUBLIC :: iTempMax=541, iDenMax=201 
+  INTEGER, PARAMETER, PUBLIC :: iTempMax=201, iDenMax=542 
 
   TYPE, PUBLIC :: HelmTableType
     

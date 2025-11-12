@@ -517,19 +517,22 @@ CONTAINS
         LeptonGasState % e < 0.0_dp .OR. & 
         LeptonGasState % s < 0.0_dp ) THEN
 
+      WRITE(*,*) 'Something is negative, and it should not be'
+      WRITE(*,*) LeptonGasState % rho, LeptonGasState % T, LeptonGasState % yL
+      WRITE(*,*) den, temp, yL
+      WRITE(*,*) LeptonGasState % p  , LeptonGasState % e, LeptonGasState % s
+
       HelmState % rho = LeptonGasState % rho
       HelmState % T   = LeptonGasState % T
       HelmState % ye  = LeptonGasState % yL
       CALL FullHelmEOS(1, HelmTable, HelmState)
-      WRITE(*,*) 'Something is negative, and it should not be'
-      WRITE(*,*) 'Setting everything to zero for simplicity'
-      WRITE(*,*) LeptonGasState % rho, LeptonGasState % T, LeptonGasState % yL
-      WRITE(*,*) den, temp, yL
-      WRITE(*,*) LeptonGasState % p  , LeptonGasState % e, LeptonGasState % s
       WRITE(*,*) HelmState % pele  , HelmState % eele, HelmState % sele
-      WRITE(*,*) -df_t, yL
+      WRITE(*,*) iat, jat, df_d, -df_t, yL
+      WRITE(*,*) HelmTable % nPointsDen, HelmTable % nPointsTemp
       STOP
-                 
+      
+      ! Or if you do not want to STOP perhaps set everything to zero?
+      ! But negative pressures is a bad sign
       LeptonGasState % p    = 0.0_dp
       LeptonGasState % dpdT = 0.0_dp
       LeptonGasState % dpdr = 0.0_dp

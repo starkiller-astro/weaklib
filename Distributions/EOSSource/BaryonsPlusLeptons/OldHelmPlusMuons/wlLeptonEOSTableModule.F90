@@ -7,7 +7,7 @@ MODULE wlLeptonEOSTableModule
   IMPLICIT NONE
   PRIVATE
   
-    INTEGER, PARAMETER, PUBLIC :: iTempMax=541, iDenMax=201 
+    INTEGER, PARAMETER, PUBLIC :: iDensMax=541, iTempMax=201 
     INTEGER, PARAMETER, PUBLIC :: nTempMuon=270, nDenMuon=1301 
   
    TYPE, PUBLIC :: HelmTableType
@@ -204,7 +204,7 @@ CONTAINS
     END IF
 
     MuonTable % nPointsTemp  = nPoints(1)
-    MuonTable % nPointsDen    = nPoints(2)
+    MuonTable % nPointsDen   = nPoints(2)
 
     ALLOCATE( MuonTable % t( nPoints(1) ) )
     ALLOCATE( MuonTable % mu( nPoints(1), nPoints(2) ) )
@@ -250,17 +250,17 @@ CONTAINS
     INTEGER :: istat=0
     INTEGER :: iDen, iT
     
-        !..   read the helmholtz free energy table
-        tlo   = 3.0d0
-        thi   = 13.0d0
-        tstp  = (thi - tlo)/real(HelmTable % nPointsTemp-1, dp)
-        tstpi = 1.0d0/tstp
-        dlo   = -12.0d0
-        dhi   = 15.0d0
-        dstp  = (dhi - dlo)/real(HelmTable % nPointsDen-1,  dp)
-        dstpi = 1.0d0/dstp
+    !..   read the helmholtz free energy table
+    tlo   = 3.0d0
+    thi   = 13.0d0
+    tstp  = (thi - tlo)/real(HelmTable % nPointsTemp-1, dp)
+    tstpi = 1.0d0/tstp
+    dlo   = -12.0d0
+    dhi   = 15.0d0
+    dstp  = (dhi - dlo)/real(HelmTable % nPointsDen-1,  dp)
+    dstpi = 1.0d0/dstp
     
-        do iT=1,HelmTable % nPointsTemp
+    do iT=1,HelmTable % nPointsTemp
       tsav = tlo + (iT-1)*tstp
       HelmTable % t(iT) = 10.0d0**(tsav)
     enddo

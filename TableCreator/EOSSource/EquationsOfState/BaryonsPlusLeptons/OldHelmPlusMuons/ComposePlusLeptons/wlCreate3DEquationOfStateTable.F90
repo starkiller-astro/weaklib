@@ -85,7 +85,7 @@ PROGRAM wlCreateEquationOfStateTable
 
     ! At this point you have filled the Compose EOS, now read in the Helmholtz and Muon EOS
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPoints2D = (/ iTempMax, iDenMax /)
+    nPoints2D = (/ iDenMax, iTempMax /)
     PRINT*, "Allocate Helmholtz EOS"
     CALL AllocateHelmholtzTable( HelmTable, nPoints2D )
     

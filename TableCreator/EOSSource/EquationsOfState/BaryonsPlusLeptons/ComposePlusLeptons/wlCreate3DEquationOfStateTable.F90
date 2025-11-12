@@ -39,11 +39,11 @@ PROGRAM wlCreateEquationOfStateTable
     REAL(DP), PARAMETER :: dhi_Muons  = 15.85594401137048_dp
 
     ! PARAMETERS OF ELECTRON TABLE, NEED TO KNOW THIS IN ADVANCE
-    INTEGER, PARAMETER  :: nTempElectrons = 541
+    INTEGER, PARAMETER  :: nTempElectrons = 201
     REAL(DP), PARAMETER :: tlo_Electrons  = 3.0_dp
     REAL(DP), PARAMETER :: thi_Electrons  = 13.0_dp 
 
-    INTEGER, PARAMETER  :: nDenElectrons  = 201
+    INTEGER, PARAMETER  :: nDenElectrons  = 541
     REAL(DP), PARAMETER :: dlo_Electrons  = -12.0_dp
     REAL(DP), PARAMETER :: dhi_Electrons  = 15.0_dp
         
@@ -105,7 +105,7 @@ PROGRAM wlCreateEquationOfStateTable
 
     ! At this point you have filled the Compose EOS, now read in the Helmholtz and Muon EOS
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPoints2D = (/ nTempElectrons, nDenElectrons /)
+    nPoints2D = (/ nDenElectrons, nTempElectrons /)
     PRINT*, "Allocate Helmholtz EOS for Electrons"
     CALL AllocateHelmholtzTable( HelmTableElectrons, nPoints2D )
     
@@ -114,7 +114,7 @@ PROGRAM wlCreateEquationOfStateTable
        tlo_Electrons, thi_Electrons, dlo_Electrons, dhi_Electrons )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPoints2D = (/ nTempMuons, nDenMuons /)
+    nPoints2D = (/ nDenMuons, nTempMuons /)
     PRINT*, "Allocate Helmholtz EOS for Muons"
     CALL AllocateHelmholtzTable( HelmTableMuons, nPoints2D )
     

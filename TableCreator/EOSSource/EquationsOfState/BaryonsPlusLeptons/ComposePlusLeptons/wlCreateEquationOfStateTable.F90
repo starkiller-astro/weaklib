@@ -29,11 +29,11 @@ PROGRAM wlCreateEquationOfStateTable
     REAL(DP), PARAMETER :: dhi_Muons  = 15.85594401137048_dp
 
     ! PARAMETERS OF ELECTRON TABLE, NEED TO KNOW THIS IN ADVANCE
-    INTEGER, PARAMETER  :: nTempElectrons = 541
+    INTEGER, PARAMETER  :: nTempElectrons = 201
     REAL(DP), PARAMETER :: tlo_Electrons  = 3.0_dp
     REAL(DP), PARAMETER :: thi_Electrons  = 13.0_dp 
 
-    INTEGER, PARAMETER  :: nDenElectrons  = 201
+    INTEGER, PARAMETER  :: nDenElectrons  = 541
     REAL(DP), PARAMETER :: dlo_Electrons  = -12.0_dp
     REAL(DP), PARAMETER :: dhi_Electrons  = 15.0_dp
 
@@ -263,18 +263,24 @@ PROGRAM wlCreateEquationOfStateTable
     END DO
                   
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPointsHelm = (/ nTempElectrons, nDenElectrons /)
+    nPointsHelm = (/ nDenElectrons, nTempElectrons /)
     PRINT*, "Allocate Helmholtz EOS for Electrons"
     CALL AllocateHelmholtzTable( HelmTableElectrons, nPointsHelm )
+
+    WRITE(*,*) 'HelmTableElectrons Dimensions = ', &
+               HelmTableElectrons % nPointsDen, HelmTableElectrons % nPointsTemp
     
     HelmDatFilePath = '../electron_table_p256_q800.dat'
     CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableElectrons, me, &
        tlo_Electrons, thi_Electrons, dlo_Electrons, dhi_Electrons )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPointsHelm = (/ nTempMuons, nDenMuons /)
+    nPointsHelm = (/ nDenMuons, nTempMuons /)
     PRINT*, "Allocate Helmholtz EOS for Muons"
     CALL AllocateHelmholtzTable( HelmTableMuons, nPointsHelm )
+    
+    WRITE(*,*) 'HelmTableMuons Dimensions = ', &
+               HelmTableMuons % nPointsDen, HelmTableMuons % nPointsTemp
     
     HelmDatFilePath = '../muon_table_p256_q800.dat'
     CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableMuons, mmu, &

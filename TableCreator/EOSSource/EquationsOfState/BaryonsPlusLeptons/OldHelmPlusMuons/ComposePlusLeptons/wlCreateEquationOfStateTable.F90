@@ -246,15 +246,15 @@ PROGRAM wlCreateEquationOfStateTable
     END DO
                   
     ! ------------- NOW DO ELECTRON EOS ------------------ !
-    nPointsHelm = (/ iTempMax, iDenMax /)
+    nPoints2D = (/ iDenMax, iTempMax /)
     PRINT*, "Allocate Helmholtz EOS"
-    CALL AllocateHelmholtzTable( HelmTable, nPointsHelm )
+    CALL AllocateHelmholtzTable( HelmTable, nPoints2D )
     
     HelmDatFilePath = '../helm_table.dat'
     CALL ReadHelmEOSdat( HelmDatFilePath, HelmTable )
     
     ! ------------- NOW DO MUON EOS ------------------ !
-    nPointsDenon = (/ nTempMuon, nDenMuon /)
+    nPoints2D = (/ nTempMuon, nDenMuon /)
     PRINT*, "Allocate Muon EOS"
     CALL AllocateMuonTable( MuonTable, nPointsDenon )
     
