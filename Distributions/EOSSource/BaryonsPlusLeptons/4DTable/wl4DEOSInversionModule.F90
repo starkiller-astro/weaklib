@@ -255,7 +255,7 @@ CONTAINS
     ErrorString(13) = 'Unable to Find Any Root'
 
     WRITE(*,*)
-    WRITE(*,*) '  wlEOSInversionModule ERROR: ' // TRIM( ErrorString(Error) )
+    WRITE(*,*) '  wl4DEOSInversionModule ERROR: ' // TRIM( ErrorString(Error) )
     WRITE(*,*)
 
   END SUBROUTINE DescribeEOSInversionError
