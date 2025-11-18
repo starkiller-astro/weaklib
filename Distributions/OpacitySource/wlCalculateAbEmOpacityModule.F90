@@ -124,7 +124,8 @@ CONTAINS
     f3 = 1.0d0/(EXP((E3 - Mu3)/T/kmev) + 1.0d0)
 
     OpEl = C_Op_el * baryons_term * phase_space_term * (1.0d0 - f3)
-
+    OpEl = MAX( OpEl, 0.0_dp )
+    
   END SUBROUTINE ElasticAbsorptionOpacity
 
   SUBROUTINE CalculateHorowitzWeakMagRecoil(E, WeakMagRecNuLep, WeakMagRecNuLepBar)

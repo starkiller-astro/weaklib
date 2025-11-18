@@ -19,21 +19,31 @@ PROGRAM wlCreateEquationOfStateTable
 
     IMPLICIT NONE
     
-    ! PARAMETERS OF MUON TABLE, NEED TO KNOW THIS IN ADVANCE
-    INTEGER, PARAMETER  :: nTempMuons = 101
-    REAL(DP), PARAMETER :: tlo_Muons  = 8.0e+00_dp
-    REAL(DP), PARAMETER :: thi_Muons  = 1.3e+01_dp
+    ! ! PARAMETERS OF MUON TABLE, NEED TO KNOW THIS IN ADVANCE
+    ! INTEGER,  PARAMETER :: nTempMuons = 101
+    ! REAL(DP), PARAMETER :: tlo_Muons  = 8.0e+00_dp
+    ! REAL(DP), PARAMETER :: thi_Muons  = 1.3e+01_dp
 
-    INTEGER, PARAMETER  :: nDenMuons  = 421
-    REAL(DP), PARAMETER :: dlo_Muons  = -5.05e+00_dp
-    REAL(DP), PARAMETER :: dhi_Muons  = 15.95e+00_dp
+    ! INTEGER,  PARAMETER :: nDenMuons  = 421
+    ! REAL(DP), PARAMETER :: dlo_Muons  = -5.05e+00_dp
+    ! REAL(DP), PARAMETER :: dhi_Muons  = 15.95e+00_dp
 
     ! PARAMETERS OF ELECTRON TABLE, NEED TO KNOW THIS IN ADVANCE
-    INTEGER, PARAMETER  :: nTempElectrons = 201
+    ! THIS IS FOR THE FIRST MUON TABLE WE MADE
+    INTEGER,  PARAMETER :: nTempMuons = 270
+    REAL(DP), PARAMETER :: tlo_Muons  =  9.763597279797683_dp
+    REAL(DP), PARAMETER :: thi_Muons  = 12.45359726262338_dp
+
+    INTEGER, PARAMETER  :: nDenMuons  = 1501
+    REAL(DP), PARAMETER :: dlo_Muons  =  3.220259248823259_dp
+    REAL(DP), PARAMETER :: dhi_Muons  = 15.85594401137048_dp
+
+    ! PARAMETERS OF ELECTRON TABLE, NEED TO KNOW THIS IN ADVANCE
+    INTEGER,  PARAMETER :: nTempElectrons = 201
     REAL(DP), PARAMETER :: tlo_Electrons  = 3.0_dp
     REAL(DP), PARAMETER :: thi_Electrons  = 13.0_dp 
 
-    INTEGER, PARAMETER  :: nDenElectrons  = 541
+    INTEGER,  PARAMETER :: nDenElectrons  = 541
     REAL(DP), PARAMETER :: dlo_Electrons  = -12.0_dp
     REAL(DP), PARAMETER :: dhi_Electrons  = 15.0_dp
 
@@ -282,7 +292,7 @@ PROGRAM wlCreateEquationOfStateTable
     WRITE(*,*) 'HelmTableMuons Dimensions = ', &
                HelmTableMuons % nPointsDen, HelmTableMuons % nPointsTemp
     
-    HelmDatFilePath = '../muon_table_p256_q800.dat'
+    HelmDatFilePath = '/home/lbocciol/MuonProject/muon_table_p256_q800.dat'
     CALL ReadHelmEOSdat( HelmDatFilePath, HelmTableMuons, mmu, &
        tlo_Muons, thi_Muons, dlo_Muons, dhi_Muons)
     
