@@ -500,7 +500,7 @@ CONTAINS
     LeptonGasState % dpdT = dplep_dt
     LeptonGasState % dpdr = dplep_dd
 
-    LeptonGasState % e    = elep !+ HelmTable % lepton_mass / rmu * ergmev * yL
+    LeptonGasState % e    = elep + HelmTable % lepton_mass / rmu * ergmev * yL
     LeptonGasState % dedT = delep_dt
     LeptonGasState % dedr = delep_dd
 

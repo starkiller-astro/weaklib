@@ -832,6 +832,8 @@ CONTAINS
     CALL MPI_BCAST( helm_dims, 2, MPI_INTEGER, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( min_max_helm, 4, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
+    CALL MPI_BCAST( HelmTable % lepton_mass, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
     IF ( myid /= rootproc ) THEN
         HelmTable % nPointsDen = helm_dims(1)
         HelmTable % nPointsTemp = helm_dims(2)
@@ -841,6 +843,10 @@ CONTAINS
         HelmTable % maxdens = min_max_helm(4)
         CALL AllocateHelmholtzTable(HelmTable, helm_dims)
     END IF
+
+    !Need to broadcast eos_MinD after AllocateHelmholtzTable, otherwise it would be overwritten
+    !in that routine
+    CALL MPI_BCAST( HelmTable % eos_MinD, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     
     ! 1D arrays in density
     i_count = HelmTable % nPointsDen  
