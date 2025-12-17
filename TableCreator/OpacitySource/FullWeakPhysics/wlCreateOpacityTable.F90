@@ -1453,11 +1453,20 @@ print*, '>>> Brem T', T
 
   QuickDirty: BLOCK
 
-    INTEGER :: iE
-    REAL(dp) :: FourPi
+    INTEGER :: iE, iEp, iMu_n, iMu_p
+    REAL(dp) :: TwoPi, FourPi
+    REAL(dp) :: chem_nu, f_nu, f_nub, detBal
     REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
                                      phi0_nub_Iso, phi1_nub_Iso
+    REAL(dp), DIMENSION(nPointsE) :: E_Vol
+    REAL(dp), DIMENSION(nPointsE) :: invMFP_nu_n,  invMFP_nu_p, &
+                                     invMFP_nub_n, invMFP_nub_p
+    REAL(dp), DIMENSION(nPointsE,nPointsE) :: phi0_nu_n_NNS,  phi1_nu_n_NNS, &
+                                              phi0_nub_n_NNS, phi1_nub_n_NNS, &
+                                              phi0_nu_p_NNS,  phi1_nu_p_NNS, &
+                                              phi0_nub_p_NNS, phi1_nub_p_NNS
 
+    TwoPi  =  2.0d0 * acos ( -1.0d0 )
    FourPi  =  4.0d0 * acos ( -1.0d0 )
     
    ASSOCIATE(  &
@@ -1467,7 +1476,8 @@ print*, '>>> Brem T', T
        nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
        iYe     => OpacityTable % TS % Indices % iYe                            , &
        nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
-       E_cells => OpacityTable % EnergyGrid % Values                           , &
+       E_Cells => OpacityTable % EnergyGrid % Values                           , &
+       E_Edges => OpacityTable % EnergyGrid % Edge                            , &
        Indices => OpacityTable % EOSTable % DV % Indices                       , &
        DVOffs  => OpacityTable % EOSTable % DV % Offsets                       , &
        DVar    => OpacityTable % EOSTable % DV % Variables  )
@@ -1496,7 +1506,7 @@ print*, '>>> Brem T', T
   !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
   ! END DO
 
-    !-- Bruenn et al. (2020) Isoenergetic scattering figures
+    !-- Bruenn et al. (2020) figures
 
 !    j_rho = 118 !-- 10^11 g cm^-3 
 !    j_rho = 103 !-- 10^10 g cm^-3 
@@ -1520,25 +1530,60 @@ print*, '>>> Brem T', T
     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
 
-    A   = 10**DVar(Indices % iHeavyMassNumber) % &
-          Values(j_rho, k_t, l_ye) &
+    A   = 10**DVar(Indices % iHeavyMassNumber) &
+                % Values(j_rho, k_t, l_ye) &
           - DVOffs(Indices % iHeavyMassNumber)   &
           - epsilon
     WRITE (*,*) 'A          ', A
 
-    Z   = 10**DVar(Indices % iHeavyChargeNumber) % &
-          Values(j_rho, k_t, l_ye) &
+    Z   = 10**DVar(Indices % iHeavyChargeNumber) &
+                % Values(j_rho, k_t, l_ye) &
           - DVOffs(Indices % iHeavyChargeNumber)   &
           - epsilon
     WRITE (*,*) 'Z          ', Z
 
     xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
-              Values(j_rho, k_t, l_ye) &
+                    Values(j_rho, k_t, l_ye) &
               - DVOffs(Indices % iHeavyMassFraction)   &
               - epsilon
     WRITE (*,*) 'X_A        ', xheavy
     WRITE (*,*) 'n_A (cm^-3)', ( xheavy / A ) * rho/rmu
     WRITE (*,*) 'n_A (fm^-3)', ( xheavy / A ) * rho/rmu * ( 1.e-13 )**3
+
+!    iMu_n  =  69  !-- 921 MeV
+!    iMu_n  =  63  !-- 906 MeV
+    iMu_n  =  73  !-- 932 MeV
+
+!    iMu_p  =  67  !-- 916 MeV
+!    iMu_p  =  53  !-- 880 MeV
+    iMu_p  =  58  !-- 894 MeV
+
+    chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
+                   Values(j_rho, k_t, l_ye) &
+             - DVOffs(Indices % iNeutronChemicalPotential)   &
+             - epsilon
+    chem_n  =  chem_n + dmnp + mn_wl  !-- Convert from Chimera to absolute
+    WRITE (*,*) 'chem_n (MeV)', chem_n, &
+                iMu_n, OpacityTable % MuBGrid % Values(iMu_n)
+
+    chem_p = 10**DVar(Indices % iProtonChemicalPotential) % &
+                   Values(j_rho, k_t, l_ye) &
+             - DVOffs(Indices % iProtonChemicalPotential)   &
+             - epsilon
+    chem_p  =  chem_p + dmnp + mp_wl  !-- Convert from Chimera to absolute
+    WRITE (*,*) 'chem_p (MeV)', chem_p, &
+                iMu_p, OpacityTable % MuBGrid % Values(iMu_p)
+
+    chem_e = 10**DVar(Indices % iElectronChemicalPotential) % &
+                   Values(j_rho, k_t, l_ye) &
+             - DVOffs(Indices % iElectronChemicalPotential)   &
+             - epsilon
+    WRITE (*,*) 'chem_e (MeV)', chem_e
+
+    chem_nu = chem_p - chem_n + chem_e
+    WRITE (*,*) 'chem_nu_e (MeV)', chem_nu
+
+    !-- Elastic scattering (Iso)
 
     phi0_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
                        ( :, 1, j_rho, k_t, l_ye )
@@ -1568,11 +1613,112 @@ print*, '>>> Brem T', T
         E_Cells ( iE ),     '    ', &
         phi0_nub_Iso ( iE ), '    ', &
         phi1_nub_Iso ( iE ), '    ', &
-        FourPi * ( E_Cells ( iE ) ** 2 ) &
+        FourPi * ( E_Cells ( iE ) ** 2 ) &   
           * ( phi0_nub_Iso ( iE )  -  (1.d0/3.d0) * phi1_nub_Iso ( iE ) )
     END DO
 
-  WRITE (*,*)
+    !-- Inelastic scattering (NNS)
+
+    DO iE = 1, nPointsE
+      E_Vol ( iE )  =  ( E_Edges ( iE + 1 ) ** 3  -  E_Edges ( iE ) ** 3 ) &
+                       / 3.d0 
+    END DO !-- iE
+
+    phi0_nu_n_NNS  &
+      =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+             ( :, :, 1, k_t, iMu_n )
+
+    phi0_nub_n_NNS  &
+      =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+             ( :, :, 1, k_t, iMu_n )
+
+    phi0_nu_p_NNS  &
+      =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
+             ( :, :, 1, k_t, iMu_p )
+
+    phi0_nub_p_NNS  &
+      =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+             ( :, :, 1, k_t, iMu_p )
+
+    invMFP_nu_n   =  0.d0
+    invMFP_nu_p   =  0.d0
+    invMFP_nub_n  =  0.d0
+    invMFP_nub_p  =  0.d0
+    DO iE = 1, nPointsE
+      DO iEp = 1, nPointsE
+
+        f_nu   =  1.d0 / ( 1.d0 &
+                          + dexp ( ( E_Cells ( iEp ) - chem_nu ) / TMeV ) )
+
+        f_nub  =  1.d0 / ( 1.d0 &
+                          + dexp ( ( E_Cells ( iEp ) + chem_nu ) / TMeV ) )
+
+if ( iE == 1 ) &
+  WRITE (*,*) '>>> iEp, f_nu, f_nub', iEP, f_nu, f_nub
+
+        detBal  =  dexp ( ( E_Cells ( iEp ) - E_Cells ( iEp ) ) / TMeV )
+
+        invMFP_nu_n ( iE )  &
+          =  invMFP_nu_n ( iE )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nu_n_NNS ( iEp, iE )  *  ( 1.d0  -  f_nu )  & 
+             +  E_Vol ( iEp )  &
+                *  phi0_nu_n_NNS ( iEp, iE )  *  detBal  *  f_nu 
+
+        invMFP_nu_p ( iE )  &
+          =  invMFP_nu_p ( iE )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nu_p_NNS ( iEp, iE )  *  ( 1.d0  -  f_nu )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nu_p_NNS ( iEp, iE )  *  detBal  *  f_nu
+
+        invMFP_nub_n ( iE )  &
+          =  invMFP_nub_n ( iE )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nub_n_NNS ( iEp, iE )  *  ( 1.d0  -  f_nub )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nub_n_NNS ( iEp, iE )  *  detBal  *  f_nub
+
+        invMFP_nub_p ( iE )  &
+          =  invMFP_nub_p ( iE )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nub_p_NNS ( iEp, iE )  *  ( 1.d0  -  f_nub )  &
+             +  E_Vol ( iEp )  &
+                *  phi0_nub_p_NNS ( iEp, iE )  *  detBal  *  f_nub
+
+      END DO !-- iEp
+
+      !-- Factor of 2 to undo thornado legendre moment convention
+      !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
+
+      invMFP_nu_n  ( iE )  =  2.d0 * TwoPi * invMFP_nu_n  ( iE )
+      invMFP_nu_p  ( iE )  =  2.d0 * TwoPi * invMFP_nu_p  ( iE )
+      invMFP_nub_n ( iE )  =  2.d0 * TwoPi * invMFP_nub_n ( iE )
+      invMFP_nub_p ( iE )  =  2.d0 * TwoPi * invMFP_nub_p ( iE )
+
+    END DO !-- iE
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> Nu NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
+    DO iE = 1, nPointsE
+      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+        E_Cells ( iE ),     '    ', &
+        invMFP_nu_n ( iE ), '    ', &
+        invMFP_nu_p ( iE ), '    ', &
+        invMFP_nu_n ( iE )  +  invMFP_nu_p ( iE )  
+    END DO
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> NuB NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
+    DO iE = 1, nPointsE
+      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+        E_Cells ( iE ),     '    ', &
+        invMFP_nub_n ( iE ), '    ', &
+        invMFP_nub_p ( iE ), '    ', &
+        invMFP_nub_n ( iE )  +  invMFP_nub_p ( iE )  
+    END DO
+
+   WRITE (*,*)
 
    END ASSOCIATE ! rho-T-Ye
 
