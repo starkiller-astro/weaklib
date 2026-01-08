@@ -71,7 +71,7 @@ PROGRAM wlCreateOpacityTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
       WriteOpacityTableHDF
   USE wlExtPhysicalConstantsModule, ONLY: &
-      kMeV, dmnp, mn_wl => mn, mp_wl => mp, rmu
+      kMeV, dmnp, mn_wl => mn, mp_wl => mp, rmu, kfm
   USE wlExtNumericalModule, ONLY: epsilon
   USE HR98_Bremsstrahlung
   USE prb_cntl_module, ONLY: &
@@ -179,13 +179,13 @@ IMPLICIT NONE
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
    INTEGER, PARAMETER      :: Scat_many_body_corrections &
-                              = 0
+                              = 1
                               !Modification to neutral current scattering due to many-body effects
                               !Horowitz et al 2017
 
    REAL(DP), PARAMETER     :: Scat_ga_strange &
-                              = -0.1d0
-!                              = 0.0d0
+!                              = -0.1d0
+                              = 0.0d0
                               !Include strange-quark contributions to the axial vector coupling constant ga
                               !Value from Hobbs et al 2016
 
@@ -1455,7 +1455,7 @@ print*, '>>> Brem T', T
 
     INTEGER :: iE, iEp, iMu_n, iMu_p
     REAL(dp) :: TwoPi, FourPi
-    REAL(dp) :: chem_nu, f_nu, f_nub, detBal
+    REAL(dp) :: chem_nu, f_nu, f_nub, detBal, S_tot
     REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
                                      phi0_nub_Iso, phi1_nub_Iso
     REAL(dp), DIMENSION(nPointsE) :: E_Vol
@@ -1509,24 +1509,24 @@ print*, '>>> Brem T', T
     !-- Bruenn et al. (2020) figures
 
 !    j_rho = 118 !-- 10^11 g cm^-3 
-!    j_rho = 103 !-- 10^10 g cm^-3 
+    j_rho = 103 !-- 10^10 g cm^-3 
 !    j_rho = 133 !-- 10^12 g cm^-3 
-    j_rho = 163 !-- 10^14 g cm^-3 
+!    j_rho = 163 !-- 10^14 g cm^-3 
     rho = OpacityTable % TS % States (iRho) % Values (j_rho)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3)', j_rho, '    ', rho
 
 !    k_t = 25  !--  0.9 MeV
-!    k_t = 38  !--  3.0 MeV
+    k_t = 38  !--  3.0 MeV
 !    k_t = 51  !-- 10.0 MeV
-    k_t = 53  !-- 12.0 MeV
+!    k_t = 53  !-- 12.0 MeV
     T = OpacityTable % TS % States (iT) % Values (k_t)
     TMeV = T * kMeV
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'T (MeV)      ', k_t, '    ', TMeV
 
 !    l_ye = 20  !-- 0.4
-!    l_ye = 13  !-- 0.25
+    l_ye = 13  !-- 0.25
 !    l_ye =  5  !-- 0.1
-    l_ye = 14  !-- 0.27
+!    l_ye = 14  !-- 0.27
     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
 
@@ -1550,13 +1550,19 @@ print*, '>>> Brem T', T
     WRITE (*,*) 'n_A (cm^-3)', ( xheavy / A ) * rho/rmu
     WRITE (*,*) 'n_A (fm^-3)', ( xheavy / A ) * rho/rmu * ( 1.e-13 )**3
 
-!    iMu_n  =  69  !-- 921 MeV
-!    iMu_n  =  63  !-- 906 MeV
-    iMu_n  =  73  !-- 932 MeV
+!    iMu_n  =  68  !-- 919 MeV
+    iMu_n  =  69  !-- 921 MeV
 
-!    iMu_p  =  67  !-- 916 MeV
+!    iMu_n  =  63  !-- 906 MeV
+
+!    iMu_n  =  73  !-- 932 MeV
+
+!    iMu_p  =  66  !-- 914 MeV
+    iMu_p  =  67  !-- 916 MeV
+
 !    iMu_p  =  53  !-- 880 MeV
-    iMu_p  =  58  !-- 894 MeV
+
+!    iMu_p  =  58  !-- 894 MeV
 
     chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
                    Values(j_rho, k_t, l_ye) &
@@ -1653,38 +1659,38 @@ print*, '>>> Brem T', T
         f_nub  =  1.d0 / ( 1.d0 &
                           + dexp ( ( E_Cells ( iEp ) + chem_nu ) / TMeV ) )
 
-if ( iE == 1 ) &
-  WRITE (*,*) '>>> iEp, f_nu, f_nub', iEP, f_nu, f_nub
+!if ( iE == 1 ) &
+!  WRITE (*,*) '>>> iEp, f_nu, f_nub', iEP, f_nu, f_nub
 
         detBal  =  dexp ( ( E_Cells ( iEp ) - E_Cells ( iEp ) ) / TMeV )
 
         invMFP_nu_n ( iE )  &
           =  invMFP_nu_n ( iE )  &
              +  E_Vol ( iEp )  &
-                *  phi0_nu_n_NNS ( iEp, iE )  *  ( 1.d0  -  f_nu )  & 
-             +  E_Vol ( iEp )  &
-                *  phi0_nu_n_NNS ( iEp, iE )  *  detBal  *  f_nu 
+                *  phi0_nu_n_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nu )  & 
+!             +  E_Vol ( iEp )  &
+!                *  phi0_nu_n_NNS ( iEp, iE )  *  detBal  *  f_nu 
 
         invMFP_nu_p ( iE )  &
           =  invMFP_nu_p ( iE )  &
              +  E_Vol ( iEp )  &
-                *  phi0_nu_p_NNS ( iEp, iE )  *  ( 1.d0  -  f_nu )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nu_p_NNS ( iEp, iE )  *  detBal  *  f_nu
+                *  phi0_nu_p_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nu )  &
+!             +  E_Vol ( iEp )  &
+!                *  phi0_nu_p_NNS ( iEp, iE )  *  detBal  *  f_nu
 
         invMFP_nub_n ( iE )  &
           =  invMFP_nub_n ( iE )  &
              +  E_Vol ( iEp )  &
-                *  phi0_nub_n_NNS ( iEp, iE )  *  ( 1.d0  -  f_nub )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nub_n_NNS ( iEp, iE )  *  detBal  *  f_nub
+                *  phi0_nub_n_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nub )  &
+!             +  E_Vol ( iEp )  &
+!                *  phi0_nub_n_NNS ( iEp, iE )  *  detBal  *  f_nub
 
         invMFP_nub_p ( iE )  &
           =  invMFP_nub_p ( iE )  &
              +  E_Vol ( iEp )  &
-                *  phi0_nub_p_NNS ( iEp, iE )  *  ( 1.d0  -  f_nub )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nub_p_NNS ( iEp, iE )  *  detBal  *  f_nub
+                *  phi0_nub_p_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nub )  &
+!             +  E_Vol ( iEp )  &
+!                *  phi0_nub_p_NNS ( iEp, iE )  *  detBal  *  f_nub
 
       END DO !-- iEp
 
@@ -1697,6 +1703,23 @@ if ( iE == 1 ) &
       invMFP_nub_p ( iE )  =  2.d0 * TwoPi * invMFP_nub_p ( iE )
 
     END DO !-- iE
+
+    !-- Many-body corrections, not tabulated for NNS, must be separately applied
+
+    CALL nc_manybody_corrections_weaklib( rho * kfm, TMev, ye, S_tot )
+    WRITE (*,*)
+    WRITE (*,*) '>>> rho'   , rho
+    WRITE (*,*) '>>> n_fm_3', rho * kfm
+    WRITE (*,*) '>>> TMeV'  , TMeV
+    WRITE (*,*) '>>> Ye'    , ye
+    WRITE (*,*) '>>> S_tot' , S_tot
+
+    invMFP_nu_n   =  invMFP_nu_n   *  S_tot
+    invMFP_nu_p   =  invMFP_nu_p   *  S_tot
+    invMFP_nub_n  =  invMFP_nub_n  *  S_tot
+    invMFP_nub_p  =  invMFP_nub_p  *  S_tot
+
+    !-- Display
 
     WRITE (*,*)
     WRITE (*,*) '>>> Nu NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
