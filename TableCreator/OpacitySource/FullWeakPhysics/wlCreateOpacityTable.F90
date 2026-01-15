@@ -1455,6 +1455,7 @@ print*, '>>> Brem T', T
 
     INTEGER :: iE, iEp, iMu_n, iMu_p
     REAL(dp) :: TwoPi, FourPi
+    REAL(dp) :: chem_n_Ch, chem_p_Ch  !-- Chimera convention 
     REAL(dp) :: chem_nu, f_nu, f_nub, detBal, S_tot
     REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
                                      phi0_nub_Iso, phi1_nub_Iso
@@ -1509,24 +1510,24 @@ print*, '>>> Brem T', T
     !-- Bruenn et al. (2020) figures
 
 !    j_rho = 118 !-- 10^11 g cm^-3 
-    j_rho = 103 !-- 10^10 g cm^-3 
+!    j_rho = 103 !-- 10^10 g cm^-3 
 !    j_rho = 133 !-- 10^12 g cm^-3 
-!    j_rho = 163 !-- 10^14 g cm^-3 
+    j_rho = 163 !-- 10^14 g cm^-3 
     rho = OpacityTable % TS % States (iRho) % Values (j_rho)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3)', j_rho, '    ', rho
 
 !    k_t = 25  !--  0.9 MeV
-    k_t = 38  !--  3.0 MeV
+!    k_t = 38  !--  3.0 MeV
 !    k_t = 51  !-- 10.0 MeV
-!    k_t = 53  !-- 12.0 MeV
+    k_t = 53  !-- 12.0 MeV
     T = OpacityTable % TS % States (iT) % Values (k_t)
     TMeV = T * kMeV
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'T (MeV)      ', k_t, '    ', TMeV
 
 !    l_ye = 20  !-- 0.4
-    l_ye = 13  !-- 0.25
+!    l_ye = 13  !-- 0.25
 !    l_ye =  5  !-- 0.1
-!    l_ye = 14  !-- 0.27
+    l_ye = 14  !-- 0.27
     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
 
@@ -1551,32 +1552,26 @@ print*, '>>> Brem T', T
     WRITE (*,*) 'n_A (fm^-3)', ( xheavy / A ) * rho/rmu * ( 1.e-13 )**3
 
 !    iMu_n  =  68  !-- 919 MeV
-    iMu_n  =  69  !-- 921 MeV
-
 !    iMu_n  =  63  !-- 906 MeV
-
-!    iMu_n  =  73  !-- 932 MeV
+    iMu_n  =  73  !-- 932 MeV
 
 !    iMu_p  =  66  !-- 914 MeV
-    iMu_p  =  67  !-- 916 MeV
-
 !    iMu_p  =  53  !-- 880 MeV
+    iMu_p  =  58  !-- 894 MeV
 
-!    iMu_p  =  58  !-- 894 MeV
-
-    chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
-                   Values(j_rho, k_t, l_ye) &
-             - DVOffs(Indices % iNeutronChemicalPotential)   &
-             - epsilon
-    chem_n  =  chem_n + dmnp + mn_wl  !-- Convert from Chimera to absolute
+    chem_n_Ch = 10**DVar(Indices % iNeutronChemicalPotential) % &
+                      Values(j_rho, k_t, l_ye) &
+                - DVOffs(Indices % iNeutronChemicalPotential)   &
+                - epsilon
+    chem_n  =  chem_n_Ch + dmnp + mn_wl  !-- Convert from Chimera to absolute
     WRITE (*,*) 'chem_n (MeV)', chem_n, &
                 iMu_n, OpacityTable % MuBGrid % Values(iMu_n)
 
-    chem_p = 10**DVar(Indices % iProtonChemicalPotential) % &
-                   Values(j_rho, k_t, l_ye) &
-             - DVOffs(Indices % iProtonChemicalPotential)   &
-             - epsilon
-    chem_p  =  chem_p + dmnp + mp_wl  !-- Convert from Chimera to absolute
+    chem_p_Ch = 10**DVar(Indices % iProtonChemicalPotential) % &
+                      Values(j_rho, k_t, l_ye) &
+                - DVOffs(Indices % iProtonChemicalPotential)   &
+                - epsilon
+    chem_p  =  chem_p_Ch + dmnp + mp_wl  !-- Convert from Chimera to absolute
     WRITE (*,*) 'chem_p (MeV)', chem_p, &
                 iMu_p, OpacityTable % MuBGrid % Values(iMu_p)
 
@@ -1630,21 +1625,51 @@ print*, '>>> Brem T', T
                        / 3.d0 
     END DO !-- iE
 
+    ! !-- Opacities from table
+
+    ! phi0_nu_n_NNS  &
+    !   =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+    !          ( :, :, 1, k_t, iMu_n )
+
+    ! phi0_nub_n_NNS  &
+    !   =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+    !          ( :, :, 1, k_t, iMu_n )
+
+    ! phi0_nu_p_NNS  &
+    !   =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
+    !          ( :, :, 1, k_t, iMu_p )
+
+    ! phi0_nub_p_NNS  &
+    !   =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+    !          ( :, :, 1, k_t, iMu_p )
+
+    !-- Opacities computed directly
+
+    CALL scatnrgn_weaklib &
+           ( nPointsE, &
+             OpacityTable % EnergyGrid % Values, &
+             OpacityTable % EnergyGrid % Edge, &
+             TMev, chem_n_Ch, chem_p_Ch, Scat_weak_magnetism, Scat_ga_strange, &
+             phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+             phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+
     phi0_nu_n_NNS  &
-      =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
-             ( :, :, 1, k_t, iMu_n )
+      =  0.5_DP * TRANSPOSE(phi0_nu_n(:,:))
+         ! phi0_nu_n was saved as phi0_nu_n(e,ep)
 
     phi0_nub_n_NNS  &
-      =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
-             ( :, :, 1, k_t, iMu_n )
+      =  0.5_DP * TRANSPOSE(phi0_nub_n(:,:))
+         ! phi0_nu_n was saved as phi0_nub_n(e,ep)
 
     phi0_nu_p_NNS  &
-      =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
-             ( :, :, 1, k_t, iMu_p )
+      =  0.5_DP * TRANSPOSE(phi0_nu_p(:,:))
+         ! phi0_nu_n was saved as phi0_nu_n(e,ep)
 
     phi0_nub_p_NNS  &
-      =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
-             ( :, :, 1, k_t, iMu_p )
+      =  0.5_DP * TRANSPOSE(phi0_nub_p(:,:))
+         ! phi0_nu_n was saved as phi0_nub_n(e,ep)
+
+    !-- Inverse mean free paths
 
     invMFP_nu_n   =  0.d0
     invMFP_nu_p   =  0.d0
