@@ -1108,8 +1108,6 @@ CONTAINS
       RETURN
     END IF
 
-    ! --- Get Number of Energy Points ---
-
     !Get parameters for EmAb in order to check if the spectrum
     !and rate for electron capture on nuclei using the LMSH table
     !is present in the hdf5 table
@@ -1209,6 +1207,8 @@ CONTAINS
       CALL CloseFileHDF( file_id )
 
     ENDIF
+
+    ! --- Get Number of Energy Points ---
 
     nPointsE = 0
     DO iOp = iEmAb, iBrem
@@ -1534,7 +1534,7 @@ CONTAINS
 
         CALL OpenGroupHDF( "MuBGrid",    .FALSE., file_id, group_id )
 
-        CALL ReadGridHDF( OpacityTable % EtaGrid, group_id )
+        CALL ReadGridHDF( OpacityTable % MuBGrid, group_id )
 
         CALL CloseGroupHDF( group_id )
 
