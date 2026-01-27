@@ -16,16 +16,16 @@ MODULE wlSemiLeptonicOpacityModule2D
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
-   pi, Gw_MeV, ga, gv, mpi, Vud, &
+   pi, Gw_MeV, ga, gv, mpi, Vud, mn, mp, &
    massA, massV, gamma_p, gamma_n, hbarc, hbar
   ! USE wlEosConstantsModule, ONLY: &
-  !  pi, hbarc, hbar
+  !  pi, hbarc, hbar, mn, mp
 
   IMPLICIT NONE
   PRIVATE
 
   REAL(DP), PARAMETER :: F2wm0 = gamma_p - gamma_n - 1.0d0
-  ! ! If you want to reproduce exactly the GSI numbers you need:
+  ! If you want to reproduce exactly the GSI numbers you need:
   ! REAL(DP),  PARAMETER :: Gw_MeV=1.166d-11,Vud=0.97427d0, F2wm0 = 3.706d0, &
   !      ga =1.2723d0,gv=1.d0, Mpi=139.57d0, Mnp=938.919d0, &
   !      Dnp=1.293d0, massA=1.0d3,massV=840.d0 , GfVud2 = (Gw_MeV*Vud)**2
@@ -239,7 +239,7 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
 
   Ampsq = 0.0d0
 
-  MassNuc = 0.5d0*( Mass2 + Mass4 )
+  MassNuc = 0.5d0*( mn + mp ) ! Looks like this should be the BARE MASS
   dU2 = U2 - U4
   dmf = Mass2 - Mass4
   Qmass = 0.5d0*( Mass2**2 - Mass4**2 )
@@ -578,7 +578,7 @@ SUBROUTINE Calc_Ampsq( Enu, T, E2, E3, Mass2, Mass3, Mass4, U2, U4, anti, Reacti
       IF(Ampsq+ampsq_pseudo>=0.0d0) Ampsq=Ampsq+ampsq_pseudo
     END IF
 
-END subroutine Calc_Ampsq
+END SUBROUTINE Calc_Ampsq
 
 SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
 

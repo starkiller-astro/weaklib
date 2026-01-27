@@ -76,11 +76,11 @@ PROGRAM wlTestElasticOpacity
   Ye = 0.2d0 !Does not matter...
   Ym = 1.0d-4
 
-  ! Case (b) of Table II in FIscher 2020
-  D  = 1.0d14
-  T  = 25.0d0 / kmev
-  Ye = 0.15d0 !Does not matter...
-  Ym = 0.05
+  ! ! Case (b) of Table II in FIscher 2020
+  ! D  = 1.0d14
+  ! T  = 25.0d0 / kmev
+  ! Ye = 0.15d0 !Does not matter...
+  ! Ym = 0.05
 
   ! Calculate all relevant quantities
   iEOS_Rho = EOSTable % TS % Indices % iRho

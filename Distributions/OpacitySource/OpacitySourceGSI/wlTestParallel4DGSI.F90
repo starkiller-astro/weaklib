@@ -12,16 +12,15 @@ PROGRAM wlTestParallel4DGSI
 
   INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4
   REAL(DP), PARAMETER :: masse = me , massm = mmu
-  REAL(DP), PARAMETER :: massn = mn, massp = mp
 
   REAL(DP) :: EnuA(NP)
-  REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl
+  REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl, xMassn, xMassp
   INTEGER :: i, j, k, l, nThermoPoints
   LOGICAL, PARAMETER :: DoMuons = .true.
 
   REAL(DP), allocatable :: OpaA_4D(:,:,:,:)
-  REAL(DP), allocatable :: T(:), Rho(:), Ye(:), Ym(:), &
-                         Mue(:), Mum(:), Mun(:), Mup(:), Un(:), Up(:)
+  REAL(DP), ALLOCATABLE :: T(:), Rho(:), Ye(:), Ym(:), Mue(:), Mum(:), &
+      Mun(:), Mup(:), Un(:), Up(:), EffMassn(:), EffMassp(:)
 
   REAL(DP) :: OpaA_dummy
   REAL(DP) :: t_tot, t_start, t_end, t_serial
@@ -43,7 +42,7 @@ PROGRAM wlTestParallel4DGSI
   ALLOCATE(OpaA_4D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(T(nThermoPoints), Rho(nThermoPoints), Ye(nThermoPoints), Ym(nThermoPoints))
   ALLOCATE(Mue(nThermoPoints), Mum(nThermoPoints), Mun(nThermoPoints), Mup(nThermoPoints))
-  ALLOCATE(Un(nThermoPoints), Up(nThermoPoints))
+  ALLOCATE(Un(nThermoPoints), Up(nThermoPoints), EffMassn(nThermoPoints), EffMassp(nThermoPoints))
 
   DO i = 1, nThermoPoints
      read(123,*) T(i), Rho(i), Ye(i), Ym(i), Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i)
@@ -73,7 +72,7 @@ PROGRAM wlTestParallel4DGSI
           xUp   = Up(i)
 
           CALL Opacity_CC_4D(j-1, k, EnuA(l), OpaA_dummy, &
-                xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
+                xTem, cheml, chemn, chemp, massl, EffMassn(i), EffMassp(i), xUn, xUp)
 
         END DO
       END DO
@@ -104,7 +103,7 @@ PROGRAM wlTestParallel4DGSI
           xUp   = Up(i)
 
           CALL Opacity_CC_4D(j-1, k, EnuA(l), OpaA_4D(l, i, j, k), &
-                xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp)
+                xTem, cheml, chemn, chemp, massl, EffMassn(i), EffMassp(i), xUn, xUp)
 
         END DO
       END DO
@@ -129,7 +128,6 @@ PROGRAM wlTestParallel4DGSI
   CLOSE(200)
 
   DEALLOCATE(OpaA_4D)
-  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up)
+  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
 END PROGRAM wlTestParallel4DGSI
-

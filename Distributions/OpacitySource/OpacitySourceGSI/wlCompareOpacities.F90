@@ -107,7 +107,7 @@ PROGRAM wlCompareOpacities
 
   DO i = 1, nThermoPoints
     READ(123,*) xT(i), xD(i), xYe(i), xYm(i), &
-      buffer, buffer, buffer, buffer, buffer, buffer
+      buffer, buffer, buffer, buffer, buffer, buffer, buffer, buffer
     xT(i) = xT(i) * kmev_inv
   END DO
   CLOSE(123)

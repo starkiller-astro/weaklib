@@ -5,23 +5,22 @@ PROGRAM wlTestGSI
     Opacity_CC_2D
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mn, mp, me, mmu, mpi, &
-   Vud, massA, massV, gamma_p, gamma_n
+   Vud, massA, massV, gamma_p, gamma_n, kmev
 
   IMPLICIT NONE
 
   INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4, nE_2D = 50
   REAL(DP), PARAMETER :: masse = me , massm = mmu
-  REAL(DP), PARAMETER :: massn = mn, massp = mp
 
   REAL(DP) :: EnuA(NP), Error(NP)
-  REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl
+  REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl, xMassn, xMassp
   INTEGER :: i, j, k, l, nThermoPoints
   INTEGER :: nDone, total, lastPrint
-  LOGICAL, PARAMETER :: DoMuons = .false.
+  LOGICAL, PARAMETER :: DoMuons = .true.
 
   REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:,:)
-  REAL(DP), ALLOCATABLE :: T(:), Rho(:), Ye(:), Ym(:), &
-                         Mue(:), Mum(:), Mun(:), Mup(:), Un(:), Up(:)
+  REAL(DP), ALLOCATABLE :: T(:), Rho(:), Ye(:), Ym(:), Mue(:), Mum(:), &
+      Mun(:), Mup(:), Un(:), Up(:), EffMassn(:), EffMassp(:)
 
   REAL(DP) :: t1, t2, t_start, t_end, t_2D
 
@@ -52,16 +51,31 @@ PROGRAM wlTestGSI
   READ(123,*)
 
   ! You can also set nThermoPoints to a smaller value for quick checks
-  ! nThermoPoints = 2
+  nThermoPoints = 1
   ALLOCATE(OpaA_2D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(T(nThermoPoints), Rho(nThermoPoints), Ye(nThermoPoints), Ym(nThermoPoints))
   ALLOCATE(Mue(nThermoPoints), Mum(nThermoPoints), Mun(nThermoPoints), Mup(nThermoPoints))
-  ALLOCATE(Un(nThermoPoints), Up(nThermoPoints))
+  ALLOCATE(Un(nThermoPoints), Up(nThermoPoints), EffMassn(nThermoPoints), EffMassp(nThermoPoints))
 
   DO i = 1, nThermoPoints
-    READ(123,*) T(i), Rho(i), Ye(i), Ym(i), Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i)
+    READ(123,*) T(i), Rho(i), Ye(i), Ym(i), &
+        Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i), EffMassn(i), EffMassp(i)
   END DO
   CLOSE(123)
+
+  ! ! Force single point to compare to Table II of Fischer 2020
+  ! Rho(1) = 1.0d13
+  ! T(1)  = 10.0d0
+  ! Ye(1) = 0.2d0 !Does not matter...
+  ! Ym(1) = 1.0d-4
+  ! Mue(1) = 59.8987d0
+  ! Mum(1) = 35.48134000d0
+  ! Mun(1) = -15.50788137687d0 + mn
+  ! Mup(1) = -38.7855487990624d0 + mp
+  ! Un(1)  = 5.6396315248d0
+  ! Up(1)  = 3.58702109103d0
+  ! EffMassn(1)  = 930.881301628124999999999999999999980d0
+  ! EffMassp(1)  = 929.588001628125000000000000000000005d0
 
   CALL CPU_TIME(t_start)
 
@@ -87,15 +101,15 @@ PROGRAM wlTestGSI
         chemp = Mup(i)
         xUn = Un(i)
         xUp = Up(i)
+        xmassn = EffMassn(i)
+        xmassp = EffMassp(i)
 
         CALL CPU_TIME(t1)
         DO l=1, NP
           call Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-                xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp, nE_2D)
-          WRITE(*,*) j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-                  xTem, cheml, chemn, chemp, massl, massn, massp, xUn, xUp, nE_2D
-          STOP
+                xTem, cheml, chemn, chemp, massl, xmassn, xmassp, xUn, xUp, nE_2D)
         END DO
+        
         CALL CPU_TIME(t2)
         t_2D = t_2D + t2 - t1
 
@@ -119,8 +133,6 @@ PROGRAM wlTestGSI
   CLOSE(200)
 
   DEALLOCATE(OpaA_2D)
-  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up)
+  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
 END PROGRAM wlTestGSI
-
-

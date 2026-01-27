@@ -18,17 +18,17 @@ PROGRAM wlTestParallel2DGSI
 
   INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4, nE_2D = 40
   REAL(DP), PARAMETER :: masse = me , massm = mmu
-  REAL(DP), PARAMETER :: massn = mn, massp = mp
 
   REAL(DP) :: EnuA(NP)
-  REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl
+  REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl, xMassn, xMassp
   INTEGER :: i, j, k, l, nThermoPoints, iE2, iE3
   LOGICAL, PARAMETER :: DoMuons = .true.
 
   REAL(DP), allocatable :: OpaA_2D(:,:,:,:), OpaA_2D_parallel(:,:,:,:)
   REAL(DP), allocatable :: OpaA_2D_wrapped(:,:,:,:), OpaA_2D_collapsed(:,:,:,:)
-  REAL(DP), allocatable :: T(:), Rho(:), Ye(:), Ym(:), &
-                         Mue(:), Mum(:), Mul(:), Mun(:), Mup(:), Un(:), Up(:)
+  REAL(DP), ALLOCATABLE :: T(:), Rho(:), Ye(:), Ym(:), Mue(:), Mum(:), &
+      Mun(:), Mup(:), Un(:), Up(:), EffMassn(:), EffMassp(:)
+
   REAL(DP), allocatable :: xa(:), wxa(:)
   REAL(DP), allocatable :: Store2DIntegral(:,:,:)
   REAL(DP) :: OpaA_dummy
@@ -55,7 +55,7 @@ PROGRAM wlTestParallel2DGSI
   ALLOCATE(OpaA_2D_collapsed(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(T(nThermoPoints), Rho(nThermoPoints), Ye(nThermoPoints), Ym(nThermoPoints))
   ALLOCATE(Mue(nThermoPoints), Mum(nThermoPoints), Mul(nThermoPoints), Mun(nThermoPoints), Mup(nThermoPoints))
-  ALLOCATE(Un(nThermoPoints), Up(nThermoPoints))
+  ALLOCATE(Un(nThermoPoints), Up(nThermoPoints), EffMassn(nThermoPoints), EffMassp(nThermoPoints))
   ALLOCATE(Store2DIntegral(nE_2D, nE_2D, nOp))
   ALLOCATE(xa(nE_2D))
   ALLOCATE(wxa(nE_2D))
@@ -81,7 +81,7 @@ PROGRAM wlTestParallel2DGSI
   DO i = 1, nThermoPoints
   DO l=1, NP
     CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-          T(i), Mul(i), Mun(i), Mup(i), massl, massn, massp, Un(i), Up(i), nE_2D)
+          T(i), Mul(i), Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE_2D)
   END DO
   END DO
   END DO
@@ -97,7 +97,7 @@ PROGRAM wlTestParallel2DGSI
   DO i = 1, nThermoPoints
   DO l=1, NP
     CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D_parallel(l, i, j, k), &
-          T(i), Mul(i), Mun(i), Mup(i), massl, massn, massp, Un(i), Up(i), nE_2D)
+          T(i), Mul(i), Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE_2D)
   END DO
   END DO
   END DO
@@ -133,16 +133,16 @@ PROGRAM wlTestParallel2DGSI
       IncludeCorrections(3) = 1
     END SELECT
 
-    CALL NuAbsorptionOnNeutrons(EnuA(l), T(i), massn, massl, massp, &
+    CALL NuAbsorptionOnNeutrons(EnuA(l), T(i), EffMassn(i), massl, EffMassp(i), &
         Un(i), Up(i), Mun(i), Mul(i), Mup(i), &
         IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 1))
-    CALL NuBarAbsorptionOnProtons(EnuA(l), T(i), massp, massl, massn, &
+    CALL NuBarAbsorptionOnProtons(EnuA(l), T(i), EffMassp(i), massl, EffMassn(i), &
         Up(i), Un(i), Mup(i), Mul(i), Mun(i), &
         IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 2))
-    CALL InverseNeutronDecay(EnuA(l), T(i), massp, massl, massn, &
+    CALL InverseNeutronDecay(EnuA(l), T(i), EffMassp(i), massl, EffMassn(i), &
         Up(i), Un(i), Mup(i), Mul(i), Mun(i), &
         IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 3))
-    CALL NeutronEmissivity(EnuA(l), T(i), massp, massl, massn, &
+    CALL NeutronEmissivity(EnuA(l), T(i), EffMassp(i), massl, EffMassn(i), &
         Up(i), Un(i), Mup(i), Mul(i), Mun(i), &
         IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 4))
   END DO
@@ -185,16 +185,16 @@ PROGRAM wlTestParallel2DGSI
     DO iE2=1,nE_2D
     DO iE3=1,nE_2D
       
-      CALL NuCapture2DIntegration(EnuA(l), T(i), massn, massl, massp, &
+      CALL NuCapture2DIntegration(EnuA(l), T(i), EffMassn(i), massl, EffMassp(i), &
           Un(i), Up(i), Mun(i), Mul(i), Mup(i), &
           IncludeCorrections, xa(iE2), wxa(iE2), xa(iE3), wxa(iE3), Store2DIntegral(iE2,iE3,1))
-      CALL NuBarCapture2DIntegration(EnuA(l), T(i), massp, massl, massn, &
+      CALL NuBarCapture2DIntegration(EnuA(l), T(i), EffMassp(i), massl, EffMassn(i), &
           Up(i), Un(i), Mup(i), Mul(i), Mun(i), &
           IncludeCorrections, xa(iE2), wxa(iE2), xa(iE3), wxa(iE3), Store2DIntegral(iE2,iE3,2))
-      CALL InverseNeutronDecay2DIntegration(EnuA(l), T(i), massp, massl, massn, &
+      CALL InverseNeutronDecay2DIntegration(EnuA(l), T(i), EffMassp(i), massl, EffMassn(i), &
           Up(i), Un(i), Mup(i), Mul(i), Mun(i), &
           IncludeCorrections, xa(iE2), wxa(iE2), xa(iE3), wxa(iE3), Store2DIntegral(iE2,iE3,3))
-      CALL NeutronEmissivity2DIntegration(EnuA(l), T(i), massp, massl, massn, &
+      CALL NeutronEmissivity2DIntegration(EnuA(l), T(i), EffMassp(i), massl, EffMassn(i), &
           Up(i), Un(i), Mup(i), Mul(i), Mun(i), &
           IncludeCorrections, xa(iE2), wxa(iE2), xa(iE3), wxa(iE3), Store2DIntegral(iE2,iE3,4))
     END DO
@@ -255,7 +255,7 @@ PROGRAM wlTestParallel2DGSI
   ! CLOSE(200)
 
   DEALLOCATE(OpaA_2D, OpaA_2D_collapsed)
-  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up)
+  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
 END PROGRAM wlTestParallel2DGSI
 
