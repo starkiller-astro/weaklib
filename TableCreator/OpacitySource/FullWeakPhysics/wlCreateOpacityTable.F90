@@ -1445,6 +1445,9 @@ print*, '>>> Brem T', T
 !      Describe the Table ( give the real physical value )
 !---------------------------------------------------------------------
 
+  WRITE(*,*)
+  WRITE(*,*) 'Describe the table before LOG operation'
+
   CALL DescribeOpacityTable( OpacityTable )
 
 !----------------------------------------------------------
@@ -1832,6 +1835,15 @@ print*, '>>> Brem T', T
       = LOG10 ( OpacityTable % Scat_Brem % Kernel(1) % Values &
               + OpacityTable % Scat_Brem % Offsets(1, 1) + epsilon )
   ENDIF
+
+!---------------------------------------------------------------------
+!      Describe the Table again
+!---------------------------------------------------------------------
+
+  WRITE(*,*)
+  WRITE(*,*) 'Describe the table after LOG operation'
+
+  CALL DescribeOpacityTable( OpacityTable )
 
 ! -- write into hdf5 file
 
