@@ -8,7 +8,7 @@ PROGRAM wlReadOpacityTableTest
     DescribeOpacityTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
-
+  
   IMPLICIT NONE
 
   TYPE(OpacityTableType) :: OpacityTable
@@ -36,5 +36,13 @@ PROGRAM wlReadOpacityTableTest
   CALL DescribeOpacityTable( OpacityTable )
 
   CALL FinalizeHDF( ) 
+
+  BaryonGrid: BLOCK
+
+    USE wlOpacityFieldsModule, ONLY: &
+        iNu_NNS, iNuBar_NNS, &
+        iNeutron_NNS, iProton_NNS
+
+  END BLOCK BaryonGrid
 
 END PROGRAM wlReadOpacityTableTest

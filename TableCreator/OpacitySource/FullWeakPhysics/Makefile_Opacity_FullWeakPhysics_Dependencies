@@ -23,4 +23,5 @@ wlCreateOpacityTable.o: \
 wlReadOpacityTableTest.o: \
   wlIOModuleHDF.o \
   wlOpacityTableModule.o \
-  wlOpacityTableIOModuleHDF.o
+  wlOpacityTableIOModuleHDF.o \
+  wlOpacityFieldsModule.o
