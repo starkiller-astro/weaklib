@@ -26,6 +26,10 @@ MODULE wlInterpolationModule
   IMPLICIT NONE
   PRIVATE
 
+  PUBLIC :: GetIndexAndDelta_Log
+  PUBLIC :: GetIndexAndDelta_Lin
+  PUBLIC :: LinearInterp2D_2DArray_Point
+
   PUBLIC :: LogInterpolateSingleVariable
   PUBLIC :: LogInterpolateDifferentiateSingleVariable
 

@@ -21,7 +21,9 @@ wlCreateOpacityTable.o: \
   wlExtEOSWrapperModule.o
 
 wlReadOpacityTableTest.o: \
+  wlKindModule.o \
   wlIOModuleHDF.o \
+  wlInterpolationModule.o \
   wlOpacityTableModule.o \
   wlOpacityTableIOModuleHDF.o \
   wlOpacityFieldsModule.o
