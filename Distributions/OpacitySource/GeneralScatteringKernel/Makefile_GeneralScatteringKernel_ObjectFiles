@@ -1,0 +1,5 @@
+
+WL_GENERAL_SCAT_KERN = \
+	wlPolylogModule.o \
+	wlFukushimaFermiDiracIntegralsModule.o \
+  wlGeneralLeptonScatteringModule.o

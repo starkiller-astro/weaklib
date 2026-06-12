@@ -1,0 +1,29 @@
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_Path
+include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
+
+.DEFAULT_GOAL := all
+
+all: wlTestElasticOpacity \
+     wlTestFig56Guo
+
+wlTestElasticOpacity: \
+	$(weaklib) wlTestElasticOpacity.o
+	$(FLINKER) $(FLAGS) -o wlTestElasticOpacity_$(MACHINE) \
+	$(weaklib) wlTestElasticOpacity.o \
+	$(LIBRARIES)
+
+wlTestFig56Guo: \
+	$(weaklib) wlTestFig56Guo.o
+	$(FLINKER) $(FLAGS) -o wlTestFig56Guo_$(MACHINE) \
+	$(weaklib) wlTestFig56Guo.o \
+	$(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld *.acc.s
+
+clobber: clean
+	rm -f *_$(MACHINE)

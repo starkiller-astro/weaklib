@@ -88,8 +88,61 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
 
   CHARACTER(len=128) :: BaryonPlusHelmTableName
   
+
+  ! --- Initialize Points ---
+
+  ! This crashes
+  D  = 1.4627E+14
+  E  = 5.7620E+19
+  Ye = 0.43603993
+  Ym = 0.0d0
+
+  ! This does not crash but is messed up
+  D  = 2.937198130e+13
+  E  = 3.542233480e+19
+  Ye = 0.43603993
+  Ym = 0.0d0
+
+  ! Messed up in a different way
+  D  = 2.447488340e+13
+  E  = 3.363482380e+19
+  Ye = 0.43603993
+  Ym = 0.0d0
+
+  ! This crashes
+  D  = 1.6079E+14
+  E  = 6.0164E+19
+  Ye = 0.43639
+  Ym = 0.0d0
+
+  ! This crashes
+  D  = 9.669405706285288E+09
+  E  = 1.256144409343513E+18
+  Ye = 4.360399289999997E-01
+  Ym = 9.999999999999998E-11
+
+  D  = 4.745317016201826E+11
+  E  = 9.065184921812803E+20
+  Ye = 4.322603955866234E-01
+  Ym = 2.161483308649492E-02
+
+  ! This does not 
+  T_Guess = 3.894870830e+10
+
+  ! This crashes
+  D  = 1.201734578203410E+10
+  E  = 9.005407717094165E+20
+  Ye = 4.573978529949616E-01
+  Ym = -2.983966380977352E-09
+
+  D  = 1.201734578203410E+10
+  E  = 8.980036852188848E+20
+  Ye = 4.573978529949616E-01
+  Ym = -2.983966380977352E-09
+
+  Yp_over_Ymu = (Ye + Ym) / Ym
+
   CALL InitializeHDF( )
-  Yp_over_Ymu = 1.0d-10
 
 #ifdef EOSMODE_COMPOSE
   BaryonPlusHelmTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
@@ -166,7 +219,7 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
       DO iYp=1,SizeYps
 
         Ymu_temp = Yps_bary(iYp) / Yp_over_Ymu
-        Ymu_temp = 0.0d0
+        ! Ymu_temp = 0.0d0
 
         ! Now add electron photon and muon component
         CALL GetPhotonLeptonGasEOS( &
@@ -216,41 +269,6 @@ PROGRAM wlEOSComposeInversionTestOnePointEnergy
 #endif
 
   ! --- Random Sampling of EOSTable Table ---
-
-  ! --- Initialize Points ---
-
-  ! This crashes
-  D  = 1.4627E+14
-  E  = 5.7620E+19
-  Ye = 0.43603993
-  Ym = 0.0d0
-
-  ! This does not crash but is messed up
-  D  = 2.937198130e+13
-  E  = 3.542233480e+19
-  Ye = 0.43603993
-  Ym = 0.0d0
-
-  ! Messed up in a different way
-  D  = 2.447488340e+13
-  E  = 3.363482380e+19
-  Ye = 0.43603993
-  Ym = 0.0d0
-
-  ! This crashes
-  D  = 1.6079E+14
-  E  = 6.0164E+19
-  Ye = 0.43639
-  Ym = 0.0d0
-
-  ! This crashes
-  D  = 9.669405706285288E+09
-  E  = 1.256144409343513E+18
-  Ye = 4.360399289999997E-01
-  Ym = 9.999999999999998E-11
-
-  ! This does not 
-  T_Guess = 3.894870830e+10
 
 #ifdef EOSMODE_COMPOSE
   CALL ComputeTemperatureWith_DEYpYl_Single_Guess &

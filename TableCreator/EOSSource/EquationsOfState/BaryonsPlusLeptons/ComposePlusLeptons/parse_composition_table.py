@@ -64,15 +64,16 @@ def LumpIntoHeavyNucleus(XDict, ZDict, ADict, dict_compo_names):
     Zbar = ZDict['Heavy']
     Abar = ADict['Heavy']
 
-    Zbar_new, Abar_new, Xh_new = 0, 0, 0.0
-    for key in ClustersIndices:
-        mass_fraction, charge, baryon_number = XDict[key], ZDict[key], ADict[key]
+    Xh_total = Xh
+    Yh_total = Xh / Abar  # Abundance (moles per gram)
+    Zh_total = Zbar * Yh_total # Proton abundance
 
-        if mass_fraction == 0:
-            continue
+    for key in ClustersIndices:
+        Xi, Zi, Ai = XDict[key], ZDict[key], ADict[key]
+        if Xi <= 0: continue
         
         # If you get past this then you should have Heavies AND Light Clusters
-        if Zbar == DummyValue:
+        if Zi == DummyValue:
             # if you don't have heavy nuclei but only light clusters it might be
             # that the light cluster abundances are super small. Doesn't really
             # matter what you do with them
@@ -81,13 +82,19 @@ def LumpIntoHeavyNucleus(XDict, ZDict, ADict, dict_compo_names):
                 print('No Heavy Nuclei here, and Light clusters have X =',XDict[ClustersIndices])
             return LumpIntoNucleons(XDict, ZDict, ADict, dict_compo_names)
 
-        Xh_new   = Xh + mass_fraction
-        Abar_new = (Xh*Abar      + mass_fraction*baryon_number*mass_fraction) / Xh_new
-        Zbar_new = (Xh*Zbar/Abar + mass_fraction*charge/baryon_number)        / Xh_new * Abar_new
+        Xh_total += Xi
+        Yi = Xi / Ai
+        Yh_total += Yi
+        Zh_total += (Zi * Yi)
 
-        Zbar, Abar, Xh = Zbar_new, Abar_new, Xh_new
+    # Final weighted averages
+    if Yh_total > 0:
+        Abar_new = Xh_total / Yh_total
+        Zbar_new = Zh_total / Yh_total
+    else:
+        Abar_new, Zbar_new = Abar, Zbar # Fallback
 
-    return Xh, Zbar, Abar, Xp, Xn, Xa
+    return Xh_total, Zbar_new, Abar_new, Xp, Xn, Xa
     
 def read_compo(file_compo, file_yq, dict_pairs, dict_compo_names, \
                HowToHandleLightClusters='LumpIntoNucleons', charge_tol=1e-7, mfrac_tol=1e-7):
@@ -161,8 +168,7 @@ def read_compo(file_compo, file_yq, dict_pairs, dict_compo_names, \
         if Nquad == 0:
             Xh[iL], _, _, Xp[iL], Xn[iL], Xa[iL] = HandleLightClusters(XDict, ZDict, ADict, \
                                       dict_compo_names, How=HowToHandleLightClusters)
-            if Xh[iL] > 0:
-                raise RuntimeError('This should not happen, investigate!')
+
             msum = Xh[iL] + Xa[iL] + Xp[iL] + Xn[iL]
             if abs(msum - 1.0) > mfrac_tol:
                 raise RuntimeError(f"mass fraction not conserved at line {iL}: {msum}")

@@ -13,6 +13,7 @@ Weaklib_EOSTableCreator = \
   $(WL_EOSSOURCE) \
   $(WL_OPACITYSOURCE) \
 	$(WL_OPACITYSOURCE_GSI) \
+  $(WL_GENERAL_SCAT_KERN) \
   $(SHAREDMODULES) \
   $(EOS_MODS) \
   $(EOS_OBJ) \

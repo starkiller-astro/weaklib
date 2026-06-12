@@ -5,8 +5,9 @@ include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBa
 # include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/OldHelmPlusMuons/Makefile_EosBaryLep_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/4DTable/Makefile_4DEOS_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel/Makefile_GeneralScatteringKernel_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI/Makefile_OpacitySourceGSI_ObjectFiles
 
 weaklib = \
   $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) \
-  $(WL_OPACITYSOURCE_GSI) $(WL_EOSSOURCE_SPLIT) $(WL_EOSSOURCE_4D)
+  $(WL_OPACITYSOURCE_GSI) $(WL_GENERAL_SCAT_KERN) $(WL_EOSSOURCE_SPLIT) $(WL_EOSSOURCE_4D)

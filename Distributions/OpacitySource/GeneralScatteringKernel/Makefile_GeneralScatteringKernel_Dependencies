@@ -1,0 +1,11 @@
+wlPolylogModule.o: \
+  wlKindModule.o
+
+wlFukushimaFermiDiracIntegralsModule.o: \
+  wlKindModule.o
+
+wlGeneralLeptonScatteringModule.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlPolylogModule.o \
+  wlFukushimaFermiDiracIntegralsModule.o

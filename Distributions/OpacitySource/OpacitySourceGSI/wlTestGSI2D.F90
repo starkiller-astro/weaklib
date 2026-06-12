@@ -87,7 +87,7 @@ PROGRAM wlTestGSI
 
   t_2D = 0.0d0
   DO j = 4, nApprox
-    DO k = 1, 2
+    DO k = 1, nOp
       DO i = 1, nThermoPoints
         xTem = T(i)
         if (DoMuons) then

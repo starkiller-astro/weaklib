@@ -150,6 +150,14 @@ PROGRAM wlTestGSI
           WRITE(*,*) i, j, k
         ENDIF
 
+        IF ( ANY(OpaA_2D(:, i, j, k) < 0.0d0) ) THEN
+          WRITE(*,*)
+          WRITE(*,*) '2D Error large', err
+          WRITE(*,*) '2D OLD', OpaA_2D_OLD(:, i, j, k)
+          WRITE(*,*) '2D NEW', OpaA_2D(:, i, j, k)
+          WRITE(*,*) i, j, k
+        ENDIF
+
         Error = OpaA_4D_OLD(:, i, j, k) - OpaA_4D(:, i, j, k)
         err = 0.0d0
         DO l=1,NP

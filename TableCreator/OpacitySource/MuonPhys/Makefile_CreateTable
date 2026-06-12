@@ -6,7 +6,8 @@ Weaklib_EOSTableCreator = \
   $(WL_EOSSOURCE_SPLIT) \
 	$(WL_EOSSOURCE_4D) \
   $(WL_OPACITYSOURCE) \
-	$(WL_OPACITYSOURCE_GSI)
+	$(WL_OPACITYSOURCE_GSI) \
+  $(WL_GENERAL_SCAT_KERN)
 
 all: wlCreate4DAbEmOpacityTable
  

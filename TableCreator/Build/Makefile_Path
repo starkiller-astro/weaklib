@@ -4,4 +4,5 @@ $(WEAKLIB_DIR)/Distributions/EOSSource: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource: \
 $(WEAKLIB_DIR)/TableCreator/SharedModules: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel: \
 ..

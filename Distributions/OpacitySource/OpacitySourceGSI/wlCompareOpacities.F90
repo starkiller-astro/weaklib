@@ -34,7 +34,7 @@ PROGRAM wlCompareOpacities
 
   IMPLICIT NONE
 
-  INTEGER , PARAMETER :: NP = 60, nOp = 2, nApprox = 4, nE_2D = 50
+  INTEGER , PARAMETER :: NP = 60, nOp = 3, nApprox = 4, nE_2D = 50
   INTEGER , PARAMETER :: nOutTerminal = 100
   LOGICAL , PARAMETER :: UseReddy = .TRUE.
   LOGICAL , PARAMETER :: IncldudeGSI_2D = .TRUE.
