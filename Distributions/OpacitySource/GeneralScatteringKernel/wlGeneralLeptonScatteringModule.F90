@@ -51,8 +51,9 @@
 
 MODULE wlGeneralLeptonScatteringModule
 
-  USE wlKindModule,        ONLY: dp
-  USE wlEosConstantsModule, ONLY: pi, Gw_MeV, hbarc, sin2W, me
+  USE wlKindModule,         ONLY: dp
+  USE wlEosConstantsModule, ONLY: &
+    pi, Gw_MeV, hbarc, sin2W, me, cvel
   USE wlPolylogModule, ONLY: &
     Fermi_Dirac_Integrals, &
     Init_Polylogarithms 
@@ -201,6 +202,7 @@ MODULE wlGeneralLeptonScatteringModule
   INTEGER , PARAMETER    :: nGL_FI = 64
   REAL(DP), DIMENSION(:) :: xa_FI(nGL_FI), wa_FI(nGL_FI)
 
+  PUBLIC :: CalculatePhoutPhin
   PUBLIC :: GeneralScatteringKernel         ! R_out and R_in at single (E1,E3,costheta) point
   PUBLIC :: GeneralScatteringOpacity        ! angle-integrated outscattering opacity [cm^-1]
   PUBLIC :: ProcessIndexFromReactionString
@@ -621,6 +623,55 @@ CONTAINS
   !    Rin   -- R_in (E1, E3, costheta) [MeV^-4]
   !
   !================================================================================
+  SUBROUTINE CalculatePhoutPhin( E1, E3, xT, xMu_l2, xMu_l4, m2, m4, &
+                                ProcessIndex, Phout, Phin, nL, nTheta_in )
+
+    REAL(DP), INTENT(IN)  :: E1, E3, xT, xMu_l2, xMu_l4, m2, m4
+    INTEGER , INTENT(IN)  :: ProcessIndex
+    REAL(DP), INTENT(OUT) :: Phout(nL), Phin(nL)
+    INTEGER , INTENT(IN)  :: nL
+    INTEGER , INTENT(IN), OPTIONAL :: nTheta_in
+
+    REAL(DP) :: Rout, Rin
+    REAL(DP) :: costheta, Delta_mu, exponent, conv_fac
+    INTEGER  :: iTh, nTheta, iL
+    REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
+    REAL(DP), ALLOCATABLE :: Pl(:)
+
+    nTheta = nTheta_default
+    IF (PRESENT(nTheta_in)) nTheta = nTheta_in
+
+    ALLOCATE( xa_cos_theta(nTheta), wa_cos_theta(nTheta) )
+    ALLOCATE( Pl(nL) )
+    
+    CALL gauleg( -1.0d0, 1.0d0, xa_cos_theta, wa_cos_theta, nTheta )
+    
+    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+
+    Phout = 0.0d0
+    Phin = 0.0d0
+    DO iTh=1, nTheta
+      costheta = xa_cos_theta(iTh)
+      CALL GeneralScatteringKernel( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, &
+                                ProcessIndex, Rout, Rin )
+      CALL GetLegendrePolynomials(costheta, nL, Pl)
+
+      ! --- Accumulate the integral for each moment ---
+      DO iL = 1, nL
+        Phout(iL) = Phout(iL) +  0.5d0 * Rout * Pl(iL) * wa_cos_theta(iTh)
+      END DO
+      
+    ENDDO
+    ! The factor of two is to match thornado's convention
+    Phout = Phout * conv_fac * 2.0d0
+
+    ! --- Phin from detailed balance 
+    Delta_mu = xMu_l2 - xMu_l4
+    exponent = MIN( (E3 - E1 - Delta_mu) / xT, 500.0d0 )
+    Phin = Phout * EXP(exponent)
+
+  END SUBROUTINE CalculatePhoutPhin
+
   SUBROUTINE GeneralScatteringKernel( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, &
                                 ProcessIndex, Rout, Rin )
 
@@ -1773,5 +1824,27 @@ CONTAINS
     I2 = I2a + I2b
 
   END SUBROUTINE Compute_Is_Integrals_explicitly
+
+  SUBROUTINE GetLegendrePolynomials(costheta, nL, Pl)
+    ! Assuming DP is defined in the host module
+    INTEGER,  INTENT(IN)  :: nL
+    REAL(DP), INTENT(IN)  :: costheta
+    REAL(DP), INTENT(OUT) :: Pl(nL)
+    INTEGER :: iL, l
+
+    ! P_0
+    Pl(1) = 1.0d0                                   
+    
+    ! P_1
+    IF (nL >= 2) Pl(2) = costheta                   
+    
+    ! P_2 through P_{nL-1} using Bonnet's recursion
+    DO iL = 3, nL
+      l = iL - 1
+      Pl(iL) = ( (2.0d0*l - 1.0d0) * costheta * Pl(iL-1) - &
+                 (l - 1.0d0) * Pl(iL-2) ) / REAL(l, DP)
+    END DO
+
+  END SUBROUTINE GetLegendrePolynomials
 
 END MODULE wlGeneralLeptonScatteringModule
