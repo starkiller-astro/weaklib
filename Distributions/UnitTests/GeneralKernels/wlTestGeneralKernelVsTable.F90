@@ -43,7 +43,7 @@ PROGRAM wlTestGeneralKernelVsTable
   !-------- variables for reading opacity table -----------------------------
   TYPE(OpacityTableType) :: OpacityTable
   REAL(dp)               :: Offset_cmpe
-  REAL(dp), DIMENSION(2) :: Offset_NES
+  REAL(dp), DIMENSION(4) :: Offset_NES
 
   !--- Variables for profile read ---
   REAL(DP), ALLOCATABLE :: Inte_T(:) , Inte_Rho(:), &
@@ -198,7 +198,7 @@ PROGRAM wlTestGeneralKernelVsTable
   ALLOCATE( Phi1Out_General_numtbar( Inte_nPointE, Inte_nPointE, nThermoPoints ) )
 
   icmpe = OpacityTable % EOSTable % DV % Indices % iElectronChemicalPotential
-  Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:2)
+  Offset_NES = OpacityTable % Scat_NES % Offsets(1,1:4)
   Offset_cmpe = OpacityTable % EOSTable % DV % Offsets(icmpe)
 
   WRITE(*,*) 'Table Interpolation started'
@@ -250,7 +250,7 @@ PROGRAM wlTestGeneralKernelVsTable
            LOG10(OpacityTable % EnergyGrid % Values),      &
            LOG10(OpacityTable % TS % States(iT) % Values), &
            LOG10(OpacityTable % EtaGrid % Values),         &
-           Offset_NES(iHi0), TableNES_H1i, InterH1i )
+           Offset_NES(iHi1), TableNES_H1i, InterH1i )
 
   CALL LogInterpolateSingleVariable_2D2D_Custom &
          ( LOG10(Energy), LOG10(Inte_T),        &
@@ -258,7 +258,7 @@ PROGRAM wlTestGeneralKernelVsTable
            LOG10(OpacityTable % EnergyGrid % Values),      &
            LOG10(OpacityTable % TS % States(iT) % Values), &
            LOG10(OpacityTable % EtaGrid % Values),         &
-           Offset_NES(iHii0), TableNES_H1ii, InterH1ii )
+           Offset_NES(iHii1), TableNES_H1ii, InterH1ii )
 
   Phi0Out_Table_nue     = 4.0d0*pi * ( cparpe  * InterH0i + cparne  * InterH0ii )
   Phi0Out_Table_nuebar  = 4.0d0*pi * ( cparne  * InterH0i + cparpe  * InterH0ii )
@@ -322,7 +322,7 @@ PROGRAM wlTestGeneralKernelVsTable
   WRITE(*,*) 'Table done, now doing General Scattering Kernels'
   DO i = 1, nThermoPoints
     DO ii = 1, Inte_nPointE
-      DO jj = ii+1, Inte_nPointE
+      DO jj = ii, Inte_nPointE
 
         E1 = Inte_E % Values(ii)
         E3 = Inte_E % Values(jj)
@@ -408,10 +408,7 @@ PROGRAM wlTestGeneralKernelVsTable
   ! Close the files when done
   CLOSE(66)
   CLOSE(77)
-                   
-  WRITE(*,*) MAXVAL( ABS(Phi0Out_General_nue - Phi0Out_Table_nue)/Phi0Out_Table_nue )
-  WRITE(*,*) MAXVAL( ABS(Phi1Out_General_nue - Phi1Out_Table_nue)/Phi1Out_Table_nue )
-
+            
   DEALLOCATE( InterH0i, InterH0ii )
   DEALLOCATE( Phi0Out_Table_nue, Phi0Out_Table_nuebar, Phi0Out_Table_numt, Phi0Out_Table_numtbar)
   DEALLOCATE( Phi0Out_General_nue, Phi0Out_General_nuebar, Phi0Out_General_numt, Phi0Out_General_numtbar)

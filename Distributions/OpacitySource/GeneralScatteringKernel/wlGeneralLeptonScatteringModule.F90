@@ -658,12 +658,13 @@ CONTAINS
 
       ! --- Accumulate the integral for each moment ---
       DO iL = 1, nL
-        Phout(iL) = Phout(iL) +  0.5d0 * Rout * Pl(iL) * wa_cos_theta(iTh)
+        Phout(iL) = Phout(iL) + Rout * Pl(iL) * wa_cos_theta(iTh)
       END DO
       
     ENDDO
-    ! The factor of two is to match thornado's convention
-    Phout = Phout * conv_fac * 2.0d0
+    ! factors of 1/2 and 3/2 to match Bruenn and then factor of two to match thornado convention?
+    Phout(1) = Phout(1) * conv_fac * 0.5d0 * 2.0d0
+    Phout(2) = Phout(2) * conv_fac * 1.5d0 * 2.0d0
 
     ! --- Phin from detailed balance 
     Delta_mu = xMu_l2 - xMu_l4
