@@ -9,3 +9,8 @@ wlGeneralLeptonScatteringModule.o: \
   wlEosConstantsModule.o \
   wlPolylogModule.o \
   wlFukushimaFermiDiracIntegralsModule.o
+
+wlGeneralLeptonScatteringModuleThornadoInterface.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlGeneralLeptonScatteringModule.o

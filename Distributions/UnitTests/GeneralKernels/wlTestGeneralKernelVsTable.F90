@@ -98,7 +98,7 @@ PROGRAM wlTestGeneralKernelVsTable
 
   INTEGER , PARAMETER :: nL = 2
   REAL(DP) :: Phout(nL), Phin(nL)
-  REAL(DP) :: E1, E3
+  REAL(DP) :: E1, E3, me_loc
   INTEGER  :: iProcess, ierr
   INTEGER, PARAMETER :: nTheta = 24
 
@@ -125,7 +125,7 @@ PROGRAM wlTestGeneralKernelVsTable
   OPEN(UNIT=123, FILE=trim(adjustl(ThermoConditionsName)), STATUS='OLD', ACTION='READ')
   READ(123,*) nThermoPoints
   READ(123,*)
-  nThermoPoints = 10
+  nThermoPoints = 100
 
   ALLOCATE(Inte_T (nThermoPoints) , Inte_Rho(nThermoPoints), &
            Inte_Ye(nThermoPoints) , Inte_Mue(nThermoPoints))
@@ -326,19 +326,27 @@ PROGRAM wlTestGeneralKernelVsTable
 
         E1 = Inte_E % Values(ii)
         E3 = Inte_E % Values(jj)
+        me_loc = me
+        me_loc = 0.0d0
 
         process_string = 'nu_e + e- -> nu_e + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me, me, &
+        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
         Phi0Out_General_nue    (ii,jj,i) = Phin (1)
         Phi0Out_General_nue    (jj,ii,i) = Phout(1)
         Phi1Out_General_nue    (ii,jj,i) = Phin (2)
         Phi1Out_General_nue    (jj,ii,i) = Phout(2)
 
+        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), 0.0d0, 0.0d0, &
+                                iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
+        IF ( ABS(Phi0Out_General_nue(ii,jj,i) - Phin(1)) / Phin(1) > 5.0d-2 ) THEN
+          WRITE(*,*) i, ii, jj, Phi0Out_General_nue(ii,jj,i), Phin(1)
+        ENDIF
+
         process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me, me, &
+        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
         Phi0Out_General_nuebar (ii,jj,i) = Phin (1)
         Phi0Out_General_nuebar (jj,ii,i) = Phout(1)
@@ -347,7 +355,7 @@ PROGRAM wlTestGeneralKernelVsTable
 
         process_string = 'nu_mu + e- -> nu_mu + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me, me, &
+        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
         Phi0Out_General_numt   (ii,jj,i) = Phin (1)
         Phi0Out_General_numt   (jj,ii,i) = Phout(1)
@@ -356,7 +364,7 @@ PROGRAM wlTestGeneralKernelVsTable
 
         process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me, me, &
+        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
         Phi0Out_General_numtbar(ii,jj,i) = Phin (1)
         Phi0Out_General_numtbar(jj,ii,i) = Phout(1)

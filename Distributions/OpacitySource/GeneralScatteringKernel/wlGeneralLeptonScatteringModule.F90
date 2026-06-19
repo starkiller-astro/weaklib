@@ -66,20 +66,11 @@ MODULE wlGeneralLeptonScatteringModule
 
   IMPLICIT NONE
   PRIVATE
-  
-  INTERFACE
-    PURE FUNCTION c_expm1(x) BIND(c, name='expm1')
-      IMPORT :: c_double
-      REAL(c_double), VALUE, INTENT(IN) :: x
-      REAL(c_double) :: c_expm1
-    END FUNCTION c_expm1
-  END INTERFACE
 
   ! 1 is direct GL quadarture integration
   ! 2 is polylogarithm-based evaluation (Bollig 2018, Chapter V, Section 8)
   ! 3 is Fukushima (2015) rational approximation formulae (fastest)
-  INTEGER, PARAMETER  :: CompleteFDIntegralsEvaluationMethod = 2
-
+  INTEGER, PARAMETER  :: CompleteFDIntegralsEvaluationMethod = 3
 
   !====================================================================
   ! INELASTIC FLAVOR EXCHANGE & CONVERSION (Guo Eq. A3 & A4)
@@ -210,6 +201,13 @@ MODULE wlGeneralLeptonScatteringModule
   PUBLIC :: GeneralAngleAveragedOutgoingScattering_Simple
   PUBLIC :: InverseMuonDecayEmissivity
   PUBLIC :: GeneralAngleAveragedOutgoingScattering_Moments
+  PUBLIC :: SelectLambdaFromProcessIndex
+  PUBLIC :: Compute_Is_Integrals
+  PUBLIC :: A1_f
+  PUBLIC :: B1_f
+  PUBLIC :: C1_f
+  PUBLIC :: C3_f
+  PUBLIC :: gauleg, LegendrePolynomial
 
 CONTAINS
 
@@ -632,18 +630,16 @@ CONTAINS
     INTEGER , INTENT(IN)  :: nL
     INTEGER , INTENT(IN), OPTIONAL :: nTheta_in
 
-    REAL(DP) :: Rout, Rin
+    REAL(DP) :: Rout, Rin, Pl_mu
     REAL(DP) :: costheta, Delta_mu, exponent, conv_fac
     INTEGER  :: iTh, nTheta, iL
     REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
-    REAL(DP), ALLOCATABLE :: Pl(:)
 
     nTheta = nTheta_default
     IF (PRESENT(nTheta_in)) nTheta = nTheta_in
 
     ALLOCATE( xa_cos_theta(nTheta), wa_cos_theta(nTheta) )
-    ALLOCATE( Pl(nL) )
-    
+
     CALL gauleg( -1.0d0, 1.0d0, xa_cos_theta, wa_cos_theta, nTheta )
     
     conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
@@ -654,11 +650,11 @@ CONTAINS
       costheta = xa_cos_theta(iTh)
       CALL GeneralScatteringKernel( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, &
                                 ProcessIndex, Rout, Rin )
-      CALL GetLegendrePolynomials(costheta, nL, Pl)
 
       ! --- Accumulate the integral for each moment ---
       DO iL = 1, nL
-        Phout(iL) = Phout(iL) + Rout * Pl(iL) * wa_cos_theta(iTh)
+        Pl_mu = LegendrePolynomial(iL-1, costheta)
+        Phout(iL) = Phout(iL) + Rout * Pl_mu * wa_cos_theta(iTh)
       END DO
       
     ENDDO
@@ -1429,7 +1425,7 @@ CONTAINS
     END SELECT
 
     IF (ABS(xi) < xi_tol) THEN
-      WRITE(*,*) 'Warning: Compute_Is_Integrals: |xi| < xi_tol; using degenerate limit for I_s integrals.'
+      ! WRITE(*,*) 'Warning: Compute_Is_Integrals: |xi| < xi_tol; using degenerate limit for I_s integrals.'
       ! =====================================================================
       ! SPECIAL CASE: \xi -> 0 (Guo 2020 Eqs. 11a, 11b, 11c)
       ! =====================================================================
@@ -1561,10 +1557,6 @@ CONTAINS
     REAL(DP), INTENT(IN)  :: E1, E3, mu, Q, m2, m4
     REAL(DP), INTENT(OUT) :: A1, B1, C1, A2, B2, C2, A3, B3, C3
 
-    REAL(DP) :: Delta2
-
-    Delta2  = E1**2 - 2.0d0*E1*E3*mu + E3**2   ! = Delta^2
-
     A1 = A1_f( E1, E3, mu )
     B1 = B1_f( E1, E3, mu, Q )
     C1 = C1_f( E1, E3, mu, Q, m2 )
@@ -1575,7 +1567,7 @@ CONTAINS
 
     A3 = 0.0d0
     B3 = 0.0d0
-    C3 = (1-mu)*Delta2**2*m2*m4 ! Lohs has the extra m2*m4 Guo does not, typo in Guo!
+    C3 = C3_f( E1, E3, mu, m2, m4 )
 
   END SUBROUTINE ABC_Scattering_Coefficients
 
@@ -1611,6 +1603,16 @@ CONTAINS
         + 0.5d0*E1*E3*(1.0d0 - mu**2) * (E1**2 - 2.0d0*E1*E3*mu + E3**2) * m2**2
 
   END FUNCTION C1_f
+
+  PURE ELEMENTAL FUNCTION C3_f( E1, E3, mu, m2, m4 )
+    REAL(DP), INTENT(IN) :: E1, E3, mu, m2, m4
+    REAL(DP) :: C3_f
+
+    ! Guo Eq. A6c
+    ! Lohs has the extra m2*m4 Guo does not, typo in Guo!
+    C3_f = (1.0d0 - mu) * (E1**2 - 2.0d0*E1*E3*mu + E3**2)**2 * m2*m4
+
+  END FUNCTION C3_f
 
   !================================================================================
   !  gauleg: Gauss-Legendre quadrature nodes and weights (Numerical Recipes)
@@ -1825,27 +1827,5 @@ CONTAINS
     I2 = I2a + I2b
 
   END SUBROUTINE Compute_Is_Integrals_explicitly
-
-  SUBROUTINE GetLegendrePolynomials(costheta, nL, Pl)
-    ! Assuming DP is defined in the host module
-    INTEGER,  INTENT(IN)  :: nL
-    REAL(DP), INTENT(IN)  :: costheta
-    REAL(DP), INTENT(OUT) :: Pl(nL)
-    INTEGER :: iL, l
-
-    ! P_0
-    Pl(1) = 1.0d0                                   
-    
-    ! P_1
-    IF (nL >= 2) Pl(2) = costheta                   
-    
-    ! P_2 through P_{nL-1} using Bonnet's recursion
-    DO iL = 3, nL
-      l = iL - 1
-      Pl(iL) = ( (2.0d0*l - 1.0d0) * costheta * Pl(iL-1) - &
-                 (l - 1.0d0) * Pl(iL-2) ) / REAL(l, DP)
-    END DO
-
-  END SUBROUTINE GetLegendrePolynomials
 
 END MODULE wlGeneralLeptonScatteringModule
