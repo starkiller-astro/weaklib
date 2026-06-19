@@ -12,7 +12,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   IMPLICIT NONE
   PRIVATE
 
-  INTEGER , PARAMETER      :: iProcessMax = 33
+  INTEGER , PARAMETER, PUBLIC :: iProcessMax = 33
   REAL(DP), ALLOCATABLE    :: LambdaScatteringArray(:)
   REAL(DP), ALLOCATABLE    :: A_Scat(:, :, :, :)
   REAL(DP), ALLOCATABLE    :: B_Scat(:, :, :, :, :, :)
@@ -47,6 +47,10 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   REAL(DP) :: lam1(iProcessMax), lam2(iProcessMax), lam3(iProcessMax)
 
   REAL(DP) :: conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc )
+
+  PUBLIC :: InitGeneralScatteringKernels
+  PUBLIC :: CalculateAllRout
+  PUBLIC :: CalculateAllPhout
 
 CONTAINS
 
@@ -392,7 +396,7 @@ CONTAINS
     
     ! There are nDistinctCases different cases:
 
-    CALL SetMuMassDistinctCases(Mu_e, Mu_mu, MuPairDistinct)
+    CALL SetMuDistinctCases(Mu_e, Mu_mu, MuPairDistinct)
     DO iCase=1,nDistinctCases
       
       k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5

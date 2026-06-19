@@ -1,4 +1,4 @@
-PROGRAM wlTestGeneralKernelVsTable
+PROGRAM wlTestGeneralKernelVsTable_Interface
 
   USE wlKindModule,         ONLY: dp
   USE wlEosConstantsModule, ONLY: &
@@ -28,8 +28,11 @@ PROGRAM wlTestGeneralKernelVsTable
     DescribeGrid, &
     MakeLogGrid
   USE wlGeneralLeptonScatteringModule, ONLY: &
-    CalculatePhoutPhin, &
     ProcessIndexFromReactionString
+  USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    CalculateAllPhout, &
+    InitGeneralScatteringKernels, &
+    iProcessMax
   USE HDF5
 
   IMPLICIT NONE
@@ -97,8 +100,8 @@ PROGRAM wlTestGeneralKernelVsTable
                                              Phi1Out_General_numtbar
 
   INTEGER , PARAMETER :: nL = 2
-  REAL(DP) :: Phout(nL), Phin(nL)
-  REAL(DP) :: E1, E3, me_loc
+  REAL(DP) :: Phout(iProcessMax,nL), Phin(iProcessMax,nL)
+  REAL(DP) :: E1, E3, Delta_mu, exponent
   INTEGER  :: iProcess, ierr
   INTEGER, PARAMETER :: nTheta = 24
   INTEGER  :: count_start, count_interm, count_end, count_rate
@@ -345,64 +348,70 @@ PROGRAM wlTestGeneralKernelVsTable
 
   CALL DeAllocateOpacityTable( OpacityTable )
 
+  CALL InitGeneralScatteringKernels( &
+      Inte_E % Values, &
+      Inte_E % Values, &
+      Inte_nPointE,    &
+      Inte_nPointE,   &
+      nTheta)
+
 !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
   !============================================================================
   WRITE(*,*) 'Table done, now doing General Scattering Kernels'
   CALL SYSTEM_CLOCK(count_start, count_rate=count_rate)
   DO i = 1, nThermoPoints
-    ! Make sure you are using the exact same chemical potential
-    Inte_Mue(i) = Inte_cmpe(i) + 0.511d0
     WRITE(*,*) i, '/', nThermoPoints
+    ! Make sure you are using the exact same chemical potential
+    Inte_Mue(i) = Inte_cmpe(i) !+ 0.511d0
     DO ii = 1, Inte_nPointE
       DO jj = ii, Inte_nPointE
 
         E1 = Inte_E % Values(ii)
         E3 = Inte_E % Values(jj)
-        me_loc = me
-        me_loc = 0.0d0
+
+        CALL CalculateAllPhout( ii, jj, E1, E3, Inte_T(i) * kmev, Inte_Mue(i), &
+             0.0d0, Phout(:,:), nL )
+
+        Delta_mu = 0.0d0
+        exponent = MIN( (E3 - E1 - Delta_mu) / (Inte_T(i) * kmev), 500.0d0 )
+        Phin = Phout * EXP(exponent)
 
         process_string = 'nu_e + e- -> nu_e + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
-                                iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
-        Phi0Out_General_nue    (ii,jj,i) = Phin (1)
-        Phi0Out_General_nue    (jj,ii,i) = Phout(1)
-        Phi1Out_General_nue    (ii,jj,i) = Phin (2)
-        Phi1Out_General_nue    (jj,ii,i) = Phout(2)
+        
+        Phi0Out_General_nue    (ii,jj,i) = Phin (iProcess,1)
+        Phi0Out_General_nue    (jj,ii,i) = Phout(iProcess,1)
+        Phi1Out_General_nue    (ii,jj,i) = Phin (iProcess,2)
+        Phi1Out_General_nue    (jj,ii,i) = Phout(iProcess,2)
 
         process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
-                                iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
-        Phi0Out_General_nuebar (ii,jj,i) = Phin (1)
-        Phi0Out_General_nuebar (jj,ii,i) = Phout(1)
-        Phi1Out_General_nuebar (ii,jj,i) = Phin (2)
-        Phi1Out_General_nuebar (jj,ii,i) = Phout(2)
+        Phi0Out_General_nuebar (ii,jj,i) = Phin (iProcess,1)
+        Phi0Out_General_nuebar (jj,ii,i) = Phout(iProcess,1)
+        Phi1Out_General_nuebar (ii,jj,i) = Phin (iProcess,2)
+        Phi1Out_General_nuebar (jj,ii,i) = Phout(iProcess,2)
 
         process_string = 'nu_mu + e- -> nu_mu + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
-                                iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
-        Phi0Out_General_numt   (ii,jj,i) = Phin (1)
-        Phi0Out_General_numt   (jj,ii,i) = Phout(1)
-        Phi1Out_General_numt   (ii,jj,i) = Phin (2)
-        Phi1Out_General_numt   (jj,ii,i) = Phout(2)
+        Phi0Out_General_numt   (ii,jj,i) = Phin (iProcess,1)
+        Phi0Out_General_numt   (jj,ii,i) = Phout(iProcess,1)
+        Phi1Out_General_numt   (ii,jj,i) = Phin (iProcess,2)
+        Phi1Out_General_numt   (jj,ii,i) = Phout(iProcess,2)
 
         process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)
-        CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
-                                iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
-        Phi0Out_General_numtbar(ii,jj,i) = Phin (1)
-        Phi0Out_General_numtbar(jj,ii,i) = Phout(1)
-        Phi1Out_General_numtbar(ii,jj,i) = Phin (2)
-        Phi1Out_General_numtbar(jj,ii,i) = Phout(2)
+        Phi0Out_General_numtbar(ii,jj,i) = Phin (iProcess,1)
+        Phi0Out_General_numtbar(jj,ii,i) = Phout(iProcess,1)
+        Phi1Out_General_numtbar(ii,jj,i) = Phin (iProcess,2)
+        Phi1Out_General_numtbar(jj,ii,i) = Phout(iProcess,2)
 
       ENDDO
     ENDDO
   END DO
   CALL SYSTEM_CLOCK(count_end)
   t_General = REAL(count_end - count_start) / REAL(count_rate)
+
 
   ! --- Output Routine ---
   OPEN(UNIT=66, FILE='Bruenn_Table_Phi.dat', STATUS='REPLACE', ACTION='WRITE')
@@ -454,6 +463,8 @@ PROGRAM wlTestGeneralKernelVsTable
   DEALLOCATE( Phi1Out_Table_nue, Phi1Out_Table_nuebar, Phi1Out_Table_numt, Phi1Out_Table_numtbar)
   DEALLOCATE( Phi1Out_General_nue, Phi1Out_General_nuebar, Phi1Out_General_numt, Phi1Out_General_numtbar)
 
+  DEALLOCATE( Inte_T, Inte_Rho, Inte_Ye, Inte_Mue, Inte_cmpe )
+
   WRITE(*,*) 't_Table, t_General', t_Table, t_General
 
-END PROGRAM wlTestGeneralKernelVsTable
+END PROGRAM wlTestGeneralKernelVsTable_Interface

@@ -9,7 +9,8 @@ include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
 
 all: wlTestElasticOpacity \
      wlTestFig56Guo \
-     wlTestGeneralKernelVsTable
+     wlTestGeneralKernelVsTable \
+     wlTestGeneralKernelVsTable_Interface
 
 wlTestElasticOpacity: \
 	$(weaklib) wlTestElasticOpacity.o
@@ -27,6 +28,12 @@ wlTestGeneralKernelVsTable: \
 	$(weaklib) wlTestGeneralKernelVsTable.o
 	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelVsTable_$(MACHINE) \
 	$(weaklib) wlTestGeneralKernelVsTable.o \
+	$(LIBRARIES)
+
+wlTestGeneralKernelVsTable_Interface: \
+	$(weaklib) wlTestGeneralKernelVsTable_Interface.o
+	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelVsTable_Interface_$(MACHINE) \
+	$(weaklib) wlTestGeneralKernelVsTable_Interface.o \
 	$(LIBRARIES)
 
 clean:
