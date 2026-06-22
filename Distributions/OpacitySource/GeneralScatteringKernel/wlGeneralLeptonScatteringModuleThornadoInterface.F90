@@ -12,7 +12,13 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   IMPLICIT NONE
   PRIVATE
 
-  INTEGER , PARAMETER, PUBLIC :: iProcessMax = 33
+  INTEGER , PARAMETER, PUBLIC :: iProcessMin_Default = 1
+  INTEGER , PARAMETER, PUBLIC :: iProcessMax_Default = 32
+  INTEGER                     :: iProcessMin
+  INTEGER                     :: iProcessMax
+  REAL(DP), PARAMETER         :: ElectronMass        = me
+  REAL(DP), PARAMETER         :: MuonMass            = mmu
+
   REAL(DP), ALLOCATABLE    :: LambdaScatteringArray(:)
   REAL(DP), ALLOCATABLE    :: A_Scat(:, :, :, :)
   REAL(DP), ALLOCATABLE    :: B_Scat(:, :, :, :, :, :)
@@ -25,7 +31,8 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: iABC_el = 1
   INTEGER , PARAMETER      :: iABC_mu = 2
 
-  INTEGER , PARAMETER      :: nDistinctCases = 8
+  INTEGER , PARAMETER      :: nDistinctCasesMax = 8
+  INTEGER                  :: nDistinctCases
   REAL(DP), DIMENSION(8,2) :: MassPairDistinct
   INTEGER , PARAMETER      :: i_em_em = 1 ! particle 2 is e-  and particle 4 is e-
   INTEGER , PARAMETER      :: i_ep_ep = 2 ! particle 2 is e+  and particle 4 is e+
@@ -43,33 +50,49 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
     iABC_m4 = (/ iABC_el, iABC_el, iABC_mu, iABC_mu, &
                  iABC_mu, iABC_el, iABC_mu, iABC_el /)
 
-  INTEGER  :: iDistinctMap(iProcessMax)
-  REAL(DP) :: lam1(iProcessMax), lam2(iProcessMax), lam3(iProcessMax)
+  INTEGER                             :: iDistinctMap(iProcessMax_Default)
+  REAL(DP), ALLOCATABLE, DIMENSION(:) :: ChosenToTrueCaseMap(:)
+  REAL(DP), ALLOCATABLE, DIMENSION(:) :: lam1(:), lam2(:), lam3(:)
 
   REAL(DP) :: conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc )
 
   PUBLIC :: InitGeneralScatteringKernels
+  PUBLIC :: FinalizeGeneralScatteringKernels
   PUBLIC :: CalculateAllRout
   PUBLIC :: CalculateAllPhout
 
 CONTAINS
 
-  SUBROUTINE InitGeneralScatteringKernels(E1_array, E3_array, nE1, nE3, nTheta)
+  SUBROUTINE InitGeneralScatteringKernels(E1_array, E3_array, nE1, nE3, nTheta, &
+                                          iProcessMin_Option, iProcessMax_Option)
 
-    REAL(DP), INTENT(IN) :: E1_array(nE1), E3_array(nE3)
-    INTEGER , INTENT(IN) :: nE1, nE3, nTheta
-    ! Here is where A, B, C are calculated
-    ! Lambda are calculated
-    ! GauLeg are calculated
-    ! Potentially this is where the
-    ! selection of which processes to include is done
+    REAL(DP), INTENT(IN)           :: E1_array(nE1), E3_array(nE3)
+    INTEGER , INTENT(IN)           :: nE1, nE3, nTheta
+    INTEGER , INTENT(IN), OPTIONAL :: iProcessMin_Option, iProcessMax_Option
 
     REAL(DP) :: E1, E3, costh, Delta, Delta5
-    INTEGER  :: iE1, iE3, iTh, iProcess
+    INTEGER  :: iE1, iE3, iTh, iProcess, iCase
+    
+    INTEGER, DIMENSION(nDistinctCasesMax) :: unique_cases
+    INTEGER :: idx, current_val
 
     nThetaScattering = nTheta
 
-    ALLOCATE( LambdaScatteringArray(iProcessMax) )
+    IF ( PRESENT(iProcessMin_Option) ) THEN
+      iProcessMin = iProcessMin_Option
+    ELSE
+      iProcessMin = iProcessMin_Default
+    ENDIF
+
+    IF ( PRESENT(iProcessMax_Option) ) THEN
+      iProcessMax = iProcessMax_Option
+    ELSE
+      iProcessMax = iProcessMax_Default
+    ENDIF
+
+    ALLOCATE( lam1(iProcessMax - iProcessMin + 1) )
+    ALLOCATE( lam2(iProcessMax - iProcessMin + 1) )
+    ALLOCATE( lam3(iProcessMax - iProcessMin + 1) )
     ALLOCATE( A_Scat(nE1, nE3, nThetaScattering, 2) )
     ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) ) ! This could also be (nE1, nE2, nTheta, 3, 3) but more readable this way
     ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
@@ -95,30 +118,30 @@ CONTAINS
           B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
           B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
 
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, me**2 - mmu**2 )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, me**2 - mmu**2 )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, ElectronMass**2 - MuonMass**2 )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, ElectronMass**2 - MuonMass**2 )
 
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, mmu**2 - me**2 )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, mmu**2 - me**2 )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, MuonMass**2 - ElectronMass**2 )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, MuonMass**2 - ElectronMass**2 )
  
           B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
           B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
   
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, me**2 )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, me**2 )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, me, me )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, ElectronMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, ElectronMass, ElectronMass )
 
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, me**2 - mmu**2, me**2 )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, me**2 - mmu**2, me**2 )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, me, mmu )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, ElectronMass**2 - MuonMass**2, ElectronMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, ElectronMass**2 - MuonMass**2, ElectronMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, ElectronMass, MuonMass )
 
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, mmu**2 - me**2, mmu**2 )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, mmu**2 - me**2, mmu**2 )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, mmu, me ) ! Same as the one above actually
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, MuonMass**2 - ElectronMass**2, MuonMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, MuonMass**2 - ElectronMass**2, MuonMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, MuonMass, ElectronMass ) ! Same as the one above actually
  
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, mmu**2 )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, mmu**2 )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 3) = C3_f(  E1,  E3, costh, mmu, mmu )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, MuonMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 3) = C3_f(  E1,  E3, costh, MuonMass, MuonMass )
 
           ! Might as well build Delta into A, B, C while we are here
           Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))
@@ -131,39 +154,78 @@ CONTAINS
     ENDDO
 
     ! This is to compute Distinct Is
-    MassPairDistinct(i_em_em,1) = me
-    MassPairDistinct(i_em_em,2) = me
+    MassPairDistinct(i_em_em,1) = ElectronMass
+    MassPairDistinct(i_em_em,2) = ElectronMass
 
-    MassPairDistinct(i_ep_ep,1) = me
-    MassPairDistinct(i_ep_ep,2) = me
+    MassPairDistinct(i_ep_ep,1) = ElectronMass
+    MassPairDistinct(i_ep_ep,2) = ElectronMass
 
-    MassPairDistinct(i_mm_mm,1) = mmu
-    MassPairDistinct(i_mm_mm,2) = mmu
+    MassPairDistinct(i_mm_mm,1) = MuonMass
+    MassPairDistinct(i_mm_mm,2) = MuonMass
 
-    MassPairDistinct(i_mp_mp,1) = mmu
-    MassPairDistinct(i_mp_mp,2) = mmu
+    MassPairDistinct(i_mp_mp,1) = MuonMass
+    MassPairDistinct(i_mp_mp,2) = MuonMass
 
-    MassPairDistinct(i_em_mm,1) = me
-    MassPairDistinct(i_em_mm,2) = mmu
+    MassPairDistinct(i_em_mm,1) = ElectronMass
+    MassPairDistinct(i_em_mm,2) = MuonMass
 
-    MassPairDistinct(i_mm_em,1) = mmu
-    MassPairDistinct(i_mm_em,2) = me
+    MassPairDistinct(i_mm_em,1) = MuonMass
+    MassPairDistinct(i_mm_em,2) = ElectronMass
 
-    MassPairDistinct(i_ep_mp,1) = me
-    MassPairDistinct(i_ep_mp,2) = mmu
+    MassPairDistinct(i_ep_mp,1) = ElectronMass
+    MassPairDistinct(i_ep_mp,2) = MuonMass
 
-    MassPairDistinct(i_mp_ep,1) = mmu
-    MassPairDistinct(i_mp_ep,2) = me
+    MassPairDistinct(i_mp_ep,1) = MuonMass
+    MassPairDistinct(i_mp_ep,2) = ElectronMass
 
     ! Now initialize Lambdas and map each process to the correct I
-    DO iProcess = 1, iProcessMax
-      CALL SelectLambdaFromProcessIndex( &
-           iProcess, lam1(iProcess), lam2(iProcess), lam3(iProcess))
-      CALL SelectiDistinctFromProcessIndex(&
-           iProcess, iDistinctMap(iProcess))
+    nDistinctCases  = 0
+    unique_cases(:) = -1
+    DO iProcess = iProcessMin, iProcessMax
+       ! Storing your index expression in a temporary variable to keep things scannable
+       idx = iProcess - iProcessMin + 1
+
+       CALL SelectLambdaFromProcessIndex( iProcess, &
+                  lam1(idx), &
+                  lam2(idx), &
+                  lam3(idx))
+       ! Notice that iDistinctMap is always called with the "True" iProcess
+       CALL SelectiDistinctFromProcessIndex( iProcess, &
+                  iDistinctMap(iProcess))
+
+       current_val = iDistinctMap(iProcess)
+
+       ! 2. Check if current_val is NOT present in the populated portion of unique_cases
+       ! This basically looks at whether we have encountered current_val already, and if
+       ! we have not, then increases nDistinctCases by 1.
+       IF (.NOT. ANY(unique_cases(1:nDistinctCases) == current_val)) THEN
+          nDistinctCases = nDistinctCases + 1
+          unique_cases(nDistinctCases) = current_val
+       END IF
     ENDDO
 
+    ALLOCATE( ChosenToTrueCaseMap(nDistinctCases) )
+    ! This is needed because in principle you might be needing Cases
+    ! 3,4,5 for example (not sure if this specific combination can actually happend since
+    ! user does not have complete freedom in choosing reactions, but can only
+    ! choose iProcessMin and iProcessMas, cannot choose chunks by skipping reactions
+    ! in between for example). But this part will work regardless
+    DO iCase=1, nDistinctCases
+      ChosenToTrueCaseMap(iCase) = unique_cases(iCase)
+    ENDDO
+
+    WRITE(*,*) 'Working with', nDistinctCases, 'Distinct Scattering Cases'
+
   END SUBROUTINE InitGeneralScatteringKernels
+
+  SUBROUTINE FinalizeGeneralScatteringKernels()
+
+    DEALLOCATE( lam1, lam2, lam3, A_Scat, B_Scat, C_Scat )
+    DEALLOCATE( xa_cos_theta, wa_cos_theta )
+    DEALLOCATE( ChosenToTrueCaseMap )
+
+  END SUBROUTINE FinalizeGeneralScatteringKernels
+
 
   SUBROUTINE SelectiDistinctFromProcessIndex(ProcessIndex, iDistinct)
 
@@ -264,66 +326,138 @@ CONTAINS
 
   END SUBROUTINE SelectiDistinctFromProcessIndex
 
-  SUBROUTINE CalculateAllRout( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, Rout )
-
-    REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
-    INTEGER , INTENT(IN)  :: iE1, iE3, iTh
-    REAL(DP), INTENT(OUT) :: Rout(iProcessMax)
-    REAL(DP) :: I0(nDistinctCases), R1(nDistinctCases)
-    REAL(DP) :: I1(nDistinctCases), R2(nDistinctCases)
-    REAL(DP) :: I2(nDistinctCases), R3(nDistinctCases)
-
-    INTEGER  :: iDistinct, iProcess, Index2, Index4
-
-    CALL CalculateDistinctI0I1I2( E1, E3, costh, T, Mu_e, Mu_mu, I0, I1, I2 )
-    DO iDistinct = 1, nDistinctCases
-      Index2 = iABC_m2( iDistinct )
-      Index4 = iABC_m4( iDistinct )
-      CALL CalculateR1R2R3( E1, E3, costh, &
-          A_Scat(iE1, iE3, iTh, :), &
-          B_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-          C_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-          I0(iDistinct), I1(iDistinct), I2(iDistinct), &
-          R1(iDistinct), R2(iDistinct), R3(iDistinct) )
-    ENDDO
-
-    DO iProcess = 1, iProcessMax
-      Rout(iProcess) = lam1(iProcess)*R1(iDistinctMap(iProcess)) + &
-                       lam2(iProcess)*R2(iDistinctMap(iProcess)) + &
-                       lam3(iProcess)*R3(iDistinctMap(iProcess))
-    ENDDO
-
-  END SUBROUTINE CalculateAllRout
-
-  SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
+SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
 
     INTEGER , INTENT(IN)  :: iE1, iE3
     REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
     REAL(DP), INTENT(OUT) :: Phout(iProcessMax,nL)
     INTEGER , INTENT(IN)  :: nL
 
-    REAL(DP) :: Rout(iProcessMax)
-    REAL(DP) :: costh, Delta_mu, exponent, Pl_mu
-    INTEGER  :: iTh, nTheta, iL, iProcess
+    REAL(DP) :: costh, Pl_mu
+    INTEGER  :: iTh, iL, iProcess, idx, iTrueCase, iCase
 
-    Phout = 0.0d0
+    ! Arrays to hold the integrated components for the distinct cases ONLY
+    REAL(DP) :: Int_R1(nDistinctCasesMax, nL)
+    REAL(DP) :: Int_R2(nDistinctCasesMax, nL)
+    REAL(DP) :: Int_R3(nDistinctCasesMax, nL)
+
+    ! Arrays to hold the angular integrand components for a specific theta
+    REAL(DP) :: R1_th(nDistinctCasesMax)
+    REAL(DP) :: R2_th(nDistinctCasesMax)
+    REAL(DP) :: R3_th(nDistinctCasesMax)
+
+    Phout  = 0.0d0
+    Int_R1 = 0.0d0
+    Int_R2 = 0.0d0
+    Int_R3 = 0.0d0
+
+    ! -------------------------------------------------------------------
+    ! 1. Perform the angular integration over the DISTINCT cases ONLY
+    ! -------------------------------------------------------------------
     DO iTh=1, nThetaScattering
       costh = xa_cos_theta(iTh)
-      CALL CalculateAllRout( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, Rout )
+      
+      CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
+                                        iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
-      ! --- Accumulate the integral for each moment ---
       DO iL = 1, nL
-         Pl_mu = LegendrePolynomial(iL-1, costh)
-        DO iProcess=1,iProcessMax
-          Phout(iProcess,iL) = Phout(iProcess,iL) + Rout(iProcess) * Pl_mu * wa_cos_theta(iTh)
+        Pl_mu = LegendrePolynomial(iL-1, costh) * wa_cos_theta(iTh)
+        
+        ! Only integrate the unique cases we actually need
+        DO iCase = 1, nDistinctCases
+          iTrueCase = ChosenToTrueCaseMap(iCase)
+          Int_R1(iTrueCase, iL) = Int_R1(iTrueCase, iL) + R1_th(iTrueCase) * Pl_mu
+          Int_R2(iTrueCase, iL) = Int_R2(iTrueCase, iL) + R2_th(iTrueCase) * Pl_mu
+          Int_R3(iTrueCase, iL) = Int_R3(iTrueCase, iL) + R3_th(iTrueCase) * Pl_mu
         END DO
       ENDDO
     ENDDO
+
+    ! -------------------------------------------------------------------
+    ! 2. Map the integrated distinct cases back to the full iProcess array
+    ! -------------------------------------------------------------------
+    DO iL = 1, nL
+      DO iProcess = iProcessMin, iProcessMax
+        idx = iProcess - iProcessMin + 1
+        iTrueCase = iDistinctMap(iProcess)
+
+        ! Apply the Lambdas to the integrated values once
+        Phout(iProcess, iL) = lam1(idx) * Int_R1(iTrueCase, iL) + &
+                              lam2(idx) * Int_R2(iTrueCase, iL) + &
+                              lam3(idx) * Int_R3(iTrueCase, iL)
+      END DO
+    END DO
+
     ! factors of 1/2 and 3/2 to match Bruenn and then factor of two to match thornado convention?
     Phout(:,1) = Phout(:,1) * conv_fac * 0.5d0 * 2.0d0
     Phout(:,2) = Phout(:,2) * conv_fac * 1.5d0 * 2.0d0
 
   END SUBROUTINE CalculateAllPhout
+
+  SUBROUTINE CalculateAllRout( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, Rout )
+
+    REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
+    INTEGER , INTENT(IN)  :: iE1, iE3, iTh
+    REAL(DP), INTENT(OUT) :: Rout(iProcessMax)
+
+    ! Temporary arrays to hold the distinct R components for this theta
+    REAL(DP) :: R1_th(nDistinctCasesMax)
+    REAL(DP) :: R2_th(nDistinctCasesMax)
+    REAL(DP) :: R3_th(nDistinctCasesMax)
+    INTEGER  :: iProcess, idx, iTrueCase
+
+    ! 1. Get the raw distinct R components for this specific angle/energy
+    CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
+                                      iE1, iE3, iTh, R1_th, R2_th, R3_th )
+
+    ! 2. Safely initialize Rout
+    Rout = 0.0d0
+
+    ! 3. Map the distinct cases to the full iProcess array using Lambdas
+    DO iProcess = iProcessMin, iProcessMax
+      idx = iProcess - iProcessMin + 1
+      
+      ! Fetch the true underlying physics case ID for this process
+      iTrueCase = iDistinctMap(iProcess)
+
+      ! Combine them
+      Rout(iProcess) = lam1(idx) * R1_th(iTrueCase) + &
+                       lam2(idx) * R2_th(iTrueCase) + &
+                       lam3(idx) * R3_th(iTrueCase)
+    END DO
+
+  END SUBROUTINE CalculateAllRout
+
+  SUBROUTINE CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, R1, R2, R3 )
+    REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
+    INTEGER , INTENT(IN)  :: iE1, iE3, iTh
+    REAL(DP), INTENT(OUT) :: R1(nDistinctCasesMax)
+    REAL(DP), INTENT(OUT) :: R2(nDistinctCasesMax)
+    REAL(DP), INTENT(OUT) :: R3(nDistinctCasesMax)
+
+    REAL(DP) :: I0(nDistinctCasesMax), I1(nDistinctCasesMax), I2(nDistinctCasesMax)
+    INTEGER  :: iCase, iTrueCase, Index2, Index4
+
+    ! Ensure unused cases are safely zeroed out
+    R1 = 0.0d0; R2 = 0.0d0; R3 = 0.0d0
+
+    CALL CalculateDistinctI0I1I2( E1, E3, costh, T, Mu_e, Mu_mu, I0, I1, I2 )
+    
+    DO iCase = 1, nDistinctCases
+      iTrueCase = ChosenToTrueCaseMap(iCase)
+      Index2 = iABC_m2( iTrueCase )
+      Index4 = iABC_m4( iTrueCase )
+      
+      ! We populate the R arrays by the TRUE case index so they match what Phout expects later
+      CALL CalculateR1R2R3( E1, E3, costh, &
+          A_Scat(iE1, iE3, iTh, :), &
+          B_Scat(iE1, iE3, iTh, Index2, Index4, :), &
+          C_Scat(iE1, iE3, iTh, Index2, Index4, :), &
+          I0(iTrueCase), I1(iTrueCase), I2(iTrueCase), &
+          R1(iTrueCase), R2(iTrueCase), R3(iTrueCase) )
+    ENDDO
+
+  END SUBROUTINE CalculateAllR1R2R3
 
   SUBROUTINE CalculateR1R2R3( E1, E3, costh, A, B, C, I0_val, I1_val, I2_val, R1, R2, R3 )
 
@@ -331,12 +465,11 @@ CONTAINS
     REAL(DP), INTENT(IN)  :: A(2), B(2), C(3) ! Notice that A3 and B3 are identically zero
     REAL(DP), INTENT(OUT) :: R1, R2, R3
 
-    REAL(DP) :: Delta
-
     ! --- Delta (Guo Eq. 4) ---
-    Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
-
+    ! Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
     ! --- Notice that 1.0d0 / (16.0d0 * pi * Delta5) is built into A, B, C ---
+    ! In principle this function does not need costh as input but for clarity
+    ! we leave it in
 
     R1 = A(1)*I2_val + B(1)*I1_val + C(1)*I0_val   ! Guo Eq. 3
     R2 = A(2)*I2_val + B(2)*I1_val + C(2)*I0_val   ! Guo Eq. 3
@@ -344,36 +477,36 @@ CONTAINS
 
   END SUBROUTINE CalculateR1R2R3
 
-  SUBROUTINE SetMuDistinctCases(Mu_e, Mu_mu, MuPair)
+  SUBROUTINE SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPair)
 
     REAL(DP), INTENT(IN)  :: Mu_e, Mu_mu
-    REAL(DP), INTENT(OUT) :: MuPair(nDistinctCases,2)
+    REAL(DP), INTENT(OUT) :: ChemPotPair(nDistinctCasesMax,2)
 
-    MuPair(i_em_em,1) = Mu_e
-    MuPair(i_em_em,2) = Mu_e
+    ChemPotPair(i_em_em,1) = Mu_e
+    ChemPotPair(i_em_em,2) = Mu_e
 
-    MuPair(i_ep_ep,1) = -Mu_e
-    MuPair(i_ep_ep,2) = -Mu_e
+    ChemPotPair(i_ep_ep,1) = -Mu_e
+    ChemPotPair(i_ep_ep,2) = -Mu_e
 
-    MuPair(i_mm_mm,1) = Mu_mu
-    MuPair(i_mm_mm,2) = Mu_mu
+    ChemPotPair(i_mm_mm,1) = Mu_mu
+    ChemPotPair(i_mm_mm,2) = Mu_mu
 
-    MuPair(i_mp_mp,1) = -Mu_mu
-    MuPair(i_mp_mp,2) = -Mu_mu
+    ChemPotPair(i_mp_mp,1) = -Mu_mu
+    ChemPotPair(i_mp_mp,2) = -Mu_mu
 
-    MuPair(i_em_mm,1) = Mu_e
-    MuPair(i_em_mm,2) = Mu_mu
+    ChemPotPair(i_em_mm,1) = Mu_e
+    ChemPotPair(i_em_mm,2) = Mu_mu
 
-    MuPair(i_mm_em,1) = Mu_mu
-    MuPair(i_mm_em,2) = Mu_e
+    ChemPotPair(i_mm_em,1) = Mu_mu
+    ChemPotPair(i_mm_em,2) = Mu_e
 
-    MuPair(i_ep_mp,1) = -Mu_e
-    MuPair(i_ep_mp,2) = -Mu_mu
+    ChemPotPair(i_ep_mp,1) = -Mu_e
+    ChemPotPair(i_ep_mp,2) = -Mu_mu
 
-    MuPair(i_mp_ep,1) = -Mu_mu
-    MuPair(i_mp_ep,2) = -Mu_e
+    ChemPotPair(i_mp_ep,1) = -Mu_mu
+    ChemPotPair(i_mp_ep,2) = -Mu_e
 
-  END SUBROUTINE SetMuDistinctCases
+  END SUBROUTINE SetChemPotDistinctCases
 
   SUBROUTINE CalculateDistinctI0I1I2( E1, E3, costh, T, Mu_e, Mu_mu, I0, I1, I2 )
 
@@ -381,8 +514,8 @@ CONTAINS
     REAL(DP), INTENT(OUT) :: I0(nDistinctCases), I1(nDistinctCases), I2(nDistinctCases)
     
     REAL(DP) :: Delta, xMu_l2, xMu_l4, m2, m4, disc, k_val, E_minus, Q
-    REAL(DP) :: MuPairDistinct(nDistinctCases,2)
-    INTEGER  :: iCase
+    REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
+    INTEGER  :: iCase, iTrueCase
 
     I0 = 0.0d0
     I1 = 0.0d0
@@ -395,21 +528,21 @@ CONTAINS
     IF (1.0d0 - costh < 1.0d-10) RETURN   ! mu -> 1: E_minus -> inf, no phase space
     
     ! There are nDistinctCases different cases:
-
-    CALL SetMuDistinctCases(Mu_e, Mu_mu, MuPairDistinct)
+    CALL SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPairDistinct)
     DO iCase=1,nDistinctCases
       
+      iTrueCase = ChosenToTrueCaseMap(iCase)     
+      m2        = MassPairDistinct(iTrueCase,1)
+      m4        = MassPairDistinct(iTrueCase,1)
+
+      Q = 0.5d0 * (m4**2 - m2**2)
       k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
       disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 4
       IF (disc < 0.0d0) RETURN
 
-      m2     = MassPairDistinct(iCase,1)
-      m4     = MassPairDistinct(iCase,1)
- 
-      xMu_l2 = MuPairDistinct(iCase,1)
-      xMu_l4 = MuPairDistinct(iCase,2)
+      xMu_l2 = ChemPotPairDistinct(iTrueCase,1)
+      xMu_l4 = ChemPotPairDistinct(iTrueCase,2)
 
-      Q       = 0.5d0 * (m4**2 - m2**2)
       E_minus = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) )   ! Guo Eq. 4
       E_minus = MAX(E_minus, m2)
 

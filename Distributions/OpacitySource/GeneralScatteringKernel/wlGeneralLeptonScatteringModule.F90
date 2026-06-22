@@ -67,7 +67,7 @@ MODULE wlGeneralLeptonScatteringModule
   IMPLICIT NONE
   PRIVATE
 
-  ! 1 is direct GL quadarture integration
+  ! 1 is direct GL quadarture integration (slowest by far)
   ! 2 is polylogarithm-based evaluation (Bollig 2018, Chapter V, Section 8)
   ! 3 is Fukushima (2015) rational approximation formulae (fastest)
   INTEGER, PARAMETER  :: CompleteFDIntegralsEvaluationMethod = 3
@@ -1372,7 +1372,7 @@ CONTAINS
     REAL(DP), INTENT(OUT) :: I0, I1, I2
 
     REAL(DP), PARAMETER :: xi_tol = 1.0d-8   ! Threshold for \xi -> 0 branch
-    INTEGER, PARAMETER  :: n_pts  = 32       ! GL quadrature points
+    INTEGER , PARAMETER :: n_pts  = 32       ! GL quadrature points
 
     REAL(DP) :: xi, y, eta, eta_prime
     REAL(DP) :: F0_eta, F1_eta, F2_eta
@@ -1429,13 +1429,14 @@ CONTAINS
       ! =====================================================================
       ! SPECIAL CASE: \xi -> 0 (Guo 2020 Eqs. 11a, 11b, 11c)
       ! =====================================================================
-      df0_dz = 1.0d0 / (EXP(MIN(y - eta, 500.0d0)) + 1.0d0)
-      df0_dz = 1.0d0 / (EXP(y - eta) + 1.0d0)
+      df0_dz = 1.0d0 / (EXP(MIN(y - eta, 30.0d0)) + 1.0d0)
+      ! df0_dz = 1.0d0 / (EXP(y - eta) + 1.0d0)
+      ! df0_dz = EXP(eta - y) / (1.0_dp - EXP(eta - y))
 
       ! Using F_n'(z) relations from the text (Eq 11):
-      I0 = (T)    * df0_dz                                                    ! Eq. 11a
-      I1 = (T**2) * ( F0_eta + y * df0_dz )                                   ! Eq. 11b
-      I2 = (T**3) * ( 2.0d0 * F1_eta + 2.0d0 * y * F0_eta + (y**2) * df0_dz ) ! Eq. 11c
+      I0 = (T)    * df0_dz                                                  ! Eq. 11a
+      I1 = (T**2) * ( F0_eta + y * df0_dz )                                 ! Eq. 11b
+      I2 = (T**3) * ( 2.0d0 * F1_eta + 2.0d0 * y * F0_eta + y**2 * df0_dz ) ! Eq. 11c
 
     ELSE
       ! =====================================================================

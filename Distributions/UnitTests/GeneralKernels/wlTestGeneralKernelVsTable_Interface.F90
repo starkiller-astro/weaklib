@@ -32,7 +32,9 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
     CalculateAllPhout, &
     InitGeneralScatteringKernels, &
-    iProcessMax
+    FinalizeGeneralScatteringKernels, &
+    iProcessMin_Default, &
+    iProcessMax_Default
   USE HDF5
 
   IMPLICIT NONE
@@ -100,13 +102,21 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
                                              Phi1Out_General_numtbar
 
   INTEGER , PARAMETER :: nL = 2
-  REAL(DP) :: Phout(iProcessMax,nL), Phin(iProcessMax,nL)
+  ! INTEGER , PARAMETER :: iProcessMin = iProcessMin_Default
+  ! INTEGER , PARAMETER :: iProcessMax = iProcessMax_Default
+  INTEGER , PARAMETER :: iProcessMin = 1
+  INTEGER , PARAMETER :: iProcessMax = 12
+  REAL(DP) :: Phout(iProcessMax - iProcessMin + 1,nL)
+  REAL(DP) :: Phin (iProcessMax - iProcessMin + 1,nL)
   REAL(DP) :: E1, E3, Delta_mu, exponent
   INTEGER  :: iProcess, ierr
   INTEGER, PARAMETER :: nTheta = 24
-  INTEGER  :: count_start, count_interm, count_end, count_rate
-  REAL(DP) :: t_Table, t_General
-  LOGICAL  :: UseExactTablePoints = .TRUE.
+  INTEGER(8) :: count_start, count_interm, count_end, count_rate
+  REAL(DP)   :: t_Table, t_General
+  LOGICAL    :: UseExactTablePoints = .FALSE.
+  LOGICAL    :: Add_NPS = .TRUE.
+  INTEGER    :: iProcess_nueem, iProcess_nuebem, iProcess_numem, iProcess_numbem
+  INTEGER    :: iProcess_nueep, iProcess_nuebep, iProcess_numep, iProcess_numbep
 
   CALL MPI_INIT( ierr )
 
@@ -132,6 +142,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
     OPEN(UNIT=123, FILE=trim(adjustl(ThermoConditionsName)), STATUS='OLD', ACTION='READ')
     READ(123,*) nThermoPoints
     READ(123,*)
+    ! nThermoPoints = 10
 
     ALLOCATE(Inte_T (nThermoPoints) , Inte_Rho(nThermoPoints), &
              Inte_Ye(nThermoPoints) , Inte_Mue(nThermoPoints))
@@ -348,14 +359,42 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
 
   CALL DeAllocateOpacityTable( OpacityTable )
 
-  CALL InitGeneralScatteringKernels( &
-      Inte_E % Values, &
-      Inte_E % Values, &
-      Inte_nPointE,    &
-      Inte_nPointE,   &
-      nTheta)
+  CALL InitGeneralScatteringKernels(  &
+      Inte_E % Values,                &
+      Inte_E % Values,                &
+      Inte_nPointE,                   &
+      Inte_nPointE,                   &
+      nTheta,                         &
+      iProcessMin_Option=iProcessMin, &
+      iProcessMax_Option=iProcessMax  )
 
-!============================================================================
+  ! Map all indices correctly
+  process_string = 'nu_e + e- -> nu_e + e-'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_nueem = iProcess + iProcessMin - 1
+  process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_nuebem = iProcess + iProcessMin - 1
+  process_string = 'nu_mu + e- -> nu_mu + e-'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_numem = iProcess + iProcessMin - 1
+  process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_numbem = iProcess + iProcessMin - 1
+  process_string = 'nu_e + e+ -> nu_e + e+'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_nueep = iProcess + iProcessMin - 1
+  process_string = 'nu_bar_e + e+ -> nu_bar_e + e+'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_nuebep = iProcess + iProcessMin - 1
+  process_string = 'nu_mu + e+ -> nu_mu + e+'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_numep = iProcess + iProcessMin - 1
+  process_string = 'nu_bar_mu + e+ -> nu_bar_mu + e+'
+  CALL ProcessIndexFromReactionString( process_string, iProcess)
+  iProcess_numbep = iProcess + iProcessMin - 1
+
+  !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
   !============================================================================
   WRITE(*,*) 'Table done, now doing General Scattering Kernels'
@@ -376,35 +415,58 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
         Delta_mu = 0.0d0
         exponent = MIN( (E3 - E1 - Delta_mu) / (Inte_T(i) * kmev), 500.0d0 )
         Phin = Phout * EXP(exponent)
-
-        process_string = 'nu_e + e- -> nu_e + e-'
-        CALL ProcessIndexFromReactionString( process_string, iProcess)
         
-        Phi0Out_General_nue    (ii,jj,i) = Phin (iProcess,1)
-        Phi0Out_General_nue    (jj,ii,i) = Phout(iProcess,1)
-        Phi1Out_General_nue    (ii,jj,i) = Phin (iProcess,2)
-        Phi1Out_General_nue    (jj,ii,i) = Phout(iProcess,2)
+        !'nu_e + e- -> nu_e + e-'
+        Phi0Out_General_nue    (ii,jj,i) = Phin (iProcess_nueem,1)
+        Phi0Out_General_nue    (jj,ii,i) = Phout(iProcess_nueem,1)
+        Phi1Out_General_nue    (ii,jj,i) = Phin (iProcess_nueem,2)
+        Phi1Out_General_nue    (jj,ii,i) = Phout(iProcess_nueem,2)
 
-        process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
-        CALL ProcessIndexFromReactionString( process_string, iProcess)
-        Phi0Out_General_nuebar (ii,jj,i) = Phin (iProcess,1)
-        Phi0Out_General_nuebar (jj,ii,i) = Phout(iProcess,1)
-        Phi1Out_General_nuebar (ii,jj,i) = Phin (iProcess,2)
-        Phi1Out_General_nuebar (jj,ii,i) = Phout(iProcess,2)
+        !'nu_bar_e + e- -> nu_bar_e + e-'
+        Phi0Out_General_nuebar (ii,jj,i) = Phin (iProcess_nuebem,1)
+        Phi0Out_General_nuebar (jj,ii,i) = Phout(iProcess_nuebem,1)
+        Phi1Out_General_nuebar (ii,jj,i) = Phin (iProcess_nuebem,2)
+        Phi1Out_General_nuebar (jj,ii,i) = Phout(iProcess_nuebem,2)
 
-        process_string = 'nu_mu + e- -> nu_mu + e-'
-        CALL ProcessIndexFromReactionString( process_string, iProcess)
-        Phi0Out_General_numt   (ii,jj,i) = Phin (iProcess,1)
-        Phi0Out_General_numt   (jj,ii,i) = Phout(iProcess,1)
-        Phi1Out_General_numt   (ii,jj,i) = Phin (iProcess,2)
-        Phi1Out_General_numt   (jj,ii,i) = Phout(iProcess,2)
+        !'nu_mu + e- -> nu_mu + e-'
+        Phi0Out_General_numt   (ii,jj,i) = Phin (iProcess_numem,1)
+        Phi0Out_General_numt   (jj,ii,i) = Phout(iProcess_numem,1)
+        Phi1Out_General_numt   (ii,jj,i) = Phin (iProcess_numem,2)
+        Phi1Out_General_numt   (jj,ii,i) = Phout(iProcess_numem,2)
 
-        process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
-        CALL ProcessIndexFromReactionString( process_string, iProcess)
-        Phi0Out_General_numtbar(ii,jj,i) = Phin (iProcess,1)
-        Phi0Out_General_numtbar(jj,ii,i) = Phout(iProcess,1)
-        Phi1Out_General_numtbar(ii,jj,i) = Phin (iProcess,2)
-        Phi1Out_General_numtbar(jj,ii,i) = Phout(iProcess,2)
+        !'nu_bar_mu + e- -> nu_bar_mu + e-'
+        Phi0Out_General_numtbar(ii,jj,i) = Phin (iProcess_numbem,1)
+        Phi0Out_General_numtbar(jj,ii,i) = Phout(iProcess_numbem,1)
+        Phi1Out_General_numtbar(ii,jj,i) = Phin (iProcess_numbem,2)
+        Phi1Out_General_numtbar(jj,ii,i) = Phout(iProcess_numbem,2)
+
+        IF (Add_NPS) THEN
+            
+          !'nu_e + e+ -> nu_e + e+'
+          Phi0Out_General_nue    (ii,jj,i) = Phi0Out_General_nue    (ii,jj,i) + Phin (iProcess_nueep,1)
+          Phi0Out_General_nue    (jj,ii,i) = Phi0Out_General_nue    (jj,ii,i) + Phout(iProcess_nueep,1)
+          Phi1Out_General_nue    (ii,jj,i) = Phi1Out_General_nue    (ii,jj,i) + Phin (iProcess_nueep,2)
+          Phi1Out_General_nue    (jj,ii,i) = Phi1Out_General_nue    (jj,ii,i) + Phout(iProcess_nueep,2)
+
+          !'nu_bar_e + e+ -> nu_bar_e + e+'
+          Phi0Out_General_nuebar (ii,jj,i) = Phi0Out_General_nuebar (ii,jj,i) + Phin (iProcess_nuebep,1)
+          Phi0Out_General_nuebar (jj,ii,i) = Phi0Out_General_nuebar (jj,ii,i) + Phout(iProcess_nuebep,1)
+          Phi1Out_General_nuebar (ii,jj,i) = Phi1Out_General_nuebar (ii,jj,i) + Phin (iProcess_nuebep,2)
+          Phi1Out_General_nuebar (jj,ii,i) = Phi1Out_General_nuebar (jj,ii,i) + Phout(iProcess_nuebep,2)
+
+          !'nu_mu + e+ -> nu_mu + e+'
+          Phi0Out_General_numt   (ii,jj,i) = Phi0Out_General_numt   (ii,jj,i) + Phin (iProcess_numep,1)
+          Phi0Out_General_numt   (jj,ii,i) = Phi0Out_General_numt   (jj,ii,i) + Phout(iProcess_numep,1)
+          Phi1Out_General_numt   (ii,jj,i) = Phi1Out_General_numt   (ii,jj,i) + Phin (iProcess_numep,2)
+          Phi1Out_General_numt   (jj,ii,i) = Phi1Out_General_numt   (jj,ii,i) + Phout(iProcess_numep,2)
+
+          !'nu_bar_mu + e+ -> nu_bar_mu + e+'
+          Phi0Out_General_numtbar(ii,jj,i) = Phi0Out_General_numtbar(ii,jj,i) + Phin (iProcess_numbep,1)
+          Phi0Out_General_numtbar(jj,ii,i) = Phi0Out_General_numtbar(jj,ii,i) + Phout(iProcess_numbep,1)
+          Phi1Out_General_numtbar(ii,jj,i) = Phi1Out_General_numtbar(ii,jj,i) + Phin (iProcess_numbep,2)
+          Phi1Out_General_numtbar(jj,ii,i) = Phi1Out_General_numtbar(jj,ii,i) + Phout(iProcess_numbep,2)
+
+        ENDIF
 
       ENDDO
     ENDDO
@@ -412,6 +474,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   CALL SYSTEM_CLOCK(count_end)
   t_General = REAL(count_end - count_start) / REAL(count_rate)
 
+  WRITE(*,*) 't_Table, t_General', t_Table, t_General
 
   ! --- Output Routine ---
   OPEN(UNIT=66, FILE='Bruenn_Table_Phi.dat', STATUS='REPLACE', ACTION='WRITE')
@@ -465,6 +528,6 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
 
   DEALLOCATE( Inte_T, Inte_Rho, Inte_Ye, Inte_Mue, Inte_cmpe )
 
-  WRITE(*,*) 't_Table, t_General', t_Table, t_General
+  CALL FinalizeGeneralScatteringKernels()
 
 END PROGRAM wlTestGeneralKernelVsTable_Interface
