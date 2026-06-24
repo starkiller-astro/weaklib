@@ -26,4 +26,6 @@ wlReadOpacityTableTest.o: \
   wlInterpolationModule.o \
   wlOpacityTableModule.o \
   wlOpacityTableIOModuleHDF.o \
-  wlOpacityFieldsModule.o
+  wlOpacityFieldsModule.o \
+  wlExtPhysicalConstantsModule.o \
+  scat_n_module_weaklib.o

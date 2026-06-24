@@ -65,13 +65,13 @@ PROGRAM wlReadOpacityTableTest
       Computed_NuB_P_0, Computed_NuB_P_1
 
     associate &
-      ( iT_TS     =>  OpacityTable % TS % Indices % iT, &
-        nPointsE  =>  OpacityTable % Scat_NNS % nPoints ( 1 ) )
+      ( iT_TS     =>  OpacityTable % TS % Indices % iT )
     associate &
-      ( T_Min    =>  OpacityTable % TS % minValues ( iT_TS ), &
-        T_Max    =>  OpacityTable % TS % maxValues ( iT_TS ), &
-        MuB_Min  =>  OpacityTable % MuBGrid % minValue, &
-        MuB_Max  =>  OpacityTable % MuBGrid % maxValue )    
+      ( T_Min     =>  OpacityTable % TS % minValues ( iT_TS ), &
+        T_Max     =>  OpacityTable % TS % maxValues ( iT_TS ), &
+        MuB_Min   =>  OpacityTable % MuBGrid % minValue, &
+        MuB_Max   =>  OpacityTable % MuBGrid % maxValue, &    
+        nPointsE  =>  OpacityTable % EnergyGrid % nPoints )
 
     CALL random_number ( random )
     T  =  10.d0 ** ( LOG10 ( T_Min )  &
@@ -83,7 +83,7 @@ PROGRAM wlReadOpacityTableTest
     WRITE (*,*)
     WRITE (*,'(A6,ES12.6E2)') 'T   = ', T 
     WRITE (*,'(A6,ES12.6E2)') 'MuB = ', MuB 
-!    WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
+    WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
 
     allocate &
       ( Interpolated_Nu_N_0  ( nPointsE, nPointsE ), &
@@ -105,11 +105,17 @@ PROGRAM wlReadOpacityTableTest
         Computed_NuB_P_1 ( nPointsE, nPointsE ) )
 
     CALL Interpolate_NNS_Point &
-           ( T, MuB, &
+           ( T, MuB, nPointsE, &
              Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
              Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
              Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
              Interpolated_NuB_P_0, Interpolated_NuB_P_1 )
+    CALL Compute_NNS_Point &
+           ( T, MuB, nPointsE, &
+             Computed_Nu_N_0,  Computed_Nu_N_1,  &
+             Computed_NuB_N_0, Computed_NuB_N_1, &
+             Computed_Nu_P_0,  Computed_Nu_P_1,  &
+             Computed_NuB_P_0, Computed_NuB_P_1 )
 
     end associate !-- T_Min, etc.
     end associate !-- iT 
@@ -123,7 +129,7 @@ CONTAINS
 
 
   SUBROUTINE Interpolate_NNS_Point &
-               ( T, MuB, &
+               ( T, MuB, nPointsE, &
                  Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
                  Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
                  Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
@@ -137,6 +143,7 @@ CONTAINS
       LinearInterp2D_2DArray_Point
 
     REAL(dp), INTENT(in)  :: T, MuB
+    INTEGER,  INTENT(in)  :: nPointsE
     REAL(dp), DIMENSION ( :, : ), INTENT(out), TARGET :: &
       Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
       Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
@@ -257,7 +264,7 @@ CONTAINS
 
 
   SUBROUTINE Compute_NNS_Point &
-               ( T, MuB, &
+               ( T, MuB, nPointsE, &
                  Computed_Nu_N_0,  Computed_Nu_N_1,  &
                  Computed_NuB_N_0, Computed_NuB_N_1, &
                  Computed_Nu_P_0,  Computed_Nu_P_1,  &
@@ -265,13 +272,81 @@ CONTAINS
 
     USE wlKindModule, ONLY: &
       dp
+    USE wlExtPhysicalConstantsModule, ONLY: &
+      kMeV, dmnp, mn_wl => mn, mp_wl => mp
+  USE scat_n_module_weaklib, ONLY: &
+        init_quad_scat_n
 
     REAL(dp), INTENT(in)  :: T, MuB
+    INTEGER,  INTENT(in)  :: nPointsE
     REAL(dp), DIMENSION ( :, : ), INTENT(out) :: &
       Computed_Nu_N_0,  Computed_Nu_N_1,  &
       Computed_NuB_N_0, Computed_NuB_N_1, &
       Computed_Nu_P_0,  Computed_Nu_P_1,  &
       Computed_NuB_P_0, Computed_NuB_P_1
+
+    INTEGER, PARAMETER :: Scat_weak_magnetism &
+                          = 1
+    REAL(DP), PARAMETER :: Scat_ga_strange &
+!                               = -0.1d0
+                           = 0.0d0
+    REAL(dp) :: TMev, chem_n, chem_p
+    REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_nu_n,  phi1_nu_n, &
+                                               phi0_nub_n, phi1_nub_n, &
+                                               phi0_nu_p,  phi1_nu_p, &
+                                               phi0_nub_p, phi1_nub_p
+
+    CALL init_quad_scat_n
+    CALL load_polylog_weaklib
+
+    !-- convert to Chimera conventions
+
+    TMeV    =  T * kMeV
+    chem_n  =  MuB - dmnp - mn_wl
+    chem_p  =  MuB - dmnp - mp_wl
+
+    WRITE (*,*)
+    WRITE (*,'(A9,ES12.6E2)') 'TMeV   = ', TMeV
+    WRITE (*,'(A9,ES12.6E2)') 'chem_n = ', chem_n
+    WRITE (*,'(A9,ES12.6E2)') 'chem_p = ', chem_p
+
+    CALL scatnrgn_weaklib &
+         ( nPointsE, &
+           OpacityTable % EnergyGrid % Values, &
+           OpacityTable % EnergyGrid % Edge, &
+           TMeV, chem_n, chem_p, Scat_weak_magnetism, Scat_ga_strange, &
+           phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+           phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+
+    Computed_Nu_N_0  =  0.5_DP * TRANSPOSE(phi0_nu_n(:,:))  
+            ! phi0_nu_n was saved as phi0_nu_n(e,ep)
+
+    Computed_Nu_N_1  =  1.5_DP * TRANSPOSE(phi1_nu_n(:,:))  
+            ! phi1_nu_n was saved as phi1_nu_n(e,ep)
+
+    Computed_NuB_N_0  =  0.5_DP * TRANSPOSE(phi0_nub_n(:,:))  
+            ! phi0_nub_n was saved as phi0_nub_n(e,ep)
+
+    Computed_NuB_N_1  =  1.5_DP * TRANSPOSE(phi1_nub_n(:,:))  
+            ! phi1_nub_n was saved as phi1_nub_n(e,ep)
+
+    Computed_Nu_P_0  =  0.5_DP * TRANSPOSE(phi0_nu_p(:,:))  
+            ! phi0_nu_p was saved as phi0_nu_p(e,ep)
+
+    Computed_Nu_P_1  =  1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
+            ! phi1_nu_p was saved as phi1_nu_p(e,ep)
+
+    Computed_NuB_P_0  =  0.5_DP * TRANSPOSE(phi0_nub_p(:,:))  
+            ! phi0_nub_p was saved as phi0_nub_p(e,ep)
+
+    Computed_NuB_P_1  =  1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
+            ! phi1_nub_p was saved as phi1_nub_p(e,ep)
+
+    WRITE (*,*)
+    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_Nu_N_0  ( 15, 25 )  
+    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_NuB_N_0 ( 15, 25 )  
+    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_Nu_P_0  ( 15, 25 )  
+    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_NuB_P_0 ( 15, 25 )  
 
   END SUBROUTINE Compute_NNS_Point
 
