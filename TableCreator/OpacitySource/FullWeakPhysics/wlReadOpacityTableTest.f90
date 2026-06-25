@@ -64,7 +64,7 @@ PROGRAM wlReadOpacityTableTest
     CALL random_number ( random )
     MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
 
-    call Test_NNS_Point ( T, MuB )
+    call Test_NNS_Point ( T, MuB, MuB )
   
     end associate !-- T_Min, etc.
     end associate !-- iT 
@@ -74,7 +74,7 @@ PROGRAM wlReadOpacityTableTest
 CONTAINS
 
 
-  SUBROUTINE Test_NNS_Point ( T, MuB )
+  SUBROUTINE Test_NNS_Point ( T, MuN, MuP )
 
     USE wlKindModule, ONLY: &
       dp
@@ -84,7 +84,7 @@ CONTAINS
       iNu_NNS, iNuBar_NNS, &
       iNeutron_NNS, iProton_NNS
 
-    REAL(dp), INTENT(in) :: T, MuB
+    REAL(dp), INTENT(in) :: T, MuN, MuP
 
     REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
       Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
@@ -102,7 +102,8 @@ CONTAINS
 
     WRITE (*,*)
     WRITE (*,'(A6,ES12.6E2)') 'T   = ', T 
-    WRITE (*,'(A6,ES12.6E2)') 'MuB = ', MuB 
+    WRITE (*,'(A6,ES12.6E2)') 'MuN = ', MuN 
+    WRITE (*,'(A6,ES12.6E2)') 'MuP = ', MuP 
     WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
 
     allocate &
@@ -125,13 +126,13 @@ CONTAINS
         Computed_NuB_P_1 ( nPointsE, nPointsE ) )
 
     CALL Interpolate_NNS_Point &
-           ( T, MuB, nPointsE, &
+           ( T, MuN, MuP, nPointsE, &
              Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
              Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
              Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
              Interpolated_NuB_P_0, Interpolated_NuB_P_1 )
     CALL Compute_NNS_Point &
-           ( T, MuB, nPointsE, &
+           ( T, MuN, MuP, nPointsE, &
              Computed_Nu_N_0,  Computed_Nu_N_1,  &
              Computed_NuB_N_0, Computed_NuB_N_1, &
              Computed_Nu_P_0,  Computed_Nu_P_1,  &
@@ -145,7 +146,7 @@ CONTAINS
 
 
   SUBROUTINE Interpolate_NNS_Point &
-               ( T, MuB, nPointsE, &
+               ( T, MuN, MuP, nPointsE, &
                  Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
                  Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
                  Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
@@ -158,7 +159,7 @@ CONTAINS
       GetIndexAndDelta_Lin, &
       LinearInterp2D_2DArray_Point
 
-    REAL(dp), INTENT(in)  :: T, MuB
+    REAL(dp), INTENT(in)  :: T, MuN, MuP
     INTEGER,  INTENT(in)  :: nPointsE
     REAL(dp), DIMENSION ( :, : ), INTENT(out), TARGET :: &
       Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
@@ -166,8 +167,8 @@ CONTAINS
       Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
       Interpolated_NuB_P_0, Interpolated_NuB_P_1
 
-    INTEGER  :: iOpacity, iMoment, iE, iEp, iT, iMuB
-    REAL(dp) :: dLogT, dMuB
+    INTEGER  :: iOpacity, iMoment, iE, iEp, iT, iMuN, iMuP, iMuB
+    REAL(dp) :: dLogT, dMuN, dMuP, dMuB
     REAL(dp), DIMENSION ( :, : ), POINTER :: Interpolated
 
     associate &
@@ -179,7 +180,8 @@ CONTAINS
     !-- Get Index and Delta
 
     CALL GetIndexAndDelta_Log ( T,     T_Values, iT,   dLogT )
-    CALL GetIndexAndDelta_Lin ( MuB, MuB_Values, iMuB, dMuB )
+    CALL GetIndexAndDelta_Lin ( MuN, MuB_Values, iMuN, dMuN )
+    CALL GetIndexAndDelta_Lin ( MuP, MuB_Values, iMuP, dMuP )
 
     !-- Check Index and Delta values
 
@@ -194,14 +196,24 @@ CONTAINS
                         * dLogT )
 
     WRITE (*,*)
-    WRITE (*,'(A19,I4.4)')     '            iMuB = ', iMuB 
-    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuB )     = ', MuB_Values ( iMuB )
-    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuB + 1 ) = ', MuB_Values ( iMuB + 1 )
-    WRITE (*,'(A19,ES12.6E2)') '            dMuB = ', dMuB
-    WRITE (*,'(A19,ES12.6E2)') 'MuB              = ', &
-          MuB_Values ( iMuB )  &
-          +  ( MuB_Values ( iMuB + 1 )  -  MuB_Values ( iMuB ) )  &
-             *  dMuB 
+    WRITE (*,'(A19,I4.4)')     '            iMuN = ', iMuN 
+    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuN )     = ', MuB_Values ( iMuN )
+    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuN + 1 ) = ', MuB_Values ( iMuN + 1 )
+    WRITE (*,'(A19,ES12.6E2)') '            dMuN = ', dMuN
+    WRITE (*,'(A19,ES12.6E2)') 'MuN              = ', &
+          MuB_Values ( iMuN )  &
+          +  ( MuB_Values ( iMuN + 1 )  -  MuB_Values ( iMuN ) )  &
+             *  dMuN 
+
+    WRITE (*,*)
+    WRITE (*,'(A19,I4.4)')     '            iMuP = ', iMuP 
+    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuP )     = ', MuB_Values ( iMuP )
+    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuP + 1 ) = ', MuB_Values ( iMuP + 1 )
+    WRITE (*,'(A19,ES12.6E2)') '            dMuP = ', dMuP
+    WRITE (*,'(A19,ES12.6E2)') 'MuP              = ', &
+          MuB_Values ( iMuP )  &
+          +  ( MuB_Values ( iMuP + 1 )  -  MuB_Values ( iMuP ) )  &
+             *  dMuP 
 
     associate & 
       ( Table_NNS  =>  OpacityTable % Scat_NNS )
@@ -211,6 +223,8 @@ CONTAINS
  
         select case ( iOpacity )
         case ( 1 )
+          iMuB  =  iMuN
+          dMuB  =  dMuN
           select case ( iMoment )
             case ( 1 )
               Interpolated  =>  Interpolated_Nu_N_0
@@ -218,6 +232,8 @@ CONTAINS
               Interpolated  =>  Interpolated_Nu_N_1
           end select !-- iMoment
         case ( 2 )
+          iMuB  =  iMuN
+          dMuB  =  dMuN
           select case ( iMoment )
             case ( 1 )
               Interpolated  =>  Interpolated_NuB_N_0
@@ -225,6 +241,8 @@ CONTAINS
               Interpolated  =>  Interpolated_NuB_N_1
           end select !-- iMoment
         case ( 3 )
+          iMuB  =  iMuP
+          dMuB  =  dMuP
           select case ( iMoment )
             case ( 1 )
               Interpolated  =>  Interpolated_Nu_P_0
@@ -232,6 +250,8 @@ CONTAINS
               Interpolated  =>  Interpolated_Nu_P_1
           end select !-- iMoment
         case ( 4 )
+          iMuB  =  iMuP
+          dMuB  =  dMuP
           select case ( iMoment )
             case ( 1 )
               Interpolated  =>  Interpolated_NuB_P_0
@@ -244,10 +264,10 @@ CONTAINS
         iE  = 25
 
         associate &
-          ( Table       =>  OpacityTable % Scat_NNS % Kernel ( iOpacity ) &
-                              % Values ( iEp, iE, iMoment, :, : ), &
-            Offset      =>  OpacityTable % Scat_NNS &
-                              % Offsets ( iOpacity, iMoment ) )
+          ( Table   =>  OpacityTable % Scat_NNS % Kernel ( iOpacity ) &
+                          % Values ( iEp, iE, iMoment, :, : ), &
+            Offset  =>  OpacityTable % Scat_NNS &
+                          % Offsets ( iOpacity, iMoment ) )
 
         !-- Interpolate
 
@@ -280,7 +300,7 @@ CONTAINS
 
 
   SUBROUTINE Compute_NNS_Point &
-               ( T, MuB, nPointsE, &
+               ( T, MuN, MuP, nPointsE, &
                  Computed_Nu_N_0,  Computed_Nu_N_1,  &
                  Computed_NuB_N_0, Computed_NuB_N_1, &
                  Computed_Nu_P_0,  Computed_Nu_P_1,  &
@@ -293,7 +313,7 @@ CONTAINS
   USE scat_n_module_weaklib, ONLY: &
         init_quad_scat_n
 
-    REAL(dp), INTENT(in)  :: T, MuB
+    REAL(dp), INTENT(in)  :: T, MuN, MuP
     INTEGER,  INTENT(in)  :: nPointsE
     REAL(dp), DIMENSION ( :, : ), INTENT(out) :: &
       Computed_Nu_N_0,  Computed_Nu_N_1,  &
@@ -318,8 +338,8 @@ CONTAINS
     !-- convert to Chimera conventions
 
     TMeV    =  T * kMeV
-    chem_n  =  MuB - dmnp - mn_wl
-    chem_p  =  MuB - dmnp - mp_wl
+    chem_n  =  MuN - dmnp - mn_wl
+    chem_p  =  MuP - dmnp - mp_wl
 
     WRITE (*,*)
     WRITE (*,'(A9,ES12.6E2)') 'TMeV   = ', TMeV
