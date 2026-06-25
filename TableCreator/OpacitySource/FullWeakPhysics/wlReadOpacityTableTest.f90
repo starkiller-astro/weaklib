@@ -37,11 +37,44 @@ PROGRAM wlReadOpacityTableTest
 
   CALL FinalizeHDF( ) 
 
-  !-- Test Interpolate_NNS_Point
+  !-- Test random point
 
-  CALL random_seed ( )
+  TestRandom: BLOCK
 
-  TestPoint: BLOCK
+    USE wlKindModule, ONLY: &
+      dp
+
+    REAL(dp) :: random
+    REAL(dp) :: T, MuB
+
+    CALL random_seed ( )
+
+    associate &
+      ( iT_TS     =>  OpacityTable % TS % Indices % iT )
+    associate &
+      ( T_Min     =>  OpacityTable % TS % minValues ( iT_TS ), &
+        T_Max     =>  OpacityTable % TS % maxValues ( iT_TS ), &
+        MuB_Min   =>  OpacityTable % MuBGrid % minValue, &
+        MuB_Max   =>  OpacityTable % MuBGrid % maxValue )
+
+    CALL random_number ( random )
+    T  =  10.d0 ** ( LOG10 ( T_Min )  &
+                     +  random  *  ( LOG10 ( T_Max )  -  LOG10 ( T_Min ) ) ) 
+
+    CALL random_number ( random )
+    MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
+
+    call Test_NNS_Point ( T, MuB )
+  
+    end associate !-- T_Min, etc.
+    end associate !-- iT 
+
+  END BLOCK TestRandom
+
+CONTAINS
+
+
+  SUBROUTINE Test_NNS_Point ( T, MuB )
 
     USE wlKindModule, ONLY: &
       dp
@@ -51,8 +84,8 @@ PROGRAM wlReadOpacityTableTest
       iNu_NNS, iNuBar_NNS, &
       iNeutron_NNS, iProton_NNS
 
-    REAL(dp) :: random
-    REAL(dp) :: T, MuB
+    REAL(dp), INTENT(in) :: T, MuB
+
     REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
       Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
       Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
@@ -65,20 +98,7 @@ PROGRAM wlReadOpacityTableTest
       Computed_NuB_P_0, Computed_NuB_P_1
 
     associate &
-      ( iT_TS     =>  OpacityTable % TS % Indices % iT )
-    associate &
-      ( T_Min     =>  OpacityTable % TS % minValues ( iT_TS ), &
-        T_Max     =>  OpacityTable % TS % maxValues ( iT_TS ), &
-        MuB_Min   =>  OpacityTable % MuBGrid % minValue, &
-        MuB_Max   =>  OpacityTable % MuBGrid % maxValue, &    
-        nPointsE  =>  OpacityTable % EnergyGrid % nPoints )
-
-    CALL random_number ( random )
-    T  =  10.d0 ** ( LOG10 ( T_Min )  &
-                     +  random  *  ( LOG10 ( T_Max )  -  LOG10 ( T_Min ) ) ) 
-
-    CALL random_number ( random )
-    MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
+      ( nPointsE  =>  OpacityTable % EnergyGrid % nPoints )
 
     WRITE (*,*)
     WRITE (*,'(A6,ES12.6E2)') 'T   = ', T 
@@ -117,15 +137,11 @@ PROGRAM wlReadOpacityTableTest
              Computed_Nu_P_0,  Computed_Nu_P_1,  &
              Computed_NuB_P_0, Computed_NuB_P_1 )
 
-    end associate !-- T_Min, etc.
-    end associate !-- iT 
+    end associate !-- nPointsE
 
     WRITE (*,*)
 
-  END BLOCK TestPoint
-
-  
-CONTAINS
+  END SUBROUTINE Test_NNS_Point
 
 
   SUBROUTINE Interpolate_NNS_Point &
