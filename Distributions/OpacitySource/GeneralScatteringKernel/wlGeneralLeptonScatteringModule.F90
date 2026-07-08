@@ -183,14 +183,15 @@ MODULE wlGeneralLeptonScatteringModule
   
   ! Integration parameters
   !--- Default quadrature resolution ---
-  REAL(DP), PARAMETER :: tfac = 100.0d0
-  INTEGER, PARAMETER  :: nE3_default      = 32   ! GL points for E3 integral in opacity
-  INTEGER, PARAMETER  :: nTheta_default   = 16   ! GL points for costheta in opacity
-  INTEGER, PARAMETER  :: nPhi_default     = 16   ! GL points for costheta in opacity
+  REAL(DP), PARAMETER :: tfac           = 100.0d0
+  REAL(DP), PARAMETER :: MaxExponent    = 100.0d0
+  INTEGER, PARAMETER  :: nE3_default    = 32   ! GL points for E3 integral in opacity
+  INTEGER, PARAMETER  :: nTheta_default = 16   ! GL points for costheta in opacity
+  INTEGER, PARAMETER  :: nPhi_default   = 16   ! GL points for costheta in opacity
 
   ! If you want to integrate directly only call gauleg once
   LOGICAL                :: GauLegInitialized = .FALSE.
-  INTEGER , PARAMETER    :: nGL_FI = 64
+  INTEGER , PARAMETER    :: nGL_FI = 32
   REAL(DP), DIMENSION(:) :: xa_FI(nGL_FI), wa_FI(nGL_FI)
 
   PUBLIC :: CalculatePhoutPhin
@@ -207,14 +208,16 @@ MODULE wlGeneralLeptonScatteringModule
   PUBLIC :: B1_f
   PUBLIC :: C1_f
   PUBLIC :: C3_f
-  PUBLIC :: gauleg, LegendrePolynomial
+  PUBLIC :: FD
+  PUBLIC :: CalculateCollinearH0
+  PUBLIC :: gaulag, gauleg, LegendrePolynomial
 
 CONTAINS
 
   SUBROUTINE ProcessIndexFromReactionString(reac, ProcessIndex)
 
     CHARACTER(*), INTENT(IN)  :: reac
-    INTEGER,      INTENT(OUT) :: ProcessIndex
+    INTEGER     , INTENT(OUT) :: ProcessIndex
 
     CHARACTER(:), ALLOCATABLE :: s, lhs, rhs
     CHARACTER(32) :: nu_in, l_in, nu_out, l_out
@@ -223,10 +226,14 @@ CONTAINS
     ProcessIndex = -1
     s = NormalizeSpaces(ADJUSTL(TRIM(reac)))
 
-    ! Special 3->1 IMD channel (ProcessIndex=29)
-    IF ( s == 'nu_bar_e + e- + nu_mu -> mu-' .OR. &
-         s == 'nu_e + e+ + nu_bar_mu -> mu+' ) THEN
-      ProcessIndex = 29
+    !------------------------------------------------------------
+    ! Special 3->1 IMD channels (Table I, 5a & 5b)
+    !------------------------------------------------------------
+    IF ( s == 'nu_bar_e + e- + nu_mu -> mu-' ) THEN
+      ProcessIndex = 33
+      RETURN
+    ELSE IF ( s == 'nu_mu + e- + nu_bar_e -> mu-' ) THEN
+      ProcessIndex = 34
       RETURN
     END IF
 
@@ -474,7 +481,10 @@ CONTAINS
     CASE (30); s = 'nu_e       + e+  -> nu_mu      + mu+ '  ! 4a reverse
     CASE (31); s = 'nu_bar_mu  + mu- -> nu_bar_e   + e-  '  ! 4b forward
     CASE (32); s = 'nu_bar_e   + e-  -> nu_bar_mu  + mu- '  ! 4b reverse
-    CASE (33); s = 'nu_bar_e   + e- + nu_mu -> mu-  ' ! inverse muon decay (3->1)
+
+    ! --- IMD: Inverse Muon Decay (IMD) (Table I, 5a & 5b) ---
+    CASE (33); s = 'nu_bar_e   + e- + nu_mu -> mu-  '       ! inverse muon decay (3->1)
+    CASE (34); s = 'nu_mu      + e- + nu_bar_e -> mu-  '    ! inverse muon decay (3->1)
 
     CASE DEFAULT
       WRITE(*,*) 'ReactionStringFromProcessIndex: unsupported ProcessIndex = ', ProcessIndex
@@ -566,10 +576,16 @@ CONTAINS
       lam2 = lam2_LFC
       lam3 = lam3_LFC
 
+    ! IMD: Inverse Muon Decay (IMD) (Table I, 5a & 5b)
     CASE(33)  ! inverse muon decay (3->1)
       lam1 = lam1_LFE ! LFE and IMD have the same lambdas
       lam2 = lam2_LFE ! LFE and IMD have the same lambdas
       lam3 = lam3_LFE ! LFE and IMD have the same lambdas
+
+    CASE(34)  ! inverse muon decay (3->1)
+      lam1 = lam1_LFC ! Same as above but now you switched places for neutrinos
+      lam2 = lam2_LFC ! Same as above but now you switched places for neutrinos
+      lam3 = lam3_LFC ! Same as above but now you switched places for neutrinos
 
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
@@ -642,7 +658,7 @@ CONTAINS
 
     CALL gauleg( -1.0d0, 1.0d0, xa_cos_theta, wa_cos_theta, nTheta )
     
-    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
 
     Phout = 0.0d0
     Phin = 0.0d0
@@ -658,13 +674,13 @@ CONTAINS
       END DO
       
     ENDDO
-    ! factors of 1/2 and 3/2 to match Bruenn and then factor of two to match thornado convention?
-    Phout(1) = Phout(1) * conv_fac * 0.5d0 * 2.0d0
-    Phout(2) = Phout(2) * conv_fac * 1.5d0 * 2.0d0
+    ! factors of 1/2 and 3/2 to match Bruenn
+    Phout(1) = Phout(1) * conv_fac * 0.5d0
+    Phout(2) = Phout(2) * conv_fac * 1.5d0
 
     ! --- Phin from detailed balance 
     Delta_mu = xMu_l2 - xMu_l4
-    exponent = MIN( (E3 - E1 - Delta_mu) / xT, 500.0d0 )
+    exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )
     Phin = Phout * EXP(exponent)
 
   END SUBROUTINE CalculatePhoutPhin
@@ -686,7 +702,7 @@ CONTAINS
 
     ! --- R_in from detailed balance 
     Delta_mu = xMu_l2 - xMu_l4
-    exponent = MIN( (E3 - E1 - Delta_mu) / xT, 500.0d0 )   ! Guo Eq. 13
+    exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )   ! Guo Eq. 13
 
     Rin = Rout * EXP(exponent)   ! Guo Eq. 13
 
@@ -730,13 +746,13 @@ CONTAINS
 
     Opacity = 0.0d0
     
-    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
       E3    = xa_E3(iE3)
       wE3   = wa_E3(iE3)
-      f_nu3 = FD(E3, xT, xMu_nu3)
+      f_nu3 = FD(E3, xMu_nu3, xT)
 
       ! Replaced the triple loop with a single loop over relative angle mu
       DO iTheta = 1, nTheta
@@ -795,7 +811,7 @@ CONTAINS
 
     Emissivity = 0.0d0
     
-    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -804,7 +820,7 @@ CONTAINS
       IF (IsFinalStateFree) THEN
         f_nu3 = 0.0d0
       ELSE
-        f_nu3 = FD(E3, xT, xMu_nu3)
+        f_nu3 = FD(E3, xMu_nu3, xT)
       ENDIF
       ! Replaced the triple loop with a single loop over relative angle mu
       DO iTheta = 1, nTheta
@@ -996,7 +1012,7 @@ CONTAINS
 
     Opacity_array = 0.0d0
     
-    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -1072,7 +1088,7 @@ CONTAINS
 
     Opacity_array = 0.0d0
     
-    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -1408,7 +1424,7 @@ CONTAINS
 
       CALL Init_Polylogarithms()
       ! --- Evaluate F_s(eta, y) and F_s(eta_prime, y) using polylog-based functions ---
-      CALL Fermi_Dirac_Integrals( eta       - y, F0_eta, F1_eta, F2_eta )
+      CALL Fermi_Dirac_Integrals( eta       - y, F0_eta , F1_eta , F2_eta )
       CALL Fermi_Dirac_Integrals( eta_prime - y, F0_etap, F1_etap, F2_etap )
 
     CASE (3)
@@ -1429,9 +1445,9 @@ CONTAINS
       ! =====================================================================
       ! SPECIAL CASE: \xi -> 0 (Guo 2020 Eqs. 11a, 11b, 11c)
       ! =====================================================================
-      df0_dz = 1.0d0 / (EXP(MIN(y - eta, 30.0d0)) + 1.0d0)
+      ! df0_dz = 1.0d0 / (EXP(MIN(y - eta, MaxExponent)) + 1.0d0)
       ! df0_dz = 1.0d0 / (EXP(y - eta) + 1.0d0)
-      ! df0_dz = EXP(eta - y) / (1.0_dp - EXP(eta - y))
+      df0_dz = EXP(MIN(eta - y, 30.0d0)) / (1.0_dp + EXP(MIN(eta - y, 30.0d0)))
 
       ! Using F_n'(z) relations from the text (Eq 11):
       I0 = (T)    * df0_dz                                                  ! Eq. 11a
@@ -1463,9 +1479,9 @@ CONTAINS
     REAL(DP), INTENT(IN) :: z
     REAL(DP) :: res
 
-    IF (z > 100.0d0) THEN
+    IF (z > MaxExponent) THEN
       res = EXP(-z)                  ! Avoid overflow in exp(z)
-    ELSE IF (z < -100.0d0) THEN
+    ELSE IF (z < -MaxExponent) THEN
       res = - 1.0d0                  ! Avoid overflow in exp(-z)
     ELSE
       res = 1.0d0 / (EXP(z) - 1.0d0) ! Exact definition
@@ -1484,9 +1500,9 @@ CONTAINS
     REAL(DP), INTENT(IN) :: z
     REAL(DP) :: res
 
-    IF (z > 40.0d0) THEN
+    IF (z > MaxExponent) THEN
       res = z                          ! \ln(1 + e^arg) \approx arg
-    ELSE IF (z < -35.0d0) THEN
+    ELSE IF (z < -MaxExponent) THEN
       res = EXP(z)                     ! \ln(1 + e^arg) \approx e^arg
     ELSE
       res = LOG(1.0d0 + EXP(z))        ! Exact Eq. 8
@@ -1543,7 +1559,7 @@ CONTAINS
         x = xm1 + xl1 * t
         w = wa(i) * xl1
         arg = x - z
-        IF (arg > 500.0d0) THEN
+        IF (arg > MaxExponent) THEN
           integrand = 0.0d0
         ELSE
           integrand = (x**n) / (EXP(arg) + 1.0d0)
@@ -1744,7 +1760,7 @@ CONTAINS
     REAL(DP), INTENT(IN) :: E, mu, T
     REAL(DP) :: FD
 
-    FD = 1.0d0 / (EXP(MIN((E - mu)/T, 500.0d0)) + 1.0d0)
+    FD = 1.0d0 / (EXP(MIN((E - mu)/T, MaxExponent)) + 1.0d0)
 
   END FUNCTION FD
 
@@ -1828,5 +1844,23 @@ CONTAINS
     I2 = I2a + I2b
 
   END SUBROUTINE Compute_Is_Integrals_explicitly
+
+  ! Deal with collinear case
+  SUBROUTINE CalculateCollinearH0(E1, E2, H0I, H0II)
+
+    REAL(DP), INTENT(IN)  :: E1, E2
+    REAL(DP), INTENT(OUT) :: H0I, H0II
+
+    ! Notice that E3 == E1 in the collinear case. This is Eq. 44 and 45 from 
+    ! Mezzacappa & Bruenn (1993) where E1 = E0 and E3 = E0' and E2 = Ee
+    IF (E1 >= E2) THEN
+      H0I  = 4.0d0/15.0d0*E2**5 + 4.0d0/3.0d0*E2**4*E1 + 8.0d0/3.0d0*E2**3*E1**2
+      H0II = 4.0d0/15.0d0*E2**5 - 4.0d0/3.0d0*E2**4*E1 + 8.0d0/3.0d0*E2**3*E1**2
+    ELSE
+      H0I  = 4.0d0/15.0d0*E1**5 + 4.0d0/3.0d0*E1**4*E2 + 8.0d0/3.0d0*E1**3*E2**2
+      H0II = 4.0d0/15.0d0*E1**5 - 4.0d0/3.0d0*E1**4*E2 + 8.0d0/3.0d0*E1**3*E2**2
+    END IF
+
+  END SUBROUTINE CalculateCollinearH0
 
 END MODULE wlGeneralLeptonScatteringModule

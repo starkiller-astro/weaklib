@@ -16,7 +16,7 @@ MODULE wlPolylogModule
 
   ! Maximum order of the Bernoulli expansion for polylogarithms.
   ! 25 terms is more than enough to reach machine precision (1e-16) for |y| < ln(2)
-  INTEGER, PARAMETER :: N_POLY = 25
+  INTEGER, PARAMETER :: N_POLY = 8
   
   REAL(DP), SAVE :: a_poly(0:N_POLY)
   REAL(DP), SAVE :: c_poly(0:N_POLY)

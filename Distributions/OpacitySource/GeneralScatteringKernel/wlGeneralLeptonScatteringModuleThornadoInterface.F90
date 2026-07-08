@@ -5,9 +5,10 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
     pi, Gw_MeV, hbarc, sin2W, me, mmu, cvel
   USE wlGeneralLeptonScatteringModule, ONLY: &
     SelectLambdaFromProcessIndex, &
-    Compute_Is_Integrals,         &
+    Compute_Is_Integrals, FD,     &
     A1_f, B1_f, C1_f, C3_f,       &
-    gauleg, LegendrePolynomial
+    gauleg, LegendrePolynomial,   &
+    gaulag, CalculateCollinearH0
 
   IMPLICIT NONE
   PRIVATE
@@ -18,15 +19,19 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER                     :: iProcessMax
   REAL(DP), PARAMETER         :: ElectronMass        = me
   REAL(DP), PARAMETER         :: MuonMass            = mmu
+  REAL(DP), PARAMETER         :: E2_max_Default      = 100.0d0
+  INTEGER , PARAMETER         :: nE2_Default         = 32
+  INTEGER                     :: nE2_Lepton
 
   REAL(DP), ALLOCATABLE    :: LambdaScatteringArray(:)
   REAL(DP), ALLOCATABLE    :: A_Scat(:, :, :, :)
   REAL(DP), ALLOCATABLE    :: B_Scat(:, :, :, :, :, :)
   REAL(DP), ALLOCATABLE    :: C_Scat(:, :, :, :, :, :)
 
-  INTEGER                  :: nThetaScattering = 24
-  REAL(DP), ALLOCATABLE    :: xa_cos_theta(:)
-  REAL(DP), ALLOCATABLE    :: wa_cos_theta(:)
+  INTEGER                  :: nThetaScattering
+  REAL(DP), ALLOCATABLE    :: xa_cos_theta(:), wa_cos_theta(:)
+  REAL(DP), ALLOCATABLE    :: xa_GLeg_ref(:), wa_GLeg_ref(:)
+  REAL(DP), ALLOCATABLE    :: xa_GLag(:), wa_GLag(:)
 
   INTEGER , PARAMETER      :: iABC_el = 1
   INTEGER , PARAMETER      :: iABC_mu = 2
@@ -54,7 +59,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: ChosenToTrueCaseMap(:)
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: lam1(:), lam2(:), lam3(:)
 
-  REAL(DP) :: conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc )
+  REAL(DP) :: conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
 
   PUBLIC :: InitGeneralScatteringKernels
   PUBLIC :: FinalizeGeneralScatteringKernels
@@ -64,19 +69,34 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
 CONTAINS
 
   SUBROUTINE InitGeneralScatteringKernels(E1_array, E3_array, nE1, nE3, nTheta, &
-                                          iProcessMin_Option, iProcessMax_Option)
+                                          iProcessMin_Option, iProcessMax_Option, &
+                                          E2_max_Option, nE2_Option)
 
     REAL(DP), INTENT(IN)           :: E1_array(nE1), E3_array(nE3)
     INTEGER , INTENT(IN)           :: nE1, nE3, nTheta
     INTEGER , INTENT(IN), OPTIONAL :: iProcessMin_Option, iProcessMax_Option
+    REAL(DP), INTENT(IN), OPTIONAL :: E2_max_Option
+    INTEGER , INTENT(IN), OPTIONAL :: nE2_Option
 
-    REAL(DP) :: E1, E3, costh, Delta, Delta5
-    INTEGER  :: iE1, iE3, iTh, iProcess, iCase
+    REAL(DP) :: E1, E2, E3, costh, Delta, Delta5, E2_max
+    INTEGER  :: iE1, iE2, iE3, iTh, iProcess, iCase
     
     INTEGER, DIMENSION(nDistinctCasesMax) :: unique_cases
     INTEGER :: idx, current_val
 
     nThetaScattering = nTheta
+
+    IF ( PRESENT(nE2_Option) ) THEN
+      nE2_Lepton = nE2_Option
+    ELSE
+      nE2_Lepton = nE2_Default
+    ENDIF
+
+    IF ( PRESENT(E2_max_Option) ) THEN
+      E2_max = E2_max_Option
+    ELSE
+      E2_max = E2_max_Default
+    ENDIF
 
     IF ( PRESENT(iProcessMin_Option) ) THEN
       iProcessMin = iProcessMin_Option
@@ -94,7 +114,7 @@ CONTAINS
     ALLOCATE( lam2(iProcessMax - iProcessMin + 1) )
     ALLOCATE( lam3(iProcessMax - iProcessMin + 1) )
     ALLOCATE( A_Scat(nE1, nE3, nThetaScattering, 2) )
-    ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) ) ! This could also be (nE1, nE2, nTheta, 3, 3) but more readable this way
+    ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) ) ! This could also be (nE1, nE3, nTheta, 3, 3) but more readable this way
     ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
 
     ! Take care of angular quadrature
@@ -152,6 +172,16 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
+
+    ! --- Preallocate collinear grids (generated ONCE, reused every call) ---
+    ALLOCATE( xa_GLeg_ref(nE2_Lepton), wa_GLeg_ref(nE2_Lepton) )
+    ALLOCATE( xa_GLag(nE2_Lepton),     wa_GLag(nE2_Lepton) )
+
+    ! Canonical GL panel on [-1,1]; affine-mapped to [0,E1] at use time.
+    CALL gauleg( -1.0d0, 1.0d0, xa_GLeg_ref, wa_GLeg_ref, nE2_Lepton )
+
+    ! Raw Gauss-Laguerre (alpha=0) nodes/weights for int_0^inf e^{-x} g(x) dx.
+    CALL gaulag( xa_GLag, wa_GLag, nE2_Lepton, 0.0d0 )
 
     ! This is to compute Distinct Is
     MassPairDistinct(i_em_em,1) = ElectronMass
@@ -222,6 +252,7 @@ CONTAINS
 
     DEALLOCATE( lam1, lam2, lam3, A_Scat, B_Scat, C_Scat )
     DEALLOCATE( xa_cos_theta, wa_cos_theta )
+    DEALLOCATE( xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag )
     DEALLOCATE( ChosenToTrueCaseMap )
 
   END SUBROUTINE FinalizeGeneralScatteringKernels
@@ -326,7 +357,7 @@ CONTAINS
 
   END SUBROUTINE SelectiDistinctFromProcessIndex
 
-SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
+  SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
 
     INTEGER , INTENT(IN)  :: iE1, iE3
     REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
@@ -351,6 +382,15 @@ SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
     Int_R2 = 0.0d0
     Int_R3 = 0.0d0
 
+    ! IF ( ABS(E3 - E1) < 1.0d-10) THEN
+    !   IF (nL == 1)  THEN
+    !     CALL CalculateAllPhi0_collinear( iE1, E1, T, Mu_e, Mu_mu, Phout(:,1) )
+    !   ELSE
+    !     CALL CalculateAllPhoutGeneral_collinear( iE1, E1, T, Mu_e, Mu_mu, Phout, nL )
+    !   ENDIF
+    !   RETURN
+    ! ENDIF
+
     ! -------------------------------------------------------------------
     ! 1. Perform the angular integration over the DISTINCT cases ONLY
     ! -------------------------------------------------------------------
@@ -358,7 +398,7 @@ SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
       costh = xa_cos_theta(iTh)
       
       CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
-                                        iE1, iE3, iTh, R1_th, R2_th, R3_th )
+                               iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
       DO iL = 1, nL
         Pl_mu = LegendrePolynomial(iL-1, costh) * wa_cos_theta(iTh)
@@ -386,11 +426,9 @@ SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
                               lam2(idx) * Int_R2(iTrueCase, iL) + &
                               lam3(idx) * Int_R3(iTrueCase, iL)
       END DO
+    ! factors of 1/2 and 3/2 to match Bruenn (i.e. ((iL-1) + 0.5d0))
+      Phout(:, iL) = Phout(:, iL) * conv_fac * ((iL-1) + 0.5d0)
     END DO
-
-    ! factors of 1/2 and 3/2 to match Bruenn and then factor of two to match thornado convention?
-    Phout(:,1) = Phout(:,1) * conv_fac * 0.5d0 * 2.0d0
-    Phout(:,2) = Phout(:,2) * conv_fac * 1.5d0 * 2.0d0
 
   END SUBROUTINE CalculateAllPhout
 
@@ -408,7 +446,7 @@ SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
 
     ! 1. Get the raw distinct R components for this specific angle/energy
     CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
-                                      iE1, iE3, iTh, R1_th, R2_th, R3_th )
+                             iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
     ! 2. Safely initialize Rout
     Rout = 0.0d0
@@ -525,20 +563,20 @@ SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
     IF (Delta < 1.0d-10) RETURN   ! pathological collinear case
 
     ! --- k (Guo Eq. 5): diverges at forward scattering mu=1 ---
-    IF (1.0d0 - costh < 1.0d-10) RETURN   ! mu -> 1: E_minus -> inf, no phase space
-    
+    IF (1.0d0 - costh < 1.0d-10) RETURN
+
     ! There are nDistinctCases different cases:
     CALL SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPairDistinct)
     DO iCase=1,nDistinctCases
       
       iTrueCase = ChosenToTrueCaseMap(iCase)     
       m2        = MassPairDistinct(iTrueCase,1)
-      m4        = MassPairDistinct(iTrueCase,1)
+      m4        = MassPairDistinct(iTrueCase,2)
 
       Q = 0.5d0 * (m4**2 - m2**2)
       k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
       disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 4
-      IF (disc < 0.0d0) RETURN
+      IF (disc < 0.0d0) CYCLE
 
       xMu_l2 = ChemPotPairDistinct(iTrueCase,1)
       xMu_l4 = ChemPotPairDistinct(iTrueCase,2)
@@ -552,5 +590,114 @@ SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
 
   END SUBROUTINE CalculateDistinctI0I1I2
 
+  SUBROUTINE CalculateAllPhi0_collinear( iE1, E1, xT, Mu_e, Mu_mu, Phi0 )
+
+    INTEGER,  INTENT(IN)  :: iE1
+    REAL(DP), INTENT(IN)  :: E1, xT, Mu_e, Mu_mu
+    REAL(DP), INTENT(OUT) :: Phi0(iProcessMax - iProcessMin + 1)
+
+    INTEGER  :: iE2, iProcess, iCase, iTrueCase, idx
+    REAL(DP) :: E2, wE2, xMu_l2, xMu_l4, f2, f4, occ, xnode
+    REAL(DP) :: val_H0I, val_H0II
+    REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
+    REAL(DP) :: integrand0I(nDistinctCasesMax), integrand0II(nDistinctCasesMax)
+
+    integrand0I  = 0.0d0
+    integrand0II = 0.0d0
+    CALL SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPairDistinct)
+
+    DO iCase = 1, nDistinctCases
+      iTrueCase = ChosenToTrueCaseMap(iCase)
+
+      xMu_l2 = ChemPotPairDistinct(iTrueCase,1)
+      xMu_l4 = ChemPotPairDistinct(iTrueCase,2)
+
+      ! ================================================================
+      ! PANEL 1: [0, E1] -- finite, use Gauss-Legendre.
+      ! Affine-map the preallocated canonical [-1,1] grid to [0,E1].
+      ! E2 = (E1/2)*(x_ref + 1),  weight scaled by (E1/2).
+      ! ================================================================
+      DO iE2 = 1, nE2_Lepton
+        E2  = 0.5d0 * E1 * ( xa_GLeg_ref(iE2) + 1.0d0 )
+        wE2 = 0.5d0 * E1 * wa_GLeg_ref(iE2)
+
+        CALL CalculateCollinearH0(E1, E2, val_H0I, val_H0II)
+
+        f2 = FD(E2, xMu_l2, xT)
+        IF (ABS(xMu_l2 - xMu_l4) < 1.0d-10) THEN
+          f4 = f2
+        ELSE
+          f4 = FD(E2, xMu_l4, xT)
+        ENDIF
+        occ = f2 * (1.0d0 - f4)
+
+        integrand0I(iTrueCase)  = integrand0I(iTrueCase)  + wE2 * occ * val_H0I
+        integrand0II(iTrueCase) = integrand0II(iTrueCase) + wE2 * occ * val_H0II
+      ENDDO
+
+      ! ================================================================
+      ! PANEL 2: [E1, infinity) -- semi-infinite, use Gauss-Laguerre.
+      ! Map raw GLag nodes (weight e^{-x}) via E2 = E1 + x*T.
+      ! The built-in e^{-x} must be undone (multiply by e^{+x}) since the
+      ! true integrand is f2*(1-f4)*H0, not a pure exponential; xT is the
+      ! dE2 = xT dx Jacobian.
+      ! ================================================================
+      DO iE2 = 1, nE2_Lepton
+        xnode = xa_GLag(iE2)
+        E2    = E1 + xnode * xT
+        wE2   = wa_GLag(iE2) * EXP(xnode) * xT
+
+        CALL CalculateCollinearH0(E1, E2, val_H0I, val_H0II)
+
+        f2 = FD(E2, xMu_l2, xT)
+        IF (ABS(xMu_l2 - xMu_l4) < 1.0d-10) THEN
+          f4 = f2
+        ELSE
+          f4 = FD(E2, xMu_l4, xT)
+        ENDIF
+        occ = f2 * (1.0d0 - f4)
+
+        integrand0I(iTrueCase)  = integrand0I(iTrueCase)  + wE2 * occ * val_H0I
+        integrand0II(iTrueCase) = integrand0II(iTrueCase) + wE2 * occ * val_H0II
+      ENDDO
+
+    ENDDO
+
+    DO iProcess = iProcessMin, iProcessMax
+      idx = iProcess - iProcessMin + 1
+      iTrueCase = iDistinctMap(iProcess)
+
+      Phi0(idx) = lam1(idx) * integrand0I(iTrueCase) + &
+                  lam2(idx) * integrand0II(iTrueCase)
+    END DO
+
+    Phi0(:) = Phi0(:) / E1**4 * 4066026.8989943061
+
+  END SUBROUTINE CalculateAllPhi0_collinear
+
+  SUBROUTINE CalculateAllPhoutGeneral_collinear( iE1, E1, xT, Mu_e, Mu_mu, Phout, nL )
+    
+    INTEGER , INTENT(IN)  :: iE1
+    REAL(DP), INTENT(IN)  :: E1, xT, Mu_e, Mu_mu
+    REAL(DP), INTENT(OUT) :: Phout(iProcessMax - iProcessMin + 1, nL)
+    INTEGER , INTENT(IN)  :: nL
+
+    REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
+    REAL(DP) :: integrand0I(nDistinctCasesMax), integrand0II(nDistinctCasesMax)
+    REAL(DP) :: Phi0(iProcessMax - iProcessMin + 1)
+    INTEGER  :: iL
+    
+    CALL CalculateAllPhi0_collinear( iE1, E1, xT, Mu_e, Mu_mu, Phi0 )
+
+    Phout(:,1) = Phi0(:) * 0.5d0
+    DO iL = 2, nL
+      ! Here you have to reconstruct the kernel using eq. 42 from Mezzacappa & Bruenn 1993, 
+      ! and then integrate over angle to get all other Phis. My guess is that from Phi0 you can
+      ! directly calculate all Phis perhaps without having to do the Theta loop but maybe not.
+      ! Don't have time now to implement this. Phi0 should be enough.
+      Phout(:,iL) = 0.0d0
+    ENDDO
+
+  END SUBROUTINE CalculateAllPhoutGeneral_collinear
 
 END MODULE wlGeneralLeptonScatteringModuleThornadoInterface

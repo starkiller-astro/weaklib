@@ -366,6 +366,9 @@ PROGRAM wlTestGeneralKernelVsTable
         CALL ProcessIndexFromReactionString( process_string, iProcess)
         CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
+        ! Multiply by 4*pi to match what is done for the interpolated table
+        Phout(:) = 4.0d0 * pi * Phout(:)
+        Phin(:)  = 4.0d0 * pi * Phin(:)
         Phi0Out_General_nue    (ii,jj,i) = Phin (1)
         Phi0Out_General_nue    (jj,ii,i) = Phout(1)
         Phi1Out_General_nue    (ii,jj,i) = Phin (2)
@@ -375,6 +378,9 @@ PROGRAM wlTestGeneralKernelVsTable
         CALL ProcessIndexFromReactionString( process_string, iProcess)
         CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
+        ! Multiply by 4*pi to match what is done for the interpolated table
+        Phout(:) = 4.0d0 * pi * Phout(:)
+        Phin(:)  = 4.0d0 * pi * Phin(:)
         Phi0Out_General_nuebar (ii,jj,i) = Phin (1)
         Phi0Out_General_nuebar (jj,ii,i) = Phout(1)
         Phi1Out_General_nuebar (ii,jj,i) = Phin (2)
@@ -384,6 +390,9 @@ PROGRAM wlTestGeneralKernelVsTable
         CALL ProcessIndexFromReactionString( process_string, iProcess)
         CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
+        ! Multiply by 4*pi to match what is done for the interpolated table
+        Phout(:) = 4.0d0 * pi * Phout(:)
+        Phin(:)  = 4.0d0 * pi * Phin(:)
         Phi0Out_General_numt   (ii,jj,i) = Phin (1)
         Phi0Out_General_numt   (jj,ii,i) = Phout(1)
         Phi1Out_General_numt   (ii,jj,i) = Phin (2)
@@ -393,6 +402,9 @@ PROGRAM wlTestGeneralKernelVsTable
         CALL ProcessIndexFromReactionString( process_string, iProcess)
         CALL CalculatePhoutPhin( E1, E3, Inte_T(i) * kmev, Inte_Mue(i), Inte_Mue(i), me_loc, me_loc, &
                                 iProcess, Phout(:), Phin(:), nL, nTheta_in=nTheta )
+        ! Multiply by 4*pi to match what is done for the interpolated table
+        Phout(:) = 4.0d0 * pi * Phout(:)
+        Phin(:)  = 4.0d0 * pi * Phin(:)
         Phi0Out_General_numtbar(ii,jj,i) = Phin (1)
         Phi0Out_General_numtbar(jj,ii,i) = Phout(1)
         Phi1Out_General_numtbar(ii,jj,i) = Phin (2)

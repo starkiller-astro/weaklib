@@ -142,7 +142,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
     OPEN(UNIT=123, FILE=trim(adjustl(ThermoConditionsName)), STATUS='OLD', ACTION='READ')
     READ(123,*) nThermoPoints
     READ(123,*)
-    ! nThermoPoints = 10
+    nThermoPoints = 10
 
     ALLOCATE(Inte_T (nThermoPoints) , Inte_Rho(nThermoPoints), &
              Inte_Ye(nThermoPoints) , Inte_Mue(nThermoPoints))
@@ -411,6 +411,8 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
 
         CALL CalculateAllPhout( ii, jj, E1, E3, Inte_T(i) * kmev, Inte_Mue(i), &
              0.0d0, Phout(:,:), nL )
+        ! Multiply by 4*pi to match what is done for the interpolated table
+        Phout(:,:) = 4.0d0 * pi * Phout(:,:)
 
         Delta_mu = 0.0d0
         exponent = MIN( (E3 - E1 - Delta_mu) / (Inte_T(i) * kmev), 500.0d0 )
@@ -421,6 +423,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
         Phi0Out_General_nue    (jj,ii,i) = Phout(iProcess_nueem,1)
         Phi1Out_General_nue    (ii,jj,i) = Phin (iProcess_nueem,2)
         Phi1Out_General_nue    (jj,ii,i) = Phout(iProcess_nueem,2)
+        IF (ii == jj) WRITE(*,*) Phi0Out_Table_nue(ii,jj,i) / Phi0Out_General_nue(ii,jj,i)
 
         !'nu_bar_e + e- -> nu_bar_e + e-'
         Phi0Out_General_nuebar (ii,jj,i) = Phin (iProcess_nuebem,1)
@@ -474,7 +477,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   CALL SYSTEM_CLOCK(count_end)
   t_General = REAL(count_end - count_start) / REAL(count_rate)
 
-  WRITE(*,*) 't_Table, t_General', t_Table, t_General
+  WRITE(*,*) 't_Table, t_General, t_General/t_Table', t_Table, t_General, t_General/t_Table
 
   ! --- Output Routine ---
   OPEN(UNIT=66, FILE='Bruenn_Table_Phi.dat', STATUS='REPLACE', ACTION='WRITE')
