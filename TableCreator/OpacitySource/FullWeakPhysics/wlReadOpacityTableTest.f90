@@ -68,6 +68,9 @@ PROGRAM wlReadOpacityTableTest
     CALL random_number ( random )
     MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
 
+    !-- Temporary example values
+    T   = 1.402089E+12
+    MuB = 1.034229E+03
     call Test_NNS_Point ( T, MuB, MuB )
   
     end associate !-- T_Min, etc.
@@ -96,8 +99,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 103  !-- 10^10 g cm^-3 
     k_T   =  38  !--  3.0 MeV
     l_Ye  =  13  !-- 0.25
-    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-    call Test_NNS_Point ( T, MuN, MuP )
+!    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+!    call Test_NNS_Point ( T, MuN, MuP )
 
     WRITE (*,*)
     WRITE (*,*) '>>> Condition 2, Figs. 30-31, Bruenn et al. (2020)'
@@ -105,8 +108,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 133  !-- 10^12 g cm^-3 
     k_T   =  51  !-- 10.0 MeV
     l_Ye  =   5  !-- 0.1
-    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-    call Test_NNS_Point ( T, MuN, MuP )
+!    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+!    call Test_NNS_Point ( T, MuN, MuP )
 
     WRITE (*,*)
     WRITE (*,*) '>>> Condition 3, Figs. 30-31, Bruenn et al. (2020)'
@@ -114,8 +117,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 163  !-- 10^14 g cm^-3 
     k_T   =  53  !-- 12.0 MeV
     l_Ye  =  14  !-- 0.27
-    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-    call Test_NNS_Point ( T, MuN, MuP )
+!    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+!    call Test_NNS_Point ( T, MuN, MuP )
 
   END BLOCK BruennFigures
 
@@ -267,6 +270,9 @@ CONTAINS
              Computed_Nu_P_0,  Computed_Nu_P_1,  &
              Computed_NuB_P_0, Computed_NuB_P_1 )
 
+    WRITE (*,*)
+    call TestMax ( Interpolated_Nu_N_0, Computed_Nu_N_0 )
+
     end associate !-- nPointsE
 
     WRITE (*,*)
@@ -389,6 +395,28 @@ CONTAINS
           end select !-- iMoment
         end select !-- iOpacity
 
+        do iE = 1, nPointsE
+          do iEp = 1, nPointsE
+
+            associate &
+              ( Table   =>  OpacityTable % Scat_NNS % Kernel ( iOpacity ) &
+                              % Values ( iEp, iE, iMoment, :, : ), &
+                Offset  =>  OpacityTable % Scat_NNS &
+                              % Offsets ( iOpacity, iMoment ) )
+
+            !-- Interpolate
+
+            CALL LinearInterp2D_2DArray_Point &
+                   ( iT, iMuB, dLogT, dMuB, Offset, Table, &
+                     Interpolated ( iEp, iE ) )
+
+            end associate !-- Table, etc.
+
+          end do !-- iEp
+        end do !-- iE
+
+        !-- Spot check
+
         iEp = 5
         iE  = 7
 
@@ -397,14 +425,6 @@ CONTAINS
                           % Values ( iEp, iE, iMoment, :, : ), &
             Offset  =>  OpacityTable % Scat_NNS &
                           % Offsets ( iOpacity, iMoment ) )
-
-        !-- Interpolate
-
-        CALL LinearInterp2D_2DArray_Point &
-               ( iT, iMuB, dLogT, dMuB, Offset, Table, &
-                 Interpolated ( iEp, iE ) )
-
-        !-- Check Interpolated
 
         WRITE (*,*)
         WRITE (*,'(A15,ES13.6E2)') 'Table 00    = ', &
@@ -514,6 +534,42 @@ CONTAINS
     WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_P_0 ( 5, 7 )  
 
   END SUBROUTINE Compute_NNS_Point
+
+
+  SUBROUTINE TestMax ( Interpolated, Computed )
+
+    USE wlKindModule, ONLY: &
+      dp
+
+    REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
+      Interpolated, &
+      Computed
+
+    INTEGER :: iEp, iE
+    INTEGER, DIMENSION ( 2 ) :: iaMax
+
+    iaMax  =  MAXLOC ( Computed )
+
+    WRITE (*,*) 'maxloc = ', iaMax
+    WRITE (*,'(A15,ES13.6E2)') &
+      'Interpolated = ', Interpolated ( iaMax ( 1 ), iaMax ( 2 ) )  
+    WRITE (*,'(A15,ES13.6E2)') &
+      'Computed = ', Computed ( iaMax ( 1 ), iaMax ( 2 ) )  
+
+    WRITE (*,*)
+    WRITE (*,'(A15,ES13.6E2)') &
+      'I ( 5, 7 ) = ', Interpolated ( 5, 7 )  
+    WRITE (*,'(A15,ES13.6E2)') &
+      'C ( 5, 7 ) = ', Computed ( 5, 7 )  
+
+    WRITE (*,*)
+    iEp = 40
+    WRITE (*,*) 'iEp = ', iEp
+    DO iE = 1, SIZE ( Computed, DIM = 2 )
+      WRITE (*,*) Interpolated ( iEp, iE ), Computed ( iEp, iE )
+    END DO
+
+  END SUBROUTINE TestMax
 
 
 END PROGRAM wlReadOpacityTableTest
