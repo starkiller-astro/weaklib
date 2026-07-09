@@ -69,9 +69,9 @@ PROGRAM wlReadOpacityTableTest
     MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
 
     !-- Temporary example values
-    T   = 1.402089E+12
-    MuB = 1.034229E+03
-    call Test_NNS_Point ( T, MuB, MuB )
+!    T   = 1.402089E+12
+!    MuB = 1.034229E+03
+!    call Test_NNS_Point ( T, MuB, MuB )
   
     end associate !-- T_Min, etc.
     end associate !-- iT 
@@ -117,8 +117,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 163  !-- 10^14 g cm^-3 
     k_T   =  53  !-- 12.0 MeV
     l_Ye  =  14  !-- 0.27
-!    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-!    call Test_NNS_Point ( T, MuN, MuP )
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+    call Test_NNS_Point ( T, MuN, MuP )
 
   END BLOCK BruennFigures
 
@@ -126,7 +126,7 @@ PROGRAM wlReadOpacityTableTest
 CONTAINS
 
 
-  SUBROUTINE SetFluid ( j_Rho, k_T, l_Ye, Rho, TMeV, Ye, MuN, MuP )
+  SUBROUTINE SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
 
     USE wlKindModule, ONLY: &
       dp
@@ -135,7 +135,7 @@ CONTAINS
     USE wlExtNumericalModule, ONLY: epsilon
 
     INTEGER,  INTENT(in)  :: j_Rho, k_T, l_Ye
-    REAL(dp), INTENT(out) :: Rho, TMeV, Ye, MuN, MuP
+    REAL(dp), INTENT(out) :: Rho, T, Ye, MuN, MuP
 
     REAL(dp) :: chem_n, chem_p
 
@@ -164,7 +164,7 @@ CONTAINS
   ! DO k_t = 1, nT
   !   T = OpacityTable % TS % States (iT) % Values (k_t)
   !   TMeV = T * kMeV
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T_MeV  ', k_t, '    ', TMeV
   ! END DO
 
   ! WRITE (*,*)
@@ -177,8 +177,8 @@ CONTAINS
     Rho = OpacityTable % TS % States (iRho) % Values (j_Rho)
     WRITE (*,'(A14,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3) ', j_Rho, '    ', Rho
 
-    TMeV = OpacityTable % TS % States (iT) % Values (k_t)  *  kMev
-    WRITE (*,'(A14,I3.3,A4,ES10.3E2)') '  T (MeV)     ', k_t, '    ', TMeV
+    T = OpacityTable % TS % States (iT) % Values (k_t)
+    WRITE (*,'(A14,I3.3,A4,ES10.3E2)') '  T (K)       ', k_t, '    ', T
 
     Ye = OpacityTable % TS % States (iYe) % Values (l_ye)
     WRITE (*,'(A14,I3.3,A4,ES10.3E2)') ' Ye           ', l_ye, '    ', Ye
@@ -563,7 +563,7 @@ CONTAINS
       'C ( 5, 7 ) = ', Computed ( 5, 7 )  
 
     WRITE (*,*)
-    iEp = 40
+    iEp = 5
     WRITE (*,*) 'iEp = ', iEp
     DO iE = 1, SIZE ( Computed, DIM = 2 )
       WRITE (*,*) Interpolated ( iEp, iE ), Computed ( iEp, iE )
