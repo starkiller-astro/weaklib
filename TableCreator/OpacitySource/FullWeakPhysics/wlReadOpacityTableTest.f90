@@ -37,6 +37,7 @@ PROGRAM wlReadOpacityTableTest
 
   CALL FinalizeHDF( ) 
 
+
   !-- Test random point
 
   TestRandom: BLOCK
@@ -46,6 +47,9 @@ PROGRAM wlReadOpacityTableTest
 
     REAL(dp) :: random
     REAL(dp) :: T, MuB
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> Random ( T, MuB ) point'
 
     CALL random_seed ( )
 
@@ -71,7 +75,132 @@ PROGRAM wlReadOpacityTableTest
 
   END BLOCK TestRandom
 
+
+  !-- Bruenn et al. (2020) figures
+
+  BruennFigures: BLOCK
+
+    USE wlKindModule, ONLY: &
+      dp
+
+    INTEGER  :: j_Rho, k_T, l_Ye 
+    REAL(dp) :: Rho, T, Ye, MuN, MuP 
+
+!    j_Rho = 118 !-- 10^11 g cm^-3 
+!    k_t = 25  !--  0.9 MeV
+!    l_ye = 20  !-- 0.4
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> Condition 1, Figs. 30-31, Bruenn et al. (2020)'
+
+    j_Rho = 103  !-- 10^10 g cm^-3 
+    k_T   =  38  !--  3.0 MeV
+    l_Ye  =  13  !-- 0.25
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+    call Test_NNS_Point ( T, MuN, MuP )
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> Condition 2, Figs. 30-31, Bruenn et al. (2020)'
+
+    j_Rho = 133  !-- 10^12 g cm^-3 
+    k_T   =  51  !-- 10.0 MeV
+    l_Ye  =   5  !-- 0.1
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+    call Test_NNS_Point ( T, MuN, MuP )
+
+    WRITE (*,*)
+    WRITE (*,*) '>>> Condition 3, Figs. 30-31, Bruenn et al. (2020)'
+
+    j_Rho = 163  !-- 10^14 g cm^-3 
+    k_T   =  53  !-- 12.0 MeV
+    l_Ye  =  14  !-- 0.27
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+    call Test_NNS_Point ( T, MuN, MuP )
+
+  END BLOCK BruennFigures
+
+
 CONTAINS
+
+
+  SUBROUTINE SetFluid ( j_Rho, k_T, l_Ye, Rho, TMeV, Ye, MuN, MuP )
+
+    USE wlKindModule, ONLY: &
+      dp
+    USE wlExtPhysicalConstantsModule, ONLY: &
+      kMeV, dmnp, mn_wl => mn, mp_wl => mp
+    USE wlExtNumericalModule, ONLY: epsilon
+
+    INTEGER,  INTENT(in)  :: j_Rho, k_T, l_Ye
+    REAL(dp), INTENT(out) :: Rho, TMeV, Ye, MuN, MuP
+
+    REAL(dp) :: chem_n, chem_p
+
+    ASSOCIATE (  &
+       iRho    => OpacityTable % TS % Indices % iRho, &
+       iT      => OpacityTable % TS % Indices % iT, &
+       iYe     => OpacityTable % TS % Indices % iYe, &
+       Indices => OpacityTable % EOSTable % DV % Indices, &
+       DVOffs  => OpacityTable % EOSTable % DV % Offsets, &
+       DVar    => OpacityTable % EOSTable % DV % Variables )
+       ! nRho    => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho) , &
+       ! nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
+       ! nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
+ 
+    WRITE (*,*)
+
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> Rho values'
+  ! DO j_rho = 1, nRho
+  !   rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+  ! END DO
+
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> T values'
+  ! DO k_t = 1, nT
+  !   T = OpacityTable % TS % States (iT) % Values (k_t)
+  !   TMeV = T * kMeV
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+  ! END DO
+
+  ! WRITE (*,*)
+  ! WRITE (*,*) '>>> Ye values'
+  ! DO l_ye = 1, nYe
+  !   ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+  ! END DO
+
+    Rho = OpacityTable % TS % States (iRho) % Values (j_Rho)
+    WRITE (*,'(A14,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3) ', j_Rho, '    ', Rho
+
+    TMeV = OpacityTable % TS % States (iT) % Values (k_t)  *  kMev
+    WRITE (*,'(A14,I3.3,A4,ES10.3E2)') '  T (MeV)     ', k_t, '    ', TMeV
+
+    Ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+    WRITE (*,'(A14,I3.3,A4,ES10.3E2)') ' Ye           ', l_ye, '    ', Ye
+
+    WRITE (*,*)
+
+    chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
+                   Values(j_Rho, k_T, l_Ye) &
+             - DVOffs(Indices % iNeutronChemicalPotential)   &
+             - epsilon
+    MuN  =  chem_n + dmnp + mn_wl  !-- Convert from Chimera to absolute
+    WRITE (*,'(A10,ES10.3E2)') 'MuN (MeV) ', MuN
+
+    chem_p = 10**DVar(Indices % iProtonChemicalPotential) % &
+                   Values(j_Rho, k_T, l_Ye) &
+             - DVOffs(Indices % iProtonChemicalPotential)   &
+             - epsilon
+    MuP  =  chem_p + dmnp + mp_wl  !-- Convert from Chimera to absolute
+    WRITE (*,'(A10,ES10.3E2)') 'MuP (MeV) ', MuP
+
+    WRITE (*,*)
+
+    END ASSOCIATE ! rho-T-Ye
+
+  END SUBROUTINE SetFluid
 
 
   SUBROUTINE Test_NNS_Point ( T, MuN, MuP )
@@ -101,9 +230,9 @@ CONTAINS
       ( nPointsE  =>  OpacityTable % EnergyGrid % nPoints )
 
     WRITE (*,*)
-    WRITE (*,'(A6,ES12.6E2)') 'T   = ', T 
-    WRITE (*,'(A6,ES12.6E2)') 'MuN = ', MuN 
-    WRITE (*,'(A6,ES12.6E2)') 'MuP = ', MuP 
+    WRITE (*,'(A6,ES13.6E2)') 'T   = ', T 
+    WRITE (*,'(A6,ES13.6E2)') 'MuN = ', MuN 
+    WRITE (*,'(A6,ES13.6E2)') 'MuP = ', MuP 
     WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
 
     allocate &
@@ -187,30 +316,30 @@ CONTAINS
 
     WRITE (*,*)
     WRITE (*,'(A15,I4.4)')     '          iT = ', iT 
-    WRITE (*,'(A15,ES12.6E2)') 'T ( iT )     = ', T_Values ( iT )
-    WRITE (*,'(A15,ES12.6E2)') 'T ( iT + 1 ) = ', T_Values ( iT + 1 )
-    WRITE (*,'(A15,ES12.6E2)') '       dLogT = ', dLogT
-    WRITE (*,'(A15,ES12.6E2)') 'T            = ', &
+    WRITE (*,'(A15,ES13.6E2)') 'T ( iT )     = ', T_Values ( iT )
+    WRITE (*,'(A15,ES13.6E2)') 'T ( iT + 1 ) = ', T_Values ( iT + 1 )
+    WRITE (*,'(A15,ES13.6E2)') '       dLogT = ', dLogT
+    WRITE (*,'(A15,ES13.6E2)') 'T            = ', &
           10.d0 ** ( LOG10 ( T_Values ( iT ) )  &
                      +  LOG10 ( T_Values ( iT + 1 ) / T_Values ( iT ) )  &
                         * dLogT )
 
     WRITE (*,*)
     WRITE (*,'(A19,I4.4)')     '            iMuN = ', iMuN 
-    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuN )     = ', MuB_Values ( iMuN )
-    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuN + 1 ) = ', MuB_Values ( iMuN + 1 )
-    WRITE (*,'(A19,ES12.6E2)') '            dMuN = ', dMuN
-    WRITE (*,'(A19,ES12.6E2)') 'MuN              = ', &
+    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuN )     = ', MuB_Values ( iMuN )
+    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuN + 1 ) = ', MuB_Values ( iMuN + 1 )
+    WRITE (*,'(A19,ES13.6E2)') '            dMuN = ', dMuN
+    WRITE (*,'(A19,ES13.6E2)') 'MuN              = ', &
           MuB_Values ( iMuN )  &
           +  ( MuB_Values ( iMuN + 1 )  -  MuB_Values ( iMuN ) )  &
              *  dMuN 
 
     WRITE (*,*)
     WRITE (*,'(A19,I4.4)')     '            iMuP = ', iMuP 
-    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuP )     = ', MuB_Values ( iMuP )
-    WRITE (*,'(A19,ES12.6E2)') 'MuB ( iMuP + 1 ) = ', MuB_Values ( iMuP + 1 )
-    WRITE (*,'(A19,ES12.6E2)') '            dMuP = ', dMuP
-    WRITE (*,'(A19,ES12.6E2)') 'MuP              = ', &
+    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuP )     = ', MuB_Values ( iMuP )
+    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuP + 1 ) = ', MuB_Values ( iMuP + 1 )
+    WRITE (*,'(A19,ES13.6E2)') '            dMuP = ', dMuP
+    WRITE (*,'(A19,ES13.6E2)') 'MuP              = ', &
           MuB_Values ( iMuP )  &
           +  ( MuB_Values ( iMuP + 1 )  -  MuB_Values ( iMuP ) )  &
              *  dMuP 
@@ -260,8 +389,8 @@ CONTAINS
           end select !-- iMoment
         end select !-- iOpacity
 
-        iEp = 15
-        iE  = 25
+        iEp = 5
+        iE  = 7
 
         associate &
           ( Table   =>  OpacityTable % Scat_NNS % Kernel ( iOpacity ) &
@@ -278,15 +407,15 @@ CONTAINS
         !-- Check Interpolated
 
         WRITE (*,*)
-        WRITE (*,'(A15,ES12.6E2)') 'Table 00    = ', &
+        WRITE (*,'(A15,ES13.6E2)') 'Table 00    = ', &
           10.d0 ** ( Table ( iT,   iMuB   ) )  -  Offset    
-        WRITE (*,'(A15,ES12.6E2)') 'Table 10    = ', &
+        WRITE (*,'(A15,ES13.6E2)') 'Table 10    = ', &
           10.d0 ** ( Table ( iT+1, iMuB   ) )  -  Offset    
-        WRITE (*,'(A15,ES12.6E2)') 'Table 01    = ', &
+        WRITE (*,'(A15,ES13.6E2)') 'Table 01    = ', &
           10.d0 ** ( Table ( iT,   iMuB+1 ) )  -  Offset    
-        WRITE (*,'(A15,ES12.6E2)') 'Table 11    = ', &
+        WRITE (*,'(A15,ES13.6E2)') 'Table 11    = ', &
           10.d0 ** ( Table ( iT+1, iMuB+1 ) )  -  Offset    
-        WRITE (*,'(A15,ES12.6E2)') 'Interpolated = ', Interpolated ( iEp, iE )    
+        WRITE (*,'(A15,ES13.6E2)') 'Interpolated = ', Interpolated ( iEp, iE )    
         end associate !-- Table, etc.
 
       end do !-- iMoment
@@ -310,8 +439,8 @@ CONTAINS
       dp
     USE wlExtPhysicalConstantsModule, ONLY: &
       kMeV, dmnp, mn_wl => mn, mp_wl => mp
-  USE scat_n_module_weaklib, ONLY: &
-        init_quad_scat_n
+    USE scat_n_module_weaklib, ONLY: &
+      init_quad_scat_n
 
     REAL(dp), INTENT(in)  :: T, MuN, MuP
     INTEGER,  INTENT(in)  :: nPointsE
@@ -342,9 +471,9 @@ CONTAINS
     chem_p  =  MuP - dmnp - mp_wl
 
     WRITE (*,*)
-    WRITE (*,'(A9,ES12.6E2)') 'TMeV   = ', TMeV
-    WRITE (*,'(A9,ES12.6E2)') 'chem_n = ', chem_n
-    WRITE (*,'(A9,ES12.6E2)') 'chem_p = ', chem_p
+    WRITE (*,'(A9,ES13.6E2)') 'TMeV   = ', TMeV
+    WRITE (*,'(A9,ES13.6E2)') 'chem_n = ', chem_n
+    WRITE (*,'(A9,ES13.6E2)') 'chem_p = ', chem_p
 
     CALL scatnrgn_weaklib &
          ( nPointsE, &
@@ -379,10 +508,10 @@ CONTAINS
             ! phi1_nub_p was saved as phi1_nub_p(e,ep)
 
     WRITE (*,*)
-    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_Nu_N_0  ( 15, 25 )  
-    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_NuB_N_0 ( 15, 25 )  
-    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_Nu_P_0  ( 15, 25 )  
-    WRITE (*,'(A15,ES12.6E2)') 'Computed = ', Computed_NuB_P_0 ( 15, 25 )  
+    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_N_0  ( 5, 7 )  
+    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_N_0 ( 5, 7 )  
+    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_P_0  ( 5, 7 )  
+    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_P_0 ( 5, 7 )  
 
   END SUBROUTINE Compute_NNS_Point
 
