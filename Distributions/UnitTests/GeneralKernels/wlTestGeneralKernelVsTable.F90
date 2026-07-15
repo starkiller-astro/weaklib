@@ -360,7 +360,7 @@ PROGRAM wlTestGeneralKernelVsTable
         E1 = Inte_E % Values(ii)
         E3 = Inte_E % Values(jj)
         me_loc = me
-        me_loc = 0.0d0
+        ! me_loc = 0.0d0
 
         process_string = 'nu_e + e- -> nu_e + e-'
         CALL ProcessIndexFromReactionString( process_string, iProcess)

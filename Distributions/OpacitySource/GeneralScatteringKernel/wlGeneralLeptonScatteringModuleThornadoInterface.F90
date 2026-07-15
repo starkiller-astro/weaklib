@@ -47,6 +47,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: i_mm_em = 6 ! particle 2 is mu- and particle 4 is e-
   INTEGER , PARAMETER      :: i_ep_mp = 7 ! particle 2 is e+  and particle 4 is mu+
   INTEGER , PARAMETER      :: i_mp_ep = 8 ! particle 2 is mu+ and particle 4 is e+
+  INTEGER , PARAMETER      :: i_IMD_1 = 9 ! For IMD you need a new one
 
   INTEGER , DIMENSION(8), PARAMETER :: &
     iABC_m2 = (/ iABC_el, iABC_el, iABC_mu, iABC_mu, &
@@ -348,7 +349,8 @@ CONTAINS
     ! 32) nu_bar_e + e- -> nu_bar_mu + mu-
     CASE(32); iDistinct = i_em_mm
 
-    CASE(33); iDistinct = 0 ! Not sure about this one deal with it later
+    CASE(33); iDistinct = i_IMD_1 ! Not sure about this one deal with it later
+    CASE(34); iDistinct = 0       ! Same as 33 but need to switch nue_bar and nu_mu
 
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
@@ -361,7 +363,7 @@ CONTAINS
 
     INTEGER , INTENT(IN)  :: iE1, iE3
     REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
-    REAL(DP), INTENT(OUT) :: Phout(iProcessMax,nL)
+    REAL(DP), INTENT(OUT) :: Phout(iProcessMax - iProcessMin + 1,nL)
     INTEGER , INTENT(IN)  :: nL
 
     REAL(DP) :: costh, Pl_mu
@@ -422,10 +424,11 @@ CONTAINS
         iTrueCase = iDistinctMap(iProcess)
 
         ! Apply the Lambdas to the integrated values once
-        Phout(iProcess, iL) = lam1(idx) * Int_R1(iTrueCase, iL) + &
-                              lam2(idx) * Int_R2(iTrueCase, iL) + &
-                              lam3(idx) * Int_R3(iTrueCase, iL)
+        Phout(idx, iL) = lam1(idx) * Int_R1(iTrueCase, iL) + &
+                         lam2(idx) * Int_R2(iTrueCase, iL) + &
+                         lam3(idx) * Int_R3(iTrueCase, iL)
       END DO
+      
     ! factors of 1/2 and 3/2 to match Bruenn (i.e. ((iL-1) + 0.5d0))
       Phout(:, iL) = Phout(:, iL) * conv_fac * ((iL-1) + 0.5d0)
     END DO
@@ -491,8 +494,11 @@ CONTAINS
           A_Scat(iE1, iE3, iTh, :), &
           B_Scat(iE1, iE3, iTh, Index2, Index4, :), &
           C_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-          I0(iTrueCase), I1(iTrueCase), I2(iTrueCase), &
+          I0(iCase), I1(iCase), I2(iCase), &
           R1(iTrueCase), R2(iTrueCase), R3(iTrueCase) )
+
+      ! you should add inverse muon decay as a separate case here,
+      ! I don't think we can include it in CalculateDistinctI0I1I2
     ENDDO
 
   END SUBROUTINE CalculateAllR1R2R3

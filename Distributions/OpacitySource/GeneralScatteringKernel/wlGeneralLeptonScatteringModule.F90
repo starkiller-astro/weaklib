@@ -71,6 +71,10 @@ MODULE wlGeneralLeptonScatteringModule
   ! 2 is polylogarithm-based evaluation (Bollig 2018, Chapter V, Section 8)
   ! 3 is Fukushima (2015) rational approximation formulae (fastest)
   INTEGER, PARAMETER  :: CompleteFDIntegralsEvaluationMethod = 3
+  ! Method 1: If you want to integrate directly only call gauleg once
+  LOGICAL                :: GauLegInitialized = .FALSE.
+  INTEGER , PARAMETER    :: nGL_FI = 64
+  REAL(DP), DIMENSION(:) :: xa_FI(nGL_FI), wa_FI(nGL_FI)
 
   !====================================================================
   ! INELASTIC FLAVOR EXCHANGE & CONVERSION (Guo Eq. A3 & A4)
@@ -188,11 +192,6 @@ MODULE wlGeneralLeptonScatteringModule
   INTEGER, PARAMETER  :: nE3_default    = 32   ! GL points for E3 integral in opacity
   INTEGER, PARAMETER  :: nTheta_default = 16   ! GL points for costheta in opacity
   INTEGER, PARAMETER  :: nPhi_default   = 16   ! GL points for costheta in opacity
-
-  ! If you want to integrate directly only call gauleg once
-  LOGICAL                :: GauLegInitialized = .FALSE.
-  INTEGER , PARAMETER    :: nGL_FI = 32
-  REAL(DP), DIMENSION(:) :: xa_FI(nGL_FI), wa_FI(nGL_FI)
 
   PUBLIC :: CalculatePhoutPhin
   PUBLIC :: GeneralScatteringKernel         ! R_out and R_in at single (E1,E3,costheta) point

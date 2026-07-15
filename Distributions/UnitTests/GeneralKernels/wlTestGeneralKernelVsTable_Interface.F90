@@ -104,8 +104,8 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   INTEGER , PARAMETER :: nL = 2
   ! INTEGER , PARAMETER :: iProcessMin = iProcessMin_Default
   ! INTEGER , PARAMETER :: iProcessMax = iProcessMax_Default
-  INTEGER , PARAMETER :: iProcessMin = 1
-  INTEGER , PARAMETER :: iProcessMax = 12
+  INTEGER , PARAMETER :: iProcessMin = 12
+  INTEGER , PARAMETER :: iProcessMax = 24
   REAL(DP) :: Phout(iProcessMax - iProcessMin + 1,nL)
   REAL(DP) :: Phin (iProcessMax - iProcessMin + 1,nL)
   REAL(DP) :: E1, E3, Delta_mu, exponent
