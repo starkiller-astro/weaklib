@@ -1498,8 +1498,8 @@ CONTAINS
 
     INTEGER  :: async_flag
     INTEGER  :: i, j, k, l, ij, i0, j0, SizeE
-    INTEGER  :: iD(SIZE(Alpha)), iT
-    REAL(dp) :: dD(SIZE(Alpha)), dT
+    INTEGER  :: iD(3), iT
+    REAL(dp) :: dD(3), dT
     REAL(dp) :: Interp, SumInterp
     REAL(dp) :: p00, p10, p01, p11
 
@@ -1538,7 +1538,7 @@ CONTAINS
       !END DO
       iT = Index1D_Lin( LogT(k), LogTs )
       dT = ( LogT(k) - LogTs(iT) ) / ( LogTs(iT+1) - LogTs(iT) )
-      DO l = 1, SIZE( Alpha )
+      DO l = 1, 3
         iD(l) = Index1D_Lin( LogD(l,k), LogDs )
         dD(l) = ( LogD(l,k) - LogDs(iD(l)) ) / ( LogDs(iD(l)+1) - LogDs(iD(l)) )
       END DO
@@ -1551,7 +1551,7 @@ CONTAINS
         DO i = 1, SizeE
           IF ( i <= j ) THEN
             SumInterp = 0.0d0
-            DO l = 1, SIZE( Alpha )
+            DO l = 1, 3
               p00 = Table(i,j,iD(l)  ,iT  )
               p10 = Table(i,j,iD(l)+1,iT  )
               p01 = Table(i,j,iD(l)  ,iT+1)
@@ -1582,7 +1582,7 @@ CONTAINS
         END IF
 
         SumInterp = 0.0d0
-        DO l = 1, SIZE( Alpha )
+        DO l = 1, 3
           CALL LinearInterp2D_4DArray_2DAligned_Point &
                  ( i, j, iD(l), iT, dD(l), dT, OS, Table, Interp )
           SumInterp = SumInterp + Alpha(l) * Interp
