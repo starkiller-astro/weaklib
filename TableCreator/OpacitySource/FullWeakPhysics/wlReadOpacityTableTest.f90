@@ -38,45 +38,45 @@ PROGRAM wlReadOpacityTableTest
   CALL FinalizeHDF( ) 
 
 
-  !-- Test random point
+!   !-- Test random point
 
-  TestRandom: BLOCK
+!   TestRandom: BLOCK
 
-    USE wlKindModule, ONLY: &
-      dp
+!     USE wlKindModule, ONLY: &
+!       dp
 
-    REAL(dp) :: random
-    REAL(dp) :: T, MuB
+!     REAL(dp) :: random
+!     REAL(dp) :: T, MuB
 
-    WRITE (*,*)
-    WRITE (*,*) '>>> Random ( T, MuB ) point'
+!     WRITE (*,*)
+!     WRITE (*,*) '>>> Random ( T, MuB ) point'
 
-    CALL random_seed ( )
+!     CALL random_seed ( )
 
-    associate &
-      ( iT_TS     =>  OpacityTable % TS % Indices % iT )
-    associate &
-      ( T_Min     =>  OpacityTable % TS % minValues ( iT_TS ), &
-        T_Max     =>  OpacityTable % TS % maxValues ( iT_TS ), &
-        MuB_Min   =>  OpacityTable % MuBGrid % minValue, &
-        MuB_Max   =>  OpacityTable % MuBGrid % maxValue )
+!     associate &
+!       ( iT_TS     =>  OpacityTable % TS % Indices % iT )
+!     associate &
+!       ( T_Min     =>  OpacityTable % TS % minValues ( iT_TS ), &
+!         T_Max     =>  OpacityTable % TS % maxValues ( iT_TS ), &
+!         MuB_Min   =>  OpacityTable % MuBGrid % minValue, &
+!         MuB_Max   =>  OpacityTable % MuBGrid % maxValue )
 
-    CALL random_number ( random )
-    T  =  10.d0 ** ( LOG10 ( T_Min )  &
-                     +  random  *  ( LOG10 ( T_Max )  -  LOG10 ( T_Min ) ) ) 
+!     CALL random_number ( random )
+!     T  =  10.d0 ** ( LOG10 ( T_Min )  &
+!                      +  random  *  ( LOG10 ( T_Max )  -  LOG10 ( T_Min ) ) ) 
 
-    CALL random_number ( random )
-    MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
+!     CALL random_number ( random )
+!     MuB  =  MuB_Min  +  random * ( MuB_Max - MuB_Min )
 
-    !-- Temporary example values
-!    T   = 1.402089E+12
-!    MuB = 1.034229E+03
-!    call Test_NNS_Point ( T, MuB, MuB )
+!     !-- Temporary example values
+! !    T   = 1.402089E+12
+! !    MuB = 1.034229E+03
+! !    call Test_NNS_Point ( T, MuB, MuB )
   
-    end associate !-- T_Min, etc.
-    end associate !-- iT 
+!     end associate !-- T_Min, etc.
+!     end associate !-- iT 
 
-  END BLOCK TestRandom
+!   END BLOCK TestRandom
 
 
   !-- Bruenn et al. (2020) figures
@@ -99,8 +99,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 103  !-- 10^10 g cm^-3 
     k_T   =  38  !--  3.0 MeV
     l_Ye  =  13  !-- 0.25
-!    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-!    call Test_NNS_Point ( T, MuN, MuP )
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+    call Test_NNS_Point ( T, MuN, MuP )
 
     WRITE (*,*)
     WRITE (*,*) '>>> Condition 2, Figs. 30-31, Bruenn et al. (2020)'
@@ -108,8 +108,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 133  !-- 10^12 g cm^-3 
     k_T   =  51  !-- 10.0 MeV
     l_Ye  =   5  !-- 0.1
-!    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-!    call Test_NNS_Point ( T, MuN, MuP )
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+    call Test_NNS_Point ( T, MuN, MuP )
 
     WRITE (*,*)
     WRITE (*,*) '>>> Condition 3, Figs. 30-31, Bruenn et al. (2020)'
@@ -179,11 +179,10 @@ CONTAINS
 
     T = OpacityTable % TS % States (iT) % Values (k_t)
     WRITE (*,'(A14,I3.3,A4,ES10.3E2)') '  T (K)       ', k_t, '    ', T
+    WRITE (*,'(A14,I3.3,A4,ES10.3E2)') '  T (MeV)     ', k_t, '    ', T * kMeV
 
     Ye = OpacityTable % TS % States (iYe) % Values (l_ye)
     WRITE (*,'(A14,I3.3,A4,ES10.3E2)') ' Ye           ', l_ye, '    ', Ye
-
-    WRITE (*,*)
 
     chem_n = 10**DVar(Indices % iNeutronChemicalPotential) % &
                    Values(j_Rho, k_T, l_Ye) &
@@ -198,8 +197,6 @@ CONTAINS
              - epsilon
     MuP  =  chem_p + dmnp + mp_wl  !-- Convert from Chimera to absolute
     WRITE (*,'(A10,ES10.3E2)') 'MuP (MeV) ', MuP
-
-    WRITE (*,*)
 
     END ASSOCIATE ! rho-T-Ye
 
@@ -230,13 +227,14 @@ CONTAINS
       Computed_NuB_P_0, Computed_NuB_P_1
 
     associate &
-      ( nPointsE  =>  OpacityTable % EnergyGrid % nPoints )
+      ( nPointsE  =>  OpacityTable % EnergyGrid % nPoints, &
+        E_Edges => OpacityTable % EnergyGrid % Edge ) 
 
-    WRITE (*,*)
-    WRITE (*,'(A6,ES13.6E2)') 'T   = ', T 
-    WRITE (*,'(A6,ES13.6E2)') 'MuN = ', MuN 
-    WRITE (*,'(A6,ES13.6E2)') 'MuP = ', MuP 
-    WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
+    ! WRITE (*,*)
+    ! WRITE (*,'(A6,ES13.6E2)') 'T   = ', T 
+    ! WRITE (*,'(A6,ES13.6E2)') 'MuN = ', MuN 
+    ! WRITE (*,'(A6,ES13.6E2)') 'MuP = ', MuP 
+    ! WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
 
     allocate &
       ( Interpolated_Nu_N_0  ( nPointsE, nPointsE ), &
@@ -270,12 +268,9 @@ CONTAINS
              Computed_Nu_P_0,  Computed_Nu_P_1,  &
              Computed_NuB_P_0, Computed_NuB_P_1 )
 
-    WRITE (*,*)
-    call TestMax ( Interpolated_Nu_N_0, Computed_Nu_N_0 )
+    call TestMeanFreePath ( Interpolated_Nu_N_0, Computed_Nu_N_0, E_Edges, nPointsE )
 
     end associate !-- nPointsE
-
-    WRITE (*,*)
 
   END SUBROUTINE Test_NNS_Point
 
@@ -318,37 +313,37 @@ CONTAINS
     CALL GetIndexAndDelta_Lin ( MuN, MuB_Values, iMuN, dMuN )
     CALL GetIndexAndDelta_Lin ( MuP, MuB_Values, iMuP, dMuP )
 
-    !-- Check Index and Delta values
+    ! !-- Check Index and Delta values
 
-    WRITE (*,*)
-    WRITE (*,'(A15,I4.4)')     '          iT = ', iT 
-    WRITE (*,'(A15,ES13.6E2)') 'T ( iT )     = ', T_Values ( iT )
-    WRITE (*,'(A15,ES13.6E2)') 'T ( iT + 1 ) = ', T_Values ( iT + 1 )
-    WRITE (*,'(A15,ES13.6E2)') '       dLogT = ', dLogT
-    WRITE (*,'(A15,ES13.6E2)') 'T            = ', &
-          10.d0 ** ( LOG10 ( T_Values ( iT ) )  &
-                     +  LOG10 ( T_Values ( iT + 1 ) / T_Values ( iT ) )  &
-                        * dLogT )
+    ! WRITE (*,*)
+    ! WRITE (*,'(A15,I4.4)')     '          iT = ', iT 
+    ! WRITE (*,'(A15,ES13.6E2)') 'T ( iT )     = ', T_Values ( iT )
+    ! WRITE (*,'(A15,ES13.6E2)') 'T ( iT + 1 ) = ', T_Values ( iT + 1 )
+    ! WRITE (*,'(A15,ES13.6E2)') '       dLogT = ', dLogT
+    ! WRITE (*,'(A15,ES13.6E2)') 'T            = ', &
+    !       10.d0 ** ( LOG10 ( T_Values ( iT ) )  &
+    !                  +  LOG10 ( T_Values ( iT + 1 ) / T_Values ( iT ) )  &
+    !                     * dLogT )
 
-    WRITE (*,*)
-    WRITE (*,'(A19,I4.4)')     '            iMuN = ', iMuN 
-    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuN )     = ', MuB_Values ( iMuN )
-    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuN + 1 ) = ', MuB_Values ( iMuN + 1 )
-    WRITE (*,'(A19,ES13.6E2)') '            dMuN = ', dMuN
-    WRITE (*,'(A19,ES13.6E2)') 'MuN              = ', &
-          MuB_Values ( iMuN )  &
-          +  ( MuB_Values ( iMuN + 1 )  -  MuB_Values ( iMuN ) )  &
-             *  dMuN 
+    ! WRITE (*,*)
+    ! WRITE (*,'(A19,I4.4)')     '            iMuN = ', iMuN 
+    ! WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuN )     = ', MuB_Values ( iMuN )
+    ! WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuN + 1 ) = ', MuB_Values ( iMuN + 1 )
+    ! WRITE (*,'(A19,ES13.6E2)') '            dMuN = ', dMuN
+    ! WRITE (*,'(A19,ES13.6E2)') 'MuN              = ', &
+    !       MuB_Values ( iMuN )  &
+    !       +  ( MuB_Values ( iMuN + 1 )  -  MuB_Values ( iMuN ) )  &
+    !          *  dMuN 
 
-    WRITE (*,*)
-    WRITE (*,'(A19,I4.4)')     '            iMuP = ', iMuP 
-    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuP )     = ', MuB_Values ( iMuP )
-    WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuP + 1 ) = ', MuB_Values ( iMuP + 1 )
-    WRITE (*,'(A19,ES13.6E2)') '            dMuP = ', dMuP
-    WRITE (*,'(A19,ES13.6E2)') 'MuP              = ', &
-          MuB_Values ( iMuP )  &
-          +  ( MuB_Values ( iMuP + 1 )  -  MuB_Values ( iMuP ) )  &
-             *  dMuP 
+    ! WRITE (*,*)
+    ! WRITE (*,'(A19,I4.4)')     '            iMuP = ', iMuP 
+    ! WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuP )     = ', MuB_Values ( iMuP )
+    ! WRITE (*,'(A19,ES13.6E2)') 'MuB ( iMuP + 1 ) = ', MuB_Values ( iMuP + 1 )
+    ! WRITE (*,'(A19,ES13.6E2)') '            dMuP = ', dMuP
+    ! WRITE (*,'(A19,ES13.6E2)') 'MuP              = ', &
+    !       MuB_Values ( iMuP )  &
+    !       +  ( MuB_Values ( iMuP + 1 )  -  MuB_Values ( iMuP ) )  &
+    !          *  dMuP 
 
     associate & 
       ( Table_NNS  =>  OpacityTable % Scat_NNS )
@@ -415,28 +410,28 @@ CONTAINS
           end do !-- iEp
         end do !-- iE
 
-        !-- Spot check
+        ! !-- Spot check
 
-        iEp = 5
-        iE  = 7
+        ! iEp = 5
+        ! iE  = 7
 
-        associate &
-          ( Table   =>  OpacityTable % Scat_NNS % Kernel ( iOpacity ) &
-                          % Values ( iEp, iE, iMoment, :, : ), &
-            Offset  =>  OpacityTable % Scat_NNS &
-                          % Offsets ( iOpacity, iMoment ) )
+        ! associate &
+        !   ( Table   =>  OpacityTable % Scat_NNS % Kernel ( iOpacity ) &
+        !                   % Values ( iEp, iE, iMoment, :, : ), &
+        !     Offset  =>  OpacityTable % Scat_NNS &
+        !                   % Offsets ( iOpacity, iMoment ) )
 
-        WRITE (*,*)
-        WRITE (*,'(A15,ES13.6E2)') 'Table 00    = ', &
-          10.d0 ** ( Table ( iT,   iMuB   ) )  -  Offset    
-        WRITE (*,'(A15,ES13.6E2)') 'Table 10    = ', &
-          10.d0 ** ( Table ( iT+1, iMuB   ) )  -  Offset    
-        WRITE (*,'(A15,ES13.6E2)') 'Table 01    = ', &
-          10.d0 ** ( Table ( iT,   iMuB+1 ) )  -  Offset    
-        WRITE (*,'(A15,ES13.6E2)') 'Table 11    = ', &
-          10.d0 ** ( Table ( iT+1, iMuB+1 ) )  -  Offset    
-        WRITE (*,'(A15,ES13.6E2)') 'Interpolated = ', Interpolated ( iEp, iE )    
-        end associate !-- Table, etc.
+        ! WRITE (*,*)
+        ! WRITE (*,'(A15,ES13.6E2)') 'Table 00    = ', &
+        !   10.d0 ** ( Table ( iT,   iMuB   ) )  -  Offset    
+        ! WRITE (*,'(A15,ES13.6E2)') 'Table 10    = ', &
+        !   10.d0 ** ( Table ( iT+1, iMuB   ) )  -  Offset    
+        ! WRITE (*,'(A15,ES13.6E2)') 'Table 01    = ', &
+        !   10.d0 ** ( Table ( iT,   iMuB+1 ) )  -  Offset    
+        ! WRITE (*,'(A15,ES13.6E2)') 'Table 11    = ', &
+        !   10.d0 ** ( Table ( iT+1, iMuB+1 ) )  -  Offset    
+        ! WRITE (*,'(A15,ES13.6E2)') 'Interpolated = ', Interpolated ( iEp, iE )    
+        ! end associate !-- Table, etc.
 
       end do !-- iMoment
     end do !-- iOpacity
@@ -490,10 +485,10 @@ CONTAINS
     chem_n  =  MuN - dmnp - mn_wl
     chem_p  =  MuP - dmnp - mp_wl
 
-    WRITE (*,*)
-    WRITE (*,'(A9,ES13.6E2)') 'TMeV   = ', TMeV
-    WRITE (*,'(A9,ES13.6E2)') 'chem_n = ', chem_n
-    WRITE (*,'(A9,ES13.6E2)') 'chem_p = ', chem_p
+    ! WRITE (*,*)
+    ! WRITE (*,'(A9,ES13.6E2)') 'TMeV   = ', TMeV
+    ! WRITE (*,'(A9,ES13.6E2)') 'chem_n = ', chem_n
+    ! WRITE (*,'(A9,ES13.6E2)') 'chem_p = ', chem_p
 
     CALL scatnrgn_weaklib &
          ( nPointsE, &
@@ -527,49 +522,60 @@ CONTAINS
     Computed_NuB_P_1  =  1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
             ! phi1_nub_p was saved as phi1_nub_p(e,ep)
 
-    WRITE (*,*)
-    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_N_0  ( 5, 7 )  
-    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_N_0 ( 5, 7 )  
-    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_P_0  ( 5, 7 )  
-    WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_P_0 ( 5, 7 )  
+    ! WRITE (*,*)
+    ! WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_N_0  ( 5, 7 )  
+    ! WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_N_0 ( 5, 7 )  
+    ! WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_P_0  ( 5, 7 )  
+    ! WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_NuB_P_0 ( 5, 7 )  
 
   END SUBROUTINE Compute_NNS_Point
 
 
-  SUBROUTINE TestMax ( Interpolated, Computed )
+  SUBROUTINE TestMeanFreePath ( Interpolated_0, Computed_0, E_Edges, nPointsE )
 
     USE wlKindModule, ONLY: &
       dp
 
     REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
-      Interpolated, &
-      Computed
+      Interpolated_0, &
+      Computed_0
+    REAL(dp), DIMENSION ( : ), INTENT(in) :: &
+      E_Edges
+    INTEGER, INTENT(in) :: nPointsE
 
     INTEGER :: iEp, iE
-    INTEGER, DIMENSION ( 2 ) :: iaMax
+    REAL(dp) :: TwoPi
+    REAL(dp), DIMENSION( nPointsE ) :: E_Vol, invMFP_I, invMFP_C
+    
+    TwoPi  =  2.0d0 * acos ( -1.0d0 )
 
-    iaMax  =  MAXLOC ( Computed )
+    DO iE = 1, nPointsE
+      E_Vol ( iE )  =  ( E_Edges ( iE + 1 ) ** 3  -  E_Edges ( iE ) ** 3 ) &
+                       / 3.d0 
+    END DO !-- iE
 
-    WRITE (*,*) 'maxloc = ', iaMax
-    WRITE (*,'(A15,ES13.6E2)') &
-      'Interpolated = ', Interpolated ( iaMax ( 1 ), iaMax ( 2 ) )  
-    WRITE (*,'(A15,ES13.6E2)') &
-      'Computed = ', Computed ( iaMax ( 1 ), iaMax ( 2 ) )  
-
-    WRITE (*,*)
-    WRITE (*,'(A15,ES13.6E2)') &
-      'I ( 5, 7 ) = ', Interpolated ( 5, 7 )  
-    WRITE (*,'(A15,ES13.6E2)') &
-      'C ( 5, 7 ) = ', Computed ( 5, 7 )  
-
-    WRITE (*,*)
-    iEp = 5
-    WRITE (*,*) 'iEp = ', iEp
-    DO iE = 1, SIZE ( Computed, DIM = 2 )
-      WRITE (*,*) Interpolated ( iEp, iE ), Computed ( iEp, iE )
+    invMFP_I  =  0.d0
+    invMFP_C  =  0.d0
+    DO iE = 1, nPointsE
+      DO iEp = 1, nPointsE
+        invMFP_I ( iE )  =  invMFP_I ( iE )  &
+                            +  E_Vol ( iEp )  *  Interpolated_0 ( iEp, iE )
+        invMFP_C ( iE )  =  invMFP_C ( iE )  &
+                            +  E_Vol ( iEp )  *  Computed_0 ( iEp, iE )
+      END DO
+      !-- Factor of 2 to undo thornado legendre moment convention
+      !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
+      invMFP_I ( iE )  =  2.d0 * TwoPi * invMFP_I ( iE )
+      invMFP_C ( iE )  =  2.d0 * TwoPi * invMFP_C ( iE )
     END DO
 
-  END SUBROUTINE TestMax
+    WRITE (*,*)
+    WRITE (*,*) 'Interpolated, Computed'
+    DO iE = 1, nPointsE
+      WRITE (*,'(ES13.6E2,ES13.6E2)') invMFP_I ( iE ), invMFP_C ( iE )      
+    END DO
+
+  END SUBROUTINE TestMeanFreePath
 
 
 END PROGRAM wlReadOpacityTableTest
