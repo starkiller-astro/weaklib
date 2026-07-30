@@ -3,6 +3,7 @@ wlSemiLeptonicOpacityModule2D.o: \
   wlEosConstantsModule.o
 
 wlSemiLeptonicOpacityIntegrationModule2D.o: \
+  wlSemiLeptonicOpacityModule2D.o \
   wlKindModule.o \
   wlEosConstantsModule.o
 

@@ -1394,6 +1394,8 @@ CONTAINS
     REAL(DP) :: F0_etap, F1_etap, F2_etap
     REAL(DP) :: fg, df0_dz
 
+    I0 = 0.0d0; I1 = 0.0d0; I2 = 0.0d0
+
     ! --- Kinematic parameters ---
     ! Notice that eta_prime = eta - (E1 - E3 + xMu_l2 - xMu_l4) / T
     eta       = xMu_l2 / T
@@ -1611,11 +1613,11 @@ CONTAINS
     REAL(DP) :: C1_f
 
     ! Guo Eq. A6c
-    C1_f = E1**3*E3*(1.0d0 - mu)**2                                                 &
-        * (E1**2 - 2.0d0*E1*E3*mu + E3**2 * (-0.5d0 + 1.5d0*mu**2) )                   &
+    C1_f = E1**3*E3*(1.0d0 - mu)**2                                                &
+        * (E1**2 - 2.0d0*E1*E3*mu + E3**2 * (-0.5d0 + 1.5d0*mu**2) )               &
         + Q*E1*(1.0d0 - mu)                                                        &
-        * ( E1**3 - E1**2*E3*mu + E1*E3**2*(-2.0d0 + mu**2) + E3**3*mu )               &
-        + Q**2 * ( E1**2*mu - E1*E3*(1.5d0 + 0.5d0*mu**2) + E3**2*mu )                 &
+        * ( E1**3 - E1**2*E3*mu + E1*E3**2*(-2.0d0 + mu**2) + E3**3*mu )           &
+        + Q**2 * ( E1**2*mu - E1*E3*(1.5d0 + 0.5d0*mu**2) + E3**2*mu )             &
         + 0.5d0*E1*E3*(1.0d0 - mu**2) * (E1**2 - 2.0d0*E1*E3*mu + E3**2) * m2**2
 
   END FUNCTION C1_f

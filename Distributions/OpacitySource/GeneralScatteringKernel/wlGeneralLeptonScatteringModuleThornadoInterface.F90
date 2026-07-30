@@ -57,7 +57,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
                  iABC_mu, iABC_el, iABC_mu, iABC_el /)
 
   INTEGER                             :: iDistinctMap(iProcessMax_Default)
-  REAL(DP), ALLOCATABLE, DIMENSION(:) :: ChosenToTrueCaseMap(:)
+  INTEGER , ALLOCATABLE, DIMENSION(:) :: ChosenToTrueCaseMap(:)
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: lam1(:), lam2(:), lam3(:)
 
   REAL(DP) :: conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
@@ -66,6 +66,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   PUBLIC :: FinalizeGeneralScatteringKernels
   PUBLIC :: CalculateAllRout
   PUBLIC :: CalculateAllPhout
+  PUBLIC :: CalculateAllRoutIntegrated
 
 CONTAINS
 
@@ -139,29 +140,29 @@ CONTAINS
           B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
           B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
 
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, ElectronMass**2 - MuonMass**2 )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, ElectronMass**2 - MuonMass**2 )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.5d0*(MuonMass**2 - ElectronMass**2) )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.5d0*(MuonMass**2 - ElectronMass**2) )
 
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, MuonMass**2 - ElectronMass**2 )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, MuonMass**2 - ElectronMass**2 )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.5d0*(ElectronMass**2 - MuonMass**2) )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.5d0*(ElectronMass**2 - MuonMass**2) )
  
           B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
           B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
   
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, ElectronMass**2 )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass )
           C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, ElectronMass, ElectronMass )
 
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, ElectronMass**2 - MuonMass**2, ElectronMass**2 )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, ElectronMass**2 - MuonMass**2, ElectronMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.5d0*(MuonMass**2 - ElectronMass**2), ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.5d0*(MuonMass**2 - ElectronMass**2), ElectronMass )
           C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, ElectronMass, MuonMass )
 
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, MuonMass**2 - ElectronMass**2, MuonMass**2 )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, MuonMass**2 - ElectronMass**2, MuonMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.5d0*(ElectronMass**2 - MuonMass**2), MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.5d0*(ElectronMass**2 - MuonMass**2), MuonMass )
           C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, MuonMass, ElectronMass ) ! Same as the one above actually
  
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass**2 )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, MuonMass**2 )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, MuonMass )
           C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 3) = C3_f(  E1,  E3, costh, MuonMass, MuonMass )
 
           ! Might as well build Delta into A, B, C while we are here
@@ -220,6 +221,7 @@ CONTAINS
                   lam1(idx), &
                   lam2(idx), &
                   lam3(idx))
+
        ! Notice that iDistinctMap is always called with the "True" iProcess
        CALL SelectiDistinctFromProcessIndex( iProcess, &
                   iDistinctMap(iProcess))
@@ -468,6 +470,63 @@ CONTAINS
     END DO
 
   END SUBROUTINE CalculateAllRout
+
+  SUBROUTINE CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Rout )
+
+    REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
+    INTEGER , INTENT(IN)  :: iE1, iE3
+    REAL(DP), INTENT(OUT) :: Rout(iProcessMax)
+
+    ! Temporary arrays to hold the distinct R components for this theta
+    REAL(DP) :: R1_th(nDistinctCasesMax)
+    REAL(DP) :: R2_th(nDistinctCasesMax)
+    REAL(DP) :: R3_th(nDistinctCasesMax)
+    INTEGER  :: iProcess, idx, iTrueCase, iTh, iCase
+    REAL(DP) :: costh
+
+    ! Arrays to hold the integrated components for the distinct cases ONLY
+    REAL(DP) :: Int_R1(nDistinctCasesMax)
+    REAL(DP) :: Int_R2(nDistinctCasesMax)
+    REAL(DP) :: Int_R3(nDistinctCasesMax)
+
+    Int_R1(:) = 0.0d0
+    Int_R2(:) = 0.0d0
+    Int_R3(:) = 0.0d0
+    DO iTh=1, nThetaScattering
+      costh = xa_cos_theta(iTh)
+      
+      CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
+                               iE1, iE3, iTh, R1_th, R2_th, R3_th )
+
+        ! Only integrate the unique cases we actually need
+        DO iCase = 1, nDistinctCases
+          iTrueCase = ChosenToTrueCaseMap(iCase)
+          Int_R1(iTrueCase) = Int_R1(iTrueCase) + R1_th(iTrueCase) * wa_cos_theta(iTh)
+          Int_R2(iTrueCase) = Int_R2(iTrueCase) + R2_th(iTrueCase) * wa_cos_theta(iTh)
+          Int_R3(iTrueCase) = Int_R3(iTrueCase) + R3_th(iTrueCase) * wa_cos_theta(iTh)
+        END DO
+
+    ENDDO
+    ! 2. Safely initialize Rout
+    Rout = 0.0d0
+
+    ! -------------------------------------------------------------------
+    ! 2. Map the integrated distinct cases back to the full iProcess array
+    ! -------------------------------------------------------------------
+    DO iProcess = iProcessMin, iProcessMax
+      idx = iProcess - iProcessMin + 1
+      iTrueCase = iDistinctMap(iProcess)
+
+      ! Apply the Lambdas to the integrated values once
+      Rout(idx) = lam1(idx) * Int_R1(iTrueCase) + &
+                  lam2(idx) * Int_R2(iTrueCase) + &
+                  lam3(idx) * Int_R3(iTrueCase)
+      
+    END DO
+    ! Clamp it to zero...
+    Rout = MAX(Rout, 0.0d0)
+    
+  END SUBROUTINE CalculateAllRoutIntegrated
 
   SUBROUTINE CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, R1, R2, R3 )
     REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu

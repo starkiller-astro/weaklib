@@ -104,7 +104,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   INTEGER , PARAMETER :: nL = 2
   ! INTEGER , PARAMETER :: iProcessMin = iProcessMin_Default
   ! INTEGER , PARAMETER :: iProcessMax = iProcessMax_Default
-  INTEGER , PARAMETER :: iProcessMin = 12
+  INTEGER , PARAMETER :: iProcessMin = 1
   INTEGER , PARAMETER :: iProcessMax = 24
   REAL(DP) :: Phout(iProcessMax - iProcessMin + 1,nL)
   REAL(DP) :: Phin (iProcessMax - iProcessMin + 1,nL)
@@ -371,28 +371,28 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   ! Map all indices correctly
   process_string = 'nu_e + e- -> nu_e + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueem = iProcess + iProcessMin - 1
+  iProcess_nueem = iProcess - iProcessMin + 1
   process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nuebem = iProcess + iProcessMin - 1
+  iProcess_nuebem = iProcess - iProcessMin + 1
   process_string = 'nu_mu + e- -> nu_mu + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numem = iProcess + iProcessMin - 1
+  iProcess_numem = iProcess - iProcessMin + 1
   process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numbem = iProcess + iProcessMin - 1
+  iProcess_numbem = iProcess - iProcessMin + 1
   process_string = 'nu_e + e+ -> nu_e + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueep = iProcess + iProcessMin - 1
+  iProcess_nueep = iProcess - iProcessMin + 1
   process_string = 'nu_bar_e + e+ -> nu_bar_e + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nuebep = iProcess + iProcessMin - 1
+  iProcess_nuebep = iProcess - iProcessMin + 1
   process_string = 'nu_mu + e+ -> nu_mu + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numep = iProcess + iProcessMin - 1
+  iProcess_numep = iProcess - iProcessMin + 1
   process_string = 'nu_bar_mu + e+ -> nu_bar_mu + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numbep = iProcess + iProcessMin - 1
+  iProcess_numbep = iProcess - iProcessMin + 1
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN

@@ -9,14 +9,23 @@ include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
 
 all: wlTestElasticOpacity \
      wlTestFig56Guo \
+     wlTestFig2Fischer \
      wlTestGeneralKernelVsTable \
      wlTestGeneralKernelNMS \
+     wlTestGeneralKernelTwoReactions \
+     wlTestGeneralKernelNMS_Point \
      wlTestGeneralKernelVsTable_Interface
 
 wlTestElasticOpacity: \
 	$(weaklib) wlTestElasticOpacity.o
 	$(FLINKER) $(FLAGS) -o wlTestElasticOpacity_$(MACHINE) \
 	$(weaklib) wlTestElasticOpacity.o \
+	$(LIBRARIES)
+
+wlTestFig2Fischer: \
+	$(weaklib) wlTestFig2Fischer.o
+	$(FLINKER) $(FLAGS) -o wlTestFig2Fischer_$(MACHINE) \
+	$(weaklib) wlTestFig2Fischer.o \
 	$(LIBRARIES)
 
 wlTestFig56Guo: \
@@ -31,10 +40,22 @@ wlTestGeneralKernelVsTable: \
 	$(weaklib) wlTestGeneralKernelVsTable.o \
 	$(LIBRARIES)
 
+wlTestGeneralKernelTwoReactions: \
+	$(weaklib) wlTestGeneralKernelTwoReactions.o
+	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelTwoReactions_$(MACHINE) \
+	$(weaklib) wlTestGeneralKernelTwoReactions.o \
+	$(LIBRARIES)
+
 wlTestGeneralKernelNMS: \
 	$(weaklib) wlTestGeneralKernelNMS.o
 	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelNMS_$(MACHINE) \
 	$(weaklib) wlTestGeneralKernelNMS.o \
+	$(LIBRARIES)
+
+wlTestGeneralKernelNMS_Point: \
+	$(weaklib) wlTestGeneralKernelNMS_Point.o
+	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelNMS_Point_$(MACHINE) \
+	$(weaklib) wlTestGeneralKernelNMS_Point.o \
 	$(LIBRARIES)
 
 wlTestGeneralKernelVsTable_Interface: \

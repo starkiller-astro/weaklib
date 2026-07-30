@@ -1,14 +1,22 @@
 PROGRAM wlTestFig56Guo
 
   USE wlKindModule,                ONLY: dp
-  USE wlEosConstantsModule,        ONLY: mp, mn, me, mmu
+  USE wlEosConstantsModule,        ONLY: mp, mn, me, mmu, pi, hbarc
   USE wlGeneralLeptonScatteringModule, ONLY: &
-    GeneralScatteringOpacity, &
-    ProcessIndexFromReactionString
+    ProcessIndexFromReactionString, &
+    gauleg
+  USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    CalculateAllRoutIntegrated, &
+    InitGeneralScatteringKernels, &
+    FinalizeGeneralScatteringKernels
   USE wlSemiLeptonicOpacityModule2D,   ONLY: &
     Opacity_CC_2D
 
   IMPLICIT NONE
+
+  ! REAL(DP), PARAMETER :: conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
+  REAL(DP), PARAMETER :: conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc ) 
+  REAL(DP), PARAMETER :: tfac = 100.0d0
 
   !--- Guo 2020 Table II conditions ---
   ! Condition (a)
@@ -37,26 +45,33 @@ PROGRAM wlTestFig56Guo
   REAL(DP), PARAMETER :: MuNue_b  = 7.1d0
   REAL(DP), PARAMETER :: MuNumu_b = 1.3d0
 
-  ! Set final state neutrino chemical potential to 0 (free final state approximation)
-  REAL(DP), PARAMETER :: MuNu_Final = 0.0d0
   INTEGER , PARAMETER :: WhichCorrection = 3   ! LO+WM+PS+FF (same convention as Guo)
+  INTEGER , PARAMETER :: iProcessMin = 1
+  INTEGER , PARAMETER :: iProcessMax = 32
+  REAL(DP)            :: Rout_Int(iProcessMax - iProcessMin + 1)
 
   !--- Quadrature ---
-  INTEGER, PARAMETER :: nPhi   = 28      ! Not used if FreeFinalState
-  INTEGER, PARAMETER :: nTheta = 64      ! costheta GL points for opacity
-  INTEGER, PARAMETER :: nE3pts = 128     ! E3 GL points for opacity
+  INTEGER, PARAMETER :: nTheta = 24      ! costheta GL points for opacity
+  INTEGER, PARAMETER :: nE3    = 128     ! E3 GL points for opacity
+
+  REAL(DP) :: E3_min = 0.0d0     ! MeV
+  REAL(DP) :: E3_max = 250.0d0  ! MeV
+  REAL(DP) :: xa_E3(nE3), wa_E3(nE3)
 
   !--- Scan parameters ---
-  INTEGER , PARAMETER :: nE1_scan = 150    ! number of E_nu points for opacity
-  REAL(DP), PARAMETER :: E1_min_scan = 0.5d0     ! MeV
-  REAL(DP), PARAMETER :: E1_max_scan = 250.0d0   ! MeV
-  LOGICAL, PARAMETER  :: FreeFinalState = .FALSE.
-  LOGICAL, PARAMETER  :: DoFullIntegration = .FALSE.
-  ! LOGICAL, PARAMETER  :: FreeFinalState = .FALSE.
+  INTEGER , PARAMETER :: nE1 = 128    ! number of E_nu points for opacity
+  REAL(DP), PARAMETER :: E1_min = 0.1d0     ! MeV
+  REAL(DP), PARAMETER :: E1_max = 250.0d0   ! MeV
+  REAL(DP), PARAMETER :: log_E1_min = LOG(E1_min)
+  REAL(DP), PARAMETER :: log_E1_max = LOG(E1_max)
+  REAL(DP)            :: E1_arr(nE1)
+  INTEGER             :: iProcess_Fig5_2, iProcess_Fig5_3, iProcess_Fig5_4
+  INTEGER             :: iProcess_Fig6_2, iProcess_Fig6_4, iProcess_Fig6_5
+  REAL(DP)            :: Rout_avg_2, Rout_avg_3, Rout_avg_4, Rout_avg_5
 
   !--- Variables ---
-  INTEGER  :: iE1
-  REAL(DP) :: E1
+  INTEGER  :: iE1, iE3
+  REAL(DP) :: E1, E3, wE3
   INTEGER  :: iProcess
   
   ! Opacity arrays for Figure 5 (4 processes)
@@ -126,151 +141,185 @@ PROGRAM wlTestFig56Guo
   WRITE(13,'(A)') '# Col 5: ' // TRIM(ADJUSTL(process_string_Fig6(4)))
   WRITE(13,'(A)') '# Col 6: ' // TRIM(ADJUSTL(process_string_Fig6(5)))
 
-!============================================================================
+  !============================================================================
+  ! PRE-COMPUTE LIN-SPACED ENERGY GRID
+  !============================================================================
+  DO iE1 = 1, nE1
+    E1_arr(iE1) = E1_min + REAL(iE1-1, dp) * (E1_max - E1_min) / REAL(nE1-1, dp)
+  ENDDO
+  !============================================================================
+  ! PRE-COMPUTE LOG-SPACED ENERGY GRID
+  !============================================================================
+  DO iE1 = 1, nE1
+    E1_arr(iE1) = EXP( log_E1_min + REAL(iE1-1, dp) * (log_E1_max - log_E1_min) / REAL(nE1-1, dp) )
+  END DO
+
+  CALL gauleg(  E3_min, E3_max, xa_E3, wa_E3, nE3  )
+  CALL InitGeneralScatteringKernels(  &
+      E1_arr,                         &
+      xa_E3,                          &
+      nE1,                            &
+      nE3,                            &
+      nTheta,                         &
+      iProcessMin_Option=iProcessMin, &
+      iProcessMax_Option=iProcessMax  )
+
+  ! 2. nu_mu + e- -> nu_mu + e- (e- in, e- out)
+  CALL ProcessIndexFromReactionString( process_string_Fig5(2), iProcess)
+  iProcess_Fig5_2 = iProcess - iProcessMin + 1
+
+  ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
+  CALL ProcessIndexFromReactionString( process_string_Fig5(3), iProcess)
+  iProcess_Fig5_3 = iProcess - iProcessMin + 1
+
+  ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
+  CALL ProcessIndexFromReactionString( process_string_Fig5(4), iProcess)
+  iProcess_Fig5_4 = iProcess - iProcessMin + 1
+
+  !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
   !============================================================================
-  DO iE1 = 1, nE1_scan
-    E1 = E1_min_scan + REAL(iE1-1, dp) * (E1_max_scan - E1_min_scan) / REAL(nE1_scan-1, dp)
+  DO iE1 = 1, nE1
+    E1 = E1_arr(iE1)
 
     ! --- CONDITION (A) ---
     ! 1. nu_mu + n -> mu- + p (Produces muon)
     CALL Opacity_CC_2D(WhichCorrection, 1, E1, chi_numu_n_mu_p, &
                         T_a, MuMu_a, MuN_a, MuP_a, mmu,      &
-                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3pts)
+                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
     chi_numu_n_mu_p = chi_numu_n_mu_p * 1.0d5  
-                        
-    ! 2. nu_mu + e- -> nu_mu + e- (e- in, e- out)
-    CALL ProcessIndexFromReactionString( process_string_Fig5(2), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_a, MuE_a, MuE_a, MuNumu_a, me, me, &
-                             iProcess, chi_numu_e_numu_e, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+    
+    Rout_avg_2 = 0.0d0
+    Rout_avg_3 = 0.0d0
+    Rout_avg_4 = 0.0d0
+    DO iE3 = 1, nE3
+      E3    = xa_E3(iE3)
+      wE3   = wa_E3(iE3)
+      
+      CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_a, MuE_a, MuMu_a, Rout_Int(:) )
 
-    ! 3. nu_mu + e- -> nu_e + mu- (e- in, mu- out)
-    CALL ProcessIndexFromReactionString( process_string_Fig5(3), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_a, MuE_a, MuMu_a, MuNue_a, me, mmu, &
-                             iProcess, chi_numu_e_nue_mu, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+      Rout_avg_2 = Rout_avg_2 + Rout_Int(iProcess_Fig5_2) * E3**2 * conv_fac * wE3
+      Rout_avg_3 = Rout_avg_3 + Rout_Int(iProcess_Fig5_3) * E3**2 * conv_fac * wE3
+      Rout_avg_4 = Rout_avg_4 + Rout_Int(iProcess_Fig5_4) * E3**2 * conv_fac * wE3
 
-    ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
-    CALL ProcessIndexFromReactionString( process_string_Fig5(4), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_a, MuE_a, MuMu_a, -MuNumu_a, me, mmu, &
-                             iProcess, chi_nue_e_numu_mu, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+    ENDDO
 
-    WRITE(10,'(5ES18.8E3)') E1, chi_numu_n_mu_p, chi_numu_e_numu_e, &
-                          chi_numu_e_nue_mu, chi_nue_e_numu_mu
+    WRITE(10,'(5ES18.8E3)') E1, chi_numu_n_mu_p, Rout_avg_2, &
+                          Rout_avg_3, Rout_avg_4
 
     ! --- CONDITION (B) --- 
-    ! (Same variable mapping as A, just using _b parameters)
     CALL Opacity_CC_2D(WhichCorrection, 1, E1, chi_numu_n_mu_p, &
                         T_b, MuMu_b, MuN_b, MuP_b, mmu,      &
-                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3pts)
-    chi_numu_n_mu_p = chi_numu_n_mu_p * 1.0d5 
+                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
+    chi_numu_n_mu_p = chi_numu_n_mu_p * 1.0d5  
+    
+    Rout_avg_2 = 0.0d0
+    Rout_avg_3 = 0.0d0
+    Rout_avg_4 = 0.0d0
+    DO iE3 = 1, nE3
+      E3    = xa_E3(iE3)
+      wE3   = wa_E3(iE3)
+      
+      CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Rout_Int(:) )
 
-    CALL ProcessIndexFromReactionString( process_string_Fig5(2), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_b, MuE_b, MuE_b, MuNumu_b, me, me, &
-                             iProcess, chi_numu_e_numu_e, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+      Rout_avg_2 = Rout_avg_2 + Rout_Int(iProcess_Fig5_2) * E3**2 * conv_fac * wE3
+      Rout_avg_3 = Rout_avg_3 + Rout_Int(iProcess_Fig5_3) * E3**2 * conv_fac * wE3
+      Rout_avg_4 = Rout_avg_4 + Rout_Int(iProcess_Fig5_4) * E3**2 * conv_fac * wE3
 
-    CALL ProcessIndexFromReactionString( process_string_Fig5(3), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_b, MuE_b, MuMu_b, -MuNue_b, me, mmu, &
-                             iProcess, chi_numu_e_nue_mu, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+    ENDDO
 
-    CALL ProcessIndexFromReactionString( process_string_Fig5(4), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_b, MuE_b, MuMu_b, MuNumu_b, me, mmu, &
-                             iProcess, chi_nue_e_numu_mu, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+    WRITE(11,'(5ES18.8E3)') E1, chi_numu_n_mu_p, Rout_avg_2, &
+                          Rout_avg_3, Rout_avg_4
 
-    WRITE(11,'(5ES18.8E3)') E1, chi_numu_n_mu_p, chi_numu_e_numu_e, &
-                          chi_numu_e_nue_mu, chi_nue_e_numu_mu
   END DO
+
+    ! 2. nu_mu + e- -> nu_mu + e- (e- in, e- out)
+  CALL ProcessIndexFromReactionString( process_string_Fig6(2), iProcess)
+  iProcess_Fig6_2 = iProcess - iProcessMin + 1
+
+  ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
+  CALL ProcessIndexFromReactionString( process_string_Fig6(4), iProcess)
+  iProcess_Fig6_4 = iProcess - iProcessMin + 1
+
+  ! 5. nu_bar_e + e- + nu_mu -> mu-
+  CALL ProcessIndexFromReactionString( process_string_Fig6(5), iProcess)
+  iProcess_Fig6_5 = iProcess - iProcessMin + 1
 
   !============================================================================
   ! FIGURE 6: LOOP OVER ENERGY SCAN
   !============================================================================
-  DO iE1 = 1, nE1_scan
-    E1 = E1_min_scan + REAL(iE1-1, dp) * (E1_max_scan - E1_min_scan) / REAL(nE1_scan-1, dp)
+  DO iE1 = 1, nE1
+    E1 = E1_arr(iE1)
 
     ! --- CONDITION (A) ---
     ! 1. nu_bar_e + p -> e+ + n (Involves positron)
     CALL Opacity_CC_2D(WhichCorrection, 2, E1, chi1, &
                         T_a, MuE_a, MuN_a, MuP_a, me,      &
-                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3pts)
+                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
     chi1 = chi1 * 1.0d5  
-                        
-    ! 2. nu_bar_e + e- -> nu_bar_e + e- (e- in, e- out)
-    CALL ProcessIndexFromReactionString( process_string_Fig6(2), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_a, MuE_a, MuE_a, MuNue_a, me, me, &
-                             iProcess, chi2, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
-
+            
     ! 3. nu_bar_e + e- + p -> n (Involves electron)
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_a, MuE_a, MuN_a, MuP_a, me,      &
-                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3pts)
+                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
     chi3 = chi3 * 1.0d5  
+            
+    Rout_avg_2 = 0.0d0
+    Rout_avg_4 = 0.0d0
+    Rout_avg_5 = 0.0d0
+    DO iE3 = 1, nE3
+      E3    = xa_E3(iE3)
+      wE3   = wa_E3(iE3)
+      
+      CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_a, MuE_a, MuMu_a, Rout_Int(:) )
 
-    ! 4. nu_bar_e + e- -> nu_bar_mu + mu-
-    CALL ProcessIndexFromReactionString( process_string_Fig6(4), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_a, MuE_a, MuMu_a, -MuNue_a, me, mmu, &
-                             iProcess, chi4, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+      Rout_avg_2 = Rout_avg_2 + Rout_Int(iProcess_Fig6_2) * E3**2 * conv_fac * wE3
+      Rout_avg_4 = Rout_avg_4 + Rout_Int(iProcess_Fig6_4) * E3**2 * conv_fac * wE3
+      ! Rout_avg_5 = Rout_avg_5 + Rout_Int(iProcess_Fig6_5) * E3**2 * conv_fac * wE3
+      Rout_avg_5 = 0.0d0 ! IMD to zero for now
 
-    ! 5. 'nu_bar_e + e- + nu_mu -> mu-'
-    iProcess = 33
-    CALL GeneralScatteringOpacity( E1, T_a, MuE_a, MuMu_a, MuNuMu_a, me, mmu, &
-                                   iProcess, chi5, nE3pts, nTheta )
+    ENDDO
 
-    WRITE(12,'(6ES18.8E3)') E1, chi1, chi2, chi3, chi4, chi5
+    WRITE(12,'(6ES18.8E3)') E1, chi1, Rout_avg_2, chi3, Rout_avg_4, Rout_avg_5
 
     ! --- CONDITION (B) ---
     ! 1. nu_bar_e + p -> e+ + n (Involves positron)
     CALL Opacity_CC_2D(WhichCorrection, 2, E1, chi1, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
-                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3pts)
+                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
     chi1 = chi1 * 1.0d5  
-                        
-    ! 2. nu_bar_e + e- -> nu_bar_e + e- (e- in, e- out)
-    CALL ProcessIndexFromReactionString( process_string_Fig6(2), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_b, MuE_b, MuE_b, -MuNue_b, me, me, &
-                             iProcess, chi2, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
-
+            
     ! 3. nu_bar_e + e- + p -> n (Involves electron)
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
-                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3pts)
+                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
     chi3 = chi3 * 1.0d5  
+            
+    Rout_avg_2 = 0.0d0
+    Rout_avg_4 = 0.0d0
+    Rout_avg_5 = 0.0d0
+    DO iE3 = 1, nE3
+      E3    = xa_E3(iE3)
+      wE3   = wa_E3(iE3)
+      
+      CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Rout_Int(:) )
 
-    ! 4. nu_bar_e + e- -> nu_bar_mu + mu-
-    CALL ProcessIndexFromReactionString( process_string_Fig6(4), iProcess)
-    CALL GeneralScatteringOpacity( E1, T_b, MuE_b, MuMu_b, -MuNue_b, me, mmu, &
-                             iProcess, chi4, nE3pts, nTheta, nPhi, &
-                             IsFinalStateFree_in=FreeFinalState, &
-                             DoFullIntegration_in=DoFullIntegration )
+      Rout_avg_2 = Rout_avg_2 + Rout_Int(iProcess_Fig6_2) * E3**2 * conv_fac * wE3
+      Rout_avg_4 = Rout_avg_4 + Rout_Int(iProcess_Fig6_4) * E3**2 * conv_fac * wE3
+      ! Rout_avg_5 = Rout_avg_5 + Rout_Int(iProcess_Fig6_5) * E3**2 * conv_fac * wE3
+      Rout_avg_5 = 0.0d0 ! IMD to zero for now
 
-    ! 5. nu_bar_e + e- + nu_mu -> mu-
-    iProcess = 33
-    CALL GeneralScatteringOpacity( E1, T_b, MuE_b, MuMu_b, MuNuMu_b, me, mmu, &
-                                   iProcess, chi5, nE3pts, nTheta )
+    ENDDO
 
-    WRITE(13,'(6ES18.8E3)') E1, chi1, chi2, chi3, chi4, chi5
+    WRITE(13,'(6ES18.8E3)') E1, chi1, Rout_avg_2, chi3, Rout_avg_4, Rout_avg_5
+   
   END DO
 
   CLOSE(10)
   CLOSE(11)
   CLOSE(12)
   CLOSE(13)
+  CALL FinalizeGeneralScatteringKernels()
 
   WRITE(*,'(A)') '=== test_Fig56_Guo completed ==='
   WRITE(*,'(A)') 'Output files written: Guo_Fig5_cond_a.dat, Guo_Fig5_cond_b.dat'

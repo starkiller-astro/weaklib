@@ -155,28 +155,28 @@ PROGRAM wlTestGeneralKernelNMS
   ! Map all indices correctly
   process_string = 'nu_e + mu- -> nu_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_lep = iProcess - iProcessMin + 1
+  iProcess_nue_lep = iProcess
   process_string = 'nu_bar_e + mu- -> nu_bar_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_lep = iProcess - iProcessMin + 1
+  iProcess_nueb_lep = iProcess
   process_string = 'nu_mu + mu- -> nu_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_lep = iProcess - iProcessMin + 1
+  iProcess_num_lep = iProcess
   process_string = 'nu_bar_mu + mu- -> nu_bar_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_lep = iProcess - iProcessMin + 1
+  iProcess_numb_lep = iProcess
   process_string = 'nu_e + mu+ -> nu_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_alep = iProcess - iProcessMin + 1
+  iProcess_nue_alep = iProcess
   process_string = 'nu_bar_e + mu+ -> nu_bar_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_alep = iProcess - iProcessMin + 1
+  iProcess_nueb_alep = iProcess
   process_string = 'nu_mu + mu+ -> nu_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_alep = iProcess - iProcessMin + 1
+  iProcess_num_alep = iProcess
   process_string = 'nu_bar_mu + mu+ -> nu_bar_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_alep = iProcess - iProcessMin + 1
+  iProcess_numb_alep = iProcess
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
