@@ -268,7 +268,12 @@ CONTAINS
              Computed_Nu_P_0,  Computed_Nu_P_1,  &
              Computed_NuB_P_0, Computed_NuB_P_1 )
 
-    call TestMeanFreePath ( Interpolated_Nu_N_0, Computed_Nu_N_0, E_Edges, nPointsE )
+    call TestMeanFreePath &
+           ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+             Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+             Computed_Nu_N_0, Computed_NuB_N_0, &
+             Computed_Nu_P_0, Computed_NuB_P_0, &
+             E_Edges, nPointsE )
 
     end associate !-- nPointsE
 
@@ -531,21 +536,30 @@ CONTAINS
   END SUBROUTINE Compute_NNS_Point
 
 
-  SUBROUTINE TestMeanFreePath ( Interpolated_0, Computed_0, E_Edges, nPointsE )
+  SUBROUTINE TestMeanFreePath &
+               ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+                 Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+                 Computed_Nu_N_0, Computed_NuB_N_0, &
+                 Computed_Nu_P_0, Computed_NuB_P_0, &
+                 E_Edges, nPointsE )
 
     USE wlKindModule, ONLY: &
       dp
 
     REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
-      Interpolated_0, &
-      Computed_0
+      Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+      Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+      Computed_Nu_N_0, Computed_NuB_N_0, &
+      Computed_Nu_P_0, Computed_NuB_P_0
     REAL(dp), DIMENSION ( : ), INTENT(in) :: &
       E_Edges
     INTEGER, INTENT(in) :: nPointsE
 
-    INTEGER :: iEp, iE
+    INTEGER  :: iEp, iE
     REAL(dp) :: TwoPi
-    REAL(dp), DIMENSION( nPointsE ) :: E_Vol, invMFP_I, invMFP_C
+    REAL(dp), DIMENSION( nPointsE ) :: E_Vol, &
+                                       invMFP_Nu_I,  invMFP_Nu_C, &
+                                       invMFP_NuB_I, invMFP_NuB_C
     
     TwoPi  =  2.0d0 * acos ( -1.0d0 )
 
@@ -554,25 +568,47 @@ CONTAINS
                        / 3.d0 
     END DO !-- iE
 
-    invMFP_I  =  0.d0
-    invMFP_C  =  0.d0
+    invMFP_Nu_I   =  0.d0
+    invMFP_Nu_C   =  0.d0
+    invMFP_NuB_I  =  0.d0
+    invMFP_NuB_C  =  0.d0
     DO iE = 1, nPointsE
       DO iEp = 1, nPointsE
-        invMFP_I ( iE )  =  invMFP_I ( iE )  &
-                            +  E_Vol ( iEp )  *  Interpolated_0 ( iEp, iE )
-        invMFP_C ( iE )  =  invMFP_C ( iE )  &
-                            +  E_Vol ( iEp )  *  Computed_0 ( iEp, iE )
+        invMFP_Nu_I ( iE )  &
+          =  invMFP_Nu_I ( iE )  &
+             +  E_Vol ( iEp )  *  (    Interpolated_Nu_N_0 ( iEp, iE )  &
+                                    +  Interpolated_Nu_P_0 ( iEp, iE ) )  
+        invMFP_Nu_C ( iE )  &
+          =  invMFP_Nu_C ( iE )  &
+             +  E_Vol ( iEp )  *  (    Computed_Nu_N_0 ( iEp, iE )  &
+                                    +  Computed_Nu_P_0 ( iEp, iE ) )  
+        invMFP_NuB_I ( iE )  &
+          =  invMFP_NuB_I ( iE )  &
+             +  E_Vol ( iEp )  *  (    Interpolated_NuB_N_0 ( iEp, iE )  &
+                                    +  Interpolated_NuB_P_0 ( iEp, iE ) )  
+        invMFP_NuB_C ( iE )  &
+          =  invMFP_NuB_C ( iE )  &
+             +  E_Vol ( iEp )  *  (    Computed_NuB_N_0 ( iEp, iE )  &
+                                    +  Computed_NuB_P_0 ( iEp, iE ) )  
       END DO
       !-- Factor of 2 to undo thornado legendre moment convention
       !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
-      invMFP_I ( iE )  =  2.d0 * TwoPi * invMFP_I ( iE )
-      invMFP_C ( iE )  =  2.d0 * TwoPi * invMFP_C ( iE )
+      invMFP_Nu_I  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_I  ( iE )
+      invMFP_Nu_C  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_C  ( iE )
+      invMFP_NuB_I ( iE )  =  2.d0 * TwoPi * invMFP_NuB_I ( iE )
+      invMFP_NuB_C ( iE )  =  2.d0 * TwoPi * invMFP_NuB_C ( iE )
     END DO
 
     WRITE (*,*)
-    WRITE (*,*) 'Interpolated, Computed'
+    WRITE (*,*) 'Nu Interpolated, Computed'
     DO iE = 1, nPointsE
-      WRITE (*,'(ES13.6E2,ES13.6E2)') invMFP_I ( iE ), invMFP_C ( iE )      
+      WRITE (*,'(ES13.6E2,ES13.6E2)') invMFP_Nu_I ( iE ), invMFP_Nu_C ( iE )    
+    END DO
+
+    WRITE (*,*)
+    WRITE (*,*) 'NuB Interpolated, Computed'
+    DO iE = 1, nPointsE
+      WRITE (*,'(ES13.6E2,ES13.6E2)') invMFP_NuB_I ( iE ), invMFP_NuB_C ( iE )
     END DO
 
   END SUBROUTINE TestMeanFreePath
