@@ -87,7 +87,7 @@ PROGRAM wlReadOpacityTableTest
       dp
 
     INTEGER  :: j_Rho, k_T, l_Ye 
-    REAL(dp) :: Rho, T, Ye, MuN, MuP 
+    REAL(dp) :: Rho, T, Ye, MuN, MuP, S_tot 
 
 !    j_Rho = 118 !-- 10^11 g cm^-3 
 !    k_t = 25  !--  0.9 MeV
@@ -99,8 +99,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 103  !-- 10^10 g cm^-3 
     k_T   =  38  !--  3.0 MeV
     l_Ye  =  13  !-- 0.25
-    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-    call Test_NNS_Point ( T, MuN, MuP )
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP, S_tot )
+    call Test_NNS_Point ( T, MuN, MuP, S_tot )
 
     WRITE (*,*)
     WRITE (*,*) '>>> Condition 2, Figs. 30-31, Bruenn et al. (2020)'
@@ -108,8 +108,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 133  !-- 10^12 g cm^-3 
     k_T   =  51  !-- 10.0 MeV
     l_Ye  =   5  !-- 0.1
-    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-    call Test_NNS_Point ( T, MuN, MuP )
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP, S_tot )
+    call Test_NNS_Point ( T, MuN, MuP, S_tot )
 
     WRITE (*,*)
     WRITE (*,*) '>>> Condition 3, Figs. 30-31, Bruenn et al. (2020)'
@@ -117,8 +117,8 @@ PROGRAM wlReadOpacityTableTest
     j_Rho = 163  !-- 10^14 g cm^-3 
     k_T   =  53  !-- 12.0 MeV
     l_Ye  =  14  !-- 0.27
-    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
-    call Test_NNS_Point ( T, MuN, MuP )
+    call SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP, S_tot )
+    call Test_NNS_Point ( T, MuN, MuP, S_tot )
 
   END BLOCK BruennFigures
 
@@ -126,16 +126,16 @@ PROGRAM wlReadOpacityTableTest
 CONTAINS
 
 
-  SUBROUTINE SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP )
+  SUBROUTINE SetFluid ( j_Rho, k_T, l_Ye, Rho, T, Ye, MuN, MuP, S_tot )
 
     USE wlKindModule, ONLY: &
       dp
     USE wlExtPhysicalConstantsModule, ONLY: &
-      kMeV, dmnp, mn_wl => mn, mp_wl => mp
+      kMeV, kfm, dmnp, mn_wl => mn, mp_wl => mp
     USE wlExtNumericalModule, ONLY: epsilon
 
     INTEGER,  INTENT(in)  :: j_Rho, k_T, l_Ye
-    REAL(dp), INTENT(out) :: Rho, T, Ye, MuN, MuP
+    REAL(dp), INTENT(out) :: Rho, T, Ye, MuN, MuP, S_tot
 
     REAL(dp) :: chem_n, chem_p
 
@@ -198,12 +198,15 @@ CONTAINS
     MuP  =  chem_p + dmnp + mp_wl  !-- Convert from Chimera to absolute
     WRITE (*,'(A10,ES10.3E2)') 'MuP (MeV) ', MuP
 
+    CALL nc_manybody_corrections_weaklib( Rho * kfm, T * kMeV, Ye, S_tot )
+    WRITE (*,'(A10,ES10.3E2)') 'S_tot     ', S_tot
+
     END ASSOCIATE ! rho-T-Ye
 
   END SUBROUTINE SetFluid
 
 
-  SUBROUTINE Test_NNS_Point ( T, MuN, MuP )
+  SUBROUTINE Test_NNS_Point ( T, MuN, MuP, S_tot )
 
     USE wlKindModule, ONLY: &
       dp
@@ -213,7 +216,7 @@ CONTAINS
       iNu_NNS, iNuBar_NNS, &
       iNeutron_NNS, iProton_NNS
 
-    REAL(dp), INTENT(in) :: T, MuN, MuP
+    REAL(dp), INTENT(in) :: T, MuN, MuP, S_tot
 
     REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
       Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
@@ -273,7 +276,7 @@ CONTAINS
              Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
              Computed_Nu_N_0, Computed_NuB_N_0, &
              Computed_Nu_P_0, Computed_NuB_P_0, &
-             E_Edges, nPointsE )
+             E_Edges, S_tot, nPointsE )
 
     end associate !-- nPointsE
 
@@ -541,7 +544,7 @@ CONTAINS
                  Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
                  Computed_Nu_N_0, Computed_NuB_N_0, &
                  Computed_Nu_P_0, Computed_NuB_P_0, &
-                 E_Edges, nPointsE )
+                 E_Edges, S_tot, nPointsE )
 
     USE wlKindModule, ONLY: &
       dp
@@ -553,6 +556,7 @@ CONTAINS
       Computed_Nu_P_0, Computed_NuB_P_0
     REAL(dp), DIMENSION ( : ), INTENT(in) :: &
       E_Edges
+    REAL(dp), INTENT(in) :: S_tot
     INTEGER, INTENT(in) :: nPointsE
 
     INTEGER  :: iEp, iE
@@ -593,10 +597,11 @@ CONTAINS
       END DO
       !-- Factor of 2 to undo thornado legendre moment convention
       !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
-      invMFP_Nu_I  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_I  ( iE )
-      invMFP_Nu_C  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_C  ( iE )
-      invMFP_NuB_I ( iE )  =  2.d0 * TwoPi * invMFP_NuB_I ( iE )
-      invMFP_NuB_C ( iE )  =  2.d0 * TwoPi * invMFP_NuB_C ( iE )
+      !-- Many-body corrections S_tot
+      invMFP_Nu_I  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_I  ( iE ) * S_tot
+      invMFP_Nu_C  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_C  ( iE ) * S_tot
+      invMFP_NuB_I ( iE )  =  2.d0 * TwoPi * invMFP_NuB_I ( iE ) * S_tot
+      invMFP_NuB_C ( iE )  =  2.d0 * TwoPi * invMFP_NuB_C ( iE ) * S_tot
     END DO
 
     WRITE (*,*)
