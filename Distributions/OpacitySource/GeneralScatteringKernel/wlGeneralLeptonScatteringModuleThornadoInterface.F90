@@ -14,7 +14,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   PRIVATE
 
   INTEGER , PARAMETER, PUBLIC :: iProcessMin_Default = 1
-  INTEGER , PARAMETER, PUBLIC :: iProcessMax_Default = 32
+  INTEGER , PARAMETER, PUBLIC :: iProcessMax_Default = 34
   INTEGER                     :: iProcessMin
   INTEGER                     :: iProcessMax
   REAL(DP), PARAMETER         :: ElectronMass        = me
@@ -28,6 +28,13 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   REAL(DP), ALLOCATABLE    :: B_Scat(:, :, :, :, :, :)
   REAL(DP), ALLOCATABLE    :: C_Scat(:, :, :, :, :, :)
 
+  REAL(DP), ALLOCATABLE    :: A_IMD(:, :, :, :)
+  REAL(DP), ALLOCATABLE    :: B_IMD(:, :, :, :)
+  REAL(DP), ALLOCATABLE    :: C_IMD(:, :, :, :)
+
+  ! IMD threshold (Guo Eq. 16): kernel vanishes for k < k0
+  REAL(DP), PARAMETER      :: k0_IMD = (MuonMass + ElectronMass) / (MuonMass - ElectronMass)
+
   INTEGER                  :: nThetaScattering
   REAL(DP), ALLOCATABLE    :: xa_cos_theta(:), wa_cos_theta(:)
   REAL(DP), ALLOCATABLE    :: xa_GLeg_ref(:), wa_GLeg_ref(:)
@@ -36,9 +43,9 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: iABC_el = 1
   INTEGER , PARAMETER      :: iABC_mu = 2
 
-  INTEGER , PARAMETER      :: nDistinctCasesMax = 8
+  INTEGER , PARAMETER      :: nDistinctCasesMax = 9
   INTEGER                  :: nDistinctCases
-  REAL(DP), DIMENSION(8,2) :: MassPairDistinct
+  REAL(DP), DIMENSION(nDistinctCasesMax,2) :: MassPairDistinct
   INTEGER , PARAMETER      :: i_em_em = 1 ! particle 2 is e-  and particle 4 is e-
   INTEGER , PARAMETER      :: i_ep_ep = 2 ! particle 2 is e+  and particle 4 is e+
   INTEGER , PARAMETER      :: i_mm_mm = 3 ! particle 2 is mu- and particle 4 is mu-
@@ -47,7 +54,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: i_mm_em = 6 ! particle 2 is mu- and particle 4 is e-
   INTEGER , PARAMETER      :: i_ep_mp = 7 ! particle 2 is e+  and particle 4 is mu+
   INTEGER , PARAMETER      :: i_mp_ep = 8 ! particle 2 is mu+ and particle 4 is e+
-  INTEGER , PARAMETER      :: i_IMD_1 = 9 ! For IMD you need a new one
+  INTEGER , PARAMETER      :: i_IMD = 9 ! IMD: particle 2 is e-, particle 4 is mu- (applies to 33 and 34)
 
   INTEGER , DIMENSION(8), PARAMETER :: &
     iABC_m2 = (/ iABC_el, iABC_el, iABC_mu, iABC_mu, &
@@ -83,8 +90,11 @@ CONTAINS
     REAL(DP) :: E1, E2, E3, costh, Delta, Delta5, E2_max
     INTEGER  :: iE1, iE2, iE3, iTh, iProcess, iCase
     
+    REAL(DP) :: DeltaA, DeltaA5, Q_mu_e, Q_e_mu
+
     INTEGER, DIMENSION(nDistinctCasesMax) :: unique_cases
     INTEGER :: idx, current_val
+    LOGICAL :: IncludeIMD
 
     nThetaScattering = nTheta
 
@@ -112,16 +122,29 @@ CONTAINS
       iProcessMax = iProcessMax_Default
     ENDIF
 
+    IncludeIMD = ( iProcessMax >= 33 )
+
     ALLOCATE( lam1(iProcessMax - iProcessMin + 1) )
     ALLOCATE( lam2(iProcessMax - iProcessMin + 1) )
     ALLOCATE( lam3(iProcessMax - iProcessMin + 1) )
     ALLOCATE( A_Scat(nE1, nE3, nThetaScattering, 2) )
     ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) ) ! This could also be (nE1, nE3, nTheta, 3, 3) but more readable this way
     ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
+      
+    IF (IncludeIMD) THEN
+      ! Only one flavor combination (e- in, mu- out) and no C3 slot (lam3 = 0
+      ! for both IMD processes), hence the small last dimension.
+      ALLOCATE( A_IMD(nE1, nE3, nThetaScattering, 2) )
+      ALLOCATE( B_IMD(nE1, nE3, nThetaScattering, 2) )
+      ALLOCATE( C_IMD(nE1, nE3, nThetaScattering, 2) )
+    ENDIF
 
     ! Take care of angular quadrature
     ALLOCATE( xa_cos_theta(nThetaScattering), wa_cos_theta(nThetaScattering) )
     CALL gauleg( -1.0d0, 1.0d0, xa_cos_theta, wa_cos_theta, nThetaScattering )
+
+    Q_mu_e = 0.5d0 * (MuonMass**2 - ElectronMass**2)
+    Q_e_mu = - Q_mu_e
 
     ! Here we might want to iterate from iE_B to iE_S or whatever? Not sure
     DO iE1=1,nE1
@@ -140,11 +163,11 @@ CONTAINS
           B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
           B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
 
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.5d0*(MuonMass**2 - ElectronMass**2) )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.5d0*(MuonMass**2 - ElectronMass**2) )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, Q_mu_e )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, Q_mu_e )
 
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.5d0*(ElectronMass**2 - MuonMass**2) )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.5d0*(ElectronMass**2 - MuonMass**2) )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, Q_e_mu )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, Q_e_mu )
  
           B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
           B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
@@ -153,12 +176,12 @@ CONTAINS
           C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass )
           C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, ElectronMass, ElectronMass )
 
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.5d0*(MuonMass**2 - ElectronMass**2), ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.5d0*(MuonMass**2 - ElectronMass**2), ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, Q_mu_e, ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, Q_mu_e, ElectronMass )
           C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, ElectronMass, MuonMass )
 
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.5d0*(ElectronMass**2 - MuonMass**2), MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.5d0*(ElectronMass**2 - MuonMass**2), MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, Q_e_mu, MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, Q_e_mu, MuonMass )
           C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, MuonMass, ElectronMass ) ! Same as the one above actually
  
           C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass )
@@ -170,6 +193,25 @@ CONTAINS
           A_Scat(iE1, iE3, iTh, :      ) = A_Scat(iE1, iE3, iTh, :      ) / (16.0d0 * pi * Delta5)
           B_Scat(iE1, iE3, iTh, :, :, :) = B_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
           C_Scat(iE1, iE3, iTh, :, :, :) = C_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
+
+          IF (IncludeIMD) THEN
+            ! IMD coefficients, the "1" set is process 33
+            ! (nu_bar_e has energy E1), the "2" set is its E1 <-> E3 swap
+            ! (process 34). Particle 2 is the electron in BOTH orientations.
+            ! Notice that C is not needed since lam3 is always zero
+
+            DeltaA  = SQRT(MAX(E1**2 + 2.0d0*E1*E3*costh + E3**2, 0.0d0))
+            DeltaA5 = DeltaA**5
+
+            A_IMD(iE1, iE3, iTh, 1) = A1_f(  E1, -E3, costh )        / (16.0d0 * pi * DeltaA5)
+            A_IMD(iE1, iE3, iTh, 2) = A1_f(  E3, -E1, costh )        / (16.0d0 * pi * DeltaA5)
+
+            B_IMD(iE1, iE3, iTh, 1) = B1_f(  E1, -E3, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
+            B_IMD(iE1, iE3, iTh, 2) = B1_f(  E3, -E1, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
+
+            C_IMD(iE1, iE3, iTh, 1) = C1_f(  E1, -E3, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
+            C_IMD(iE1, iE3, iTh, 2) = C1_f(  E3, -E1, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
+          ENDIF
 
         ENDDO
       ENDDO
@@ -209,6 +251,9 @@ CONTAINS
 
     MassPairDistinct(i_mp_ep,1) = MuonMass
     MassPairDistinct(i_mp_ep,2) = ElectronMass
+
+    MassPairDistinct(i_IMD,1) = ElectronMass
+    MassPairDistinct(i_IMD,2) = MuonMass
 
     ! Now initialize Lambdas and map each process to the correct I
     nDistinctCases  = 0
@@ -257,6 +302,7 @@ CONTAINS
     DEALLOCATE( xa_cos_theta, wa_cos_theta )
     DEALLOCATE( xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag )
     DEALLOCATE( ChosenToTrueCaseMap )
+    IF ( ALLOCATED(A_IMD) ) DEALLOCATE( A_IMD, B_IMD, C_IMD )
 
   END SUBROUTINE FinalizeGeneralScatteringKernels
 
@@ -351,8 +397,8 @@ CONTAINS
     ! 32) nu_bar_e + e- -> nu_bar_mu + mu-
     CASE(32); iDistinct = i_em_mm
 
-    CASE(33); iDistinct = i_IMD_1 ! Not sure about this one deal with it later
-    CASE(34); iDistinct = 0       ! Same as 33 but need to switch nue_bar and nu_mu
+    CASE(33); iDistinct = i_IMD
+    CASE(34); iDistinct = i_IMD ! Same as 33 but need to switch nue_bar and nu_mu
 
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
@@ -545,19 +591,35 @@ CONTAINS
     
     DO iCase = 1, nDistinctCases
       iTrueCase = ChosenToTrueCaseMap(iCase)
-      Index2 = iABC_m2( iTrueCase )
-      Index4 = iABC_m4( iTrueCase )
-      
-      ! We populate the R arrays by the TRUE case index so they match what Phout expects later
-      CALL CalculateR1R2R3( E1, E3, costh, &
-          A_Scat(iE1, iE3, iTh, :), &
-          B_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-          C_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-          I0(iCase), I1(iCase), I2(iCase), &
-          R1(iTrueCase), R2(iTrueCase), R3(iTrueCase) )
 
-      ! you should add inverse muon decay as a separate case here,
-      ! I don't think we can include it in CalculateDistinctI0I1I2
+      IF (iTrueCase == i_IMD) THEN
+
+        ! IMD uses its own coefficient tables (built at (E1,-E3) / (E3,-E1)
+        ! with the DeltaA^5 normalization). R1 is process 33 (nu_bar_e has
+        ! energy E1); R2 is the E1 <-> E3 swap, i.e. process 34. R3 never
+        ! contributes because lam3 = 0 for both IMD processes.
+        R1(iTrueCase) = A_IMD(iE1, iE3, iTh, 1)*I2(iCase) &
+                      + B_IMD(iE1, iE3, iTh, 1)*I1(iCase) &
+                      + C_IMD(iE1, iE3, iTh, 1)*I0(iCase)
+        R2(iTrueCase) = A_IMD(iE1, iE3, iTh, 2)*I2(iCase) &
+                      + B_IMD(iE1, iE3, iTh, 2)*I1(iCase) &
+                      + C_IMD(iE1, iE3, iTh, 2)*I0(iCase)
+        R3(iTrueCase) = 0.0d0
+
+      ELSE
+
+        Index2 = iABC_m2( iTrueCase )
+        Index4 = iABC_m4( iTrueCase )
+        
+        ! We populate the R arrays by the TRUE case index so they match what Phout expects later
+        CALL CalculateR1R2R3( E1, E3, costh, &
+            A_Scat(iE1, iE3, iTh, :), &
+            B_Scat(iE1, iE3, iTh, Index2, Index4, :), &
+            C_Scat(iE1, iE3, iTh, Index2, Index4, :), &
+            I0(iCase), I1(iCase), I2(iCase), &
+            R1(iTrueCase), R2(iTrueCase), R3(iTrueCase) )
+      ENDIF
+
     ENDDO
 
   END SUBROUTINE CalculateAllR1R2R3
@@ -609,6 +671,9 @@ CONTAINS
     ChemPotPair(i_mp_ep,1) = -Mu_mu
     ChemPotPair(i_mp_ep,2) = -Mu_e
 
+    ChemPotPair(i_IMD,1) = Mu_e
+    ChemPotPair(i_IMD,2) = Mu_mu
+
   END SUBROUTINE SetChemPotDistinctCases
 
   SUBROUTINE CalculateDistinctI0I1I2( E1, E3, costh, T, Mu_e, Mu_mu, I0, I1, I2 )
@@ -616,7 +681,8 @@ CONTAINS
     REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
     REAL(DP), INTENT(OUT) :: I0(nDistinctCases), I1(nDistinctCases), I2(nDistinctCases)
     
-    REAL(DP) :: Delta, xMu_l2, xMu_l4, m2, m4, disc, k_val, E_minus, Q
+    REAL(DP) :: Delta, DeltaA, xMu_l2, xMu_l4, m2, m4, disc, k_val, E_minus, E_plus, Q
+    REAL(DP) :: I0m, I1m, I2m, I0p, I1p, I2p
     REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
     INTEGER  :: iCase, iTrueCase
 
@@ -625,31 +691,66 @@ CONTAINS
     I2 = 0.0d0
 
     Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
-    IF (Delta < 1.0d-10) RETURN   ! pathological collinear case
-
-    ! --- k (Guo Eq. 5): diverges at forward scattering mu=1 ---
-    IF (1.0d0 - costh < 1.0d-10) RETURN
 
     ! There are nDistinctCases different cases:
     CALL SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPairDistinct)
+
     DO iCase=1,nDistinctCases
       
       iTrueCase = ChosenToTrueCaseMap(iCase)     
       m2        = MassPairDistinct(iTrueCase,1)
       m4        = MassPairDistinct(iTrueCase,2)
 
-      Q = 0.5d0 * (m4**2 - m2**2)
-      k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
-      disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 4
-      IF (disc < 0.0d0) CYCLE
-
       xMu_l2 = ChemPotPairDistinct(iTrueCase,1)
       xMu_l4 = ChemPotPairDistinct(iTrueCase,2)
 
-      E_minus = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) )   ! Guo Eq. 4
-      E_minus = MAX(E_minus, m2)
+      Q = 0.5d0 * (m4**2 - m2**2)
 
-      CALL Compute_Is_Integrals( E1, E3, E_minus, T, xMu_l2, xMu_l4, I0(iCase), I1(iCase), I2(iCase) )
+      IF (iTrueCase == i_IMD) THEN
+
+        ! ==============================================================
+        ! IMD kinematics (Guo Eqs. 16-19)
+        ! ==============================================================
+        k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
+        IF (k_val < k0_IMD) CYCLE   ! Theta function, Guo Eq. 16
+
+        DeltaA = SQRT(MAX(E1**2 + 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 17
+
+        disc = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 17
+        IF (disc < 0.0d0) CYCLE
+
+        E_minus = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) )   ! Guo Eq. 17
+        E_plus  = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) + DeltaA*SQRT(disc) )   ! Guo Eq. 17
+        E_minus = MAX(E_minus, m2)
+        E_plus  = MAX(E_plus , m2)
+        IF (E_minus >= E_plus) CYCLE
+
+        ! I_s = I_s(E_minus) - I_s(E_plus), both evaluated at (E1, -E3) (Guo Eq. 18).
+        ! Note these are E1 <-> E3 symmetric, which is why one distinct case
+        ! serves both process 33 and process 34.
+        CALL Compute_Is_Integrals( E1, -E3, E_minus, T, xMu_l2, xMu_l4, I0m, I1m, I2m )
+        CALL Compute_Is_Integrals( E1, -E3, E_plus , T, xMu_l2, xMu_l4, I0p, I1p, I2p )
+
+        I0(iCase) = I0m - I0p
+        I1(iCase) = I1m - I1p
+        I2(iCase) = I2m - I2p
+
+      ELSE
+
+        IF (Delta < 1.0d-10) RETURN   ! pathological collinear case
+        ! --- k (Guo Eq. 5): diverges at forward scattering mu=1 ---
+        IF (1.0d0 - costh < 1.0d-10) RETURN
+
+        k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
+        disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 4
+        IF (disc < 0.0d0) CYCLE
+
+        E_minus = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) )   ! Guo Eq. 4
+        E_minus = MAX(E_minus, m2)
+
+        CALL Compute_Is_Integrals( E1, E3, E_minus, T, xMu_l2, xMu_l4, I0(iCase), I1(iCase), I2(iCase) )
+      
+      ENDIF
 
     ENDDO
 

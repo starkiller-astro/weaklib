@@ -197,27 +197,27 @@ PROGRAM wlTestGeneralKernelTwoReactions
   CALL ProcessIndexFromReactionString( process_string_2, iProcess)
   iProcess_2 = iProcess - iProcessMin + 1
 
-  ! ----------------------     LFE   -----------------------------
-  process_string_1 = 'nu_bar_mu  + e+  -> nu_bar_e   + mu+ '
-  Mu2_1(:) = -Inte_Mue(:); Mu4_1(:) = -Inte_Mum(:)
-  CALL ProcessIndexFromReactionString( process_string_1, iProcess)
-  iProcess_1 = iProcess - iProcessMin + 1
+  ! ! ----------------------     LFE   -----------------------------
+  ! process_string_1 = 'nu_bar_mu  + e+  -> nu_bar_e   + mu+ '
+  ! Mu2_1(:) = -Inte_Mue(:); Mu4_1(:) = -Inte_Mum(:)
+  ! CALL ProcessIndexFromReactionString( process_string_1, iProcess)
+  ! iProcess_1 = iProcess - iProcessMin + 1
   
-  process_string_2 = 'nu_bar_e   + mu+ -> nu_bar_mu  + e+  '
-  Mu2_2(:) = -Inte_Mum(:); Mu4_2(:) = -Inte_Mue(:)
-  CALL ProcessIndexFromReactionString( process_string_2, iProcess)
-  iProcess_2 = iProcess - iProcessMin + 1
+  ! process_string_2 = 'nu_bar_e   + mu+ -> nu_bar_mu  + e+  '
+  ! Mu2_2(:) = -Inte_Mum(:); Mu4_2(:) = -Inte_Mue(:)
+  ! CALL ProcessIndexFromReactionString( process_string_2, iProcess)
+  ! iProcess_2 = iProcess - iProcessMin + 1
 
-  ! ----------------------     LFE   -----------------------------
-  process_string_1 = 'nu_mu      + e-  -> nu_e       + mu- '
-  Mu2_1(:) = Inte_Mue(:); Mu4_1(:) = Inte_Mum(:)
-  CALL ProcessIndexFromReactionString( process_string_1, iProcess)
-  iProcess_1 = iProcess - iProcessMin + 1
+  ! ! ----------------------     LFE   -----------------------------
+  ! process_string_1 = 'nu_mu      + e-  -> nu_e       + mu- '
+  ! Mu2_1(:) = Inte_Mue(:); Mu4_1(:) = Inte_Mum(:)
+  ! CALL ProcessIndexFromReactionString( process_string_1, iProcess)
+  ! iProcess_1 = iProcess - iProcessMin + 1
   
-  process_string_2 = 'nu_e       + mu- -> nu_mu      + e- '
-  Mu2_2(:) = Inte_Mum(:); Mu4_2(:) = Inte_Mue(:)
-  CALL ProcessIndexFromReactionString( process_string_2, iProcess)
-  iProcess_2 = iProcess - iProcessMin + 1
+  ! process_string_2 = 'nu_e       + mu- -> nu_mu      + e- '
+  ! Mu2_2(:) = Inte_Mum(:); Mu4_2(:) = Inte_Mue(:)
+  ! CALL ProcessIndexFromReactionString( process_string_2, iProcess)
+  ! iProcess_2 = iProcess - iProcessMin + 1
   
   ! ! ----------------------     NMS   -----------------------------
   ! process_string_1 = 'nu_mu      + mu- -> nu_mu       + mu-  '

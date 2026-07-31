@@ -4,7 +4,7 @@ PROGRAM wlTestFig56Guo
   USE wlEosConstantsModule,        ONLY: mp, mn, me, mmu, pi, hbarc
   USE wlGeneralLeptonScatteringModule, ONLY: &
     ProcessIndexFromReactionString, &
-    gauleg
+    gauleg, FD
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
     CalculateAllRoutIntegrated, &
     InitGeneralScatteringKernels, &
@@ -47,7 +47,7 @@ PROGRAM wlTestFig56Guo
 
   INTEGER , PARAMETER :: WhichCorrection = 3   ! LO+WM+PS+FF (same convention as Guo)
   INTEGER , PARAMETER :: iProcessMin = 1
-  INTEGER , PARAMETER :: iProcessMax = 32
+  INTEGER , PARAMETER :: iProcessMax = 34
   REAL(DP)            :: Rout_Int(iProcessMax - iProcessMin + 1)
 
   !--- Quadrature ---
@@ -275,8 +275,7 @@ PROGRAM wlTestFig56Guo
 
       Rout_avg_2 = Rout_avg_2 + Rout_Int(iProcess_Fig6_2) * E3**2 * conv_fac * wE3
       Rout_avg_4 = Rout_avg_4 + Rout_Int(iProcess_Fig6_4) * E3**2 * conv_fac * wE3
-      ! Rout_avg_5 = Rout_avg_5 + Rout_Int(iProcess_Fig6_5) * E3**2 * conv_fac * wE3
-      Rout_avg_5 = 0.0d0 ! IMD to zero for now
+      Rout_avg_5 = Rout_avg_5 + Rout_Int(iProcess_Fig6_5) * E3**2 * conv_fac * wE3 * FD(E3, MuNumu_a, T_a)
 
     ENDDO
 
@@ -304,10 +303,10 @@ PROGRAM wlTestFig56Guo
       
       CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Rout_Int(:) )
 
+      ! Notice the blocking factor
       Rout_avg_2 = Rout_avg_2 + Rout_Int(iProcess_Fig6_2) * E3**2 * conv_fac * wE3
       Rout_avg_4 = Rout_avg_4 + Rout_Int(iProcess_Fig6_4) * E3**2 * conv_fac * wE3
-      ! Rout_avg_5 = Rout_avg_5 + Rout_Int(iProcess_Fig6_5) * E3**2 * conv_fac * wE3
-      Rout_avg_5 = 0.0d0 ! IMD to zero for now
+      Rout_avg_5 = Rout_avg_5 + Rout_Int(iProcess_Fig6_5) * E3**2 * conv_fac * wE3 * FD(E3, MuNumu_b, T_b)
 
     ENDDO
 

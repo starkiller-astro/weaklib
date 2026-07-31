@@ -38,14 +38,14 @@ PROGRAM wlTestFig2Fischer
 
   !--- Quadrature ---
   INTEGER, PARAMETER :: nTheta = 24    ! costheta GL points for opacity
-  INTEGER, PARAMETER :: nE3    = 128     ! E3 GL points for opacity
+  INTEGER, PARAMETER :: nE3    = 24     ! E3 GL points for opacity
 
   REAL(DP) :: E3_min = 0.0d0     ! MeV
   REAL(DP) :: E3_max = 320.0d0  ! MeV
   REAL(DP) :: xa_E3(nE3), wa_E3(nE3)
 
   !--- Scan parameters ---
-  INTEGER , PARAMETER :: nE1 = 128    ! number of E_nu points for opacity
+  INTEGER , PARAMETER :: nE1 = 24    ! number of E_nu points for opacity
   REAL(DP), PARAMETER :: E1_min = 0.1d0     ! MeV
   REAL(DP), PARAMETER :: E1_max = 320.0d0   ! MeV
   REAL(DP), PARAMETER :: log_E1_min = LOG(E1_min)
@@ -58,12 +58,18 @@ PROGRAM wlTestFig2Fischer
   !--- Variables ---
   INTEGER  :: iE1, iE3
   REAL(DP) :: E1, E3, wE3
-  INTEGER  :: iProcess, iProcess_1, iProcess_2, iProcess_3, iProcess_4
+  INTEGER  :: iProcess
+  INTEGER  :: iProcess_1, iProcess_2, iProcess_3, iProcess_4
+  INTEGER  :: iProcess_Anti_1, iProcess_Anti_2, iProcess_Anti_3, iProcess_Anti_4
   
   ! Opacity arrays for Figure 6 (4 processes)
   REAL(DP) :: chi1, chi2, chi3, chi4
 
   CHARACTER(LEN=64), DIMENSION(4) :: process_string
+  CHARACTER(LEN=64), DIMENSION(4) :: process_anti_string
+
+  LOGICAL, PARAMETER :: Include_AntiLeptons = .TRUE.
+  LOGICAL, PARAMETER :: Use_Integrated_Rout = .FALSE.
 
   !--- Open output files ---
   OPEN(UNIT=10, FILE='Fischer_Fig2_cond_a.dat',  STATUS='REPLACE', ACTION='WRITE')
@@ -86,8 +92,31 @@ PROGRAM wlTestFig2Fischer
   CALL ProcessIndexFromReactionString( process_string(4), iProcess)
   iProcess_4 = iProcess - iProcessMin + 1
 
+  IF (Include_AntiLeptons) THEN
+    ! Initialize process strings
+    process_anti_string(1) = 'nu_mu + mu+ -> nu_mu + mu+'
+    CALL ProcessIndexFromReactionString( process_anti_string(1), iProcess)
+    iProcess_Anti_1 = iProcess - iProcessMin + 1
+
+    process_anti_string(2) = 'nu_mu + e+ -> nu_mu + e+'
+    CALL ProcessIndexFromReactionString( process_anti_string(2), iProcess)
+    iProcess_Anti_2 = iProcess - iProcessMin + 1
+
+    process_anti_string(3) = 'nu_bar_mu + mu+ -> nu_bar_mu + mu+'
+    CALL ProcessIndexFromReactionString( process_anti_string(3), iProcess)
+    iProcess_Anti_3 = iProcess - iProcessMin + 1
+    
+    process_anti_string(4) = 'nu_bar_mu + e+ -> nu_bar_mu + e+'
+    CALL ProcessIndexFromReactionString( process_anti_string(4), iProcess)
+    iProcess_Anti_4 = iProcess - iProcessMin + 1
+  ENDIF
+
   ! Write Headers
-  WRITE(10,'(A)') '# Opacities [cm^-1] vs Incoming Neutrino Energy [MeV]'
+  IF (Include_AntiLeptons) THEN
+    WRITE(10,'(A)') '# Opacities [cm^-1] (Including AntiLeptons!!!) vs Incoming Neutrino Energy [MeV]'
+  ELSE
+    WRITE(10,'(A)') '# Opacities [cm^-1] vs Incoming Neutrino Energy [MeV]'
+  ENDIF
   WRITE(10,'(A)') '# Condition (a): T=10 MeV, mu_e=108.1 MeV, mu_mu=51.7 MeV'
   WRITE(10,'(A)') '# Col 1: E_nu [MeV]'
   WRITE(10,'(A)') '# Col 2: ' // TRIM(ADJUSTL(process_string(1)))
@@ -95,8 +124,11 @@ PROGRAM wlTestFig2Fischer
   WRITE(10,'(A)') '# Col 4: ' // TRIM(ADJUSTL(process_string(3)))
   WRITE(10,'(A)') '# Col 5: ' // TRIM(ADJUSTL(process_string(4)))
 
-
-  WRITE(11,'(A)') '# Opacities [cm^-1] vs Incoming Neutrino Energy [MeV]'
+  IF (Include_AntiLeptons) THEN
+    WRITE(11,'(A)') '# Opacities [cm^-1] (Including AntiLeptons!!!) vs Incoming Neutrino Energy [MeV]'
+  ELSE
+    WRITE(11,'(A)') '# Opacities [cm^-1] vs Incoming Neutrino Energy [MeV]'
+  ENDIF
   WRITE(11,'(A)') '# Condition (b): T=25 MeV, mu_e=147.4 MeV, mu_mu=132.8 MeV'
   WRITE(11,'(A)') '# Col 1: E_nu [MeV]'
   WRITE(11,'(A)') '# Col 2: ' // TRIM(ADJUSTL(process_string(1)))
@@ -143,19 +175,36 @@ PROGRAM wlTestFig2Fischer
       E3    = xa_E3(iE3)
       wE3   = wa_E3(iE3)
       
-      ! CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_a, MuE_a, MuMu_a, Rout_Int(:) )
+      IF (Use_Integrated_Rout) THEN
+        CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_a, MuE_a, MuMu_a, Rout_Int(:) )
 
-      ! chi1 = chi1 + Rout_Int(iProcess_1) * E3**2 * conv_fac * wE3
-      ! chi2 = chi2 + Rout_Int(iProcess_2) * E3**2 * conv_fac * wE3
-      ! chi3 = chi3 + Rout_Int(iProcess_3) * E3**2 * conv_fac * wE3
-      ! chi4 = chi4 + Rout_Int(iProcess_4) * E3**2 * conv_fac * wE3
-      
-      CALL CalculateAllPhout( iE1, iE3, E1, E3, T_a, MuE_a, MuMu_a, Phout(:,:), nL )
+        chi1 = chi1 + Rout_Int(iProcess_1) * E3**2 * conv_fac * wE3
+        chi2 = chi2 + Rout_Int(iProcess_2) * E3**2 * conv_fac * wE3
+        chi3 = chi3 + Rout_Int(iProcess_3) * E3**2 * conv_fac * wE3
+        chi4 = chi4 + Rout_Int(iProcess_4) * E3**2 * conv_fac * wE3
 
-      chi1 = chi1 + Phout(iProcess_1, 1) * E3**2 * 4.0d0*pi * wE3
-      chi2 = chi2 + Phout(iProcess_2, 1) * E3**2 * 4.0d0*pi * wE3
-      chi3 = chi3 + Phout(iProcess_3, 1) * E3**2 * 4.0d0*pi * wE3
-      chi4 = chi4 + Phout(iProcess_4, 1) * E3**2 * 4.0d0*pi * wE3
+        IF (Include_AntiLeptons) THEN
+          chi1 = chi1 + Rout_Int(iProcess_Anti_1) * E3**2 * conv_fac * wE3
+          chi2 = chi2 + Rout_Int(iProcess_Anti_2) * E3**2 * conv_fac * wE3
+          chi3 = chi3 + Rout_Int(iProcess_Anti_3) * E3**2 * conv_fac * wE3
+          chi4 = chi4 + Rout_Int(iProcess_Anti_4) * E3**2 * conv_fac * wE3
+        ENDIF
+      ELSE
+        CALL CalculateAllPhout( iE1, iE3, E1, E3, T_a, MuE_a, MuMu_a, Phout(:,:), nL )
+
+        chi1 = chi1 + Phout(iProcess_1, 1) * E3**2 * 4.0d0*pi * wE3
+        chi2 = chi2 + Phout(iProcess_2, 1) * E3**2 * 4.0d0*pi * wE3
+        chi3 = chi3 + Phout(iProcess_3, 1) * E3**2 * 4.0d0*pi * wE3
+        chi4 = chi4 + Phout(iProcess_4, 1) * E3**2 * 4.0d0*pi * wE3
+
+        IF (Include_AntiLeptons) THEN
+          WRITE(*, *) Phout(iProcess_2,1), Phout(iProcess_Anti_2,1)
+          chi1 = chi1 + Phout(iProcess_Anti_1, 1) * E3**2 * 4.0d0*pi * wE3
+          chi2 = chi2 + Phout(iProcess_Anti_2, 1) * E3**2 * 4.0d0*pi * wE3
+          chi3 = chi3 + Phout(iProcess_Anti_3, 1) * E3**2 * 4.0d0*pi * wE3
+          chi4 = chi4 + Phout(iProcess_Anti_4, 1) * E3**2 * 4.0d0*pi * wE3
+        ENDIF
+      ENDIF
 
     ENDDO
 
@@ -170,19 +219,35 @@ PROGRAM wlTestFig2Fischer
       E3    = xa_E3(iE3)
       wE3   = wa_E3(iE3)
       
-      ! CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Rout_Int(:) )
+      IF (Use_Integrated_Rout) THEN
+        CALL CalculateAllRoutIntegrated( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Rout_Int(:) )
 
-      ! chi1 = chi1 + Rout_Int(iProcess_1) * E3**2 * conv_fac * wE3
-      ! chi2 = chi2 + Rout_Int(iProcess_2) * E3**2 * conv_fac * wE3
-      ! chi3 = chi3 + Rout_Int(iProcess_3) * E3**2 * conv_fac * wE3
-      ! chi4 = chi4 + Rout_Int(iProcess_4) * E3**2 * conv_fac * wE3
+        chi1 = chi1 + Rout_Int(iProcess_1) * E3**2 * conv_fac * wE3
+        chi2 = chi2 + Rout_Int(iProcess_2) * E3**2 * conv_fac * wE3
+        chi3 = chi3 + Rout_Int(iProcess_3) * E3**2 * conv_fac * wE3
+        chi4 = chi4 + Rout_Int(iProcess_4) * E3**2 * conv_fac * wE3
 
-      CALL CalculateAllPhout( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Phout(:,:), nL )
+        IF (Include_AntiLeptons) THEN
+          chi1 = chi1 + Rout_Int(iProcess_Anti_1) * E3**2 * conv_fac * wE3
+          chi2 = chi2 + Rout_Int(iProcess_Anti_2) * E3**2 * conv_fac * wE3
+          chi3 = chi3 + Rout_Int(iProcess_Anti_3) * E3**2 * conv_fac * wE3
+          chi4 = chi4 + Rout_Int(iProcess_Anti_4) * E3**2 * conv_fac * wE3
+        ENDIF
+      ELSE
+        CALL CalculateAllPhout( iE1, iE3, E1, E3, T_b, MuE_b, MuMu_b, Phout(:,:), nL )
 
-      chi1 = chi1 + Phout(iProcess_1, 1) * E3**2 * 4.0d0*pi * wE3
-      chi2 = chi2 + Phout(iProcess_2, 1) * E3**2 * 4.0d0*pi * wE3
-      chi3 = chi3 + Phout(iProcess_3, 1) * E3**2 * 4.0d0*pi * wE3
-      chi4 = chi4 + Phout(iProcess_4, 1) * E3**2 * 4.0d0*pi * wE3
+        chi1 = chi1 + Phout(iProcess_1, 1) * E3**2 * 4.0d0*pi * wE3
+        chi2 = chi2 + Phout(iProcess_2, 1) * E3**2 * 4.0d0*pi * wE3
+        chi3 = chi3 + Phout(iProcess_3, 1) * E3**2 * 4.0d0*pi * wE3
+        chi4 = chi4 + Phout(iProcess_4, 1) * E3**2 * 4.0d0*pi * wE3
+
+        IF (Include_AntiLeptons) THEN
+          chi1 = chi1 + Phout(iProcess_Anti_1, 1) * E3**2 * 4.0d0*pi * wE3
+          chi2 = chi2 + Phout(iProcess_Anti_2, 1) * E3**2 * 4.0d0*pi * wE3
+          chi3 = chi3 + Phout(iProcess_Anti_3, 1) * E3**2 * 4.0d0*pi * wE3
+          chi4 = chi4 + Phout(iProcess_Anti_4, 1) * E3**2 * 4.0d0*pi * wE3
+        ENDIF
+      ENDIF
 
     ENDDO
 

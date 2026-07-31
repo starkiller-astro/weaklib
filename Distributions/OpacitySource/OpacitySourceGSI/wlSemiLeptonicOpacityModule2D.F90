@@ -318,9 +318,9 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   ! This is in 1/km
     res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
   ! This is in 1/km or 1/cm, depending on the value of output_in_km_inverse
-    res = res*opacity_unit_factor
+    res = -res*opacity_unit_factor
   ELSE IF(ReactionIndex.eq.4) THEN
-    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
+    res = -res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
   END IF
 
   res = -res
