@@ -187,7 +187,7 @@ PROGRAM wlTestFig56Guo
     CALL Opacity_CC_2D(WhichCorrection, 1, E1, chi_numu_n_mu_p, &
                         T_a, MuMu_a, MuN_a, MuP_a, mmu,      &
                         mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
-    chi_numu_n_mu_p = chi_numu_n_mu_p * 1.0d5  
+    chi_numu_n_mu_p = chi_numu_n_mu_p  
     
     Rout_avg_2 = 0.0d0
     Rout_avg_3 = 0.0d0
@@ -211,7 +211,7 @@ PROGRAM wlTestFig56Guo
     CALL Opacity_CC_2D(WhichCorrection, 1, E1, chi_numu_n_mu_p, &
                         T_b, MuMu_b, MuN_b, MuP_b, mmu,      &
                         mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
-    chi_numu_n_mu_p = chi_numu_n_mu_p * 1.0d5  
+    chi_numu_n_mu_p = chi_numu_n_mu_p  
     
     Rout_avg_2 = 0.0d0
     Rout_avg_3 = 0.0d0
@@ -256,13 +256,13 @@ PROGRAM wlTestFig56Guo
     CALL Opacity_CC_2D(WhichCorrection, 2, E1, chi1, &
                         T_a, MuE_a, MuN_a, MuP_a, me,      &
                         mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
-    chi1 = chi1 * 1.0d5  
+    chi1 = chi1  
             
     ! 3. nu_bar_e + e- + p -> n (Involves electron)
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_a, MuE_a, MuN_a, MuP_a, me,      &
                         mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
-    chi3 = chi3 * 1.0d5  
+    chi3 = chi3  
             
     Rout_avg_2 = 0.0d0
     Rout_avg_4 = 0.0d0
@@ -286,13 +286,13 @@ PROGRAM wlTestFig56Guo
     CALL Opacity_CC_2D(WhichCorrection, 2, E1, chi1, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
                         mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
-    chi1 = chi1 * 1.0d5  
+    chi1 = chi1  
             
     ! 3. nu_bar_e + e- + p -> n (Involves electron)
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
                         mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
-    chi3 = chi3 * 1.0d5  
+    chi3 = chi3  
             
     Rout_avg_2 = 0.0d0
     Rout_avg_4 = 0.0d0

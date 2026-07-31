@@ -87,7 +87,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   ! Hidden output-unit control for opacity channels
   ! Default preserves current behavior: km^-1.
   ! Set .false. to return cm^-1 without changing public API.
-  LOGICAL,  PARAMETER :: output_in_km_inverse = .true.
+  LOGICAL,  PARAMETER :: output_in_km_inverse = .false.
   REAL(DP), PARAMETER :: cm_to_km             = 1.0d-5
   REAL(DP), PARAMETER :: opacity_unit_factor  = MERGE(cm_to_km, 1.0d0, output_in_km_inverse)
 
@@ -318,15 +318,12 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   ! This is in 1/km
     res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
   ! This is in 1/km or 1/cm, depending on the value of output_in_km_inverse
-    res = -res*opacity_unit_factor
+    res = res*opacity_unit_factor
   ELSE IF(ReactionIndex.eq.4) THEN
-    res = -res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
+    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
   END IF
 
-  res = -res
-
 END SUBROUTINE Integral_2D_D
-
 
 !=======================================================================
 !  Calc_AmpCoeffs: per-call amplitude coefficients (node-independent)

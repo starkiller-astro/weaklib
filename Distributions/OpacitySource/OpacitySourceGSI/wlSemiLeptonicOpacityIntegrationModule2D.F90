@@ -183,16 +183,11 @@ SUBROUTINE CC2D_ApplyPrefactor( CD, tot )
 #endif
 
   SELECT CASE(CD%ReactionIndex)
-  CASE (1, 2)
+  CASE (1, 2, 3)
     tot = tot*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
     tot = tot*opacity_unit_factor
-  CASE (3)
-    tot = tot*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
-    tot = tot*opacity_unit_factor
-    tot = -tot
   CASE (4)
     tot = tot*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*CD%Enu**2/hbarc**3/hbar
-    tot = -tot
   CASE DEFAULT
     tot = 0.0d0
   END SELECT

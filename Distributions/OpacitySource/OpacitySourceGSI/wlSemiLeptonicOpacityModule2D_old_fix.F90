@@ -61,7 +61,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   ! Hidden output-unit control for opacity channels
   ! Default preserves current behavior: km^-1.
   ! Set .false. to return cm^-1 without changing public API.
-  LOGICAL,  PARAMETER :: output_in_km_inverse = .true.
+  LOGICAL,  PARAMETER :: output_in_km_inverse = .false.
   REAL(DP), PARAMETER :: cm_to_km             = 1.0d-5
   REAL(DP), PARAMETER :: opacity_unit_factor  = MERGE(cm_to_km, 1.0d0, output_in_km_inverse)
 
