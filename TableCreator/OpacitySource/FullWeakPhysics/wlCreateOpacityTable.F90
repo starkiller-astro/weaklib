@@ -61,7 +61,7 @@ PROGRAM wlCreateOpacityTable
       InitializeHDF,       &
       FinalizeHDF
   USE wlOpacityFieldsModule, ONLY: &
-      iNu_NNS, iNuBar_NNS, &
+!      iNu_NNS, iNuBar_NNS, &
       iNeutron_NNS, iProton_NNS
   USE wlOpacityTableModule, ONLY: &
       OpacityTableType,     &
@@ -165,7 +165,7 @@ IMPLICIT NONE
    REAL(dp), PARAMETER     :: EC_E_max   = 100.0d0
 
    INTEGER, PARAMETER      :: nOpac_Iso  = 2  ! 2 for electron type
-                                              !   ( flavor identical )
+                                              !   ( nu/nubar, flavor identical )
    INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Scat_weak_magnetism &
@@ -201,7 +201,8 @@ IMPLICIT NONE
                               !nucleon final-state blocking, and special relativity
                               !Reddy et al 1998, Bruenn et al. 2020
 
-   INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
+!   INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
+   INTEGER, PARAMETER      :: nOpac_NNS  = 2  ! 2 ( n/p, nu/nubar not stored )
    INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
    INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
@@ -252,10 +253,12 @@ IMPLICIT NONE
                               xp, xhe, bb, MuB, eta, minvar
 
    REAL(dp), DIMENSION(nPointsE,2) :: cok
-   REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_nu_n,  phi1_nu_n, &
-                                              phi0_nub_n, phi1_nub_n, &
-                                              phi0_nu_p,  phi1_nu_p, &
-                                              phi0_nub_p, phi1_nub_p
+   ! REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_nu_n,  phi1_nu_n, &
+   !                                            phi0_nub_n, phi1_nub_n, &
+   !                                            phi0_nu_p,  phi1_nu_p, &
+   !                                            phi0_nub_p, phi1_nub_p
+   REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_n,  phi1_n, &
+                                              phi0_p,  phi1_p
    REAL(dp), DIMENSION(nPointsE, nPointsE) :: H0i, H0ii, H1i, H1ii
    REAL(dp)                                :: j0i, j0ii, j1i, j1ii
 
@@ -436,14 +439,18 @@ END IF
    OpacityTable % Scat_NNS % nPoints(4) = OpacityTable % nPointsTS(2)
    OpacityTable % Scat_NNS % nPoints(5) = nPointsMuB
 
-   OpacityTable % Scat_NNS % Names = (/'Nu on Neutron   ', &
-                                       'NuBar on Neutron', &
-                                       'Nu on Proton    ', &
-                                       'NuBar on Proton '/)
+   ! OpacityTable % Scat_NNS % Names = (/'Nu on Neutron   ', &
+   !                                     'NuBar on Neutron', &
+   !                                     'Nu on Proton    ', &
+   !                                     'NuBar on Proton '/)
+   OpacityTable % Scat_NNS % Names = (/'Neutrons', &
+                                       'Protons ' /)
 
+   ! OpacityTable % Scat_NNS % Units = (/'TBD', &
+   !                                     'TBD', &
+   !                                     'TBD', &
+   !                                     'TBD' /)
    OpacityTable % Scat_NNS % Units = (/'TBD', &
-                                       'TBD', &
-                                       'TBD', &
                                        'TBD' /)
 
    OpacityTable % Scat_NNS % weak_magnetism_corrections = &
@@ -1229,61 +1236,91 @@ print*, '>>> NNS MuB', MuB
           TMeV = T * kMeV
 !print*, '   >>> TMev', TMeV
 
+          ! CALL scatnrgn_weaklib &
+          !      ( nPointsE, &
+          !        OpacityTable % EnergyGrid % Values, &
+          !        OpacityTable % EnergyGrid % Edge, &
+          !        TMev, chem_n, chem_p, Scat_weak_magnetism, Scat_ga_strange, &
+          !        phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+          !        phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
           CALL scatnrgn_weaklib &
                ( nPointsE, &
                  OpacityTable % EnergyGrid % Values, &
                  OpacityTable % EnergyGrid % Edge, &
-                 TMev, chem_n, chem_p, Scat_weak_magnetism, Scat_ga_strange, &
-                 phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
-                 phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+                 TMev, chem_n, chem_p, Scat_ga_strange, &
+                 phi0_n, phi1_n, phi0_p, phi1_p )
 
-          !-- nu on n
+          ! !-- nu on n
 
-          OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+          ! OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+          !      ( :, :, 1, k_t, i_MuB )       &
+          ! = 0.5_DP * TRANSPOSE(phi0_nu_n(:,:))  
+          !   ! phi0_nu_n was saved as phi0_nu_n(e,ep)
+
+          ! OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+          !      ( :, :, 2, k_t, i_MuB )       &
+          ! = 1.5_DP * TRANSPOSE(phi1_nu_n(:,:))  
+          !   ! phi1_nu_n was saved as phi1_nu_n(e,ep)
+
+          ! !-- nub on n
+
+          ! OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+          !      ( :, :, 1, k_t, i_MuB )       &
+          ! = 0.5_DP * TRANSPOSE(phi0_nub_n(:,:))  
+          !   ! phi0_nub_n was saved as phi0_nub_n(e,ep)
+
+          ! OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+          !      ( :, :, 2, k_t, i_MuB )       &
+          ! = 1.5_DP * TRANSPOSE(phi1_nub_n(:,:))  
+          !   ! phi1_nub_n was saved as phi1_nub_n(e,ep)
+
+          ! !-- nu on p
+
+          ! OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
+          !      ( :, :, 1, k_t, i_MuB )       &
+          ! = 0.5_DP * TRANSPOSE(phi0_nu_p(:,:))  
+          !   ! phi0_nu_p was saved as phi0_nu_p(e,ep)
+
+          ! OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
+          !      ( :, :, 2, k_t, i_MuB )       &
+          ! = 1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
+          !   ! phi1_nu_p was saved as phi1_nu_p(e,ep)
+
+          ! !-- nub on p
+
+          ! OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+          !      ( :, :, 1, k_t, i_MuB )       &
+          ! = 0.5_DP * TRANSPOSE(phi0_nub_p(:,:))  
+          !   ! phi0_nub_n was saved as phi0_nub_p(e,ep)
+
+          ! OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+          !      ( :, :, 2, k_t, i_MuB )       &
+          ! = 1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
+          !   ! phi1_nub_p was saved as phi1_nub_p(e,ep)
+
+          !-- neutrons
+
+          OpacityTable % Scat_NNS % Kernel(iNeutron_NNS) % Values &
                ( :, :, 1, k_t, i_MuB )       &
-          = 0.5_DP * TRANSPOSE(phi0_nu_n(:,:))  
-            ! phi0_nu_n was saved as phi0_nu_n(e,ep)
+          = 0.5_DP * TRANSPOSE(phi0_n(:,:))  
+            ! phi0_n was saved as phi0_n(e,ep)
 
-          OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+          OpacityTable % Scat_NNS % Kernel(iNeutron_NNS) % Values &
                ( :, :, 2, k_t, i_MuB )       &
-          = 1.5_DP * TRANSPOSE(phi1_nu_n(:,:))  
-            ! phi1_nu_n was saved as phi1_nu_n(e,ep)
+          = 1.5_DP * TRANSPOSE(phi1_n(:,:))  
+            ! phi1_n was saved as phi1_n(e,ep)
 
-          !-- nub on n
+          !-- protons
 
-          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+          OpacityTable % Scat_NNS % Kernel(iProton_NNS) % Values &
                ( :, :, 1, k_t, i_MuB )       &
-          = 0.5_DP * TRANSPOSE(phi0_nub_n(:,:))  
-            ! phi0_nub_n was saved as phi0_nub_n(e,ep)
+          = 0.5_DP * TRANSPOSE(phi0_p(:,:))  
+            ! phi0_p was saved as phi0_p(e,ep)
 
-          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+          OpacityTable % Scat_NNS % Kernel(iProton_NNS) % Values &
                ( :, :, 2, k_t, i_MuB )       &
-          = 1.5_DP * TRANSPOSE(phi1_nub_n(:,:))  
-            ! phi1_nub_n was saved as phi1_nub_n(e,ep)
-
-          !-- nu on p
-
-          OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
-               ( :, :, 1, k_t, i_MuB )       &
-          = 0.5_DP * TRANSPOSE(phi0_nu_p(:,:))  
-            ! phi0_nu_p was saved as phi0_nu_p(e,ep)
-
-          OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
-               ( :, :, 2, k_t, i_MuB )       &
-          = 1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
-            ! phi1_nu_p was saved as phi1_nu_p(e,ep)
-
-          !-- nub on p
-
-          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
-               ( :, :, 1, k_t, i_MuB )       &
-          = 0.5_DP * TRANSPOSE(phi0_nub_p(:,:))  
-            ! phi0_nub_n was saved as phi0_nub_p(e,ep)
-
-          OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
-               ( :, :, 2, k_t, i_MuB )       &
-          = 1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
-            ! phi1_nub_p was saved as phi1_nub_p(e,ep)
+          = 1.5_DP * TRANSPOSE(phi1_p(:,:))  
+            ! phi1_p was saved as phi1_p(e,ep)
 
         END DO  !k_t
 
@@ -1450,330 +1487,330 @@ print*, '>>> Brem T', T
 
   CALL DescribeOpacityTable( OpacityTable )
 
-!----------------------------------------------------------
-!           Quick and dirty NNS output
-!----------------------------------------------------------
+! !----------------------------------------------------------
+! !           Quick and dirty NNS output
+! !----------------------------------------------------------
 
-  QuickDirty: BLOCK
+!   QuickDirty: BLOCK
 
-    INTEGER :: iE, iEp, iMu_n, iMu_p
-    REAL(dp) :: TwoPi, FourPi
-    REAL(dp) :: chem_n_Ch, chem_p_Ch  !-- Chimera convention 
-    REAL(dp) :: chem_nu, f_nu, f_nub, detBal, S_tot
-    REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
-                                     phi0_nub_Iso, phi1_nub_Iso
-    REAL(dp), DIMENSION(nPointsE) :: E_Vol
-    REAL(dp), DIMENSION(nPointsE) :: invMFP_nu_n,  invMFP_nu_p, &
-                                     invMFP_nub_n, invMFP_nub_p
-    REAL(dp), DIMENSION(nPointsE,nPointsE) :: phi0_nu_n_NNS,  phi1_nu_n_NNS, &
-                                              phi0_nub_n_NNS, phi1_nub_n_NNS, &
-                                              phi0_nu_p_NNS,  phi1_nu_p_NNS, &
-                                              phi0_nub_p_NNS, phi1_nub_p_NNS
+!     INTEGER :: iE, iEp, iMu_n, iMu_p
+!     REAL(dp) :: TwoPi, FourPi
+!     REAL(dp) :: chem_n_Ch, chem_p_Ch  !-- Chimera convention 
+!     REAL(dp) :: chem_nu, f_nu, f_nub, detBal, S_tot
+!     REAL(dp), DIMENSION(nPointsE) :: phi0_nu_Iso,  phi1_nu_Iso, &
+!                                      phi0_nub_Iso, phi1_nub_Iso
+!     REAL(dp), DIMENSION(nPointsE) :: E_Vol
+!     REAL(dp), DIMENSION(nPointsE) :: invMFP_nu_n,  invMFP_nu_p, &
+!                                      invMFP_nub_n, invMFP_nub_p
+!     REAL(dp), DIMENSION(nPointsE,nPointsE) :: phi0_nu_n_NNS,  phi1_nu_n_NNS, &
+!                                               phi0_nub_n_NNS, phi1_nub_n_NNS, &
+!                                               phi0_nu_p_NNS,  phi1_nu_p_NNS, &
+!                                               phi0_nub_p_NNS, phi1_nub_p_NNS
 
-    TwoPi  =  2.0d0 * acos ( -1.0d0 )
-   FourPi  =  4.0d0 * acos ( -1.0d0 )
+!     TwoPi  =  2.0d0 * acos ( -1.0d0 )
+!    FourPi  =  4.0d0 * acos ( -1.0d0 )
     
-   ASSOCIATE(  &
-       iRho    => OpacityTable % TS % Indices % iRho                           , &
-       nRho    => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho) , &
-       iT      => OpacityTable % TS % Indices % iT                             , &
-       nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
-       iYe     => OpacityTable % TS % Indices % iYe                            , &
-       nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
-       E_Cells => OpacityTable % EnergyGrid % Values                           , &
-       E_Edges => OpacityTable % EnergyGrid % Edge                            , &
-       Indices => OpacityTable % EOSTable % DV % Indices                       , &
-       DVOffs  => OpacityTable % EOSTable % DV % Offsets                       , &
-       DVar    => OpacityTable % EOSTable % DV % Variables  )
+!    ASSOCIATE(  &
+!        iRho    => OpacityTable % TS % Indices % iRho                           , &
+!        nRho    => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iRho) , &
+!        iT      => OpacityTable % TS % Indices % iT                             , &
+!        nT      => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iT)   , &
+!        iYe     => OpacityTable % TS % Indices % iYe                            , &
+!        nYe     => OpacityTable % nPointsTS(OpacityTable % TS % Indices % iYe)  , &
+!        E_Cells => OpacityTable % EnergyGrid % Values                           , &
+!        E_Edges => OpacityTable % EnergyGrid % Edge                            , &
+!        Indices => OpacityTable % EOSTable % DV % Indices                       , &
+!        DVOffs  => OpacityTable % EOSTable % DV % Offsets                       , &
+!        DVar    => OpacityTable % EOSTable % DV % Variables  )
 
-  WRITE (*,*)
+!   WRITE (*,*)
 
-  ! WRITE (*,*)
-  ! WRITE (*,*) '>>> Rho values'
-  ! DO j_rho = 1, nRho
-  !   rho = OpacityTable % TS % States (iRho) % Values (j_rho)
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
-  ! END DO
+!   ! WRITE (*,*)
+!   ! WRITE (*,*) '>>> Rho values'
+!   ! DO j_rho = 1, nRho
+!   !   rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+!   !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Rho    ', j_rho, '    ', rho
+!   ! END DO
 
-  ! WRITE (*,*)
-  ! WRITE (*,*) '>>> T values'
-  ! DO k_t = 1, nT
-  !   T = OpacityTable % TS % States (iT) % Values (k_t)
-  !   TMeV = T * kMeV
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
-  ! END DO
+!   ! WRITE (*,*)
+!   ! WRITE (*,*) '>>> T values'
+!   ! DO k_t = 1, nT
+!   !   T = OpacityTable % TS % States (iT) % Values (k_t)
+!   !   TMeV = T * kMeV
+!   !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'T      ', k_t, '    ', TMeV
+!   ! END DO
 
-  ! WRITE (*,*)
-  ! WRITE (*,*) '>>> Ye values'
-  ! DO l_ye = 1, nYe
-  !   ye = OpacityTable % TS % States (iYe) % Values (l_ye)
-  !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
-  ! END DO
+!   ! WRITE (*,*)
+!   ! WRITE (*,*) '>>> Ye values'
+!   ! DO l_ye = 1, nYe
+!   !   ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+!   !   WRITE (*,'(A7,I3.3,A4,ES10.3E2)') 'Ye     ', l_ye, '    ', ye
+!   ! END DO
 
-    !-- Bruenn et al. (2020) figures
+!     !-- Bruenn et al. (2020) figures
 
-!    j_rho = 118 !-- 10^11 g cm^-3 
-!    j_rho = 103 !-- 10^10 g cm^-3 
-!    j_rho = 133 !-- 10^12 g cm^-3 
-    j_rho = 163 !-- 10^14 g cm^-3 
-    rho = OpacityTable % TS % States (iRho) % Values (j_rho)
-    WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3)', j_rho, '    ', rho
+! !    j_rho = 118 !-- 10^11 g cm^-3 
+! !    j_rho = 103 !-- 10^10 g cm^-3 
+! !    j_rho = 133 !-- 10^12 g cm^-3 
+!     j_rho = 163 !-- 10^14 g cm^-3 
+!     rho = OpacityTable % TS % States (iRho) % Values (j_rho)
+!     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Rho (g cm^-3)', j_rho, '    ', rho
 
-!    k_t = 25  !--  0.9 MeV
-!    k_t = 38  !--  3.0 MeV
-!    k_t = 51  !-- 10.0 MeV
-    k_t = 53  !-- 12.0 MeV
-    T = OpacityTable % TS % States (iT) % Values (k_t)
-    TMeV = T * kMeV
-    WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'T (MeV)      ', k_t, '    ', TMeV
+! !    k_t = 25  !--  0.9 MeV
+! !    k_t = 38  !--  3.0 MeV
+! !    k_t = 51  !-- 10.0 MeV
+!     k_t = 53  !-- 12.0 MeV
+!     T = OpacityTable % TS % States (iT) % Values (k_t)
+!     TMeV = T * kMeV
+!     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'T (MeV)      ', k_t, '    ', TMeV
 
-!    l_ye = 20  !-- 0.4
-!    l_ye = 13  !-- 0.25
-!    l_ye =  5  !-- 0.1
-    l_ye = 14  !-- 0.27
-    ye = OpacityTable % TS % States (iYe) % Values (l_ye)
-    WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
+! !    l_ye = 20  !-- 0.4
+! !    l_ye = 13  !-- 0.25
+! !    l_ye =  5  !-- 0.1
+!     l_ye = 14  !-- 0.27
+!     ye = OpacityTable % TS % States (iYe) % Values (l_ye)
+!     WRITE (*,'(A13,I3.3,A4,ES10.3E2)') 'Ye           ', l_ye, '    ', ye
 
-    A   = 10**DVar(Indices % iHeavyMassNumber) &
-                % Values(j_rho, k_t, l_ye) &
-          - DVOffs(Indices % iHeavyMassNumber)   &
-          - epsilon
-    WRITE (*,*) 'A          ', A
+!     A   = 10**DVar(Indices % iHeavyMassNumber) &
+!                 % Values(j_rho, k_t, l_ye) &
+!           - DVOffs(Indices % iHeavyMassNumber)   &
+!           - epsilon
+!     WRITE (*,*) 'A          ', A
 
-    Z   = 10**DVar(Indices % iHeavyChargeNumber) &
-                % Values(j_rho, k_t, l_ye) &
-          - DVOffs(Indices % iHeavyChargeNumber)   &
-          - epsilon
-    WRITE (*,*) 'Z          ', Z
+!     Z   = 10**DVar(Indices % iHeavyChargeNumber) &
+!                 % Values(j_rho, k_t, l_ye) &
+!           - DVOffs(Indices % iHeavyChargeNumber)   &
+!           - epsilon
+!     WRITE (*,*) 'Z          ', Z
 
-    xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
-                    Values(j_rho, k_t, l_ye) &
-              - DVOffs(Indices % iHeavyMassFraction)   &
-              - epsilon
-    WRITE (*,*) 'X_A        ', xheavy
-    WRITE (*,*) 'n_A (cm^-3)', ( xheavy / A ) * rho/rmu
-    WRITE (*,*) 'n_A (fm^-3)', ( xheavy / A ) * rho/rmu * ( 1.e-13 )**3
+!     xheavy  = 10**DVar(Indices % iHeavyMassFraction) % &
+!                     Values(j_rho, k_t, l_ye) &
+!               - DVOffs(Indices % iHeavyMassFraction)   &
+!               - epsilon
+!     WRITE (*,*) 'X_A        ', xheavy
+!     WRITE (*,*) 'n_A (cm^-3)', ( xheavy / A ) * rho/rmu
+!     WRITE (*,*) 'n_A (fm^-3)', ( xheavy / A ) * rho/rmu * ( 1.e-13 )**3
 
-!    iMu_n  =  68  !-- 919 MeV
-!    iMu_n  =  63  !-- 906 MeV
-    iMu_n  =  73  !-- 932 MeV
+! !    iMu_n  =  68  !-- 919 MeV
+! !    iMu_n  =  63  !-- 906 MeV
+!     iMu_n  =  73  !-- 932 MeV
 
-!    iMu_p  =  66  !-- 914 MeV
-!    iMu_p  =  53  !-- 880 MeV
-    iMu_p  =  58  !-- 894 MeV
+! !    iMu_p  =  66  !-- 914 MeV
+! !    iMu_p  =  53  !-- 880 MeV
+!     iMu_p  =  58  !-- 894 MeV
 
-    chem_n_Ch = 10**DVar(Indices % iNeutronChemicalPotential) % &
-                      Values(j_rho, k_t, l_ye) &
-                - DVOffs(Indices % iNeutronChemicalPotential)   &
-                - epsilon
-    chem_n  =  chem_n_Ch + dmnp + mn_wl  !-- Convert from Chimera to absolute
-    WRITE (*,*) 'chem_n (MeV)', chem_n, &
-                iMu_n, OpacityTable % MuBGrid % Values(iMu_n)
+!     chem_n_Ch = 10**DVar(Indices % iNeutronChemicalPotential) % &
+!                       Values(j_rho, k_t, l_ye) &
+!                 - DVOffs(Indices % iNeutronChemicalPotential)   &
+!                 - epsilon
+!     chem_n  =  chem_n_Ch + dmnp + mn_wl  !-- Convert from Chimera to absolute
+!     WRITE (*,*) 'chem_n (MeV)', chem_n, &
+!                 iMu_n, OpacityTable % MuBGrid % Values(iMu_n)
 
-    chem_p_Ch = 10**DVar(Indices % iProtonChemicalPotential) % &
-                      Values(j_rho, k_t, l_ye) &
-                - DVOffs(Indices % iProtonChemicalPotential)   &
-                - epsilon
-    chem_p  =  chem_p_Ch + dmnp + mp_wl  !-- Convert from Chimera to absolute
-    WRITE (*,*) 'chem_p (MeV)', chem_p, &
-                iMu_p, OpacityTable % MuBGrid % Values(iMu_p)
+!     chem_p_Ch = 10**DVar(Indices % iProtonChemicalPotential) % &
+!                       Values(j_rho, k_t, l_ye) &
+!                 - DVOffs(Indices % iProtonChemicalPotential)   &
+!                 - epsilon
+!     chem_p  =  chem_p_Ch + dmnp + mp_wl  !-- Convert from Chimera to absolute
+!     WRITE (*,*) 'chem_p (MeV)', chem_p, &
+!                 iMu_p, OpacityTable % MuBGrid % Values(iMu_p)
 
-    chem_e = 10**DVar(Indices % iElectronChemicalPotential) % &
-                   Values(j_rho, k_t, l_ye) &
-             - DVOffs(Indices % iElectronChemicalPotential)   &
-             - epsilon
-    WRITE (*,*) 'chem_e (MeV)', chem_e
+!     chem_e = 10**DVar(Indices % iElectronChemicalPotential) % &
+!                    Values(j_rho, k_t, l_ye) &
+!              - DVOffs(Indices % iElectronChemicalPotential)   &
+!              - epsilon
+!     WRITE (*,*) 'chem_e (MeV)', chem_e
 
-    chem_nu = chem_p - chem_n + chem_e
-    WRITE (*,*) 'chem_nu_e (MeV)', chem_nu
+!     chem_nu = chem_p - chem_n + chem_e
+!     WRITE (*,*) 'chem_nu_e (MeV)', chem_nu
 
-    !-- Elastic scattering (Iso)
+!     !-- Elastic scattering (Iso)
 
-    phi0_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
-                       ( :, 1, j_rho, k_t, l_ye )
-    phi1_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
-                       ( :, 2, j_rho, k_t, l_ye )
+!     phi0_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
+!                        ( :, 1, j_rho, k_t, l_ye )
+!     phi1_nu_Iso   =  OpacityTable % Scat_Iso % Kernel(1) % Values &
+!                        ( :, 2, j_rho, k_t, l_ye )
 
-    phi0_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
-                       ( :, 1, j_rho, k_t, l_ye )
-    phi1_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
-                       ( :, 2, j_rho, k_t, l_ye )
+!     phi0_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
+!                        ( :, 1, j_rho, k_t, l_ye )
+!     phi1_nub_Iso  =  OpacityTable % Scat_Iso % Kernel(2) % Values &
+!                        ( :, 2, j_rho, k_t, l_ye )
 
-    WRITE (*,*)
-    WRITE (*,*) '>>> Nu Iso: E, Phi0, Phi1, 1/Lambda'
-    DO iE = 1, nPointsE
-      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
-        E_Cells ( iE ),     '    ', &
-        phi0_nu_Iso ( iE ), '    ', &
-        phi1_nu_Iso ( iE ), '    ', &
-        FourPi * ( E_Cells ( iE ) ** 2 ) &
-          * ( phi0_nu_Iso ( iE )  -  (1.d0/3.d0) * phi1_nu_Iso ( iE ) )
-    END DO
+!     WRITE (*,*)
+!     WRITE (*,*) '>>> Nu Iso: E, Phi0, Phi1, 1/Lambda'
+!     DO iE = 1, nPointsE
+!       WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+!         E_Cells ( iE ),     '    ', &
+!         phi0_nu_Iso ( iE ), '    ', &
+!         phi1_nu_Iso ( iE ), '    ', &
+!         FourPi * ( E_Cells ( iE ) ** 2 ) &
+!           * ( phi0_nu_Iso ( iE )  -  (1.d0/3.d0) * phi1_nu_Iso ( iE ) )
+!     END DO
 
-    WRITE (*,*)
-    WRITE (*,*) '>>> NuB Iso: E, Phi0, Phi1, 1/Lambda'
-    DO iE = 1, nPointsE
-      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
-        E_Cells ( iE ),     '    ', &
-        phi0_nub_Iso ( iE ), '    ', &
-        phi1_nub_Iso ( iE ), '    ', &
-        FourPi * ( E_Cells ( iE ) ** 2 ) &   
-          * ( phi0_nub_Iso ( iE )  -  (1.d0/3.d0) * phi1_nub_Iso ( iE ) )
-    END DO
+!     WRITE (*,*)
+!     WRITE (*,*) '>>> NuB Iso: E, Phi0, Phi1, 1/Lambda'
+!     DO iE = 1, nPointsE
+!       WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+!         E_Cells ( iE ),     '    ', &
+!         phi0_nub_Iso ( iE ), '    ', &
+!         phi1_nub_Iso ( iE ), '    ', &
+!         FourPi * ( E_Cells ( iE ) ** 2 ) &   
+!           * ( phi0_nub_Iso ( iE )  -  (1.d0/3.d0) * phi1_nub_Iso ( iE ) )
+!     END DO
 
-    !-- Inelastic scattering (NNS)
+!     !-- Inelastic scattering (NNS)
 
-    DO iE = 1, nPointsE
-      E_Vol ( iE )  =  ( E_Edges ( iE + 1 ) ** 3  -  E_Edges ( iE ) ** 3 ) &
-                       / 3.d0 
-    END DO !-- iE
+!     DO iE = 1, nPointsE
+!       E_Vol ( iE )  =  ( E_Edges ( iE + 1 ) ** 3  -  E_Edges ( iE ) ** 3 ) &
+!                        / 3.d0 
+!     END DO !-- iE
 
-    ! !-- Opacities from table
+!     ! !-- Opacities from table
 
-    ! phi0_nu_n_NNS  &
-    !   =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
-    !          ( :, :, 1, k_t, iMu_n )
+!     ! phi0_nu_n_NNS  &
+!     !   =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iNeutron_NNS) % Values &
+!     !          ( :, :, 1, k_t, iMu_n )
 
-    ! phi0_nub_n_NNS  &
-    !   =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
-    !          ( :, :, 1, k_t, iMu_n )
+!     ! phi0_nub_n_NNS  &
+!     !   =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iNeutron_NNS) % Values &
+!     !          ( :, :, 1, k_t, iMu_n )
 
-    ! phi0_nu_p_NNS  &
-    !   =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
-    !          ( :, :, 1, k_t, iMu_p )
+!     ! phi0_nu_p_NNS  &
+!     !   =  OpacityTable % Scat_NNS % Phi(iNu_NNS, iProton_NNS) % Values &
+!     !          ( :, :, 1, k_t, iMu_p )
 
-    ! phi0_nub_p_NNS  &
-    !   =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
-    !          ( :, :, 1, k_t, iMu_p )
+!     ! phi0_nub_p_NNS  &
+!     !   =  OpacityTable % Scat_NNS % Phi(iNuBar_NNS, iProton_NNS) % Values &
+!     !          ( :, :, 1, k_t, iMu_p )
 
-    !-- Opacities computed directly
+!     !-- Opacities computed directly
 
-    CALL scatnrgn_weaklib &
-           ( nPointsE, &
-             OpacityTable % EnergyGrid % Values, &
-             OpacityTable % EnergyGrid % Edge, &
-             TMev, chem_n_Ch, chem_p_Ch, Scat_weak_magnetism, Scat_ga_strange, &
-             phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
-             phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+!     CALL scatnrgn_weaklib &
+!            ( nPointsE, &
+!              OpacityTable % EnergyGrid % Values, &
+!              OpacityTable % EnergyGrid % Edge, &
+!              TMev, chem_n_Ch, chem_p_Ch, Scat_weak_magnetism, Scat_ga_strange, &
+!              phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+!              phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
 
-    phi0_nu_n_NNS  &
-      =  0.5_DP * TRANSPOSE(phi0_nu_n(:,:))
-         ! phi0_nu_n was saved as phi0_nu_n(e,ep)
+!     phi0_nu_n_NNS  &
+!       =  0.5_DP * TRANSPOSE(phi0_nu_n(:,:))
+!          ! phi0_nu_n was saved as phi0_nu_n(e,ep)
 
-    phi0_nub_n_NNS  &
-      =  0.5_DP * TRANSPOSE(phi0_nub_n(:,:))
-         ! phi0_nu_n was saved as phi0_nub_n(e,ep)
+!     phi0_nub_n_NNS  &
+!       =  0.5_DP * TRANSPOSE(phi0_nub_n(:,:))
+!          ! phi0_nu_n was saved as phi0_nub_n(e,ep)
 
-    phi0_nu_p_NNS  &
-      =  0.5_DP * TRANSPOSE(phi0_nu_p(:,:))
-         ! phi0_nu_n was saved as phi0_nu_n(e,ep)
+!     phi0_nu_p_NNS  &
+!       =  0.5_DP * TRANSPOSE(phi0_nu_p(:,:))
+!          ! phi0_nu_n was saved as phi0_nu_n(e,ep)
 
-    phi0_nub_p_NNS  &
-      =  0.5_DP * TRANSPOSE(phi0_nub_p(:,:))
-         ! phi0_nu_n was saved as phi0_nub_n(e,ep)
+!     phi0_nub_p_NNS  &
+!       =  0.5_DP * TRANSPOSE(phi0_nub_p(:,:))
+!          ! phi0_nu_n was saved as phi0_nub_n(e,ep)
 
-    !-- Inverse mean free paths
+!     !-- Inverse mean free paths
 
-    invMFP_nu_n   =  0.d0
-    invMFP_nu_p   =  0.d0
-    invMFP_nub_n  =  0.d0
-    invMFP_nub_p  =  0.d0
-    DO iE = 1, nPointsE
-      DO iEp = 1, nPointsE
+!     invMFP_nu_n   =  0.d0
+!     invMFP_nu_p   =  0.d0
+!     invMFP_nub_n  =  0.d0
+!     invMFP_nub_p  =  0.d0
+!     DO iE = 1, nPointsE
+!       DO iEp = 1, nPointsE
 
-        f_nu   =  1.d0 / ( 1.d0 &
-                          + dexp ( ( E_Cells ( iEp ) - chem_nu ) / TMeV ) )
+!         f_nu   =  1.d0 / ( 1.d0 &
+!                           + dexp ( ( E_Cells ( iEp ) - chem_nu ) / TMeV ) )
 
-        f_nub  =  1.d0 / ( 1.d0 &
-                          + dexp ( ( E_Cells ( iEp ) + chem_nu ) / TMeV ) )
+!         f_nub  =  1.d0 / ( 1.d0 &
+!                           + dexp ( ( E_Cells ( iEp ) + chem_nu ) / TMeV ) )
 
-!if ( iE == 1 ) &
-!  WRITE (*,*) '>>> iEp, f_nu, f_nub', iEP, f_nu, f_nub
+! !if ( iE == 1 ) &
+! !  WRITE (*,*) '>>> iEp, f_nu, f_nub', iEP, f_nu, f_nub
 
-        detBal  =  dexp ( ( E_Cells ( iEp ) - E_Cells ( iEp ) ) / TMeV )
+!         detBal  =  dexp ( ( E_Cells ( iEp ) - E_Cells ( iEp ) ) / TMeV )
 
-        invMFP_nu_n ( iE )  &
-          =  invMFP_nu_n ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nu_n_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nu )  & 
-!             +  E_Vol ( iEp )  &
-!                *  phi0_nu_n_NNS ( iEp, iE )  *  detBal  *  f_nu 
+!         invMFP_nu_n ( iE )  &
+!           =  invMFP_nu_n ( iE )  &
+!              +  E_Vol ( iEp )  &
+!                 *  phi0_nu_n_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nu )  & 
+! !             +  E_Vol ( iEp )  &
+! !                *  phi0_nu_n_NNS ( iEp, iE )  *  detBal  *  f_nu 
 
-        invMFP_nu_p ( iE )  &
-          =  invMFP_nu_p ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nu_p_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nu )  &
-!             +  E_Vol ( iEp )  &
-!                *  phi0_nu_p_NNS ( iEp, iE )  *  detBal  *  f_nu
+!         invMFP_nu_p ( iE )  &
+!           =  invMFP_nu_p ( iE )  &
+!              +  E_Vol ( iEp )  &
+!                 *  phi0_nu_p_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nu )  &
+! !             +  E_Vol ( iEp )  &
+! !                *  phi0_nu_p_NNS ( iEp, iE )  *  detBal  *  f_nu
 
-        invMFP_nub_n ( iE )  &
-          =  invMFP_nub_n ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nub_n_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nub )  &
-!             +  E_Vol ( iEp )  &
-!                *  phi0_nub_n_NNS ( iEp, iE )  *  detBal  *  f_nub
+!         invMFP_nub_n ( iE )  &
+!           =  invMFP_nub_n ( iE )  &
+!              +  E_Vol ( iEp )  &
+!                 *  phi0_nub_n_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nub )  &
+! !             +  E_Vol ( iEp )  &
+! !                *  phi0_nub_n_NNS ( iEp, iE )  *  detBal  *  f_nub
 
-        invMFP_nub_p ( iE )  &
-          =  invMFP_nub_p ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  phi0_nub_p_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nub )  &
-!             +  E_Vol ( iEp )  &
-!                *  phi0_nub_p_NNS ( iEp, iE )  *  detBal  *  f_nub
+!         invMFP_nub_p ( iE )  &
+!           =  invMFP_nub_p ( iE )  &
+!              +  E_Vol ( iEp )  &
+!                 *  phi0_nub_p_NNS ( iEp, iE )!  *  ( 1.d0  -  f_nub )  &
+! !             +  E_Vol ( iEp )  &
+! !                *  phi0_nub_p_NNS ( iEp, iE )  *  detBal  *  f_nub
 
-      END DO !-- iEp
+!       END DO !-- iEp
 
-      !-- Factor of 2 to undo thornado legendre moment convention
-      !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
+!       !-- Factor of 2 to undo thornado legendre moment convention
+!       !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
 
-      invMFP_nu_n  ( iE )  =  2.d0 * TwoPi * invMFP_nu_n  ( iE )
-      invMFP_nu_p  ( iE )  =  2.d0 * TwoPi * invMFP_nu_p  ( iE )
-      invMFP_nub_n ( iE )  =  2.d0 * TwoPi * invMFP_nub_n ( iE )
-      invMFP_nub_p ( iE )  =  2.d0 * TwoPi * invMFP_nub_p ( iE )
+!       invMFP_nu_n  ( iE )  =  2.d0 * TwoPi * invMFP_nu_n  ( iE )
+!       invMFP_nu_p  ( iE )  =  2.d0 * TwoPi * invMFP_nu_p  ( iE )
+!       invMFP_nub_n ( iE )  =  2.d0 * TwoPi * invMFP_nub_n ( iE )
+!       invMFP_nub_p ( iE )  =  2.d0 * TwoPi * invMFP_nub_p ( iE )
 
-    END DO !-- iE
+!     END DO !-- iE
 
-    !-- Many-body corrections, not tabulated for NNS, must be separately applied
+!     !-- Many-body corrections, not tabulated for NNS, must be separately applied
 
-    CALL nc_manybody_corrections_weaklib( rho * kfm, TMev, ye, S_tot )
-    WRITE (*,*)
-    WRITE (*,*) '>>> rho'   , rho
-    WRITE (*,*) '>>> n_fm_3', rho * kfm
-    WRITE (*,*) '>>> TMeV'  , TMeV
-    WRITE (*,*) '>>> Ye'    , ye
-    WRITE (*,*) '>>> S_tot' , S_tot
+!     CALL nc_manybody_corrections_weaklib( rho * kfm, TMev, ye, S_tot )
+!     WRITE (*,*)
+!     WRITE (*,*) '>>> rho'   , rho
+!     WRITE (*,*) '>>> n_fm_3', rho * kfm
+!     WRITE (*,*) '>>> TMeV'  , TMeV
+!     WRITE (*,*) '>>> Ye'    , ye
+!     WRITE (*,*) '>>> S_tot' , S_tot
 
-    invMFP_nu_n   =  invMFP_nu_n   *  S_tot
-    invMFP_nu_p   =  invMFP_nu_p   *  S_tot
-    invMFP_nub_n  =  invMFP_nub_n  *  S_tot
-    invMFP_nub_p  =  invMFP_nub_p  *  S_tot
+!     invMFP_nu_n   =  invMFP_nu_n   *  S_tot
+!     invMFP_nu_p   =  invMFP_nu_p   *  S_tot
+!     invMFP_nub_n  =  invMFP_nub_n  *  S_tot
+!     invMFP_nub_p  =  invMFP_nub_p  *  S_tot
 
-    !-- Display
+!     !-- Display
 
-    WRITE (*,*)
-    WRITE (*,*) '>>> Nu NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
-    DO iE = 1, nPointsE
-      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
-        E_Cells ( iE ),     '    ', &
-        invMFP_nu_n ( iE ), '    ', &
-        invMFP_nu_p ( iE ), '    ', &
-        invMFP_nu_n ( iE )  +  invMFP_nu_p ( iE )  
-    END DO
+!     WRITE (*,*)
+!     WRITE (*,*) '>>> Nu NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
+!     DO iE = 1, nPointsE
+!       WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+!         E_Cells ( iE ),     '    ', &
+!         invMFP_nu_n ( iE ), '    ', &
+!         invMFP_nu_p ( iE ), '    ', &
+!         invMFP_nu_n ( iE )  +  invMFP_nu_p ( iE )  
+!     END DO
 
-    WRITE (*,*)
-    WRITE (*,*) '>>> NuB NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
-    DO iE = 1, nPointsE
-      WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
-        E_Cells ( iE ),     '    ', &
-        invMFP_nub_n ( iE ), '    ', &
-        invMFP_nub_p ( iE ), '    ', &
-        invMFP_nub_n ( iE )  +  invMFP_nub_p ( iE )  
-    END DO
+!     WRITE (*,*)
+!     WRITE (*,*) '>>> NuB NNS: E, 1/Lambda_n, 1/Lambda_p, 1/Lambda_N'
+!     DO iE = 1, nPointsE
+!       WRITE (*,'(ES10.3E2,A4,ES10.3E2,A4,ES10.3E2,A4,ES10.3E2)') &
+!         E_Cells ( iE ),     '    ', &
+!         invMFP_nub_n ( iE ), '    ', &
+!         invMFP_nub_p ( iE ), '    ', &
+!         invMFP_nub_n ( iE )  +  invMFP_nub_p ( iE )  
+!     END DO
 
-   WRITE (*,*)
+!    WRITE (*,*)
 
-   END ASSOCIATE ! rho-T-Ye
+!    END ASSOCIATE ! rho-T-Ye
 
-   END BLOCK QuickDirty
+!    END BLOCK QuickDirty
 
 !--------------------------------------------------------------
 

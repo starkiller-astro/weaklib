@@ -15,8 +15,8 @@ MODULE wlOpacityFieldsModule
 
   ! --- NNS Scattering Kernels ( indices of Phi ( :, : ) => Kernel ( : ) ) ---
 
-  INTEGER, PUBLIC, PARAMETER :: iNu_NNS      = 1
-  INTEGER, PUBLIC, PARAMETER :: iNuBar_NNS   = 2
+!  INTEGER, PUBLIC, PARAMETER :: iNu_NNS      = 1
+!  INTEGER, PUBLIC, PARAMETER :: iNuBar_NNS   = 2
   INTEGER, PUBLIC, PARAMETER :: iNeutron_NNS = 1
   INTEGER, PUBLIC, PARAMETER :: iProton_NNS  = 2  
 
@@ -182,10 +182,10 @@ MODULE wlOpacityFieldsModule
     INTEGER  :: weak_magnetism_corrections !Horowitz 2002
     INTEGER  :: many_body_corrections      !Horowith et al 2017
     REAL(DP) :: ga_strange                 !strange quark contributions
-    TYPE(ValueType_5D), POINTER :: Phi(:,:) => null ( )
-       !-- remapping of Kernel(:) to index nu/nub and n/p
-  CONTAINS
-    FINAL :: Finalize_NNS
+!    TYPE(ValueType_5D), POINTER :: Phi(:,:) => null ( )
+!       !-- remapping of Kernel(:) to index nu/nub and n/p
+!  CONTAINS
+!    FINAL :: Finalize_NNS
   END TYPE OpacityTypeScatNNS
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNES
@@ -396,10 +396,10 @@ CONTAINS
 
     END DO
 
-    SELECT TYPE ( Opacity )
-    TYPE IS ( OpacityTypeScatNNS )
-      Opacity % Phi ( 1:2, 1:2 )  =>  Opacity % Kernel ( 1:4 )
-    END SELECT
+!    SELECT TYPE ( Opacity )
+!    TYPE IS ( OpacityTypeScatNNS )
+!      Opacity % Phi ( 1:2, 1:2 )  =>  Opacity % Kernel ( 1:4 )
+!    END SELECT
 
   END SUBROUTINE AllocateOpacityTypeScat
 
@@ -537,14 +537,14 @@ CONTAINS
   END SUBROUTINE DescribeOpacityTypeScat
 
 
-  SUBROUTINE Finalize_NNS ( Opacity )
+  ! SUBROUTINE Finalize_NNS ( Opacity )
 
-    type ( OpacityTypeScatNNS ), intent ( inout ) :: &
-      Opacity
+  !   type ( OpacityTypeScatNNS ), intent ( inout ) :: &
+  !     Opacity
 
-    NULLIFY ( Opacity % Phi )
+  !   NULLIFY ( Opacity % Phi )
 
-  END SUBROUTINE Finalize_NNS
+  ! END SUBROUTINE Finalize_NNS
 
 
 END MODULE wlOpacityFieldsModule

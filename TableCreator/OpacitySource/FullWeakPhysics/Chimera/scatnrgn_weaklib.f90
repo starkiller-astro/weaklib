@@ -1,7 +1,9 @@
 SUBROUTINE scatnrgn_weaklib &
-           ( nez, egrid_c, egrid_e, tmev, chem_n, chem_p, wm, g_strange, &
-             phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
-             phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+!           ( nez, egrid_c, egrid_e, tmev, chem_n, chem_p, wm, g_strange, &
+!             phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+!             phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+           ( nez, egrid_c, egrid_e, tmev, chem_n, chem_p, g_strange, &
+             phi0_n, phi1_n, phi0_p, phi1_p )
 
 !-----------------------------------------------------------------------
 !
@@ -124,21 +126,25 @@ REAL(dp), DIMENSION(nez+1), INTENT(in) :: egrid_e  ! neutrino energy grid
 REAL(dp), INTENT(in)     :: tmev   ! temperature [MeV]
 REAL(dp), INTENT(in)     :: chem_n ! neutron chemical potential, Chimera
 REAL(dp), INTENT(in)     :: chem_p ! proton chemical potential, Chimera
-INTEGER,  INTENT(in)     :: wm
+!INTEGER,  INTENT(in)     :: wm
 REAL(dp), INTENT(in)     :: g_strange
 
 !--------------------------------------------------------------------
 !        Output variables
 !-------------------------------------------------------------------
 
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nu_n
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nu_n
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nub_n
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nub_n
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nu_p
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nu_p
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nub_p
-REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nub_p
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nu_n
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nu_n
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nub_n
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nub_n
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nu_p
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nu_p
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_nub_p
+! REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_nub_p
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_n
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_n
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi0_p
+REAL(dp), DIMENSION(nez,nez), INTENT(out) :: phi1_p
 
 !-----------------------------------------------------------------------
 !        Local variables
@@ -231,22 +237,22 @@ END IF ! first
   mu_p             = chem_p + dmnp + mp
   mu_n             = chem_n + dmnp + mn
 
-!-----------------------------------------------------------------------
-!  Weak magnetism corrections for neutrino and antineutrino neutron and
-!   proton scattering.
-!-----------------------------------------------------------------------
+! !-----------------------------------------------------------------------
+! !  Weak magnetism corrections for neutrino and antineutrino neutron and
+! !   proton scattering.
+! !-----------------------------------------------------------------------
 
-  !Make weak magnetism corrections non-operational initially
-  !(these are multiplicative corrections)
-  xi_p_wm  = 1.0d0
-  xi_n_wm  = 1.0d0
-  xib_p_wm = 1.0d0
-  xib_n_wm = 1.0d0
+!   !Make weak magnetism corrections non-operational initially
+!   !(these are multiplicative corrections)
+!   xi_p_wm  = 1.0d0
+!   xi_n_wm  = 1.0d0
+!   xib_p_wm = 1.0d0
+!   xib_n_wm = 1.0d0
 
-  IF(wm == 1) THEN
-    CALL nc_weak_mag_weaklib &
-           ( egrid_c, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
-  END IF
+!   IF(wm == 1) THEN
+!     CALL nc_weak_mag_weaklib &
+!            ( egrid_c, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nez )
+!   END IF
 
 ! !-----------------------------------------------------------------------
 ! !  Many body corrections for neutrino-nucleon neutral current
@@ -335,44 +341,64 @@ END IF ! first
 
       !-- Follow scatergn_weaklib.f90 in applying detailed balance here
 
-      !-- nu on n
+      ! !-- nu on n
 
-      phi0_nu_n(k,kp) = sct0_n * xi_n_wm(k)
-      phi1_nu_n(k,kp) = sct1_n * xi_n_wm(k)
+      ! phi0_nu_n(k,kp) = sct0_n * xi_n_wm(k)
+      ! phi1_nu_n(k,kp) = sct1_n * xi_n_wm(k)
 
-      phi0_nu_n(kp,k) = phi0_nu_n(k,kp) &
+      ! phi0_nu_n(kp,k) = phi0_nu_n(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      ! phi1_nu_n(kp,k) = phi1_nu_n(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      ! !-- nub on n
+
+      ! phi0_nub_n(k,kp) = sct0_n * xib_n_wm(k)
+      ! phi1_nub_n(k,kp) = sct1_n * xib_n_wm(k)
+
+      ! phi0_nub_n(kp,k) = phi0_nub_n(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      ! phi1_nub_n(kp,k) = phi1_nub_n(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      ! !-- nu on p
+
+      ! phi0_nu_p(k,kp) = sct0_p * xi_p_wm(k)
+      ! phi1_nu_p(k,kp) = sct1_p * xi_p_wm(k)
+
+      ! phi0_nu_p(kp,k) = phi0_nu_p(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      ! phi1_nu_p(kp,k) = phi1_nu_p(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      ! !-- nub on p
+
+      ! phi0_nub_p(k,kp) = sct0_p * xib_p_wm(k)
+      ! phi1_nub_p(k,kp) = sct1_p * xib_p_wm(k)
+
+      ! phi0_nub_p(kp,k) = phi0_nub_p(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+      ! phi1_nub_p(kp,k) = phi1_nub_p(k,kp) &
+      !                   * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+
+      !-- neutrons
+
+      phi0_n(k,kp) = sct0_n
+      phi1_n(k,kp) = sct1_n
+
+      phi0_n(kp,k) = phi0_n(k,kp) &
                         * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_nu_n(kp,k) = phi1_nu_n(k,kp) &
+      phi1_n(kp,k) = phi1_n(k,kp) &
                         * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
 
-      !-- nub on n
+      !-- protons
 
-      phi0_nub_n(k,kp) = sct0_n * xib_n_wm(k)
-      phi1_nub_n(k,kp) = sct1_n * xib_n_wm(k)
+      phi0_p(k,kp) = sct0_p
+      phi1_p(k,kp) = sct1_p
 
-      phi0_nub_n(kp,k) = phi0_nub_n(k,kp) &
+      phi0_p(kp,k) = phi0_p(k,kp) &
                         * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_nub_n(kp,k) = phi1_nub_n(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-
-      !-- nu on p
-
-      phi0_nu_p(k,kp) = sct0_p * xi_p_wm(k)
-      phi1_nu_p(k,kp) = sct1_p * xi_p_wm(k)
-
-      phi0_nu_p(kp,k) = phi0_nu_p(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_nu_p(kp,k) = phi1_nu_p(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-
-      !-- nub on p
-
-      phi0_nub_p(k,kp) = sct0_p * xib_p_wm(k)
-      phi1_nub_p(k,kp) = sct1_p * xib_p_wm(k)
-
-      phi0_nub_p(kp,k) = phi0_nub_p(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_nub_p(kp,k) = phi1_nub_p(k,kp) &
+      phi1_p(kp,k) = phi1_p(k,kp) &
                         * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
 
     END DO ! kp = 1,k
