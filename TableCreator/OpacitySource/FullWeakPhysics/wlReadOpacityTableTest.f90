@@ -213,24 +213,31 @@ CONTAINS
     USE wlExtPhysicalConstantsModule, ONLY: &
       kMeV
     USE wlOpacityFieldsModule, ONLY: &
-      iNu_NNS, iNuBar_NNS, &
+!      iNu_NNS, iNuBar_NNS, &
       iNeutron_NNS, iProton_NNS
 
     REAL(dp), INTENT(in) :: T, MuN, MuP, S_tot
 
+    ! REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
+    !   Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
+    !   Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
+    !   Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
+    !   Interpolated_NuB_P_0, Interpolated_NuB_P_1
+    ! REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
+    !   Computed_Nu_N_0,  Computed_Nu_N_1,  &
+    !   Computed_NuB_N_0, Computed_NuB_N_1, &
+    !   Computed_Nu_P_0,  Computed_Nu_P_1,  &
+    !   Computed_NuB_P_0, Computed_NuB_P_1
     REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
-      Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
-      Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
-      Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
-      Interpolated_NuB_P_0, Interpolated_NuB_P_1
+      Interpolated_N_0, Interpolated_N_1,  &
+      Interpolated_P_0, Interpolated_P_1
     REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
-      Computed_Nu_N_0,  Computed_Nu_N_1,  &
-      Computed_NuB_N_0, Computed_NuB_N_1, &
-      Computed_Nu_P_0,  Computed_Nu_P_1,  &
-      Computed_NuB_P_0, Computed_NuB_P_1
+      Computed_N_0, Computed_N_1,  &
+      Computed_P_0, Computed_P_1
 
     associate &
       ( nPointsE  =>  OpacityTable % EnergyGrid % nPoints, &
+        E_Cells => OpacityTable % EnergyGrid % Values, &
         E_Edges => OpacityTable % EnergyGrid % Edge ) 
 
     ! WRITE (*,*)
@@ -239,44 +246,48 @@ CONTAINS
     ! WRITE (*,'(A6,ES13.6E2)') 'MuP = ', MuP 
     ! WRITE (*,'(A11,I4.4)')    'nPointsE = ', nPointsE 
 
+    ! allocate &
+    !   ( Interpolated_Nu_N_0  ( nPointsE, nPointsE ), &
+    !     Interpolated_Nu_N_1  ( nPointsE, nPointsE ), &
+    !     Interpolated_NuB_N_0 ( nPointsE, nPointsE ), &
+    !     Interpolated_NuB_N_1 ( nPointsE, nPointsE ), &
+    !     Interpolated_Nu_P_0  ( nPointsE, nPointsE ), &
+    !     Interpolated_Nu_P_1  ( nPointsE, nPointsE ), &
+    !     Interpolated_NuB_P_0 ( nPointsE, nPointsE ), &
+    !     Interpolated_NuB_P_1 ( nPointsE, nPointsE ) )
+    ! allocate &
+    !   ( Computed_Nu_N_0  ( nPointsE, nPointsE ), &
+    !     Computed_Nu_N_1  ( nPointsE, nPointsE ), &
+    !     Computed_NuB_N_0 ( nPointsE, nPointsE ), &
+    !     Computed_NuB_N_1 ( nPointsE, nPointsE ), &
+    !     Computed_Nu_P_0  ( nPointsE, nPointsE ), &
+    !     Computed_Nu_P_1  ( nPointsE, nPointsE ), &
+    !     Computed_NuB_P_0 ( nPointsE, nPointsE ), &
+    !     Computed_NuB_P_1 ( nPointsE, nPointsE ) )
     allocate &
-      ( Interpolated_Nu_N_0  ( nPointsE, nPointsE ), &
-        Interpolated_Nu_N_1  ( nPointsE, nPointsE ), &
-        Interpolated_NuB_N_0 ( nPointsE, nPointsE ), &
-        Interpolated_NuB_N_1 ( nPointsE, nPointsE ), &
-        Interpolated_Nu_P_0  ( nPointsE, nPointsE ), &
-        Interpolated_Nu_P_1  ( nPointsE, nPointsE ), &
-        Interpolated_NuB_P_0 ( nPointsE, nPointsE ), &
-        Interpolated_NuB_P_1 ( nPointsE, nPointsE ) )
+      ( Interpolated_N_0 ( nPointsE, nPointsE ), &
+        Interpolated_N_1 ( nPointsE, nPointsE ), &
+        Interpolated_P_0 ( nPointsE, nPointsE ), &
+        Interpolated_P_1 ( nPointsE, nPointsE ) )
     allocate &
-      ( Computed_Nu_N_0  ( nPointsE, nPointsE ), &
-        Computed_Nu_N_1  ( nPointsE, nPointsE ), &
-        Computed_NuB_N_0 ( nPointsE, nPointsE ), &
-        Computed_NuB_N_1 ( nPointsE, nPointsE ), &
-        Computed_Nu_P_0  ( nPointsE, nPointsE ), &
-        Computed_Nu_P_1  ( nPointsE, nPointsE ), &
-        Computed_NuB_P_0 ( nPointsE, nPointsE ), &
-        Computed_NuB_P_1 ( nPointsE, nPointsE ) )
+      ( Computed_N_0 ( nPointsE, nPointsE ), &
+        Computed_N_1 ( nPointsE, nPointsE ), &
+        Computed_P_0 ( nPointsE, nPointsE ), &
+        Computed_P_1 ( nPointsE, nPointsE ) )
 
     CALL Interpolate_NNS_Point &
            ( T, MuN, MuP, nPointsE, &
-             Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
-             Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
-             Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
-             Interpolated_NuB_P_0, Interpolated_NuB_P_1 )
+             Interpolated_N_0, Interpolated_N_1,  &
+             Interpolated_P_0, Interpolated_P_1 )
     CALL Compute_NNS_Point &
            ( T, MuN, MuP, nPointsE, &
-             Computed_Nu_N_0,  Computed_Nu_N_1,  &
-             Computed_NuB_N_0, Computed_NuB_N_1, &
-             Computed_Nu_P_0,  Computed_Nu_P_1,  &
-             Computed_NuB_P_0, Computed_NuB_P_1 )
+             Computed_N_0, Computed_N_1,  &
+             Computed_P_0, Computed_P_1 )
 
     call TestMeanFreePath &
-           ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
-             Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
-             Computed_Nu_N_0, Computed_NuB_N_0, &
-             Computed_Nu_P_0, Computed_NuB_P_0, &
-             E_Edges, S_tot, nPointsE )
+           ( Interpolated_N_0, Interpolated_P_0, &
+                 Computed_N_0,     Computed_P_0, &
+             E_Cells, E_Edges, S_tot, nPointsE )
 
     end associate !-- nPointsE
 
@@ -284,11 +295,14 @@ CONTAINS
 
 
   SUBROUTINE Interpolate_NNS_Point &
+               ! ( T, MuN, MuP, nPointsE, &
+               !   Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
+               !   Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
+               !   Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
+               !   Interpolated_NuB_P_0, Interpolated_NuB_P_1 )
                ( T, MuN, MuP, nPointsE, &
-                 Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
-                 Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
-                 Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
-                 Interpolated_NuB_P_0, Interpolated_NuB_P_1 )
+                 Interpolated_N_0, Interpolated_N_1,  &
+                 Interpolated_P_0, Interpolated_P_1 )
 
     USE wlKindModule, ONLY: &
       dp
@@ -299,11 +313,14 @@ CONTAINS
 
     REAL(dp), INTENT(in)  :: T, MuN, MuP
     INTEGER,  INTENT(in)  :: nPointsE
+    ! REAL(dp), DIMENSION ( :, : ), INTENT(out), TARGET :: &
+    !   Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
+    !   Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
+    !   Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
+    !   Interpolated_NuB_P_0, Interpolated_NuB_P_1
     REAL(dp), DIMENSION ( :, : ), INTENT(out), TARGET :: &
-      Interpolated_Nu_N_0,  Interpolated_Nu_N_1,  &
-      Interpolated_NuB_N_0, Interpolated_NuB_N_1, &
-      Interpolated_Nu_P_0,  Interpolated_Nu_P_1,  &
-      Interpolated_NuB_P_0, Interpolated_NuB_P_1
+      Interpolated_N_0, Interpolated_N_1,  &
+      Interpolated_P_0, Interpolated_P_1
 
     INTEGER  :: iOpacity, iMoment, iE, iEp, iT, iMuN, iMuP, iMuB
     REAL(dp) :: dLogT, dMuN, dMuP, dMuB
@@ -357,44 +374,64 @@ CONTAINS
       ( Table_NNS  =>  OpacityTable % Scat_NNS )
 
     do iOpacity  =  1,  Table_NNS % nOpacities
-      do iMoment  =  1,  1 !Table_NNS % nMoments
+      do iMoment  =  1,  Table_NNS % nMoments
  
+        ! select case ( iOpacity )
+        ! case ( 1 )
+        !   iMuB  =  iMuN
+        !   dMuB  =  dMuN
+        !   select case ( iMoment )
+        !     case ( 1 )
+        !       Interpolated  =>  Interpolated_Nu_N_0
+        !     case ( 2 )
+        !       Interpolated  =>  Interpolated_Nu_N_1
+        !   end select !-- iMoment
+        ! case ( 2 )
+        !   iMuB  =  iMuN
+        !   dMuB  =  dMuN
+        !   select case ( iMoment )
+        !     case ( 1 )
+        !       Interpolated  =>  Interpolated_NuB_N_0
+        !     case ( 2 )
+        !       Interpolated  =>  Interpolated_NuB_N_1
+        !   end select !-- iMoment
+        ! case ( 3 )
+        !   iMuB  =  iMuP
+        !   dMuB  =  dMuP
+        !   select case ( iMoment )
+        !     case ( 1 )
+        !       Interpolated  =>  Interpolated_Nu_P_0
+        !     case ( 2 )
+        !       Interpolated  =>  Interpolated_Nu_P_1
+        !   end select !-- iMoment
+        ! case ( 4 )
+        !   iMuB  =  iMuP
+        !   dMuB  =  dMuP
+        !   select case ( iMoment )
+        !     case ( 1 )
+        !       Interpolated  =>  Interpolated_NuB_P_0
+        !     case ( 2 )
+        !       Interpolated  =>  Interpolated_NuB_P_1
+        !   end select !-- iMoment
+        ! end select !-- iOpacity
         select case ( iOpacity )
         case ( 1 )
           iMuB  =  iMuN
           dMuB  =  dMuN
           select case ( iMoment )
             case ( 1 )
-              Interpolated  =>  Interpolated_Nu_N_0
+              Interpolated  =>  Interpolated_N_0
             case ( 2 )
-              Interpolated  =>  Interpolated_Nu_N_1
+              Interpolated  =>  Interpolated_N_1
           end select !-- iMoment
         case ( 2 )
-          iMuB  =  iMuN
-          dMuB  =  dMuN
-          select case ( iMoment )
-            case ( 1 )
-              Interpolated  =>  Interpolated_NuB_N_0
-            case ( 2 )
-              Interpolated  =>  Interpolated_NuB_N_1
-          end select !-- iMoment
-        case ( 3 )
           iMuB  =  iMuP
           dMuB  =  dMuP
           select case ( iMoment )
             case ( 1 )
-              Interpolated  =>  Interpolated_Nu_P_0
+              Interpolated  =>  Interpolated_P_0
             case ( 2 )
-              Interpolated  =>  Interpolated_Nu_P_1
-          end select !-- iMoment
-        case ( 4 )
-          iMuB  =  iMuP
-          dMuB  =  dMuP
-          select case ( iMoment )
-            case ( 1 )
-              Interpolated  =>  Interpolated_NuB_P_0
-            case ( 2 )
-              Interpolated  =>  Interpolated_NuB_P_1
+              Interpolated  =>  Interpolated_P_1
           end select !-- iMoment
         end select !-- iOpacity
 
@@ -452,11 +489,14 @@ CONTAINS
 
 
   SUBROUTINE Compute_NNS_Point &
+               ! ( T, MuN, MuP, nPointsE, &
+               !   Computed_Nu_N_0,  Computed_Nu_N_1,  &
+               !   Computed_NuB_N_0, Computed_NuB_N_1, &
+               !   Computed_Nu_P_0,  Computed_Nu_P_1,  &
+               !   Computed_NuB_P_0, Computed_NuB_P_1 )
                ( T, MuN, MuP, nPointsE, &
-                 Computed_Nu_N_0,  Computed_Nu_N_1,  &
-                 Computed_NuB_N_0, Computed_NuB_N_1, &
-                 Computed_Nu_P_0,  Computed_Nu_P_1,  &
-                 Computed_NuB_P_0, Computed_NuB_P_1 )
+                 Computed_N_0, Computed_N_1,  &
+                 Computed_P_0, Computed_P_1 )
 
     USE wlKindModule, ONLY: &
       dp
@@ -467,22 +507,27 @@ CONTAINS
 
     REAL(dp), INTENT(in)  :: T, MuN, MuP
     INTEGER,  INTENT(in)  :: nPointsE
+    ! REAL(dp), DIMENSION ( :, : ), INTENT(out) :: &
+    !   Computed_Nu_N_0,  Computed_Nu_N_1,  &
+    !   Computed_NuB_N_0, Computed_NuB_N_1, &
+    !   Computed_Nu_P_0,  Computed_Nu_P_1,  &
+    !   Computed_NuB_P_0, Computed_NuB_P_1
     REAL(dp), DIMENSION ( :, : ), INTENT(out) :: &
-      Computed_Nu_N_0,  Computed_Nu_N_1,  &
-      Computed_NuB_N_0, Computed_NuB_N_1, &
-      Computed_Nu_P_0,  Computed_Nu_P_1,  &
-      Computed_NuB_P_0, Computed_NuB_P_1
+      Computed_N_0, Computed_N_1,  &
+      Computed_P_0, Computed_P_1
 
-    INTEGER, PARAMETER :: Scat_weak_magnetism &
-                          = 1
+!    INTEGER, PARAMETER :: Scat_weak_magnetism &
+!                          = 1
     REAL(DP), PARAMETER :: Scat_ga_strange &
 !                               = -0.1d0
                            = 0.0d0
     REAL(dp) :: TMev, chem_n, chem_p
-    REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_nu_n,  phi1_nu_n, &
-                                               phi0_nub_n, phi1_nub_n, &
-                                               phi0_nu_p,  phi1_nu_p, &
-                                               phi0_nub_p, phi1_nub_p
+    ! REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_nu_n,  phi1_nu_n, &
+    !                                            phi0_nub_n, phi1_nub_n, &
+    !                                            phi0_nu_p,  phi1_nu_p, &
+    !                                            phi0_nub_p, phi1_nub_p
+    REAL(dp), DIMENSION(nPointsE, nPointsE) :: phi0_n, phi1_n, &
+                                               phi0_p, phi1_p
 
     CALL init_quad_scat_n
     CALL load_polylog_weaklib
@@ -498,37 +543,55 @@ CONTAINS
     ! WRITE (*,'(A9,ES13.6E2)') 'chem_n = ', chem_n
     ! WRITE (*,'(A9,ES13.6E2)') 'chem_p = ', chem_p
 
+    ! CALL scatnrgn_weaklib &
+    !      ( nPointsE, &
+    !        OpacityTable % EnergyGrid % Values, &
+    !        OpacityTable % EnergyGrid % Edge, &
+    !        TMeV, chem_n, chem_p, Scat_weak_magnetism, Scat_ga_strange, &
+    !        phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
+    !        phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
     CALL scatnrgn_weaklib &
          ( nPointsE, &
            OpacityTable % EnergyGrid % Values, &
            OpacityTable % EnergyGrid % Edge, &
-           TMeV, chem_n, chem_p, Scat_weak_magnetism, Scat_ga_strange, &
-           phi0_nu_n, phi1_nu_n, phi0_nub_n, phi1_nub_n, &
-           phi0_nu_p, phi1_nu_p, phi0_nub_p, phi1_nub_p )
+           TMeV, chem_n, chem_p, Scat_ga_strange, &
+           phi0_n, phi1_n, phi0_p, phi1_p )
 
-    Computed_Nu_N_0  =  0.5_DP * TRANSPOSE(phi0_nu_n(:,:))  
-            ! phi0_nu_n was saved as phi0_nu_n(e,ep)
+    ! Computed_Nu_N_0  =  0.5_DP * TRANSPOSE(phi0_nu_n(:,:))  
+    !         ! phi0_nu_n was saved as phi0_nu_n(e,ep)
 
-    Computed_Nu_N_1  =  1.5_DP * TRANSPOSE(phi1_nu_n(:,:))  
-            ! phi1_nu_n was saved as phi1_nu_n(e,ep)
+    ! Computed_Nu_N_1  =  1.5_DP * TRANSPOSE(phi1_nu_n(:,:))  
+    !         ! phi1_nu_n was saved as phi1_nu_n(e,ep)
 
-    Computed_NuB_N_0  =  0.5_DP * TRANSPOSE(phi0_nub_n(:,:))  
-            ! phi0_nub_n was saved as phi0_nub_n(e,ep)
+    ! Computed_NuB_N_0  =  0.5_DP * TRANSPOSE(phi0_nub_n(:,:))  
+    !         ! phi0_nub_n was saved as phi0_nub_n(e,ep)
 
-    Computed_NuB_N_1  =  1.5_DP * TRANSPOSE(phi1_nub_n(:,:))  
-            ! phi1_nub_n was saved as phi1_nub_n(e,ep)
+    ! Computed_NuB_N_1  =  1.5_DP * TRANSPOSE(phi1_nub_n(:,:))  
+    !         ! phi1_nub_n was saved as phi1_nub_n(e,ep)
 
-    Computed_Nu_P_0  =  0.5_DP * TRANSPOSE(phi0_nu_p(:,:))  
-            ! phi0_nu_p was saved as phi0_nu_p(e,ep)
+    ! Computed_Nu_P_0  =  0.5_DP * TRANSPOSE(phi0_nu_p(:,:))  
+    !         ! phi0_nu_p was saved as phi0_nu_p(e,ep)
 
-    Computed_Nu_P_1  =  1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
-            ! phi1_nu_p was saved as phi1_nu_p(e,ep)
+    ! Computed_Nu_P_1  =  1.5_DP * TRANSPOSE(phi1_nu_p(:,:))  
+    !         ! phi1_nu_p was saved as phi1_nu_p(e,ep)
 
-    Computed_NuB_P_0  =  0.5_DP * TRANSPOSE(phi0_nub_p(:,:))  
-            ! phi0_nub_p was saved as phi0_nub_p(e,ep)
+    ! Computed_NuB_P_0  =  0.5_DP * TRANSPOSE(phi0_nub_p(:,:))  
+    !         ! phi0_nub_p was saved as phi0_nub_p(e,ep)
 
-    Computed_NuB_P_1  =  1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
-            ! phi1_nub_p was saved as phi1_nub_p(e,ep)
+    ! Computed_NuB_P_1  =  1.5_DP * TRANSPOSE(phi1_nub_p(:,:))  
+    !         ! phi1_nub_p was saved as phi1_nub_p(e,ep)
+
+    Computed_N_0  =  0.5_DP * TRANSPOSE(phi0_n(:,:))  
+            ! phi0_n was saved as phi0_n(e,ep)
+
+    Computed_N_1  =  1.5_DP * TRANSPOSE(phi1_n(:,:))  
+            ! phi1_n was saved as phi1_n(e,ep)
+
+    Computed_P_0  =  0.5_DP * TRANSPOSE(phi0_p(:,:))  
+            ! phi0_p was saved as phi0_p(e,ep)
+
+    Computed_P_1  =  1.5_DP * TRANSPOSE(phi1_p(:,:))  
+            ! phi1_p was saved as phi1_p(e,ep)
 
     ! WRITE (*,*)
     ! WRITE (*,'(A15,ES13.6E2)') 'Computed = ', Computed_Nu_N_0  ( 5, 7 )  
@@ -540,32 +603,62 @@ CONTAINS
 
 
   SUBROUTINE TestMeanFreePath &
-               ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
-                 Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
-                 Computed_Nu_N_0, Computed_NuB_N_0, &
-                 Computed_Nu_P_0, Computed_NuB_P_0, &
-                 E_Edges, S_tot, nPointsE )
+               ! ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+               !   Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+               !   Computed_Nu_N_0, Computed_NuB_N_0, &
+               !   Computed_Nu_P_0, Computed_NuB_P_0, &
+               !   E_Edges, S_tot, nPointsE )
+               ( Interpolated_N_0, Interpolated_P_0, &
+                     Computed_N_0,     Computed_P_0, &
+                 E_Cells, E_Edges, S_tot, nPointsE )
 
     USE wlKindModule, ONLY: &
       dp
 
+    ! REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
+    !   Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+    !   Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+    !   Computed_Nu_N_0, Computed_NuB_N_0, &
+    !   Computed_Nu_P_0, Computed_NuB_P_0
     REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
-      Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
-      Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
-      Computed_Nu_N_0, Computed_NuB_N_0, &
-      Computed_Nu_P_0, Computed_NuB_P_0
+      Interpolated_N_0, Interpolated_P_0, &
+          Computed_N_0,     Computed_P_0
     REAL(dp), DIMENSION ( : ), INTENT(in) :: &
+      E_Cells, &
       E_Edges
     REAL(dp), INTENT(in) :: S_tot
     INTEGER, INTENT(in) :: nPointsE
 
+    INTEGER, PARAMETER :: Scat_weak_magnetism &
+                          = 1
     INTEGER  :: iEp, iE
     REAL(dp) :: TwoPi
     REAL(dp), DIMENSION( nPointsE ) :: E_Vol, &
                                        invMFP_Nu_I,  invMFP_Nu_C, &
-                                       invMFP_NuB_I, invMFP_NuB_C
+                                       invMFP_NuB_I, invMFP_NuB_C, &
+                                        xi_n_wm,  xi_p_wm, &
+                                       xib_n_wm, xib_p_wm
     
     TwoPi  =  2.0d0 * acos ( -1.0d0 )
+
+    !-----------------------------------------------------------------------
+    !  Weak magnetism corrections for neutrino and antineutrino neutron and
+    !   proton scattering.
+    !-----------------------------------------------------------------------
+
+    !Make weak magnetism corrections non-operational initially
+    !(these are multiplicative corrections)
+    xi_p_wm  = 1.0d0
+    xi_n_wm  = 1.0d0
+    xib_p_wm = 1.0d0
+    xib_n_wm = 1.0d0
+
+    IF(Scat_weak_magnetism == 1) THEN
+      CALL nc_weak_mag_weaklib &
+             ( E_cells, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nPointsE )
+    END IF
+
+    !-- InverseMeanFreePaths
 
     DO iE = 1, nPointsE
       E_Vol ( iE )  =  ( E_Edges ( iE + 1 ) ** 3  -  E_Edges ( iE ) ** 3 ) &
@@ -580,20 +673,24 @@ CONTAINS
       DO iEp = 1, nPointsE
         invMFP_Nu_I ( iE )  &
           =  invMFP_Nu_I ( iE )  &
-             +  E_Vol ( iEp )  *  (    Interpolated_Nu_N_0 ( iEp, iE )  &
-                                    +  Interpolated_Nu_P_0 ( iEp, iE ) )  
+             +  E_Vol ( iEp )  &
+                *  (    Interpolated_N_0 ( iEp, iE )  *  xi_n_wm ( iE )  &
+                     +  Interpolated_P_0 ( iEp, iE )  *  xi_p_wm ( iE ) )  
         invMFP_Nu_C ( iE )  &
           =  invMFP_Nu_C ( iE )  &
-             +  E_Vol ( iEp )  *  (    Computed_Nu_N_0 ( iEp, iE )  &
-                                    +  Computed_Nu_P_0 ( iEp, iE ) )  
+             +  E_Vol ( iEp )  &
+                *  (    Computed_N_0 ( iEp, iE )  *  xi_n_wm ( iE )  &
+                     +  Computed_P_0 ( iEp, iE )  *  xi_p_wm ( iE ) )  
         invMFP_NuB_I ( iE )  &
           =  invMFP_NuB_I ( iE )  &
-             +  E_Vol ( iEp )  *  (    Interpolated_NuB_N_0 ( iEp, iE )  &
-                                    +  Interpolated_NuB_P_0 ( iEp, iE ) )  
+             +  E_Vol ( iEp )  &
+                *  (    Interpolated_N_0 ( iEp, iE )  *  xib_n_wm ( iE )  &
+                     +  Interpolated_P_0 ( iEp, iE )  *  xib_p_wm ( iE ) )  
         invMFP_NuB_C ( iE )  &
           =  invMFP_NuB_C ( iE )  &
-             +  E_Vol ( iEp )  *  (    Computed_NuB_N_0 ( iEp, iE )  &
-                                    +  Computed_NuB_P_0 ( iEp, iE ) )  
+             +  E_Vol ( iEp )  &
+                *  (    Computed_N_0 ( iEp, iE )  *  xib_n_wm ( iE )  &
+                     +  Computed_P_0 ( iEp, iE )  *  xib_p_wm ( iE ) )  
       END DO
       !-- Factor of 2 to undo thornado legendre moment convention
       !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)

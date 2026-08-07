@@ -1761,32 +1761,46 @@ CONTAINS
         OpacityTable % TS % nPoints(OpacityTable % TS % Indices % iT)
       datasize5d(5)   = OpacityTable % MuBGrid % nPoints
 
-      OpacityTable % Scat_NNS % Names(1) = "Nu on Neutron"
+      ! OpacityTable % Scat_NNS % Names(1) = "Nu on Neutron"
+
+      ! CALL ReadHDF &
+      !        ( TRIM( OpacityTable % Scat_NNS % Names(1) ), &
+      !          OpacityTable % Scat_NNS % Kernel(1) % Values, &
+      !          group_id, datasize5d )
+
+      ! OpacityTable % Scat_NNS % Names(2) = "NuBar on Neutron"
+
+      ! CALL ReadHDF &
+      !        ( TRIM( OpacityTable % Scat_NNS % Names(2) ), &
+      !          OpacityTable % Scat_NNS % Kernel(2) % Values, &
+      !          group_id, datasize5d )
+
+      ! OpacityTable % Scat_NNS % Names(3) = "Nu on Proton"
+
+      ! CALL ReadHDF &
+      !        ( TRIM( OpacityTable % Scat_NNS % Names(3) ), &
+      !          OpacityTable % Scat_NNS % Kernel(3) % Values, &
+      !          group_id, datasize5d )
+
+      ! OpacityTable % Scat_NNS % Names(4) = "NuBar on Proton"
+
+      ! CALL ReadHDF &
+      !        ( TRIM( OpacityTable % Scat_NNS % Names(4) ), &
+      !          OpacityTable % Scat_NNS % Kernel(4) % Values, &
+      !          group_id, datasize5d )
+
+      OpacityTable % Scat_NNS % Names(1) = "Neutrons"
 
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_NNS % Names(1) ), &
                OpacityTable % Scat_NNS % Kernel(1) % Values, &
                group_id, datasize5d )
 
-      OpacityTable % Scat_NNS % Names(2) = "NuBar on Neutron"
+      OpacityTable % Scat_NNS % Names(2) = "Protons"
 
       CALL ReadHDF &
              ( TRIM( OpacityTable % Scat_NNS % Names(2) ), &
                OpacityTable % Scat_NNS % Kernel(2) % Values, &
-               group_id, datasize5d )
-
-      OpacityTable % Scat_NNS % Names(3) = "Nu on Proton"
-
-      CALL ReadHDF &
-             ( TRIM( OpacityTable % Scat_NNS % Names(3) ), &
-               OpacityTable % Scat_NNS % Kernel(3) % Values, &
-               group_id, datasize5d )
-
-      OpacityTable % Scat_NNS % Names(4) = "NuBar on Proton"
-
-      CALL ReadHDF &
-             ( TRIM( OpacityTable % Scat_NNS % Names(4) ), &
-               OpacityTable % Scat_NNS % Kernel(4) % Values, &
                group_id, datasize5d )
 
       CALL CloseGroupHDF( group_id )
