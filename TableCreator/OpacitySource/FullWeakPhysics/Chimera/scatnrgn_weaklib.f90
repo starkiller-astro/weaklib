@@ -270,6 +270,11 @@ END IF ! first
 !
 !-----------------------------------------------------------------------
 
+  phi0_n = 0.d0
+  phi1_n = 0.d0
+  phi0_p = 0.d0
+  phi1_p = 0.d0
+  
 !-----------------------------------------------------------------------
 !  Neutrino-nucleon downscattering kernels
 !  Loop over incoming energy
@@ -386,20 +391,22 @@ END IF ! first
       phi0_n(k,kp) = sct0_n
       phi1_n(k,kp) = sct1_n
 
-      phi0_n(kp,k) = phi0_n(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_n(kp,k) = phi1_n(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+!-- DO NOT COMPUTE DETAILED BALANCE AT THIS POINT; LEAVE kp > k EMPTY
+!      phi0_n(kp,k) = phi0_n(k,kp) &
+!                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+!      phi1_n(kp,k) = phi1_n(k,kp) &
+!                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
 
       !-- protons
 
       phi0_p(k,kp) = sct0_p
       phi1_p(k,kp) = sct1_p
 
-      phi0_p(kp,k) = phi0_p(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
-      phi1_p(kp,k) = phi1_p(k,kp) &
-                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+!-- DO NOT COMPUTE DETAILED BALANCE AT THIS POINT; LEAVE kp > k EMPTY
+!      phi0_p(kp,k) = phi0_p(k,kp) &
+!                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
+!      phi1_p(kp,k) = phi1_p(k,kp) &
+!                        * fexp ( (egrid_c(kp) - egrid_c(k)) / tmev )
 
     END DO ! kp = 1,k
   END DO ! k = nez, 1, -1

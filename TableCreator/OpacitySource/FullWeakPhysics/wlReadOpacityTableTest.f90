@@ -234,6 +234,9 @@ CONTAINS
     REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
       Computed_N_0, Computed_N_1,  &
       Computed_P_0, Computed_P_1
+    REAL(dp), DIMENSION ( :, : ), ALLOCATABLE :: &
+      Interpolated_Nu_0, Interpolated_NuB_0, &
+          Computed_Nu_0,     Computed_NuB_0
 
     associate &
       ( nPointsE  =>  OpacityTable % EnergyGrid % nPoints, &
@@ -274,19 +277,30 @@ CONTAINS
         Computed_N_1 ( nPointsE, nPointsE ), &
         Computed_P_0 ( nPointsE, nPointsE ), &
         Computed_P_1 ( nPointsE, nPointsE ) )
+    allocate &
+      ( Interpolated_Nu_0  ( nPointsE, nPointsE ), &
+        Interpolated_NuB_0 ( nPointsE, nPointsE ), &
+            Computed_Nu_0  ( nPointsE, nPointsE ), &
+            Computed_NuB_0 ( nPointsE, nPointsE ) )
 
     CALL Interpolate_NNS_Point &
            ( T, MuN, MuP, nPointsE, &
              Interpolated_N_0, Interpolated_N_1,  &
              Interpolated_P_0, Interpolated_P_1 )
+    CALL ApplyCorrectionsDetailedBalance &
+           ( Interpolated_N_0, Interpolated_P_0, E_Cells, T, S_tot, nPointsE, &
+             Interpolated_Nu_0, Interpolated_NuB_0 )
     CALL Compute_NNS_Point &
            ( T, MuN, MuP, nPointsE, &
              Computed_N_0, Computed_N_1,  &
              Computed_P_0, Computed_P_1 )
+    CALL ApplyCorrectionsDetailedBalance &
+           ( Computed_N_0, Computed_P_0, E_Cells, T, S_tot, nPointsE, &
+             Computed_Nu_0, Computed_NuB_0 )
 
     call TestMeanFreePath &
-           ( Interpolated_N_0, Interpolated_P_0, &
-                 Computed_N_0,     Computed_P_0, &
+           ( Interpolated_Nu_0, Interpolated_NuB_0, &
+                 Computed_Nu_0,     Computed_NuB_0, &
              E_Cells, E_Edges, S_tot, nPointsE )
 
     end associate !-- nPointsE
@@ -602,44 +616,35 @@ CONTAINS
   END SUBROUTINE Compute_NNS_Point
 
 
-  SUBROUTINE TestMeanFreePath &
-               ! ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
-               !   Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
-               !   Computed_Nu_N_0, Computed_NuB_N_0, &
-               !   Computed_Nu_P_0, Computed_NuB_P_0, &
-               !   E_Edges, S_tot, nPointsE )
-               ( Interpolated_N_0, Interpolated_P_0, &
-                     Computed_N_0,     Computed_P_0, &
-                 E_Cells, E_Edges, S_tot, nPointsE )
+  SUBROUTINE ApplyCorrectionsDetailedBalance &
+               ( Phi_N_0, Phi_P_0, E_Cells, T, S_tot, nPointsE, &
+                 Phi_Nu_0, Phi_NuB_0 )
 
     USE wlKindModule, ONLY: &
       dp
+    USE wlExtPhysicalConstantsModule, ONLY: &
+      kMeV
 
-    ! REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
-    !   Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
-    !   Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
-    !   Computed_Nu_N_0, Computed_NuB_N_0, &
-    !   Computed_Nu_P_0, Computed_NuB_P_0
-    REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
-      Interpolated_N_0, Interpolated_P_0, &
-          Computed_N_0,     Computed_P_0
+    REAL(dp), DIMENSION ( :, : ), INTENT(inout) :: &
+      Phi_N_0, Phi_P_0
     REAL(dp), DIMENSION ( : ), INTENT(in) :: &
-      E_Cells, &
-      E_Edges
-    REAL(dp), INTENT(in) :: S_tot
+      E_Cells
+    REAL(dp), INTENT(in) :: T, S_tot
     INTEGER, INTENT(in) :: nPointsE
+    REAL(dp), DIMENSION ( :, : ), INTENT(out) :: &
+      Phi_Nu_0, Phi_NuB_0
 
     INTEGER, PARAMETER :: Scat_weak_magnetism &
                           = 1
     INTEGER  :: iEp, iE
-    REAL(dp) :: TwoPi
-    REAL(dp), DIMENSION( nPointsE ) :: E_Vol, &
-                                       invMFP_Nu_I,  invMFP_Nu_C, &
-                                       invMFP_NuB_I, invMFP_NuB_C, &
-                                        xi_n_wm,  xi_p_wm, &
+    REAL(dp) :: TMev
+    REAL(dp), DIMENSION( nPointsE ) ::  xi_n_wm,  xi_p_wm, &
                                        xib_n_wm, xib_p_wm
-    
-    TwoPi  =  2.0d0 * acos ( -1.0d0 )
+    REAL(dp) :: fexp          ! exponential function
+
+EXTERNAL fexp
+
+    TMeV    =  T * kMeV
 
     !-----------------------------------------------------------------------
     !  Weak magnetism corrections for neutrino and antineutrino neutron and
@@ -658,6 +663,103 @@ CONTAINS
              ( E_cells, xi_p_wm, xi_n_wm, xib_p_wm, xib_n_wm, nPointsE )
     END IF
 
+    ! !-- Apply detailed balance
+
+    ! DO iE = nPointsE, 1, -1
+    !   DO iEp = 1, iE
+
+    !     Phi_N_0 ( iE, iEp )  &
+    !       =  Phi_N_0 ( iEp, iE )  &
+    !          *  fexp ( ( E_cells ( iEp )  -  E_cells ( iE ) ) / TMev )
+
+    !     Phi_P_0 ( iE, iEp )  &
+    !       =  Phi_P_0 ( iEp, iE )  &
+    !          *  fexp ( ( E_cells ( iEp )  -  E_cells ( iE ) ) / TMev )
+
+    !   END DO
+    ! END DO
+
+    ! !-- Apply corrections (many-body corrections S_tot, weak magnetism xi)
+    ! !   and sum N,P
+
+    ! DO iE = 1, nPointsE
+    !   DO iEp = 1, nPointsE
+
+    !     Phi_Nu_0 ( iEp, iE )  &
+    !       =     Phi_N_0 ( iEp, iE )  *  S_tot  *  xi_n_wm ( iE )  &
+    !          +  Phi_P_0 ( iEp, iE )  *  S_tot  *  xi_p_wm ( iE ) 
+
+    !     Phi_NuB_0 ( iEp, iE )  &
+    !       =     Phi_N_0 ( iEp, iE )  *  S_tot  *  xib_n_wm ( iE )  &
+    !          +  Phi_P_0 ( iEp, iE )  *  S_tot  *  xib_p_wm ( iE ) 
+
+    !   END DO
+    ! END DO
+
+    DO iE = nPointsE, 1, -1
+      DO iEp = 1, iE
+
+        !-- Apply corrections (many-body corrections S_tot, weak magnetism xi)
+        !   and sum N,P
+
+        Phi_Nu_0 ( iEp, iE )  &
+          =     Phi_N_0 ( iEp, iE )  *  S_tot  *  xi_n_wm ( iE )  &
+             +  Phi_P_0 ( iEp, iE )  *  S_tot  *  xi_p_wm ( iE ) 
+
+        Phi_NuB_0 ( iEp, iE )  &
+          =     Phi_N_0 ( iEp, iE )  *  S_tot  *  xib_n_wm ( iE )  &
+             +  Phi_P_0 ( iEp, iE )  *  S_tot  *  xib_p_wm ( iE ) 
+
+        !-- Apply detailed balance
+
+        Phi_Nu_0 ( iE, iEp )  &
+          =  Phi_Nu_0 ( iEp, iE )  &
+             *  fexp ( ( E_cells ( iEp )  -  E_cells ( iE ) ) / TMev )
+
+        Phi_NuB_0 ( iE, iEp )  &
+          =  Phi_NuB_0 ( iEp, iE )  &
+             *  fexp ( ( E_cells ( iEp )  -  E_cells ( iE ) ) / TMev )
+
+      END DO
+    END DO
+
+  END SUBROUTINE ApplyCorrectionsDetailedBalance
+
+
+  SUBROUTINE TestMeanFreePath &
+               ! ( Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+               !   Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+               !   Computed_Nu_N_0, Computed_NuB_N_0, &
+               !   Computed_Nu_P_0, Computed_NuB_P_0, &
+               !   E_Edges, S_tot, nPointsE )
+               ( Interpolated_Nu_0, Interpolated_NuB_0, &
+                     Computed_Nu_0,     Computed_NuB_0, &
+                 E_Cells, E_Edges, S_tot, nPointsE )
+
+    USE wlKindModule, ONLY: &
+      dp
+
+    ! REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
+    !   Interpolated_Nu_N_0, Interpolated_NuB_N_0, &
+    !   Interpolated_Nu_P_0, Interpolated_NuB_P_0, &
+    !   Computed_Nu_N_0, Computed_NuB_N_0, &
+    !   Computed_Nu_P_0, Computed_NuB_P_0
+    REAL(dp), DIMENSION ( :, : ), INTENT(in) :: &
+      Interpolated_Nu_0, Interpolated_NuB_0, &
+          Computed_Nu_0,     Computed_NuB_0
+    REAL(dp), DIMENSION ( : ), INTENT(in) :: &
+      E_Cells, E_Edges
+    REAL(dp), INTENT(in) :: S_tot
+    INTEGER, INTENT(in) :: nPointsE
+
+    INTEGER  :: iEp, iE
+    REAL(dp) :: TwoPi
+    REAL(dp), DIMENSION( nPointsE ) :: E_Vol, &
+                                       invMFP_Nu_I,  invMFP_Nu_C, &
+                                       invMFP_NuB_I, invMFP_NuB_C
+    
+    TwoPi  =  2.0d0 * acos ( -1.0d0 )
+
     !-- InverseMeanFreePaths
 
     DO iE = 1, nPointsE
@@ -673,44 +775,37 @@ CONTAINS
       DO iEp = 1, nPointsE
         invMFP_Nu_I ( iE )  &
           =  invMFP_Nu_I ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  (    Interpolated_N_0 ( iEp, iE )  *  xi_n_wm ( iE )  &
-                     +  Interpolated_P_0 ( iEp, iE )  *  xi_p_wm ( iE ) )  
+             +  E_Vol ( iEp )  *  Interpolated_Nu_0 ( iEp, iE )
         invMFP_Nu_C ( iE )  &
           =  invMFP_Nu_C ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  (    Computed_N_0 ( iEp, iE )  *  xi_n_wm ( iE )  &
-                     +  Computed_P_0 ( iEp, iE )  *  xi_p_wm ( iE ) )  
+             +  E_Vol ( iEp )  *  Computed_Nu_0 ( iEp, iE )
         invMFP_NuB_I ( iE )  &
           =  invMFP_NuB_I ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  (    Interpolated_N_0 ( iEp, iE )  *  xib_n_wm ( iE )  &
-                     +  Interpolated_P_0 ( iEp, iE )  *  xib_p_wm ( iE ) )  
+             +  E_Vol ( iEp )  *  Interpolated_NuB_0 ( iEp, iE )
         invMFP_NuB_C ( iE )  &
           =  invMFP_NuB_C ( iE )  &
-             +  E_Vol ( iEp )  &
-                *  (    Computed_N_0 ( iEp, iE )  *  xib_n_wm ( iE )  &
-                     +  Computed_P_0 ( iEp, iE )  *  xib_p_wm ( iE ) )  
+             +  E_Vol ( iEp )  *  Computed_NuB_0 ( iEp, iE )
       END DO
       !-- Factor of 2 to undo thornado legendre moment convention
       !-- Factor of TwoPi for azimuthal integral, Bruenn et al. (2020) Eq. (364)
-      !-- Many-body corrections S_tot
-      invMFP_Nu_I  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_I  ( iE ) * S_tot
-      invMFP_Nu_C  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_C  ( iE ) * S_tot
-      invMFP_NuB_I ( iE )  =  2.d0 * TwoPi * invMFP_NuB_I ( iE ) * S_tot
-      invMFP_NuB_C ( iE )  =  2.d0 * TwoPi * invMFP_NuB_C ( iE ) * S_tot
+      invMFP_Nu_I  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_I  ( iE )
+      invMFP_Nu_C  ( iE )  =  2.d0 * TwoPi * invMFP_Nu_C  ( iE )
+      invMFP_NuB_I ( iE )  =  2.d0 * TwoPi * invMFP_NuB_I ( iE )
+      invMFP_NuB_C ( iE )  =  2.d0 * TwoPi * invMFP_NuB_C ( iE )
     END DO
 
     WRITE (*,*)
-    WRITE (*,*) 'Nu Interpolated, Computed'
+    WRITE (*,*) 'Energy, Nu Interpolated, Computed'
     DO iE = 1, nPointsE
-      WRITE (*,'(ES13.6E2,ES13.6E2)') invMFP_Nu_I ( iE ), invMFP_Nu_C ( iE )    
+      WRITE (*,'(ES13.6E2,ES13.6E2,ES13.6E2)') &
+        E_Cells ( iE ), invMFP_Nu_I ( iE ), invMFP_Nu_C ( iE )    
     END DO
 
     WRITE (*,*)
-    WRITE (*,*) 'NuB Interpolated, Computed'
+    WRITE (*,*) 'Energy, NuB Interpolated, Computed'
     DO iE = 1, nPointsE
-      WRITE (*,'(ES13.6E2,ES13.6E2)') invMFP_NuB_I ( iE ), invMFP_NuB_C ( iE )
+      WRITE (*,'(ES13.6E2,ES13.6E2,ES13.6E2)') &
+        E_Cells ( iE ), invMFP_NuB_I ( iE ), invMFP_NuB_C ( iE )
     END DO
 
   END SUBROUTINE TestMeanFreePath
