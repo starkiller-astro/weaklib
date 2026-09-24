@@ -195,13 +195,6 @@ IMPLICIT NONE
                               !Bruenn 1985
                               !Mezzacappa & Bruenn (1993)
 
-   INTEGER, PARAMETER      :: Scat_np_non_isoenergetic &
-                              = 1
-                              !Scat on free nucleons taking into account recoil,
-                              !nucleon final-state blocking, and special relativity
-                              !Reddy et al 1998, Bruenn et al. 2020
-
-!   INTEGER, PARAMETER      :: nOpac_NNS  = 4  ! 4 ( nu/nubar * n/p )
    INTEGER, PARAMETER      :: nOpac_NNS  = 2  ! 2 ( n/p, nu/nubar not stored )
    INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
@@ -379,11 +372,6 @@ IMPLICIT NONE
 
    IF( nOpac_Iso .gt. 0 ) THEN
 
-   if(Scat_np_isoenergetic + Scat_np_non_isoenergetic .gt. 1) then
-     write (*,*) "Must choose either Bruenn85 or Reddy et al 98 for Scat on free nucleons"
-     return
-   endif
-
    OpacityTable % Scat_Iso % nOpacities   = nOpac_Iso
 
    OpacityTable % Scat_Iso % nMoments     = nMom_Iso
@@ -415,19 +403,11 @@ IMPLICIT NONE
    OpacityTable % Scat_Iso % np_isoenergetic = &
                   Scat_np_isoenergetic
 
-   OpacityTable % Scat_Iso % np_non_isoenergetic = &
-                  Scat_np_non_isoenergetic
-
 END IF
 
 ! -- Set OpacityTableTypeScat NNS
 
    IF( nOpac_NNS .gt. 0 ) THEN
-
-   if(Scat_np_isoenergetic + Scat_np_non_isoenergetic .gt. 1) then
-     write (*,*) "Must choose either Bruenn85 or Reddy et al 98 for Scat on free nucleons"
-     return
-   endif
 
    OpacityTable % Scat_NNS % nOpacities   = nOpac_NNS
 
@@ -1215,7 +1195,7 @@ print*, '>>> Iso Ye', Ye
    END DO
 
 !----------------  Scat_NNS -----------------------
-   IF(Scat_np_non_isoenergetic == 1) THEN
+   IF( nOpac_NNS > 0 ) THEN
    PRINT*, 'Calculating Scat_NNS Kernel ... '
 
       CALL init_quad_scat_n
