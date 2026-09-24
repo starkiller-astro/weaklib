@@ -31,7 +31,8 @@ abemrgn_weaklib.o: \
 abem_cal_weaklib.o: \
   wlKindModule.o \
   numerical_module.o \
-  physcnst_module.o
+  physcnst_module.o \
+  abem_module_weaklib.o
 
 abem_nuclei_Bruenn85_FFN_weaklib.o: \
   wlKindModule.o \
@@ -139,7 +140,8 @@ pr_w_lt_wp_e_lt_wp.o: \
   pair_module.o
 
 scat_n_module_weaklib.o: \
-  wlKindModule.o
+  wlKindModule.o \
+  polylog_module_weaklib.o
 
 scatergn_weaklib.o: \
   pair_module.o
@@ -148,7 +150,7 @@ scatical_weaklib.o: \
   wlKindModule.o \
   numerical_module.o \
   physcnst_module.o \
-  prb_cntl_module.o
+  PRB_CNTL_MODULE.o
 
 scatncal_weaklib.o: \
   wlKindModule.o \
@@ -160,7 +162,7 @@ scatnrgn_weaklib.o: \
   wlKindModule.o \
   numerical_module.o \
   physcnst_module.o \
-  prb_cntl_module.o
+  PRB_CNTL_MODULE.o
 
 sctlgndv_weaklib.o: \
   wlKindModule.o \

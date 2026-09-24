@@ -169,17 +169,17 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: nMom_Iso   = 2  ! 2 for 0th & 1st order
                                               !   legendre coff.
    INTEGER, PARAMETER      :: Scat_weak_magnetism &
-                              = 1
+                              = 0
                               !Weak magnetism corrections for isoenergetic scattering
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: Iso_ion_ion_corrections &
-                              = 1
+                              = 0
                               !Ion-ion correlation corrections to isoenergetic scattering
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
    INTEGER, PARAMETER      :: Scat_many_body_corrections &
-                              = 1
+                              = 0
                               !Modification to neutral current scattering due to many-body effects
                               !Horowitz et al 2017
 
@@ -205,17 +205,17 @@ IMPLICIT NONE
    INTEGER, PARAMETER      :: nOpac_NNS  = 2  ! 2 ( n/p, nu/nubar not stored )
    INTEGER, PARAMETER      :: nMom_NNS   = 2  ! 2 (0th, 1st legendre moments)
 
-   INTEGER, PARAMETER      :: nOpac_NES  = 1  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_NES  = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_NES   = 4  ! 4 for H1l, H2l
                                               !   ( either 0 or 4 )
 
    INTEGER, PARAMETER      :: NPS        = 1  !Include neutrino-positron scattering as well
 
-   INTEGER, PARAMETER      :: nOpac_Pair = 1  ! 1 ( either 0 or 1 )
+   INTEGER, PARAMETER      :: nOpac_Pair = 0  ! 1 ( either 0 or 1 )
    INTEGER, PARAMETER      :: nMom_Pair  = 4  ! 4 for J1l, J2l
                                               !   ( either 0 or 4 )
 
-   INTEGER, PARAMETER      :: nOpac_Brem = 1  !Only S_sigma(eps+eps') is needed for all
+   INTEGER, PARAMETER      :: nOpac_Brem = 0  !Only S_sigma(eps+eps') is needed for all
    INTEGER, PARAMETER      :: nMom_Brem  = 1  !species and moments
 
 !---------------------------------------------------------------------

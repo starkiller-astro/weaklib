@@ -1,3 +1,6 @@
+wlKindModule.o: \
+  wlKindModule.f90
+
 HR98_Bremsstrahlung.o: \
   wlKindModule.o \
   wlExtPhysicalConstantsModule.o
