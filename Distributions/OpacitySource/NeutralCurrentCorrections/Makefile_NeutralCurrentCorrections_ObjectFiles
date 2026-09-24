@@ -1,0 +1,2 @@
+WL_NEUTRALCURRENTCORRECTIONS = \
+  wlNeutralCurrentCorrectionsModule.o

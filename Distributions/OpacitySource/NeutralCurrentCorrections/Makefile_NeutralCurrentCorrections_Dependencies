@@ -1,0 +1,3 @@
+wlNeutralCurrentCorrectionsModule.o: \
+  wlKindModule.o \
+  wlNeutralCurrentCorrectionsModule.F90

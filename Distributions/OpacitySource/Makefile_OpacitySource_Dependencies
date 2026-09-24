@@ -21,3 +21,7 @@ wlOpacityTableIOModuleHDF.o: \
   wlIOModuleHDF.o \
   wlParallelModule.o \
   wlOpacityTableIOModuleHDF.f90
+
+wlNeutralCurrentCorrectionsModule.o: \
+  wlKindModule.o \
+  wlNeutralCurrentCorrectionsModule.F90
