@@ -174,7 +174,7 @@ IMPLICIT NONE
                               !Horowitz 2002
 
    INTEGER, PARAMETER      :: Iso_ion_ion_corrections &
-                              = 0
+                              = 1
                               !Ion-ion correlation corrections to isoenergetic scattering
                               !Horowitz 1997, Bruenn and Mezzacappa 1997
 
@@ -184,8 +184,7 @@ IMPLICIT NONE
                               !Horowitz et al 2017
 
    REAL(DP), PARAMETER     :: Scat_ga_strange &
-!                              = -0.1d0
-                              = 0.0d0
+                              = -0.1d0
                               !Include strange-quark contributions to the axial vector coupling constant ga
                               !Value from Hobbs et al 2016
 
