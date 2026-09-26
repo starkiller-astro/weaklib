@@ -12,6 +12,7 @@ all: wlTestElasticOpacity \
      wlTestFig2Fischer \
      wlTestGeneralKernelVsTable \
      wlTestGeneralKernelNMS \
+     wlTestNLSOnRealTrajectory \
      wlTestGeneralKernelTwoReactions \
      wlTestGeneralKernelNMS_Point \
      wlTestGeneralKernelVsTable_Interface
@@ -50,6 +51,12 @@ wlTestGeneralKernelNMS: \
 	$(weaklib) wlTestGeneralKernelNMS.o
 	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelNMS_$(MACHINE) \
 	$(weaklib) wlTestGeneralKernelNMS.o \
+	$(LIBRARIES)
+
+wlTestNLSOnRealTrajectory: \
+	$(weaklib) wlTestNLSOnRealTrajectory.o
+	$(FLINKER) $(FLAGS) -o wlTestNLSOnRealTrajectory_$(MACHINE) \
+	$(weaklib) wlTestNLSOnRealTrajectory.o \
 	$(LIBRARIES)
 
 wlTestGeneralKernelNMS_Point: \

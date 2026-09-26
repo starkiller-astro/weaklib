@@ -45,7 +45,7 @@ PROGRAM wlTestFig56Guo
   REAL(DP), PARAMETER :: MuNue_b  = 7.1d0
   REAL(DP), PARAMETER :: MuNumu_b = 1.3d0
 
-  INTEGER , PARAMETER :: WhichCorrection = 3   ! LO+WM+PS+FF (same convention as Guo)
+  INTEGER , PARAMETER :: WhichCorrection = 1   ! LO+WM+PS+FF (same convention as Guo)
   INTEGER , PARAMETER :: iProcessMin = 1
   INTEGER , PARAMETER :: iProcessMax = 34
   REAL(DP)            :: Rout_Int(iProcessMax - iProcessMin + 1)
@@ -292,7 +292,7 @@ PROGRAM wlTestFig56Guo
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
                         mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
-    chi3 = chi3  
+    chi3 = chi3
             
     Rout_avg_2 = 0.0d0
     Rout_avg_4 = 0.0d0

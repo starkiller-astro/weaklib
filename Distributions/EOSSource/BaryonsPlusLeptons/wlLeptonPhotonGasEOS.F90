@@ -206,7 +206,7 @@ CONTAINS
       LeptonGasState % dpdT = 0.0_dp
       LeptonGasState % dpdr = 0.0_dp
 
-      LeptonGasState % e    = 0.0_dp
+      LeptonGasState % e    = HelmTable % lepton_mass / rmu * ergmev * yL
       LeptonGasState % dedT = 0.0_dp
       LeptonGasState % dedr = 0.0_dp
 
@@ -214,7 +214,7 @@ CONTAINS
       LeptonGasState % dsdT = 0.0_dp
       LeptonGasState % dsdr = 0.0_dp
 
-      LeptonGasState % mu   = 0.0_dp
+      LeptonGasState % mu   = HelmTable % lepton_mass
       RETURN
 
     ENDIF
@@ -222,19 +222,7 @@ CONTAINS
     IF ( yL*den > HelmTable % maxdens .OR. &
          temp   > HelmTable % maxtemp ) THEN
 
-      LeptonGasState % p    = 0.0_dp
-      LeptonGasState % dpdT = 0.0_dp
-      LeptonGasState % dpdr = 0.0_dp
-
-      LeptonGasState % e    = 0.0_dp
-      LeptonGasState % dedT = 0.0_dp
-      LeptonGasState % dedr = 0.0_dp
-
-      LeptonGasState % s    = 0.0_dp
-      LeptonGasState % dsdT = 0.0_dp
-      LeptonGasState % dsdr = 0.0_dp
-
-      LeptonGasState % mu   = 0.0_dp
+      STOP 'LeptonGasEOS: density or temperature is too high for the table'
       RETURN
 
     ENDIF

@@ -101,7 +101,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
                                              Phi1Out_General_numt,   &
                                              Phi1Out_General_numtbar
 
-  INTEGER , PARAMETER :: nL = 2
+  INTEGER , PARAMETER :: nL = 1
   ! INTEGER , PARAMETER :: iProcessMin = iProcessMin_Default
   ! INTEGER , PARAMETER :: iProcessMax = iProcessMax_Default
   INTEGER , PARAMETER :: iProcessMin = 1
