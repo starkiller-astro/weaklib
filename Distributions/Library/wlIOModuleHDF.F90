@@ -542,9 +542,11 @@ CONTAINS
     LOGICAL                                     :: link_exists
     INTEGER(HID_T)                              :: dataset_id
 
+    link_exists = .FALSE.
+
     CALL h5lexists_f( group_id, name, link_exists, hdferr )
 
-    IF( link_exists )THEN
+    IF( hdferr == 0 .AND. link_exists )THEN
 
       CALL OpenDsetHDF &
              ( group_id, name, dataset_id, hdferr )
@@ -557,7 +559,8 @@ CONTAINS
 
     ELSE
 
-      err = - 1
+      CALL h5eclear_f( hdferr )
+      err = -1
 
     END IF
 

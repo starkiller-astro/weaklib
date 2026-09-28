@@ -432,12 +432,6 @@ END IF
    OpacityTable % Scat_NNS % Units = (/'TBD', &
                                        'TBD' /)
 
-   OpacityTable % Scat_NNS % weak_magnetism_corrections = &
-                  Scat_weak_magnetism
-
-   OpacityTable % Scat_NNS % many_body_corrections = &
-                  Scat_many_body_corrections
-
    OpacityTable % Scat_NNS % ga_strange = &
                   Scat_ga_strange
 

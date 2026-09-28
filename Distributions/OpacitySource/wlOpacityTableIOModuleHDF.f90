@@ -276,15 +276,10 @@ CONTAINS
 
             WRITE(tempString(5),'(A13,ES11.3E3)') "ga_strange = ", OpacityTable % Scat_Iso % ga_strange
 
-            tempString(1) = "Strange quark controbutions to neutral-current neutrino nucleon interactions"
+            tempString(1) = "Strange quark contributions to neutral-current neutrino nucleon interactions"
             tempString(2) = "Suggested value is ga_strange = -0.1 or -0.04 from Hobbs et al 2016"
             tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2016PhRvC..93e2801H/doi:10.1103/PhysRevC.93.052801"
             tempString(4) = "Not active if ga_strange = 0"
-            !IF(OpacityTable % Scat_Iso % ga_strange .ne. 0.0d0) THEN
-            !  tempString(4) = "Included."
-            !ELSE
-            !  tempString(4) = "Not included."
-            !ENDIF
 
             CALL WriteGroupAttributeHDF_string("strange_quark_contributions", tempString, group_id) 
 
@@ -310,7 +305,7 @@ CONTAINS
 
         ! --- Insert Appropriate Reaction ---
         WRITE(*,'(A4,A)') &
-          '', 'OpacityTable % Scat_Iso not allocated.  Write Skipped.'
+          '', 'OpacityTable % Scat_NNS not allocated.  Write Skipped.'
 
       ELSE
 
@@ -330,54 +325,17 @@ CONTAINS
             CALL WriteGroupAttributeHDF_string("Opacity description", tempString, group_id) 
 
           END BLOCK
-    
-          BLOCK
-
-            CHARACTER(LEN=100), DIMENSION(3) :: tempString
-
-            tempString(1) = "Weak magnetism corrections for isoenergetic scattering, Horowitz (2002)"
-            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2002PhRvD..65d3001H/doi:10.1103/PhysRevD.65.043001"
-            IF(OpacityTable % Scat_Iso % weak_magnetism_corrections .gt. 0) THEN
-              tempString(3) = "Included."
-            ELSE
-              tempString(3) = "Not included."
-            ENDIF
-
-            CALL WriteGroupAttributeHDF_string("weak_magnetism_corrections", tempString, group_id) 
-
-          END BLOCK
-
-          BLOCK
-
-            CHARACTER(LEN=100), DIMENSION(3) :: tempString
-
-            tempString(1) = "Many-body effects corrections for isoenergetic scattering, Horowitz et al (2017)"
-            tempString(2) = "https://ui.adsabs.harvard.edu/link_gateway/2017PhRvC..95b5801H/doi:10.1103/PhysRevC.95.025801"
-            IF(OpacityTable % Scat_Iso % many_body_corrections .gt. 0) THEN
-              tempString(3) = "Included."
-            ELSE
-              tempString(3) = "Not included."
-            ENDIF
-
-            CALL WriteGroupAttributeHDF_string("many_body_corrections", tempString, group_id) 
-
-          END BLOCK
 
           BLOCK
 
             CHARACTER(LEN=100), DIMENSION(5) :: tempString
 
-            WRITE(tempString(5),'(A13,ES11.3E3)') "ga_strange = ", OpacityTable % Scat_Iso % ga_strange
+            WRITE(tempString(5),'(A13,ES11.3E3)') "ga_strange = ", OpacityTable % Scat_NNS % ga_strange
 
-            tempString(1) = "Strange quark controbutions to neutral-current neutrino nucleon interactions"
+            tempString(1) = "Strange quark contributions to neutral-current neutrino nucleon interactions"
             tempString(2) = "Suggested value is ga_strange = -0.1 or -0.04 from Hobbs et al 2016"
             tempString(3) = "https://ui.adsabs.harvard.edu/link_gateway/2016PhRvC..93e2801H/doi:10.1103/PhysRevC.93.052801"
             tempString(4) = "Not active if ga_strange = 0"
-            !IF(OpacityTable % Scat_Iso % ga_strange .ne. 0.0d0) THEN
-            !  tempString(4) = "Included."
-            !ELSE
-            !  tempString(4) = "Not included."
-            !ENDIF
 
             CALL WriteGroupAttributeHDF_string("strange_quark_contributions", tempString, group_id) 
 
@@ -919,13 +877,7 @@ CONTAINS
       TYPE IS ( OpacityTypeScatNNS )
 
         datasize1d = 1
-        tempInteger(1) = Scat % weak_magnetism_corrections
-        CALL WriteHDF( "weak_magnetism_corr", tempInteger, group_id, datasize1d )
-
-        tempInteger(1) = Scat % many_body_corrections
-        CALL WriteHDF( "many_body_corr", tempInteger, group_id, datasize1d )
-
-        tempReal(1)    = Scat % ga_strange
+        tempReal(1) = Scat % ga_strange
         CALL WriteHDF( "ga_strange", tempReal, group_id, datasize1d )
 
       TYPE IS ( OpacityTypeScatNES )
@@ -1015,6 +967,7 @@ CONTAINS
     INTEGER(HSIZE_T)   :: datasize3d(3)
     INTEGER(HSIZE_T)   :: datasize4d(4)
     INTEGER(HSIZE_T)   :: datasize5d(5)
+    LOGICAL :: link_exists
 
     TYPE(ThermoStateType) :: TS
 
@@ -1122,35 +1075,11 @@ CONTAINS
 
         CALL h5fget_name_f( file_id, FileName, flength, hdferr )
 
-        CALL h5eset_auto_f( 0, hdferr )
-  
-        CALL h5gopen_f( file_id, "EmAb Parameters", group_id, hdferr )
+        link_exists = .FALSE.
 
-        IF ( hdferr .ne. 0 ) THEN
+        CALL h5lexists_f ( file_id, "EmAb Parameters", link_exists, hdferr )
 
-          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
-
-          IF(myid == 0) THEN
-
-            WRITE(*,*) 'Group EmAb Parameters not found in ', TRIM( FileName )
-            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-            WRITE(*,*) 'Neither electron capture on nulcei using a LMSH table'
-            WRITE(*,*) 'nor corrections to Bruenn85 opacities for EmAb are included.'
-
-          ENDIF
-
-          OpacityTable % EmAb % np_FK               = -1
-          OpacityTable % EmAb % np_FK_inv_n_decay   = -1
-          OpacityTable % EmAb % np_isoenergetic     = -1
-          OpacityTable % EmAb % np_non_isoenergetic = -1
-          OpacityTable % EmAb % np_weak_magnetism   = -1
-          OpacityTable % EmAb % nuclei_EC_FFN       = -1
-          OpacityTable % EmAb % nuclei_EC_table     = -1
-
-          CALL h5eclear_f( hdferr )
-
-        ELSE
-
+        IF ( hdferr == 0 .AND. link_exists ) THEN
 
           CALL OpenGroupHDF &
                  ( "EmAb Parameters", .FALSE., file_id, group_id )
@@ -1173,9 +1102,30 @@ CONTAINS
 
           CALL CloseGroupHDF( group_id )
 
-        ENDIF
+        ELSE
 
-        CALL h5eset_auto_f( 1, hdferr )
+          CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+
+          IF(myid == 0) THEN
+
+            WRITE(*,*) 'Group EmAb Parameters not found in ', TRIM( FileName )
+            WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
+            WRITE(*,*) 'Neither electron capture on nulcei using a LMSH table'
+            WRITE(*,*) 'nor corrections to Bruenn85 opacities for EmAb are included.'
+
+          ENDIF
+
+          OpacityTable % EmAb % np_FK               = -1
+          OpacityTable % EmAb % np_FK_inv_n_decay   = -1
+          OpacityTable % EmAb % np_isoenergetic     = -1
+          OpacityTable % EmAb % np_non_isoenergetic = -1
+          OpacityTable % EmAb % np_weak_magnetism   = -1
+          OpacityTable % EmAb % nuclei_EC_FFN       = -1
+          OpacityTable % EmAb % nuclei_EC_table     = -1
+
+          CALL h5eclear_f( hdferr )
+
+        ENDIF
 
       END BLOCK
 
@@ -1350,6 +1300,26 @@ CONTAINS
 
       nMom_Iso = buffer(1)
 
+      OpacityTable % Scat_Iso % ga_strange = 0.0d0
+
+      link_exists = .FALSE.
+
+      CALL h5lexists_f ( group_id, "ga_strange", link_exists, hdferr )
+
+      IF ( hdferr == 0 .AND. link_exists ) THEN
+
+        datasize1d(1) = 1
+
+        CALL ReadHDF ( "ga_strange", tmp_real, group_id, datasize1d )
+
+        OpacityTable % Scat_Iso % ga_strange = tmp_real(1)
+
+      ELSE
+
+        CALL h5eclear_f( hdferr )
+
+      END IF
+
       CALL CloseGroupHDF( group_id )
 
       CALL CloseFileHDF( file_id )
@@ -1373,6 +1343,26 @@ CONTAINS
       CALL ReadHDF( "nMoments", buffer, group_id, datasize1d )
 
       nMom_NNS = buffer(1)
+
+      OpacityTable % Scat_NNS % ga_strange = 0.0d0
+
+      link_exists = .FALSE.
+
+      CALL h5lexists_f ( group_id, "ga_strange", link_exists, hdferr )
+
+      IF ( hdferr == 0 .AND. link_exists ) THEN
+
+        datasize1d(1) = 1
+
+        CALL ReadHDF ( "ga_strange", tmp_real, group_id, datasize1d )
+
+        OpacityTable % Scat_NNS % ga_strange = tmp_real(1)
+
+      ELSE
+
+        CALL h5eclear_f( hdferr )
+
+      END IF
 
       CALL CloseGroupHDF( group_id )
 
@@ -1702,15 +1692,24 @@ CONTAINS
              ( "Units",   OpacityTable % Scat_Iso % Units,   &
                group_id, datasize1d )
 
-      datasize1d(1) = 1
+      OpacityTable % Scat_Iso % np_isoenergetic = -1
 
-      CALL ReadHDF &
-             ( "np_isoenergetic", buffer, group_id, datasize1d, hdferr )
+      link_exists = .FALSE.
 
-      IF ( hdferr == 0 ) THEN
+      CALL h5lexists_f ( group_id, "np_isoenergetic", link_exists, hdferr )
+
+      IF ( hdferr == 0 .AND. link_exists ) THEN
+
+        datasize1d(1) = 1
+        CALL ReadHDF &
+               ( "np_isoenergetic", buffer, group_id, datasize1d )
+
         OpacityTable % Scat_Iso % np_isoenergetic = buffer(1)
+
       ELSE
-        OpacityTable % Scat_Iso % np_isoenergetic = -1
+
+        CALL h5eclear_f( hdferr )
+
       END IF
 
       datasize5d(1)   = OpacityTable % EnergyGrid % nPoints
@@ -1954,7 +1953,6 @@ CONTAINS
 
   SUBROUTINE ReadGridHDF( Grid, group_id )
 
-    USE MPI
  
     TYPE(GridType), INTENT(inout)               :: Grid
     INTEGER(HID_T), INTENT(in)                  :: group_id
@@ -1964,9 +1962,7 @@ CONTAINS
     REAL(dp), DIMENSION(1)                      :: bufferReal
     CHARACTER(LEN=32), DIMENSION(1)             :: buffer_string
 
-    CHARACTER(len=150)                   :: FileName
-    INTEGER(SIZE_T)                      :: flength
-    INTEGER(HID_T)                       :: dataset_id
+    LOGICAL :: link_exists
 
     datasize1d(1) = 1
     Call ReadHDF( "Name", buffer_string, group_id, datasize1d )
@@ -1986,34 +1982,34 @@ CONTAINS
                               group_id, datasize1d )
 
     !-- Read Zoom if present (geometric grid)
-    
-    CALL h5fget_name_f( group_id, FileName, flength, hdferr )
-          
-    CALL h5eset_auto_f( 0, hdferr )
- 
-    CALL h5dopen_f( group_id, "Zoom", dataset_id, hdferr )
 
-    IF( hdferr .ne. 0 ) THEN
-      CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+    Grid % Zoom     = 0.0d0
+    Grid % minEdge  = 0.0d0
+    Grid % maxEdge  = 0.0d0
+    Grid % minWidth = 0.0d0
+    Grid % Edge     = 0.0d0
+    Grid % Width    = 0.0d0
+    link_exists     = .FALSE.
 
-      IF(myid == 0) THEN
-        WRITE(*,*) 'Dataset Zoom not found in ', TRIM( FileName )
-        WRITE(*,*) 'This most likely means you are using legacy weaklib tables.'
-      ENDIF
+    CALL h5lexists_f ( group_id, "Zoom", link_exists, hdferr )
 
-      CALL h5eclear_f( hdferr )
-            
-    ELSE
+    IF ( hdferr == 0 .AND. link_exists ) THEN
+
       datasize1d(1) = 1
-      CALL ReadHDF( "Zoom", bufferReal, group_id, datasize1d )
+
+      CALL ReadHDF ( "Zoom", bufferReal, group_id, datasize1d )
+
       Grid % Zoom = bufferReal(1)
-    ENDIF
 
-    CALL h5eset_auto_f( 1, hdferr )
+    ELSE
+    
+      CALL h5eclear_f( hdferr )
 
+    END IF
+    
     !-- Fill in additional values for geometric grid
 
-    if ( Grid % Zoom  >  0.d0 ) then
+    IF ( Grid % Zoom  >  0.d0 ) THEN
 
       datasize1d(1) = 1
       CALL ReadHDF( "minEdge", bufferReal, group_id, datasize1d )
@@ -2033,7 +2029,7 @@ CONTAINS
       CALL ReadHDF( "Width", Grid % Width, &
                               group_id, datasize1d )
 
-    end if
+    END IF
 
     !-- set minValue and maxValue
 

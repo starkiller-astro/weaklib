@@ -175,8 +175,6 @@ MODULE wlOpacityFieldsModule
   END TYPE OpacityTypeScatIso
 
   TYPE, PUBLIC, EXTENDS(OpacityTypeScat) :: OpacityTypeScatNNS
-    INTEGER  :: weak_magnetism_corrections !Horowitz 2002
-    INTEGER  :: many_body_corrections      !Horowith et al 2017
     REAL(DP) :: ga_strange                 !strange quark contributions
 !    TYPE(ValueType_5D), POINTER :: Phi(:,:) => null ( )
 !       !-- remapping of Kernel(:) to index nu/nub and n/p
@@ -516,9 +514,6 @@ CONTAINS
 
         TYPE IS ( OpacityTypeScatNNS )
 
-          WRITE(*,*) 'Weak magnetism corrections, Horowitz 2002                                   ', &
-                      Opacity % weak_magnetism_corrections
-          WRITE(*,*) 'Many body corrections, Horowitz et al 2017                                  ', Opacity % many_body_corrections
           WRITE(*,*) 'Strange quark contribution to axial vector coupling constant (0.0 if no-op) ', Opacity % ga_strange
 
         TYPE IS ( OpacityTypeScatNES )
