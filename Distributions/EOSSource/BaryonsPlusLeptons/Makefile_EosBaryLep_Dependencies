@@ -1,0 +1,53 @@
+wlEosConstantsModule.o: \
+  wlKindModule.o
+
+wlLeptonEOSTableModule.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
+wlHelmholtzEOS.o: \
+  wlKindModule.o \
+  wlLeptonEOSTableModule.o \
+  wlEosConstantsModule.o
+
+wlHelmIOModuleHDF.o: \
+  wlKindModule.o \
+  wlLeptonEOSTableModule.o \
+  wlIOModuleHDF.o
+
+wlSoundSpeedModule.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+  wlInterpolationUtilitiesModule.o
+
+wlLeptonPhotonGasEOS.o: \
+  wlKindModule.o \
+  wlLeptonEOSTableModule.o \
+  wlHelmholtzEOS.o \
+  wlEosConstantsModule.o
+
+wlEosTemperatureCombinedInversionModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o
+
+wlEosTemperatureSeparateInversionModule.o: \
+  wlKindModule.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o
+
+wlEOSComponentsCombinedInversionModule.o: \
+  wlKindModule.o \
+  wlEosTemperatureCombinedInversionModule.o \
+  wlLeptonEOSTableModule.o
+
+wlEOSComponentsSeparateInversionModule.o: \
+  wlKindModule.o \
+  wlEosTemperatureSeparateInversionModule.o \
+  wlLeptonEOSTableModule.o

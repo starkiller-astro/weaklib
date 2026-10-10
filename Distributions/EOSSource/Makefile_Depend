@@ -8,5 +8,6 @@ wlEOSIOModuleHDF.o: \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
   wlEquationOfStateTableModule.o \
+  wlLeptonEOSTableModule.o \
   wlIOModuleHDF.o
 

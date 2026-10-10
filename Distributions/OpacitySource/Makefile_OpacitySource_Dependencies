@@ -22,6 +22,12 @@ wlOpacityTableIOModuleHDF.o: \
   wlParallelModule.o \
   wlOpacityTableIOModuleHDF.f90
 
+wlCalculateAbEmOpacityModule.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o
+
 wlNeutralCurrentCorrectionsModule.o: \
   wlKindModule.o \
   wlNeutralCurrentCorrectionsModule.F90

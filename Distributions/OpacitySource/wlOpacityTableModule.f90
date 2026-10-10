@@ -56,10 +56,13 @@ MODULE wlOpacityTableModule
     ReadEquationOfStateTableHDF
   USE wlEquationOfStateTableModule, ONLY: &
     EquationOfStateTableType, &
+    EquationOfState4DTableType, &
+    EquationOfStateCompOSETableType, &
     DeAllocateEquationOfStateTable, &
     AllocateEquationOfStateTable
   USE wlThermoStateModule, ONLY: &
     ThermoStateType, &
+    ThermoState4DType, &
     AllocateThermoState, &
     DeAllocateThermoState, &
     CopyThermoState 
@@ -81,11 +84,22 @@ MODULE wlOpacityTableModule
     INTEGER        :: nPointsE
     INTEGER        :: nPointsEta
     INTEGER        :: nPointsMuB
+#ifdef EOSMODE_4D
+    INTEGER        :: nPointsTS(4)
+#else
     INTEGER        :: nPointsTS(3)
+#endif
     TYPE(GridType) :: EnergyGrid
     TYPE(GridType) :: EtaGrid ! -- eletron chemical potential / kT
     TYPE(GridType) :: MuBGrid ! -- baryon chemical potential
-    TYPE(EquationOfStateTableType) :: EOSTable
+
+#ifdef EOSMODE_3D
+    TYPE(EquationOfStateTableType)        :: EOSTable
+#elif defined(EOSMODE_4D)
+    TYPE(EquationOfState4DTableType)      :: EOSTable
+#elif defined(EOSMODE_COMPOSE)
+    TYPE(EquationOfStateCompOSETableType) :: EOSTable
+#endif
     TYPE(ThermoStateType)          :: TS
     TYPE(OpacityTypeEmAb)          :: &
       EmAb       ! -- Corrected Absorption Opacity
@@ -125,7 +139,11 @@ CONTAINS
     INTEGER,                INTENT(in)           :: nPointsEta
     INTEGER,                INTENT(in)           :: nPointsMuB
     CHARACTER(LEN=*),       INTENT(in), OPTIONAL :: EquationOfStateTableName_Option
+#ifdef EOSMODE_4D
+    TYPE(ThermoState4DType),INTENT(in), OPTIONAL :: OpacityThermoState_Option
+#else
     TYPE(ThermoStateType),  INTENT(in), OPTIONAL :: OpacityThermoState_Option
+#endif
     LOGICAL,                INTENT(in), OPTIONAL :: Verbose_Option
 
     LOGICAL               :: Verbose

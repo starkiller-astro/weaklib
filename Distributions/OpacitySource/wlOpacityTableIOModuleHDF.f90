@@ -47,6 +47,7 @@ MODULE wlOpacityTableIOModuleHDF
   USE wlEquationOfStateTableModule
   USE wlThermoStateModule, ONLY:     &
     ThermoStateType,                 &
+    ThermoState4DType,                 &
     AllocateThermoState,             &
     DeAllocateThermoState
   USE HDF5
@@ -969,7 +970,11 @@ CONTAINS
     INTEGER(HSIZE_T)   :: datasize5d(5)
     LOGICAL :: link_exists
 
-    TYPE(ThermoStateType) :: TS
+#ifdef EOSMODE_4D
+    TYPE(ThermoState4DType) :: TS
+#else
+    TYPE(ThermoStateType)   :: TS
+#endif
 
     IF( PRESENT( EquationOfStateTableName_Option ) &
         .AND. ( LEN( EquationOfStateTableName_Option ) > 1 ) )THEN

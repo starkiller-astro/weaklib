@@ -2,7 +2,7 @@ wlEquationOfStateTableModule.o: \
   wlKindModule.o \
   wlThermoStateModule.o \
   wlDependentVariablesModule.o \
-  wlEquationOfStateTableModule.f90
+  wlEquationOfStateTableModule.F90
 
 wlEOSInversionModule.o: \
   wlKindModule.o \
@@ -25,4 +25,5 @@ wlEOSIOModuleHDF.o: \
   wlDependentVariablesModule.o \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
-  wlEOSIOModuleHDF.f90
+  wlLeptonEOSTableModule.o \
+  wlEOSIOModuleHDF.F90

@@ -59,7 +59,9 @@ MODULE wlInterpolationUtilitiesModule
   END INTERFACE LinearInterp_Array_Point
 
   INTERFACE LinearInterpDeriv_Array_Point
+    MODULE PROCEDURE LinearInterpDeriv2D_2DArray_Point
     MODULE PROCEDURE LinearInterpDeriv3D_3DArray_Point
+    MODULE PROCEDURE LinearInterpDeriv3D_2DArray_Point
     MODULE PROCEDURE LinearInterpDeriv4D_4DArray_Point
   END INTERFACE LinearInterpDeriv_Array_Point
 
@@ -963,6 +965,89 @@ CONTAINS
 
   END SUBROUTINE LinearInterpDeriv3D_3DArray_Point
 
+  SUBROUTINE LinearInterpDeriv2D_2DArray_Point &
+	  ( iY1, iY2, dY1, dY2, aY1, aY2, OS, Table, &
+      Interpolant, dIdY1, dIdY2 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    INTEGER,  INTENT(in) :: iY1, iY2
+    REAL(dp), INTENT(in) :: dY1, dY2, aY1, aY2, OS, Table(1:,1:)
+    REAL(dp) :: Interpolant, dIdY1, dIdY2
+
+    REAL(dp) :: p00, p10, p01, p11
+
+    p00 = Table(iY1  , iY2  )
+    p10 = Table(iY1+1, iY2  )
+    p01 = Table(iY1  , iY2+1)
+    p11 = Table(iY1+1, iY2+1)
+
+    Interpolant &
+      = 10.0d0**( &
+          BiLinear &
+            ( p00, p10, p01, p11, &
+              dY1, dY2) ) - OS
+
+    dIdY1 &
+      = (Interpolant + OS) * aY1 &
+          * dBiLineardX1( p00, p10, p01, p11, dY2 )
+
+    dIdY2 &
+      = (Interpolant + OS) * aY2 &
+          * dBiLineardX2( p00, p10, p01, p11, dY1 )
+
+  END SUBROUTINE LinearInterpDeriv2D_2DArray_Point
+
+  ! This one interpolates and calculates derivatives along first and second dimension
+  SUBROUTINE LinearInterpDeriv3D_2DArray_Point &
+	( iY1, iY2, iY3, dY1, dY2, dY3, aY1, aY2, aY3, OS, Table, &
+      Interpolant, dIdY1, dIdY2 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    INTEGER,  INTENT(in)  :: iY1, iY2, iY3
+    REAL(dp), INTENT(in)  :: dY1, dY2, dY3, aY1, aY2, aY3, OS, Table(1:,1:,1:)
+    REAL(dp), INTENT(out) :: Interpolant, dIdY1, dIdY2
+
+    REAL(dp) :: p000, p100, p010, p110, p001, p101, p011, p111
+
+    p000 = Table(iY1  , iY2  , iY3   )
+    p100 = Table(iY1+1, iY2  , iY3   )
+    p010 = Table(iY1  , iY2+1, iY3   )
+    p110 = Table(iY1+1, iY2+1, iY3   )
+    p001 = Table(iY1  , iY2  , iY3+1 )
+    p101 = Table(iY1+1, iY2  , iY3+1 )
+    p011 = Table(iY1  , iY2+1, iY3+1 )
+    p111 = Table(iY1+1, iY2+1, iY3+1 )
+
+    Interpolant &
+      = 10.0d0**( &
+          TriLinear &
+            ( p000, p100, p010, p110, &
+              p001, p101, p011, p111, &
+              dY1, dY2, dY3 ) ) - OS
+
+    dIdY1 &
+      = (Interpolant + OS) * aY1 &
+          * dTriLineardX1 &
+              ( p000, p100, p010, p110, &
+                p001, p101, p011, p111, &
+                dY2, dY3 )
+
+    dIdY2 &
+      = (Interpolant + OS) * aY2 &
+          * dTriLineardX2 &
+              ( p000, p100, p010, p110, &
+                p001, p101, p011, p111, &
+                dY1, dY3 )
+
+  END SUBROUTINE LinearInterpDeriv3D_2DArray_Point
 
   SUBROUTINE LinearInterpDeriv4D_4DArray_Point &
     ( iY1, iY2, iY3, iY4, dY1, dY2, dY3, dY4, aY1, aY2, aY3, aY4, OS, Table, &
