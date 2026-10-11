@@ -4,7 +4,8 @@ MODULE wlHelmIOModuleHDF
     USE wlLeptonEOSTableModule, ONLY: &
         HelmTableType, &
         AllocateHelmholtzTable, &
-        DeallocateHelmholtzTable
+        DeallocateHelmholtzTable, &
+        InitializePairSymmetricExtension
     USE wlIOModuleHDF
     USE HDF5
 
@@ -121,12 +122,11 @@ CONTAINS
 
   END SUBROUTINE WriteHelmholtzTableHDF
 
-  SUBROUTINE ReadHelmholtzTableHDF( HelmTable, FileName, WhichTableName, eos_minD )
+  SUBROUTINE ReadHelmholtzTableHDF( HelmTable, FileName, WhichTableName )
 
     TYPE(HelmTableType), INTENT(INOUT)  :: HelmTable
     CHARACTER(len=*), INTENT(IN) :: FileName
     CHARACTER(len=*), INTENT(IN) :: WhichTableName
-    REAL(DP), INTENT(in), OPTIONAL :: eos_minD
 
     INTEGER(HID_T) :: file_id
     INTEGER(HID_T) :: group_id
@@ -144,7 +144,7 @@ CONTAINS
     CALL CloseGroupHDF( group_id )
 
     ! Allocate Helmholtz EOS
-    CALL AllocateHelmholtzTable( HelmTable, nPoints, eos_minD = eos_minD )
+    CALL AllocateHelmholtzTable( HelmTable, nPoints )
 
     CALL OpenGroupHDF( TRIM(ADJUSTL(WhichTableName)) // "", .false., file_id, group_id )
     datasize1d = HelmTable % nPointsDen
@@ -217,6 +217,8 @@ CONTAINS
     CALL ReadHDF( "maxdens", buffer, group_id, datasize1d )
     HelmTable % maxdens = buffer(1)
     CALL CloseGroupHDF( group_id )
+
+    CALL InitializePairSymmetricExtension( HelmTable )
 
     !CALL OpenGroupHDF( "Metadata", .true., file_id, group_id )
     !CALL WriteEOSMetadataHDF( HelmTable % MD, group_id )

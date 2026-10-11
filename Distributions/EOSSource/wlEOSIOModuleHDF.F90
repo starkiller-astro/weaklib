@@ -844,10 +844,6 @@ CONTAINS
         CALL AllocateHelmholtzTable(HelmTable, helm_dims)
     END IF
 
-    !Need to broadcast eos_MinD after AllocateHelmholtzTable, otherwise it would be overwritten
-    !in that routine
-    CALL MPI_BCAST( HelmTable % eos_MinD, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
-
     ! 1D arrays in density
     i_count = HelmTable % nPointsDen
     CALL MPI_BCAST( HelmTable % d, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
@@ -863,6 +859,13 @@ CONTAINS
     CALL MPI_BCAST( HelmTable % dt2, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( HelmTable % dti, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( HelmTable % dt2i, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    i_count = SIZE( HelmTable % PairTemperature )
+    CALL MPI_BCAST( HelmTable % PairTemperature, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % PairLogP0, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % PairDLogP0dT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % PairLogA0, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % PairDLogA0dT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
     i_count = HelmTable % nPointsDen * HelmTable % nPointsTemp
     CALL MPI_BCAST( HelmTable % f,     i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )

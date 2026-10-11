@@ -7,6 +7,21 @@ include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 
 all: wlEosQueryTest wlEosPerformanceTest wlReadEquationOfStateTest wlRewriteEquationOfStateTest
 
+wlLeptonPairSymmetricTest: \
+	$(weaklib) wlLeptonPairSymmetricTest.o
+	$(FLINKER) $(FLAGS) -o wlLeptonPairSymmetricTest_$(MACHINE) \
+	$(weaklib) wlLeptonPairSymmetricTest.o \
+	$(LIBRARIES)
+
+wlLeptonPairSymmetricTest.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlIOModuleHDF.o \
+  wlHelmIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+  wlLeptonPairSymmetricTest.F90
+
 wlEosQueryTest: \
 	$(weaklib) wlEosQueryTest.o
 	$(FLINKER) $(FLAGS) -o wlEosQueryTest_$(MACHINE) \

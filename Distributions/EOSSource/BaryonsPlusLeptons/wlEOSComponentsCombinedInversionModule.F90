@@ -135,13 +135,15 @@ MODULE wlEOSComponentsCombinedInversionModule
 CONTAINS
 
   SUBROUTINE InitializeEOSComponentsInversion( Ds, Ts, Yps, Es, Ps, Ss, &
-      HelmTableElectrons, HelmTableMuons, Verbose_Option )
+      HelmTableElectrons, HelmTableMuons, Verbose_Option, &
+      ValidStateMask_Option )
 
     REAL(dp), INTENT(in) :: Ds(1:)      , Ts(1:)      , Yps(1:)
     REAL(dp), INTENT(in) :: Es(1:,1:,1:), Ps(1:,1:,1:), Ss(1:,1:,1:)
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
     LOGICAL,  INTENT(in), OPTIONAL :: Verbose_Option
+    LOGICAL,  INTENT(in), OPTIONAL :: ValidStateMask_Option(1:,1:,1:)
     LOGICAL :: Verbose
 
     IF( PRESENT( Verbose_Option ) )THEN
@@ -153,9 +155,26 @@ CONTAINS
     MinD  = MINVAL( Ds  ); MaxD  = MAXVAL( Ds  )
     MinT  = MINVAL( Ts  ); MaxT  = MAXVAL( Ts  )
     MinYp = MINVAL( Yps ); MaxYp = MAXVAL( Yps )
-    MinE  = MINVAL( Es  ); MaxE  = MAXVAL( Es  )
-    MinP  = MINVAL( Ps  ); MaxP  = MAXVAL( Ps  )
-    MinS  = MINVAL( Ss  ); MaxS  = MAXVAL( Ss  )
+
+    IF( PRESENT( ValidStateMask_Option ) )THEN
+
+      IF( .NOT. ANY( ValidStateMask_Option ) ) &
+        ERROR STOP 'InitializeEOSComponentsInversion: no valid EOS states'
+
+      MinE = MINVAL( Es, MASK = ValidStateMask_Option )
+      MaxE = MAXVAL( Es, MASK = ValidStateMask_Option )
+      MinP = MINVAL( Ps, MASK = ValidStateMask_Option )
+      MaxP = MAXVAL( Ps, MASK = ValidStateMask_Option )
+      MinS = MINVAL( Ss, MASK = ValidStateMask_Option )
+      MaxS = MAXVAL( Ss, MASK = ValidStateMask_Option )
+
+    ELSE
+
+      MinE = MINVAL( Es ); MaxE = MAXVAL( Es )
+      MinP = MINVAL( Ps ); MaxP = MAXVAL( Ps )
+      MinS = MINVAL( Ss ); MaxS = MAXVAL( Ss )
+
+    END IF
 
     IF( Verbose )THEN
       WRITE(*,*)
