@@ -22,6 +22,7 @@ PROGRAM wlTestGeneralKernelTwoReactions
   USE wlGeneralLeptonScatteringModule, ONLY: &
     ProcessIndexFromReactionString
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllPhout, &
     CalculateAllRoutIntegrated, &
     InitGeneralScatteringKernels, &
@@ -190,12 +191,12 @@ PROGRAM wlTestGeneralKernelTwoReactions
   process_string_1 = 'nu_mu      + mu+ -> nu_e       + e+  '
   Mu2_1(:) = -Inte_Mum(:); Mu4_1(:) = -Inte_Mue(:)
   CALL ProcessIndexFromReactionString( process_string_1, iProcess)
-  iProcess_1 = iProcess - iProcessMin + 1
+  iProcess_1 = ProcessRowIndex(iProcess)
   
   process_string_2 = 'nu_e       + e+  -> nu_mu      + mu+ '
   Mu2_2(:) = -Inte_Mue(:); Mu4_2(:) = -Inte_Mum(:)
   CALL ProcessIndexFromReactionString( process_string_2, iProcess)
-  iProcess_2 = iProcess - iProcessMin + 1
+  iProcess_2 = ProcessRowIndex(iProcess)
 
   ! ! ----------------------     LFE   -----------------------------
   ! process_string_1 = 'nu_bar_mu  + e+  -> nu_bar_e   + mu+ '

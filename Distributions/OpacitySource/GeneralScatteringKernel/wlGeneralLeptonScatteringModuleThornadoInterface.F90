@@ -6,6 +6,8 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   USE wlGeneralLeptonScatteringModule, ONLY: &
     SelectLambdaFromProcessIndex, &
     Compute_Is_Integrals, FD,     &
+    Compute_Is_Integrals_FD,      &
+    f_gamma, xi_tol,              &
     A1_f, B1_f, C1_f, C3_f,       &
     gauleg, LegendrePolynomial,   &
     gaulag, CalculateCollinearH0
@@ -15,15 +17,63 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
 
   INTEGER , PARAMETER, PUBLIC :: iProcessMin_Default = 1
   INTEGER , PARAMETER, PUBLIC :: iProcessMax_Default = 34
+  INTEGER , PARAMETER, PUBLIC :: nProcessTotal       = iProcessMax_Default
+
+  ! ==========================================================================
+  ! Process selection.
+  !
+  ! The selection is an explicit ORDERED LIST, not a range: any subset of the
+  ! 34 processes can be requested, in any combination. ProcessList defines the
+  ! row order of Phout / Rout, so the caller controls the output layout.
+  !
+  ! iProcessMin / iProcessMax are kept only as the min/max of the list, for
+  ! diagnostics -- no logic may assume the selection is contiguous.
+  ! ==========================================================================
+  INTEGER                     :: nProcessSel
+  INTEGER , ALLOCATABLE       :: ProcessList(:)             ! row -> absolute process
+  INTEGER                     :: iRowOfProcess(nProcessTotal) ! absolute -> row, 0 = unselected
   INTEGER                     :: iProcessMin
   INTEGER                     :: iProcessMax
+
+  ! --- Named process groups, for callers that want to combine whole blocks ---
+  INTEGER , PARAMETER, PUBLIC :: iGroup_NES    = 1   ! 1..12  NC on e-, e+
+  INTEGER , PARAMETER, PUBLIC :: iGroup_NMS    = 2   ! 13..24 NC on mu-, mu+
+  INTEGER , PARAMETER, PUBLIC :: iGroup_LFE    = 3   ! 25..28 lepton flavour exchange
+  INTEGER , PARAMETER, PUBLIC :: iGroup_LFC    = 4   ! 29..32 lepton flavour conversion
+  INTEGER , PARAMETER, PUBLIC :: iGroup_IMD    = 5   ! 33..34 inverse muon decay
+  INTEGER , PARAMETER, PUBLIC :: nGroupTotal   = 5
+
+  INTEGER , DIMENSION(nGroupTotal), PARAMETER :: GroupFirst = (/  1, 13, 25, 29, 33 /)
+  INTEGER , DIMENSION(nGroupTotal), PARAMETER :: GroupLast  = (/ 12, 24, 28, 32, 34 /)
   REAL(DP), PARAMETER         :: ElectronMass        = me
   REAL(DP), PARAMETER         :: MuonMass            = mmu
   REAL(DP), PARAMETER         :: E2_max_Default      = 100.0d0
   INTEGER , PARAMETER         :: nE2_Default         = 32
   INTEGER                     :: nE2_Lepton
 
-  REAL(DP), ALLOCATABLE    :: LambdaScatteringArray(:)
+  ! --- Energy grids the coefficient tables were built on. Stored so the
+  ! --- batched entry points need not be handed (iE1,E1) pairs that could
+  ! --- disagree with the tables.
+  INTEGER                  :: nE1_Grid, nE3_Grid
+  REAL(DP), ALLOCATABLE    :: E1_Grid(:), E3_Grid(:)
+
+  ! --- Maximum number of Legendre moments. Fixes the extent of every
+  ! --- thread-private accumulator, so it must stay a PARAMETER.
+  INTEGER , PARAMETER      :: nL_Max = 2
+
+  ! ==========================================================================
+  ! Coefficient tables, in the ORIGINAL shared layout -- which is already
+  ! close to minimal and is deliberately NOT expanded per case:
+  !   A  does not depend on the case at all (only on E1,E3,costh)
+  !   B  depends only on Q, i.e. on the flavour pair
+  !   C  depends only on (Q,m2) and (m2,m4), i.e. on the flavour pair
+  ! Replicating them across all 9 cases streams 90 doubles per
+  ! (iE1,iE3,iTh) triple instead of 22. This kernel runs at roughly
+  ! 4 flop/byte -- below the ~10 flop/byte balance point of a server GPU --
+  ! so it is bandwidth-bound, and the extra traffic costs more than the
+  ! (Index2,Index4) integer gather it would have saved. Measured: expanding
+  ! them made the CPU path 1.39x SLOWER at nE=32/nTheta=32.
+  ! ==========================================================================
   REAL(DP), ALLOCATABLE    :: A_Scat(:, :, :, :)
   REAL(DP), ALLOCATABLE    :: B_Scat(:, :, :, :, :, :)
   REAL(DP), ALLOCATABLE    :: C_Scat(:, :, :, :, :, :)
@@ -31,6 +81,39 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   REAL(DP), ALLOCATABLE    :: A_IMD(:, :, :, :)
   REAL(DP), ALLOCATABLE    :: B_IMD(:, :, :, :)
   REAL(DP), ALLOCATABLE    :: C_IMD(:, :, :, :)
+
+  ! ==========================================================================
+  ! Tabulated kinematics. E_minus, E_plus and the phase-space masks depend
+  ! only on (E1,E3,costh) and the case MASS PAIR -- NOT on T, Mu_e or Mu_mu --
+  ! so they are invariant for the whole run and are built once at Init. This
+  ! is what keeps every SQRT, divide and data-dependent branch out of the
+  ! kernel.
+  !
+  ! Indexed by deduplicated mass pair, not by case: the 9 distinct cases share
+  ! at most 5 distinct (m2,m4,isIMD) combinations, and an electron-only run
+  ! collapses to a single one. Keeps the added traffic to ~7 doubles per
+  ! triple instead of 27.
+  ! ==========================================================================
+  INTEGER , PARAMETER      :: nMassPairMax = 5
+  INTEGER                  :: nMassPair
+  REAL(DP), ALLOCATABLE    :: Eminus_MP(:, :, :, :)   ! (nE1,nE3,nTheta,nMassPair)
+  REAL(DP), ALLOCATABLE    :: Eplus_MP (:, :, :, :)   ! ditto; IMD slot only
+  LOGICAL , ALLOCATABLE    :: Active_MP(:, :, :, :)   ! .FALSE. = no phase space
+
+  ! --- Per-case constants, all resolved at Init ---
+  INTEGER , ALLOCATABLE    :: iMassPair_Case(:)  ! case -> mass-pair slot
+  LOGICAL , ALLOCATABLE    :: IsIMD_Case(:)      ! read the *_IMD tables instead
+  LOGICAL , ALLOCATABLE    :: TwoSided_Case(:)   ! IMD: I_s(E-) - I_s(E+)
+  REAL(DP), ALLOCATABLE    :: E3Sign_Case(:)     ! +1 scattering, -1 IMD (enters eta')
+  INTEGER , ALLOCATABLE    :: iIdx2(:), iIdx4(:) ! flattened iABC_m2/iABC_m4
+  INTEGER , ALLOCATABLE    :: iChemSpecies2(:)   ! 1 = electron, 2 = muon
+  INTEGER , ALLOCATABLE    :: iChemSpecies4(:)
+  REAL(DP), ALLOCATABLE    :: ChemSign2(:)       ! +1 for l-, -1 for l+
+  REAL(DP), ALLOCATABLE    :: ChemSign4(:)
+
+  ! --- P_{l}(costh_i) * w_i, precomputed. Was a recurrence evaluated in the
+  ! --- innermost loop on every call despite depending only on (iTh,iL).
+  REAL(DP), ALLOCATABLE    :: PlWeight(:, :)     ! (nTheta, nL_Max)
 
   ! IMD threshold (Guo Eq. 16): kernel vanishes for k < k0
   REAL(DP), PARAMETER      :: k0_IMD = (MuonMass + ElectronMass) / (MuonMass - ElectronMass)
@@ -54,7 +137,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: i_mm_em = 6 ! particle 2 is mu- and particle 4 is e-
   INTEGER , PARAMETER      :: i_ep_mp = 7 ! particle 2 is e+  and particle 4 is mu+
   INTEGER , PARAMETER      :: i_mp_ep = 8 ! particle 2 is mu+ and particle 4 is e+
-  INTEGER , PARAMETER      :: i_IMD = 9 ! IMD: particle 2 is e-, particle 4 is mu- (applies to 33 and 34)
+  INTEGER , PARAMETER      :: i_IMD   = 9 ! IMD: particle 2 is e-, particle 4 is mu- (applies to 33 and 34)
 
   INTEGER , DIMENSION(8), PARAMETER :: &
     iABC_m2 = (/ iABC_el, iABC_el, iABC_mu, iABC_mu, &
@@ -64,39 +147,174 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
                  iABC_mu, iABC_el, iABC_mu, iABC_el /)
 
   INTEGER                             :: iDistinctMap(iProcessMax_Default)
+  ! Inverse of ChosenToTrueCaseMap: iProcess -> COMPACT case index (1..nDistinctCases).
+  ! Lets the hot loops carry one small dense index instead of the sparse 1..9 one.
+  INTEGER                             :: iProcessToCase(iProcessMax_Default)
+  ! Row -> compact case, i.e. iProcessToCase(ProcessList(row)) collapsed into one
+  ! gather. Keeps the hot loops (and the device region) from chasing two maps.
+  INTEGER , ALLOCATABLE, DIMENSION(:) :: iRowToCase(:)
   INTEGER , ALLOCATABLE, DIMENSION(:) :: ChosenToTrueCaseMap(:)
   REAL(DP), ALLOCATABLE, DIMENSION(:) :: lam1(:), lam2(:), lam3(:)
 
-  REAL(DP) :: conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
+  ! --- Device declarations. CalculateAllPhout is a ROUTINE SEQ / DECLARE TARGET
+  ! --- routine, and such a routine may only touch module data that carries its
+  ! --- own device declaration -- a PRESENT clause at the caller does not cover
+  ! --- it. The scalars are listed too: an undeclared module scalar reads as
+  ! --- garbage/0 on device.
+#if   defined(WEAKLIB_OMP_OL)
+  !$OMP DECLARE TARGET( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,          &
+  !$OMP                 Eminus_MP, Eplus_MP, Active_MP,                       &
+  !$OMP                 iMassPair_Case, IsIMD_Case, TwoSided_Case,            &
+  !$OMP                 E3Sign_Case, iIdx2, iIdx4, PlWeight,                  &
+  !$OMP                 lam1, lam2, lam3, iRowToCase,                         &
+  !$OMP                 iChemSpecies2, iChemSpecies4,                         &
+  !$OMP                 ChemSign2, ChemSign4, E1_Grid, E3_Grid,               &
+  !$OMP                 nThetaScattering, nDistinctCases, nProcessSel )
+#elif defined(WEAKLIB_OACC)
+  !$ACC DECLARE CREATE( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,          &
+  !$ACC                 Eminus_MP, Eplus_MP, Active_MP,                       &
+  !$ACC                 iMassPair_Case, IsIMD_Case, TwoSided_Case,            &
+  !$ACC                 E3Sign_Case, iIdx2, iIdx4, PlWeight,                  &
+  !$ACC                 lam1, lam2, lam3, iRowToCase,                         &
+  !$ACC                 iChemSpecies2, iChemSpecies4,                         &
+  !$ACC                 ChemSign2, ChemSign4, E1_Grid, E3_Grid,               &
+  !$ACC                 nThetaScattering, nDistinctCases, nProcessSel )
+#endif
+
+  REAL(DP), PARAMETER :: conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
+  ! NOTE: xi_tol is imported from wlGeneralLeptonScatteringModule, NOT redeclared
+  ! here. The scalar path reaches it through Compute_Is_Integrals while the
+  ! batched kernel evaluates the xi -> 0 test itself, so two copies could drift
+  ! apart and make the two paths disagree on which branch to take.
 
   PUBLIC :: InitGeneralScatteringKernels
   PUBLIC :: FinalizeGeneralScatteringKernels
   PUBLIC :: CalculateAllRout
   PUBLIC :: CalculateAllPhout
+  PUBLIC :: CalculateAllPhout_3D
   PUBLIC :: CalculateAllRoutIntegrated
+  PUBLIC :: ProcessRowIndex
+  PUBLIC :: ProcessesInGroup
+  PUBLIC :: SelectedProcessCount
+  PUBLIC :: SelectedProcessList
 
 CONTAINS
 
+  !================================================================================
+  !
+  !  ProcessRowIndex
+  !
+  !  Row index into the Phout / Rout arrays for an ABSOLUTE process index -- the
+  !  kind ProcessIndexFromReactionString returns.
+  !
+  !  Use this at call sites instead of any hand-rolled index arithmetic. The
+  !  selection is an arbitrary subset, so "iProcess - iProcessMin + 1" is simply
+  !  wrong unless the selection happens to be the contiguous block starting at
+  !  iProcessMin; this is a direct lookup, and it fails loudly rather than
+  !  silently reading the wrong row when the process was never selected.
+  !
+  !================================================================================
+  FUNCTION ProcessRowIndex( iProcess ) RESULT( idx )
+
+    INTEGER, INTENT(IN) :: iProcess
+    INTEGER :: idx
+
+    IF ( iProcess < 1 .OR. iProcess > nProcessTotal ) THEN
+      WRITE(*,*) 'ProcessRowIndex: process index out of range: ', iProcess
+      STOP
+    ENDIF
+
+    idx = iRowOfProcess(iProcess)
+
+    IF ( idx == 0 ) THEN
+      WRITE(*,*) 'ProcessRowIndex: process ', iProcess, ' was not selected at Init.'
+      WRITE(*,*) '  selected processes: ', ProcessList(1:nProcessSel)
+      STOP
+    ENDIF
+
+  END FUNCTION ProcessRowIndex
+
+  !--- Number of rows in Phout / Rout for the current selection. --------------
+  PURE FUNCTION SelectedProcessCount() RESULT( n )
+    INTEGER :: n
+    n = nProcessSel
+  END FUNCTION SelectedProcessCount
+
+  !--- The selected absolute process indices, in row order. ------------------
+  PURE FUNCTION SelectedProcessList() RESULT( list )
+    INTEGER :: list(nProcessSel)
+    list = ProcessList(1:nProcessSel)
+  END FUNCTION SelectedProcessList
+
+  !================================================================================
+  !  ProcessesInGroup: the absolute process indices belonging to a named group.
+  !  Handy for assembling an iProcessList_Option by hand.
+  !================================================================================
+  SUBROUTINE ProcessesInGroup( iGroup, list, n )
+
+    INTEGER, INTENT(IN)  :: iGroup
+    INTEGER, INTENT(OUT) :: list(:)
+    INTEGER, INTENT(OUT) :: n
+
+    INTEGER :: i
+
+    IF ( iGroup < 1 .OR. iGroup > nGroupTotal ) THEN
+      WRITE(*,*) 'ProcessesInGroup: unknown group ', iGroup
+      STOP
+    ENDIF
+
+    n = GroupLast(iGroup) - GroupFirst(iGroup) + 1
+
+    IF ( SIZE(list) < n ) THEN
+      WRITE(*,*) 'ProcessesInGroup: list too small, need ', n, ' got ', SIZE(list)
+      STOP
+    ENDIF
+
+    DO i = 1, n
+      list(i) = GroupFirst(iGroup) + i - 1
+    ENDDO
+
+  END SUBROUTINE ProcessesInGroup
+
   SUBROUTINE InitGeneralScatteringKernels(E1_array, E3_array, nE1, nE3, nTheta, &
                                           iProcessMin_Option, iProcessMax_Option, &
-                                          E2_max_Option, nE2_Option)
+                                          E2_max_Option, nE2_Option, &
+                                          iProcessList_Option, iGroupList_Option)
 
     REAL(DP), INTENT(IN)           :: E1_array(nE1), E3_array(nE3)
     INTEGER , INTENT(IN)           :: nE1, nE3, nTheta
+    ! --- Process selection. Give AT MOST ONE of:
+    !       iProcessList_Option : explicit absolute indices, in the row order wanted
+    !       iGroupList_Option   : named groups (iGroup_NES, iGroup_LFE, ...)
+    !       iProcessMin/Max     : a contiguous block (kept for backward compatibility)
+    !     Nothing given -> the full default range.
     INTEGER , INTENT(IN), OPTIONAL :: iProcessMin_Option, iProcessMax_Option
+    INTEGER , INTENT(IN), OPTIONAL :: iProcessList_Option(:)
+    INTEGER , INTENT(IN), OPTIONAL :: iGroupList_Option(:)
     REAL(DP), INTENT(IN), OPTIONAL :: E2_max_Option
     INTEGER , INTENT(IN), OPTIONAL :: nE2_Option
 
-    REAL(DP) :: E1, E2, E3, costh, Delta, Delta5, E2_max
-    INTEGER  :: iE1, iE2, iE3, iTh, iProcess, iCase
-    
-    REAL(DP) :: DeltaA, DeltaA5, Q_mu_e, Q_e_mu
+    REAL(DP) :: E1, E3, costh, Delta, Delta5, DeltaA, DeltaA5, E2_max
+    REAL(DP) :: Q, m2, m4, k_val, disc, Em, Ep, OneMinusMu, EEOneMinusMu
+    INTEGER  :: iE1, iE3, iTh, iProcess, iCase, iTrueCase, iL
+    LOGICAL  :: IsActive
+
+    REAL(DP) :: Q_mu_e, Q_e_mu
 
     INTEGER, DIMENSION(nDistinctCasesMax) :: unique_cases
     INTEGER :: idx, current_val
-    LOGICAL :: IncludeIMD
+    INTEGER :: iRow, iGroup, nInGroup, nForms
+    INTEGER, DIMENSION(nProcessTotal) :: tmpList, groupBuf
+    REAL(DP), DIMENSION(nMassPairMax) :: MPm2, MPm4
+    LOGICAL , DIMENSION(nMassPairMax) :: MPisIMD
 
     nThetaScattering = nTheta
+    nE1_Grid         = nE1
+    nE3_Grid         = nE3
+
+    ALLOCATE( E1_Grid(nE1), E3_Grid(nE3) )
+    E1_Grid(:) = E1_array(:)
+    E3_Grid(:) = E3_array(:)
 
     IF ( PRESENT(nE2_Option) ) THEN
       nE2_Lepton = nE2_Option
@@ -110,34 +328,96 @@ CONTAINS
       E2_max = E2_max_Default
     ENDIF
 
-    IF ( PRESENT(iProcessMin_Option) ) THEN
-      iProcessMin = iProcessMin_Option
+    ! =======================================================================
+    ! Build the process selection. Exactly one input form may be used.
+    ! =======================================================================
+    nForms = 0
+    IF ( PRESENT(iProcessList_Option) ) nForms = nForms + 1
+    IF ( PRESENT(iGroupList_Option)   ) nForms = nForms + 1
+    IF ( PRESENT(iProcessMin_Option) .OR. PRESENT(iProcessMax_Option) ) &
+      nForms = nForms + 1
+
+    IF ( nForms > 1 ) THEN
+      WRITE(*,*) 'InitGeneralScatteringKernels: give at most ONE of ', &
+                 'iProcessList_Option, iGroupList_Option, iProcessMin/Max_Option.'
+      STOP
+    ENDIF
+
+    IF ( PRESENT(iProcessList_Option) ) THEN
+
+      nProcessSel = SIZE(iProcessList_Option)
+      IF ( nProcessSel < 1 ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: empty iProcessList_Option.'
+        STOP
+      ENDIF
+      tmpList(1:nProcessSel) = iProcessList_Option(:)
+
+    ELSE IF ( PRESENT(iGroupList_Option) ) THEN
+
+      nProcessSel = 0
+      DO idx = 1, SIZE(iGroupList_Option)
+        iGroup = iGroupList_Option(idx)
+        CALL ProcessesInGroup( iGroup, groupBuf, nInGroup )
+        DO iRow = 1, nInGroup
+          nProcessSel = nProcessSel + 1
+          tmpList(nProcessSel) = groupBuf(iRow)
+        ENDDO
+      ENDDO
+      IF ( nProcessSel < 1 ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: empty iGroupList_Option.'
+        STOP
+      ENDIF
+
     ELSE
-      iProcessMin = iProcessMin_Default
+
+      ! Backward-compatible contiguous block.
+      IF ( PRESENT(iProcessMin_Option) ) THEN
+        iProcessMin = iProcessMin_Option
+      ELSE
+        iProcessMin = iProcessMin_Default
+      ENDIF
+      IF ( PRESENT(iProcessMax_Option) ) THEN
+        iProcessMax = iProcessMax_Option
+      ELSE
+        iProcessMax = iProcessMax_Default
+      ENDIF
+      IF ( iProcessMax < iProcessMin ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: iProcessMax < iProcessMin.'
+        STOP
+      ENDIF
+      nProcessSel = iProcessMax - iProcessMin + 1
+      DO idx = 1, nProcessSel
+        tmpList(idx) = iProcessMin + idx - 1
+      ENDDO
+
     ENDIF
 
-    IF ( PRESENT(iProcessMax_Option) ) THEN
-      iProcessMax = iProcessMax_Option
-    ELSE
-      iProcessMax = iProcessMax_Default
-    ENDIF
+    ! --- validate, then commit the selection and its inverse map ---
+    iRowOfProcess(:) = 0
+    DO idx = 1, nProcessSel
+      iProcess = tmpList(idx)
+      IF ( iProcess < 1 .OR. iProcess > nProcessTotal ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: process out of range: ', iProcess
+        STOP
+      ENDIF
+      IF ( iRowOfProcess(iProcess) /= 0 ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: process ', iProcess, &
+                   ' requested twice (rows ', iRowOfProcess(iProcess), ' and ', idx, ')'
+        STOP
+      ENDIF
+      iRowOfProcess(iProcess) = idx
+    ENDDO
 
-    IncludeIMD = ( iProcessMax >= 33 )
+    ALLOCATE( ProcessList(nProcessSel) )
+    ProcessList(:) = tmpList(1:nProcessSel)
 
-    ALLOCATE( lam1(iProcessMax - iProcessMin + 1) )
-    ALLOCATE( lam2(iProcessMax - iProcessMin + 1) )
-    ALLOCATE( lam3(iProcessMax - iProcessMin + 1) )
-    ALLOCATE( A_Scat(nE1, nE3, nThetaScattering, 2) )
-    ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) ) ! This could also be (nE1, nE3, nTheta, 3, 3) but more readable this way
-    ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
-      
-    IF (IncludeIMD) THEN
-      ! Only one flavor combination (e- in, mu- out) and no C3 slot (lam3 = 0
-      ! for both IMD processes), hence the small last dimension.
-      ALLOCATE( A_IMD(nE1, nE3, nThetaScattering, 2) )
-      ALLOCATE( B_IMD(nE1, nE3, nThetaScattering, 2) )
-      ALLOCATE( C_IMD(nE1, nE3, nThetaScattering, 2) )
-    ENDIF
+    ! Diagnostics only -- nothing below may assume contiguity.
+    iProcessMin = MINVAL(ProcessList)
+    iProcessMax = MAXVAL(ProcessList)
+
+    ALLOCATE( lam1(nProcessSel) )
+    ALLOCATE( lam2(nProcessSel) )
+    ALLOCATE( lam3(nProcessSel) )
 
     ! Take care of angular quadrature
     ALLOCATE( xa_cos_theta(nThetaScattering), wa_cos_theta(nThetaScattering) )
@@ -146,88 +426,7 @@ CONTAINS
     Q_mu_e = 0.5d0 * (MuonMass**2 - ElectronMass**2)
     Q_e_mu = - Q_mu_e
 
-    ! Here we might want to iterate from iE_B to iE_S or whatever? Not sure
-    DO iE1=1,nE1
-      DO iE3=1,nE3
-        DO iTh=1,nThetaScattering
-
-          E1    = E1_array(iE1)
-          E3    = E3_array(iE3)
-          costh = xa_cos_theta(iTh)
-          Delta  = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))
-          Delta5 = Delta**5
-
-          A_Scat(iE1, iE3, iTh, 1) = A1_f(  E1,  E3, costh ) 
-          A_Scat(iE1, iE3, iTh, 2) = A1_f( -E3, -E1, costh )
-          
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
-
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, Q_mu_e )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, Q_mu_e )
-
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, Q_e_mu )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, Q_e_mu )
- 
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
-  
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, ElectronMass, ElectronMass )
-
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, Q_mu_e, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, Q_mu_e, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, ElectronMass, MuonMass )
-
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, Q_e_mu, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, Q_e_mu, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, MuonMass, ElectronMass ) ! Same as the one above actually
- 
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 3) = C3_f(  E1,  E3, costh, MuonMass, MuonMass )
-
-          ! Might as well build Delta into A, B, C while we are here
-          Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))
-          A_Scat(iE1, iE3, iTh, :      ) = A_Scat(iE1, iE3, iTh, :      ) / (16.0d0 * pi * Delta5)
-          B_Scat(iE1, iE3, iTh, :, :, :) = B_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
-          C_Scat(iE1, iE3, iTh, :, :, :) = C_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
-
-          IF (IncludeIMD) THEN
-            ! IMD coefficients, the "1" set is process 33
-            ! (nu_bar_e has energy E1), the "2" set is its E1 <-> E3 swap
-            ! (process 34). Particle 2 is the electron in BOTH orientations.
-            ! Notice that C is not needed since lam3 is always zero
-
-            DeltaA  = SQRT(MAX(E1**2 + 2.0d0*E1*E3*costh + E3**2, 0.0d0))
-            DeltaA5 = DeltaA**5
-
-            A_IMD(iE1, iE3, iTh, 1) = A1_f(  E1, -E3, costh )        / (16.0d0 * pi * DeltaA5)
-            A_IMD(iE1, iE3, iTh, 2) = A1_f(  E3, -E1, costh )        / (16.0d0 * pi * DeltaA5)
-
-            B_IMD(iE1, iE3, iTh, 1) = B1_f(  E1, -E3, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
-            B_IMD(iE1, iE3, iTh, 2) = B1_f(  E3, -E1, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
-
-            C_IMD(iE1, iE3, iTh, 1) = C1_f(  E1, -E3, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
-            C_IMD(iE1, iE3, iTh, 2) = C1_f(  E3, -E1, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
-          ENDIF
-
-        ENDDO
-      ENDDO
-    ENDDO
-
-    ! --- Preallocate collinear grids (generated ONCE, reused every call) ---
-    ALLOCATE( xa_GLeg_ref(nE2_Lepton), wa_GLeg_ref(nE2_Lepton) )
-    ALLOCATE( xa_GLag(nE2_Lepton),     wa_GLag(nE2_Lepton) )
-
-    ! Canonical GL panel on [-1,1]; affine-mapped to [0,E1] at use time.
-    CALL gauleg( -1.0d0, 1.0d0, xa_GLeg_ref, wa_GLeg_ref, nE2_Lepton )
-
-    ! Raw Gauss-Laguerre (alpha=0) nodes/weights for int_0^inf e^{-x} g(x) dx.
-    CALL gaulag( xa_GLag, wa_GLag, nE2_Lepton, 0.0d0 )
-
-    ! This is to compute Distinct Is
+    ! --- Mass pairs per distinct case (m2 = particle 2, m4 = particle 4) ---
     MassPairDistinct(i_em_em,1) = ElectronMass
     MassPairDistinct(i_em_em,2) = ElectronMass
 
@@ -255,12 +454,15 @@ CONTAINS
     MassPairDistinct(i_IMD,1) = ElectronMass
     MassPairDistinct(i_IMD,2) = MuonMass
 
-    ! Now initialize Lambdas and map each process to the correct I
+    ! =======================================================================
+    ! Resolve the distinct-case list FIRST. The per-case coefficient and
+    ! kinematic tables below are dimensioned by nDistinctCases, so this block
+    ! has to precede them (it used to sit at the end of this routine).
+    ! =======================================================================
     nDistinctCases  = 0
     unique_cases(:) = -1
-    DO iProcess = iProcessMin, iProcessMax
-       ! Storing your index expression in a temporary variable to keep things scannable
-       idx = iProcess - iProcessMin + 1
+    DO idx = 1, nProcessSel
+       iProcess = ProcessList(idx)
 
        CALL SelectLambdaFromProcessIndex( iProcess, &
                   lam1(idx), &
@@ -292,17 +494,336 @@ CONTAINS
       ChosenToTrueCaseMap(iCase) = unique_cases(iCase)
     ENDDO
 
+    ! Invert it: every selected process gets its compact case index.
+    iProcessToCase(:) = -1
+    DO idx = 1, nProcessSel
+      iProcess = ProcessList(idx)
+      DO iCase = 1, nDistinctCases
+        IF ( ChosenToTrueCaseMap(iCase) == iDistinctMap(iProcess) ) THEN
+          iProcessToCase(iProcess) = iCase
+          EXIT
+        ENDIF
+      ENDDO
+      IF ( iProcessToCase(iProcess) < 0 ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: no compact case for iProcess =', iProcess
+        STOP
+      ENDIF
+    ENDDO
+
+    ! Collapse the two maps into a single row -> case gather.
+    ALLOCATE( iRowToCase(nProcessSel) )
+    DO idx = 1, nProcessSel
+      iRowToCase(idx) = iProcessToCase( ProcessList(idx) )
+    ENDDO
+
+    ! =======================================================================
+    ! Per-case constants: flavour indices, chemical-potential selectors, the
+    ! E3 sign that enters eta' (IMD evaluates its I_s at (E1,-E3)), and the
+    ! deduplicated mass-pair slot. Replaces SetChemPotDistinctCases being
+    ! called once per theta and the iABC_m2/iABC_m4 gather in the hot loop.
+    ! =======================================================================
+    ALLOCATE( TwoSided_Case(nDistinctCases), E3Sign_Case(nDistinctCases) )
+    ALLOCATE( IsIMD_Case(nDistinctCases), iMassPair_Case(nDistinctCases) )
+    ALLOCATE( iIdx2(nDistinctCases), iIdx4(nDistinctCases) )
+    ALLOCATE( iChemSpecies2(nDistinctCases), iChemSpecies4(nDistinctCases) )
+    ALLOCATE( ChemSign2(nDistinctCases),     ChemSign4(nDistinctCases)     )
+
+    nMassPair = 0
+    MPm2(:) = 0.0d0 ; MPm4(:) = 0.0d0 ; MPisIMD(:) = .FALSE.
+
+    DO iCase = 1, nDistinctCases
+      iTrueCase = ChosenToTrueCaseMap(iCase)
+
+      IsIMD_Case   (iCase) = ( iTrueCase == i_IMD )
+      TwoSided_Case(iCase) = ( iTrueCase == i_IMD )
+      IF ( iTrueCase == i_IMD ) THEN
+        E3Sign_Case(iCase) = -1.0d0
+        iIdx2(iCase) = 1          ! unused for IMD, kept in range
+        iIdx4(iCase) = 1
+      ELSE
+        E3Sign_Case(iCase) = +1.0d0
+        iIdx2(iCase) = iABC_m2( iTrueCase )
+        iIdx4(iCase) = iABC_m4( iTrueCase )
+      ENDIF
+
+      ! --- deduplicate the (m2,m4,isIMD) kinematic key ---
+      m2 = MassPairDistinct(iTrueCase,1)
+      m4 = MassPairDistinct(iTrueCase,2)
+      iMassPair_Case(iCase) = -1
+      DO idx = 1, nMassPair
+        ! NOTE the parentheses around .EQV.: it binds LOOSER than .AND., so
+        ! without them this parses as (a .AND. b .AND. c) .EQV. d and every
+        ! mass pair collapses onto slot 1.
+        IF ( MPm2(idx) == m2 .AND. MPm4(idx) == m4 .AND. &
+             ( MPisIMD(idx) .EQV. IsIMD_Case(iCase) ) ) THEN
+          iMassPair_Case(iCase) = idx
+          EXIT
+        ENDIF
+      ENDDO
+      IF ( iMassPair_Case(iCase) < 0 ) THEN
+        nMassPair = nMassPair + 1
+        MPm2(nMassPair)    = m2
+        MPm4(nMassPair)    = m4
+        MPisIMD(nMassPair) = IsIMD_Case(iCase)
+        iMassPair_Case(iCase) = nMassPair
+      ENDIF
+
+      SELECT CASE (iTrueCase)
+      CASE (i_em_em)   ! (e-, e-)
+        iChemSpecies2(iCase) = 1; ChemSign2(iCase) = +1.0d0
+        iChemSpecies4(iCase) = 1; ChemSign4(iCase) = +1.0d0
+      CASE (i_ep_ep)   ! (e+, e+)
+        iChemSpecies2(iCase) = 1; ChemSign2(iCase) = -1.0d0
+        iChemSpecies4(iCase) = 1; ChemSign4(iCase) = -1.0d0
+      CASE (i_mm_mm)   ! (mu-, mu-)
+        iChemSpecies2(iCase) = 2; ChemSign2(iCase) = +1.0d0
+        iChemSpecies4(iCase) = 2; ChemSign4(iCase) = +1.0d0
+      CASE (i_mp_mp)   ! (mu+, mu+)
+        iChemSpecies2(iCase) = 2; ChemSign2(iCase) = -1.0d0
+        iChemSpecies4(iCase) = 2; ChemSign4(iCase) = -1.0d0
+      CASE (i_em_mm)   ! (e-, mu-)
+        iChemSpecies2(iCase) = 1; ChemSign2(iCase) = +1.0d0
+        iChemSpecies4(iCase) = 2; ChemSign4(iCase) = +1.0d0
+      CASE (i_mm_em)   ! (mu-, e-)
+        iChemSpecies2(iCase) = 2; ChemSign2(iCase) = +1.0d0
+        iChemSpecies4(iCase) = 1; ChemSign4(iCase) = +1.0d0
+      CASE (i_ep_mp)   ! (e+, mu+)
+        iChemSpecies2(iCase) = 1; ChemSign2(iCase) = -1.0d0
+        iChemSpecies4(iCase) = 2; ChemSign4(iCase) = -1.0d0
+      CASE (i_mp_ep)   ! (mu+, e+)
+        iChemSpecies2(iCase) = 2; ChemSign2(iCase) = -1.0d0
+        iChemSpecies4(iCase) = 1; ChemSign4(iCase) = -1.0d0
+      CASE (i_IMD)     ! (e-, mu-)
+        iChemSpecies2(iCase) = 1; ChemSign2(iCase) = +1.0d0
+        iChemSpecies4(iCase) = 2; ChemSign4(iCase) = +1.0d0
+      CASE DEFAULT
+        WRITE(*,*) 'InitGeneralScatteringKernels: unhandled distinct case ', iTrueCase
+        STOP
+      END SELECT
+    ENDDO
+
+    ! =======================================================================
+    ! Legendre weights: P_{iL-1}(costh_iTh) * w_iTh.
+    ! =======================================================================
+    ALLOCATE( PlWeight(nThetaScattering, nL_Max) )
+    DO iL = 1, nL_Max
+      DO iTh = 1, nThetaScattering
+        PlWeight(iTh,iL) = LegendrePolynomial(iL-1, xa_cos_theta(iTh)) &
+                           * wa_cos_theta(iTh)
+      ENDDO
+    ENDDO
+
+    ! =======================================================================
+    ! Coefficient tables (shared layout) and kinematic tables (per mass pair).
+    ! =======================================================================
+    ALLOCATE( A_Scat(nE1, nE3, nThetaScattering, 2) )
+    ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) )
+    ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
+    ALLOCATE( A_IMD (nE1, nE3, nThetaScattering, 2) )
+    ALLOCATE( B_IMD (nE1, nE3, nThetaScattering, 2) )
+    ALLOCATE( C_IMD (nE1, nE3, nThetaScattering, 2) )
+
+    ALLOCATE( Eminus_MP(nE1, nE3, nThetaScattering, nMassPair) )
+    ALLOCATE( Eplus_MP (nE1, nE3, nThetaScattering, nMassPair) )
+    ALLOCATE( Active_MP(nE1, nE3, nThetaScattering, nMassPair) )
+
+    A_Scat = 0.0d0 ; B_Scat = 0.0d0 ; C_Scat = 0.0d0
+    A_IMD  = 0.0d0 ; B_IMD  = 0.0d0 ; C_IMD  = 0.0d0
+    Eminus_MP = 0.0d0 ; Eplus_MP = 0.0d0 ; Active_MP = .FALSE.
+
+    DO iE1=1,nE1
+      DO iE3=1,nE3
+        DO iTh=1,nThetaScattering
+
+          E1    = E1_Grid(iE1)
+          E3    = E3_Grid(iE3)
+          costh = xa_cos_theta(iTh)
+
+          OneMinusMu   = 1.0d0 - costh
+          EEOneMinusMu = E1 * E3 * OneMinusMu
+
+          Delta   = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
+          Delta5  = Delta**5
+          DeltaA  = SQRT(MAX(E1**2 + 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 17
+          DeltaA5 = DeltaA**5
+
+          ! ---------------- scattering coefficients (shared) ----------------
+          A_Scat(iE1, iE3, iTh, 1) = A1_f(  E1,  E3, costh )
+          A_Scat(iE1, iE3, iTh, 2) = A1_f( -E3, -E1, costh )
+
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
+
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, Q_mu_e )
+          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, Q_mu_e )
+
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, Q_e_mu )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, Q_e_mu )
+
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
+          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
+
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, ElectronMass, ElectronMass )
+
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, Q_mu_e, ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, Q_mu_e, ElectronMass )
+          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, ElectronMass, MuonMass )
+
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, Q_e_mu, MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, Q_e_mu, MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, MuonMass, ElectronMass )
+
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, MuonMass )
+          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 3) = C3_f(  E1,  E3, costh, MuonMass, MuonMass )
+
+          ! Build 1/(16*pi*Delta^5) into A, B, C while we are here
+          A_Scat(iE1, iE3, iTh, :      ) = A_Scat(iE1, iE3, iTh, :      ) / (16.0d0 * pi * Delta5)
+          B_Scat(iE1, iE3, iTh, :, :, :) = B_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
+          C_Scat(iE1, iE3, iTh, :, :, :) = C_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
+
+          ! ---------------- IMD coefficients --------------------------------
+          ! The "1" set is process 33 (nu_bar_e has energy E1), the "2" set is
+          ! its E1 <-> E3 swap (process 34). Particle 2 is the electron in
+          ! BOTH orientations. C(3) is never needed since lam3 is always zero.
+          A_IMD(iE1, iE3, iTh, 1) = A1_f(  E1, -E3, costh )        / (16.0d0 * pi * DeltaA5)
+          A_IMD(iE1, iE3, iTh, 2) = A1_f(  E3, -E1, costh )        / (16.0d0 * pi * DeltaA5)
+
+          B_IMD(iE1, iE3, iTh, 1) = B1_f(  E1, -E3, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
+          B_IMD(iE1, iE3, iTh, 2) = B1_f(  E3, -E1, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
+
+          C_IMD(iE1, iE3, iTh, 1) = C1_f(  E1, -E3, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
+          C_IMD(iE1, iE3, iTh, 2) = C1_f(  E3, -E1, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
+
+          ! ---------------- kinematics, per deduplicated mass pair ----------
+          DO idx = 1, nMassPair
+            m2 = MPm2(idx)
+            m4 = MPm4(idx)
+            Q  = 0.5d0 * (m4**2 - m2**2)                                  ! Guo Eq. 5
+
+            IF ( MPisIMD(idx) ) THEN
+
+              ! --- IMD (Guo Eqs. 16-17): all three guards are genuinely live
+              k_val    = Q / EEOneMinusMu                                     ! Guo Eq. 5
+              disc     = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / EEOneMinusMu     ! Guo Eq. 17
+              IsActive = ( k_val >= k0_IMD ) .AND. ( disc >= 0.0d0 )           ! Guo Eq. 16
+
+              IF ( IsActive ) THEN
+                Em = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) ) ! Guo Eq. 17
+                Ep = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) + DeltaA*SQRT(disc) ) ! Guo Eq. 17
+                Em = MAX(Em, m2)
+                Ep = MAX(Ep, m2)
+                IsActive = ( Em < Ep )
+                Eminus_MP(iE1,iE3,iTh,idx) = Em
+                Eplus_MP (iE1,iE3,iTh,idx) = Ep
+              ENDIF
+
+            ELSE
+
+              ! --- 2 -> 2 scattering (Guo Eq. 4) ---
+              ! NOTE: disc = (1+k)^2 + 2*m2^2/(E1*E3*(1-mu)) is a square plus a
+              ! strictly positive term, so it can never be negative here. The
+              ! old "IF (disc < 0) CYCLE" guard was unreachable and is dropped.
+              ! The two live guards are the collinear (Delta -> 0) and forward
+              ! (mu -> 1) degeneracies. They are evaluated PER MASS PAIR here:
+              ! previously they were RETURNs inside the case loop, which also
+              ! discarded the IMD case (always last in the list) even though
+              ! IMD has its own DeltaA-based kinematics and is well defined
+              ! there. Latent rather than active: Gauss-Legendre nodes never
+              ! come within 1.0d-10 of mu = 1.
+              IsActive = ( Delta >= 1.0d-10 ) .AND. ( OneMinusMu >= 1.0d-10 )
+
+              IF ( IsActive ) THEN
+                k_val = Q / EEOneMinusMu                                        ! Guo Eq. 5
+                disc  = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / EEOneMinusMu       ! Guo Eq. 4
+                Em    = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) )! Guo Eq. 4
+                Em    = MAX(Em, m2)                                             ! floor at m2
+                Eminus_MP(iE1,iE3,iTh,idx) = Em
+              ENDIF
+
+            ENDIF
+
+            Active_MP(iE1,iE3,iTh,idx) = IsActive
+
+          ENDDO
+
+        ENDDO
+      ENDDO
+    ENDDO
+
+    ! --- Preallocate collinear grids (generated ONCE, reused every call) ---
+    ALLOCATE( xa_GLeg_ref(nE2_Lepton), wa_GLeg_ref(nE2_Lepton) )
+    ALLOCATE( xa_GLag(nE2_Lepton),     wa_GLag(nE2_Lepton) )
+
+    ! Canonical GL panel on [-1,1]; affine-mapped to [0,E1] at use time.
+    CALL gauleg( -1.0d0, 1.0d0, xa_GLeg_ref, wa_GLeg_ref, nE2_Lepton )
+
+    ! Raw Gauss-Laguerre (alpha=0) nodes/weights for int_0^inf e^{-x} g(x) dx.
+    CALL gaulag( xa_GLag, wa_GLag, nE2_Lepton, 0.0d0 )
+
+    ! =======================================================================
+    ! Push the read-only tables to the device. Everything listed here is
+    ! written once above and never again, so a single transfer at the end of
+    ! Init is all that is needed.
+    !
+    ! OACC: the arrays are DECLARE CREATE'd, so ALLOCATE already made the
+    ! device copy; ENTER DATA COPYIN would only bump the refcount and copy
+    ! NOTHING. UPDATE DEVICE is what actually moves the data.
+    ! =======================================================================
+#if   defined(WEAKLIB_OACC)
+    !$ACC UPDATE DEVICE( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,          &
+    !$ACC                Eminus_MP, Eplus_MP, Active_MP,                       &
+    !$ACC                iMassPair_Case, IsIMD_Case, TwoSided_Case,            &
+    !$ACC                E3Sign_Case, iIdx2, iIdx4, PlWeight,                  &
+    !$ACC                lam1, lam2, lam3, iRowToCase,                         &
+    !$ACC                iChemSpecies2, iChemSpecies4,                         &
+    !$ACC                ChemSign2, ChemSign4, E1_Grid, E3_Grid,               &
+    !$ACC                nThetaScattering, nDistinctCases, nProcessSel )
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET ENTER DATA MAP( always, to: A_Scat, B_Scat, C_Scat,           &
+    !$OMP                         A_IMD, B_IMD, C_IMD,                         &
+    !$OMP                         Eminus_MP, Eplus_MP, Active_MP,              &
+    !$OMP                         iMassPair_Case, IsIMD_Case, TwoSided_Case,   &
+    !$OMP                         E3Sign_Case, iIdx2, iIdx4, PlWeight,         &
+    !$OMP                         lam1, lam2, lam3, iRowToCase,                &
+    !$OMP                         iChemSpecies2, iChemSpecies4,                &
+    !$OMP                         ChemSign2, ChemSign4, E1_Grid, E3_Grid )
+    !$OMP TARGET UPDATE TO( nThetaScattering, nDistinctCases, nProcessSel )
+#endif
+
     WRITE(*,*) 'Working with', nDistinctCases, 'Distinct Scattering Cases'
 
   END SUBROUTINE InitGeneralScatteringKernels
 
   SUBROUTINE FinalizeGeneralScatteringKernels()
 
-    DEALLOCATE( lam1, lam2, lam3, A_Scat, B_Scat, C_Scat )
+    ! Release the device copies BEFORE the host arrays go away.
+    ! OACC needs nothing here: DEALLOCATE of a DECLARE CREATE'd array frees
+    ! the device copy as well.
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET EXIT DATA MAP( delete: A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,  &
+    !$OMP                         Eminus_MP, Eplus_MP, Active_MP,              &
+    !$OMP                         iMassPair_Case, IsIMD_Case, TwoSided_Case,   &
+    !$OMP                         E3Sign_Case, iIdx2, iIdx4, PlWeight,         &
+    !$OMP                         lam1, lam2, lam3, iRowToCase,                &
+    !$OMP                         iChemSpecies2, iChemSpecies4,                &
+    !$OMP                         ChemSign2, ChemSign4, E1_Grid, E3_Grid )
+#endif
+
+    DEALLOCATE( lam1, lam2, lam3 )
+    DEALLOCATE( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD )
+    DEALLOCATE( Eminus_MP, Eplus_MP, Active_MP )
+    DEALLOCATE( iMassPair_Case, IsIMD_Case, TwoSided_Case, E3Sign_Case )
+    DEALLOCATE( iIdx2, iIdx4 )
+    DEALLOCATE( iChemSpecies2, iChemSpecies4, ChemSign2, ChemSign4 )
+    DEALLOCATE( PlWeight )
     DEALLOCATE( xa_cos_theta, wa_cos_theta )
+    DEALLOCATE( E1_Grid, E3_Grid )
     DEALLOCATE( xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag )
     DEALLOCATE( ChosenToTrueCaseMap )
-    IF ( ALLOCATED(A_IMD) ) DEALLOCATE( A_IMD, B_IMD, C_IMD )
+    DEALLOCATE( ProcessList, iRowToCase )
 
   END SUBROUTINE FinalizeGeneralScatteringKernels
 
@@ -407,25 +928,58 @@ CONTAINS
 
   END SUBROUTINE SelectiDistinctFromProcessIndex
 
+  !================================================================================
+  !
+  !  CalculateAllPhout
+  !
+  !  Per-point (iE1,iE3,T,Mu_e,Mu_mu) kernel. Device-callable (ROUTINE SEQ /
+  !  DECLARE TARGET), so it can sit inside a caller's offloaded loop over
+  !  (iX, iE3, iE1) the same way Opacity_CC_2D does for Em/Ab. Caller notes:
+  !    - the private Phout the caller passes should have PARAMETER extents
+  !      (e.g. (nProcessTotal, nL_Max)), or it becomes a per-thread heap
+  !      allocation on the device;
+  !    - make iE1 the fastest-varying loop index so the table reads
+  !      (A_Scat(iE1,...), Eminus_MP(iE1,...)) coalesce;
+  !    - nL > nL_Max is only checked on the host; on device nL is clamped.
+  !  For bulk work prefer CalculateAllPhout_3D: same arithmetic (results are
+  !  bit-identical), but one tuned kernel with coalesced Phout stores.
+  !
+  !================================================================================
   SUBROUTINE CalculateAllPhout( iE1, iE3, E1, E3, T, Mu_e, Mu_mu, Phout, nL )
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
 
     INTEGER , INTENT(IN)  :: iE1, iE3
     REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
-    REAL(DP), INTENT(OUT) :: Phout(iProcessMax - iProcessMin + 1,nL)
+    REAL(DP), INTENT(OUT) :: Phout(nProcessSel,nL)
     INTEGER , INTENT(IN)  :: nL
 
-    REAL(DP) :: costh, Pl_mu
-    INTEGER  :: iTh, iL, iProcess, idx, iTrueCase, iCase
+    REAL(DP) :: E3eff, xMu_l2, xMu_l4, xi, y, fac
+    REAL(DP) :: I0, I1, I2, I0p, I1p, I2p, R1, R2, R3
+    REAL(DP) :: MuSel(2)
+    INTEGER  :: iTh, iL, idx, iCase, iMP, jFl2, jFl4, nLeff
 
-    ! Arrays to hold the integrated components for the distinct cases ONLY
-    REAL(DP) :: Int_R1(nDistinctCasesMax, nL)
-    REAL(DP) :: Int_R2(nDistinctCasesMax, nL)
-    REAL(DP) :: Int_R3(nDistinctCasesMax, nL)
+    ! Integrated components for the distinct cases ONLY. Extents are PARAMETERs,
+    ! never the nL dummy: a runtime-extent automatic array becomes a per-thread
+    ! heap allocation once this is offloaded.
+    REAL(DP) :: Int_R1(nDistinctCasesMax, nL_Max)
+    REAL(DP) :: Int_R2(nDistinctCasesMax, nL_Max)
+    REAL(DP) :: Int_R3(nDistinctCasesMax, nL_Max)
+    REAL(DP) :: eta_c (nDistinctCasesMax)
+    REAL(DP) :: etap_c(nDistinctCasesMax)
+    REAL(DP) :: fg_c  (nDistinctCasesMax)
+    LOGICAL  :: degen_c(nDistinctCasesMax)
 
-    ! Arrays to hold the angular integrand components for a specific theta
-    REAL(DP) :: R1_th(nDistinctCasesMax)
-    REAL(DP) :: R2_th(nDistinctCasesMax)
-    REAL(DP) :: R3_th(nDistinctCasesMax)
+#if !defined(WEAKLIB_OACC) && !defined(WEAKLIB_OMP_OL)
+    IF ( nL > nL_Max ) THEN
+      WRITE(*,*) 'CalculateAllPhout: nL =', nL, ' exceeds nL_Max =', nL_Max
+      STOP
+    ENDIF
+#endif
+    nLeff = MIN( nL, nL_Max )
 
     Phout  = 0.0d0
     Int_R1 = 0.0d0
@@ -442,77 +996,355 @@ CONTAINS
     ! ENDIF
 
     ! -------------------------------------------------------------------
-    ! 1. Perform the angular integration over the DISTINCT cases ONLY
+    ! 1. Per-case setup, hoisted above the theta loop: eta, eta', f_gamma
+    !    and the xi -> 0 test are theta-independent. Same arithmetic as
+    !    Compute_Is_Integrals (method 3), so results are unchanged.
     ! -------------------------------------------------------------------
-    DO iTh=1, nThetaScattering
-      costh = xa_cos_theta(iTh)
-      
-      CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
-                               iE1, iE3, iTh, R1_th, R2_th, R3_th )
+    MuSel(1) = Mu_e
+    MuSel(2) = Mu_mu
 
-      DO iL = 1, nL
-        Pl_mu = LegendrePolynomial(iL-1, costh) * wa_cos_theta(iTh)
-        
-        ! Only integrate the unique cases we actually need
-        DO iCase = 1, nDistinctCases
-          iTrueCase = ChosenToTrueCaseMap(iCase)
-          Int_R1(iTrueCase, iL) = Int_R1(iTrueCase, iL) + R1_th(iTrueCase) * Pl_mu
-          Int_R2(iTrueCase, iL) = Int_R2(iTrueCase, iL) + R2_th(iTrueCase) * Pl_mu
-          Int_R3(iTrueCase, iL) = Int_R3(iTrueCase, iL) + R3_th(iTrueCase) * Pl_mu
-        END DO
+    DO iCase = 1, nDistinctCases
+      xMu_l2 = ChemSign2(iCase) * MuSel( iChemSpecies2(iCase) )
+      xMu_l4 = ChemSign4(iCase) * MuSel( iChemSpecies4(iCase) )
+
+      ! IMD evaluates its I_s at (E1,-E3); scattering at (E1,E3).
+      E3eff = E3Sign_Case(iCase) * E3
+
+      eta_c (iCase) = xMu_l2 / T
+      etap_c(iCase) = ( E3eff - E1 + xMu_l4 ) / T
+
+      xi             = etap_c(iCase) - eta_c(iCase)
+      degen_c(iCase) = ( ABS(xi) < xi_tol )
+      fg_c  (iCase)  = f_gamma( xi )
+    ENDDO
+
+    ! -------------------------------------------------------------------
+    ! 2. Angular integration over the DISTINCT cases ONLY
+    ! -------------------------------------------------------------------
+    DO iTh = 1, nThetaScattering
+      DO iCase = 1, nDistinctCases
+
+        iMP = iMassPair_Case(iCase)
+        IF ( .NOT. Active_MP(iE1,iE3,iTh,iMP) ) CYCLE
+
+        y = Eminus_MP(iE1,iE3,iTh,iMP) / T
+        CALL Compute_Is_Integrals_FD( y, eta_c(iCase), etap_c(iCase), T, &
+                                      fg_c(iCase), degen_c(iCase), I0, I1, I2 )
+
+        IF ( TwoSided_Case(iCase) ) THEN
+          ! I_s = I_s(E_minus) - I_s(E_plus)   (Guo Eq. 18)
+          y = Eplus_MP(iE1,iE3,iTh,iMP) / T
+          CALL Compute_Is_Integrals_FD( y, eta_c(iCase), etap_c(iCase), T, &
+                                        fg_c(iCase), degen_c(iCase), I0p, I1p, I2p )
+          I0 = I0 - I0p
+          I1 = I1 - I1p
+          I2 = I2 - I2p
+        ENDIF
+
+        ! Guo Eq. 3; the 1/(16*pi*Delta^5) normalization is baked into A/B/C.
+        IF ( IsIMD_Case(iCase) ) THEN
+          R1 = A_IMD(iE1,iE3,iTh,1)*I2 &
+             + B_IMD(iE1,iE3,iTh,1)*I1 &
+             + C_IMD(iE1,iE3,iTh,1)*I0
+          R2 = A_IMD(iE1,iE3,iTh,2)*I2 &
+             + B_IMD(iE1,iE3,iTh,2)*I1 &
+             + C_IMD(iE1,iE3,iTh,2)*I0
+          R3 = 0.0d0
+        ELSE
+          jFl2 = iIdx2(iCase)
+          jFl4 = iIdx4(iCase)
+          R1 = A_Scat(iE1,iE3,iTh,1)*I2 &
+             + B_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I1 &
+             + C_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I0
+          R2 = A_Scat(iE1,iE3,iTh,2)*I2 &
+             + B_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I1 &
+             + C_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I0
+          R3 = C_Scat(iE1,iE3,iTh,jFl2,jFl4,3)*I0
+        ENDIF
+
+        ! P_{iL-1}(costh) * w(iTh), tabulated at Init
+        DO iL = 1, nLeff
+          Int_R1(iCase,iL) = Int_R1(iCase,iL) + R1 * PlWeight(iTh,iL)
+          Int_R2(iCase,iL) = Int_R2(iCase,iL) + R2 * PlWeight(iTh,iL)
+          Int_R3(iCase,iL) = Int_R3(iCase,iL) + R3 * PlWeight(iTh,iL)
+        ENDDO
+
       ENDDO
     ENDDO
 
     ! -------------------------------------------------------------------
-    ! 2. Map the integrated distinct cases back to the full iProcess array
+    ! 3. Map the integrated distinct cases back to the full iProcess array
     ! -------------------------------------------------------------------
-    DO iL = 1, nL
-      DO iProcess = iProcessMin, iProcessMax
-        idx = iProcess - iProcessMin + 1
-        iTrueCase = iDistinctMap(iProcess)
+    DO iL = 1, nLeff
+      ! factors of 1/2 and 3/2 to match Bruenn (i.e. ((iL-1) + 0.5d0)),
+      ! folded in here so there is no second pass over Phout.
+      fac = conv_fac * ((iL-1) + 0.5d0)
+
+      DO idx = 1, nProcessSel
+        iCase = iRowToCase(idx)
 
         ! Apply the Lambdas to the integrated values once
-        Phout(idx, iL) = lam1(idx) * Int_R1(iTrueCase, iL) + &
-                         lam2(idx) * Int_R2(iTrueCase, iL) + &
-                         lam3(idx) * Int_R3(iTrueCase, iL)
+        Phout(idx, iL) = fac * ( lam1(idx) * Int_R1(iCase, iL) + &
+                                 lam2(idx) * Int_R2(iCase, iL) + &
+                                 lam3(idx) * Int_R3(iCase, iL) )
       END DO
-      
-    ! factors of 1/2 and 3/2 to match Bruenn (i.e. ((iL-1) + 0.5d0))
-      Phout(:, iL) = Phout(:, iL) * conv_fac * ((iL-1) + 0.5d0)
     END DO
 
   END SUBROUTINE CalculateAllPhout
+
+  !================================================================================
+  !
+  !  CalculateAllPhout_3D
+  !
+  !  Batched, offloadable form of CalculateAllPhout: runs the whole
+  !  (nX, nE3, nE1) nest as ONE kernel. A single CalculateAllPhout call is far
+  !  too little work to amortize a kernel launch (~nTheta*nCase*6 rational
+  !  function evaluations), so the parallelism has to come from this nest.
+  !
+  !  Nest order is iX -> iE3 -> iE1 deliberately. Under COLLAPSE(3) the LAST
+  !  loop varies fastest, so iE1 strides across adjacent threads; with nE1
+  !  leading in Phout the stores are stride-1, and the existing
+  !  A_Case(iE1,iE3,iTh,...) layout is already coalesced for the same reason.
+  !
+  !  T, Mu_e, Mu_mu and Phout are expected to be ALREADY DEVICE-RESIDENT in the
+  !  caller's data region: they are declared PRESENT, not mapped here.
+  !
+  !  Divisions by T are kept as divisions (rather than multiplying by a hoisted
+  !  reciprocal) so that this routine is bit-for-bit identical to the scalar
+  !  CalculateAllPhout. That makes the GPU-vs-CPU check an exact-equality test.
+  !  The divides are a small fraction of the cost next to the Fukushima
+  !  evaluations; revisit only if profiling says otherwise.
+  !
+  !================================================================================
+  SUBROUTINE CalculateAllPhout_3D( nX, nE1, nE3, nProc, nL, T, Mu_e, Mu_mu, Phout )
+
+    INTEGER , INTENT(IN)  :: nX, nE1, nE3, nProc, nL
+    REAL(DP), INTENT(IN)  :: T(nX), Mu_e(nX), Mu_mu(nX)
+    REAL(DP), INTENT(OUT) :: Phout(nE1, nE3, nProc, nL, nX)
+
+    REAL(DP) :: E1, E3, E3eff, xMu_l2, xMu_l4, xi, y, fac
+    REAL(DP) :: I0, I1, I2, I0p, I1p, I2p, R1, R2, R3
+    REAL(DP) :: MuSel(2)
+    INTEGER  :: iX, iE1, iE3, iTh, iL, iCase, idx, iMP, jFl2, jFl4
+    INTEGER  :: nTh, nCase
+
+    ! --- Thread-private accumulators. Every extent is a PARAMETER: a
+    ! --- runtime-extent automatic array becomes a per-thread heap allocation
+    ! --- on a device. ~0.6 kB per thread at nL_Max = 2 and 9 cases.
+    REAL(DP) :: Int_R1(nDistinctCasesMax, nL_Max)
+    REAL(DP) :: Int_R2(nDistinctCasesMax, nL_Max)
+    REAL(DP) :: Int_R3(nDistinctCasesMax, nL_Max)
+    REAL(DP) :: eta_c (nDistinctCasesMax)
+    REAL(DP) :: etap_c(nDistinctCasesMax)
+    REAL(DP) :: fg_c  (nDistinctCasesMax)
+    LOGICAL  :: degen_c(nDistinctCasesMax)
+
+    ! ------------------------------------------------------------------
+    ! All validation happens on the host: no I/O or STOP inside the region.
+    ! ------------------------------------------------------------------
+    IF ( nL > nL_Max ) THEN
+      WRITE(*,*) 'CalculateAllPhout_3D: nL =', nL, ' exceeds nL_Max =', nL_Max
+      STOP
+    ENDIF
+    IF ( nE1 /= nE1_Grid .OR. nE3 /= nE3_Grid ) THEN
+      WRITE(*,*) 'CalculateAllPhout_3D: (nE1,nE3) = (', nE1, ',', nE3, &
+                 ') does not match the grid Init was called with: (', &
+                 nE1_Grid, ',', nE3_Grid, ')'
+      STOP
+    ENDIF
+    IF ( nProc /= nProcessSel ) THEN
+      WRITE(*,*) 'CalculateAllPhout_3D: nProc =', nProc, ' expected ', nProcessSel
+      STOP
+    ENDIF
+
+    ! Module scalars copied into locals so they are captured by value. A module
+    ! scalar that was never mapped reads as 0 on device, which would silently
+    ! skip the iTh loop and return all zeros with no error.
+    nTh   = nThetaScattering
+    nCase = nDistinctCases
+
+#if   defined(WEAKLIB_OACC)
+    !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(3)                                &
+    !$ACC PRESENT( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,                &
+    !$ACC          Eminus_MP, Eplus_MP, Active_MP, iMassPair_Case,             &
+    !$ACC          IsIMD_Case, TwoSided_Case, E3Sign_Case, iIdx2, iIdx4,       &
+    !$ACC          PlWeight, lam1, lam2, lam3, iRowToCase, iChemSpecies2,      &
+    !$ACC          iChemSpecies4, ChemSign2, ChemSign4, E1_Grid, E3_Grid,      &
+    !$ACC          T, Mu_e, Mu_mu, Phout )                                     &
+    !$ACC PRIVATE( Int_R1, Int_R2, Int_R3, eta_c, etap_c, fg_c, degen_c, MuSel )
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO COLLAPSE(3)                      &
+    !$OMP PRIVATE( Int_R1, Int_R2, Int_R3, eta_c, etap_c, fg_c, degen_c, MuSel,&
+    !$OMP          E1, E3, E3eff, xMu_l2, xMu_l4, xi, y, fac,                  &
+    !$OMP          I0, I1, I2, I0p, I1p, I2p, R1, R2, R3, iTh, iL, iCase, idx, &
+    !$OMP          iMP, jFl2, jFl4 )
+#endif
+    DO iX  = 1, nX
+    DO iE3 = 1, nE3
+    DO iE1 = 1, nE1
+
+      E1 = E1_Grid(iE1)
+      E3 = E3_Grid(iE3)
+
+      MuSel(1) = Mu_e (iX)
+      MuSel(2) = Mu_mu(iX)
+
+      ! ----------------------------------------------------------------
+      ! Per-case setup, hoisted ABOVE the theta loop: eta, eta', f_gamma and
+      ! the xi -> 0 test are all theta-INDEPENDENT. This lifts an EXP and two
+      ! divides out of the innermost loop.
+      ! ----------------------------------------------------------------
+#if defined(WEAKLIB_OACC)
+      !$ACC LOOP SEQ
+#endif
+      DO iCase = 1, nCase
+        xMu_l2 = ChemSign2(iCase) * MuSel( iChemSpecies2(iCase) )
+        xMu_l4 = ChemSign4(iCase) * MuSel( iChemSpecies4(iCase) )
+
+        ! IMD evaluates its I_s at (E1,-E3); scattering at (E1,E3).
+        E3eff = E3Sign_Case(iCase) * E3
+
+        eta_c (iCase) = xMu_l2 / T(iX)
+        etap_c(iCase) = ( E3eff - E1 + xMu_l4 ) / T(iX)
+
+        xi             = etap_c(iCase) - eta_c(iCase)
+        degen_c(iCase) = ( ABS(xi) < xi_tol )
+        fg_c  (iCase)  = f_gamma( xi )
+      ENDDO
+
+      Int_R1 = 0.0d0
+      Int_R2 = 0.0d0
+      Int_R3 = 0.0d0
+
+      ! ----------------------------------------------------------------
+      ! Angular integral. Everything kinematic is a table lookup.
+      ! ----------------------------------------------------------------
+#if defined(WEAKLIB_OACC)
+      !$ACC LOOP SEQ
+#endif
+      DO iTh = 1, nTh
+#if defined(WEAKLIB_OACC)
+        !$ACC LOOP SEQ
+#endif
+        DO iCase = 1, nCase
+
+          iMP = iMassPair_Case(iCase)
+          IF ( .NOT. Active_MP(iE1,iE3,iTh,iMP) ) CYCLE
+
+          y = Eminus_MP(iE1,iE3,iTh,iMP) / T(iX)
+          CALL Compute_Is_Integrals_FD( y, eta_c(iCase), etap_c(iCase), T(iX), &
+                                        fg_c(iCase), degen_c(iCase), I0, I1, I2 )
+
+          IF ( TwoSided_Case(iCase) ) THEN
+            ! I_s = I_s(E_minus) - I_s(E_plus)   (Guo Eq. 18)
+            y = Eplus_MP(iE1,iE3,iTh,iMP) / T(iX)
+            CALL Compute_Is_Integrals_FD( y, eta_c(iCase), etap_c(iCase), T(iX), &
+                                          fg_c(iCase), degen_c(iCase), I0p, I1p, I2p )
+            I0 = I0 - I0p
+            I1 = I1 - I1p
+            I2 = I2 - I2p
+          ENDIF
+
+          ! Guo Eq. 3; the 1/(16*pi*Delta^5) normalization is baked into A/B/C.
+          ! The IMD branch is uniform across threads (same case list for
+          ! every point), so it costs no divergence.
+          IF ( IsIMD_Case(iCase) ) THEN
+            R1 = A_IMD(iE1,iE3,iTh,1)*I2 &
+               + B_IMD(iE1,iE3,iTh,1)*I1 &
+               + C_IMD(iE1,iE3,iTh,1)*I0
+            R2 = A_IMD(iE1,iE3,iTh,2)*I2 &
+               + B_IMD(iE1,iE3,iTh,2)*I1 &
+               + C_IMD(iE1,iE3,iTh,2)*I0
+            R3 = 0.0d0
+          ELSE
+            jFl2 = iIdx2(iCase)
+            jFl4 = iIdx4(iCase)
+            R1 = A_Scat(iE1,iE3,iTh,1)*I2 &
+               + B_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I1 &
+               + C_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I0
+            R2 = A_Scat(iE1,iE3,iTh,2)*I2 &
+               + B_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I1 &
+               + C_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I0
+            R3 = C_Scat(iE1,iE3,iTh,jFl2,jFl4,3)*I0
+          ENDIF
+
+#if defined(WEAKLIB_OACC)
+          !$ACC LOOP SEQ
+#endif
+          DO iL = 1, nL
+            Int_R1(iCase,iL) = Int_R1(iCase,iL) + R1 * PlWeight(iTh,iL)
+            Int_R2(iCase,iL) = Int_R2(iCase,iL) + R2 * PlWeight(iTh,iL)
+            Int_R3(iCase,iL) = Int_R3(iCase,iL) + R3 * PlWeight(iTh,iL)
+          ENDDO
+
+        ENDDO
+      ENDDO
+
+      ! ----------------------------------------------------------------
+      ! Map the integrated distinct cases onto the full process list.
+      ! ----------------------------------------------------------------
+#if defined(WEAKLIB_OACC)
+      !$ACC LOOP SEQ
+#endif
+      DO iL = 1, nL
+        ! factors of 1/2 and 3/2 to match Bruenn (i.e. ((iL-1) + 0.5d0))
+        fac = conv_fac * ((iL-1) + 0.5d0)
+
+#if defined(WEAKLIB_OACC)
+        !$ACC LOOP SEQ
+#endif
+        DO idx = 1, nProc
+          iCase = iRowToCase(idx)
+
+          Phout(iE1,iE3,idx,iL,iX) = fac * ( lam1(idx) * Int_R1(iCase,iL)   &
+                                           + lam2(idx) * Int_R2(iCase,iL)   &
+                                           + lam3(idx) * Int_R3(iCase,iL) )
+        ENDDO
+      ENDDO
+
+    ENDDO
+    ENDDO
+    ENDDO
+#if defined(WEAKLIB_OACC)
+    !$ACC END PARALLEL LOOP
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#endif
+
+  END SUBROUTINE CalculateAllPhout_3D
 
   SUBROUTINE CalculateAllRout( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, Rout )
 
     REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
     INTEGER , INTENT(IN)  :: iE1, iE3, iTh
-    REAL(DP), INTENT(OUT) :: Rout(iProcessMax)
+    ! Indexed compactly by idx = iProcess - iProcessMin + 1, matching Phout
+    ! and CalculateAllRoutIntegrated. Identical to iProcess when iProcessMin = 1.
+    REAL(DP), INTENT(OUT) :: Rout(nProcessSel)
 
     ! Temporary arrays to hold the distinct R components for this theta
     REAL(DP) :: R1_th(nDistinctCasesMax)
     REAL(DP) :: R2_th(nDistinctCasesMax)
     REAL(DP) :: R3_th(nDistinctCasesMax)
-    INTEGER  :: iProcess, idx, iTrueCase
+    INTEGER  :: idx, iCase
 
-    ! 1. Get the raw distinct R components for this specific angle/energy
-    CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
+    ! 1. Get the raw distinct R components for this specific angle/energy.
+    ! costh is no longer needed: the angle enters only through the iTh-indexed
+    ! tables. It stays in this routine's own signature for interface stability.
+    CALL CalculateAllR1R2R3( E1, E3, T, Mu_e, Mu_mu, &
                              iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
     ! 2. Safely initialize Rout
     Rout = 0.0d0
 
     ! 3. Map the distinct cases to the full iProcess array using Lambdas
-    DO iProcess = iProcessMin, iProcessMax
-      idx = iProcess - iProcessMin + 1
-      
-      ! Fetch the true underlying physics case ID for this process
-      iTrueCase = iDistinctMap(iProcess)
+    DO idx = 1, nProcessSel
+      ! Fetch the compact case index for this process
+      iCase = iRowToCase(idx)
 
       ! Combine them
-      Rout(iProcess) = lam1(idx) * R1_th(iTrueCase) + &
-                       lam2(idx) * R2_th(iTrueCase) + &
-                       lam3(idx) * R3_th(iTrueCase)
+      Rout(idx) = lam1(idx) * R1_th(iCase) + &
+                  lam2(idx) * R2_th(iCase) + &
+                  lam3(idx) * R3_th(iCase)
     END DO
 
   END SUBROUTINE CalculateAllRout
@@ -521,14 +1353,14 @@ CONTAINS
 
     REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
     INTEGER , INTENT(IN)  :: iE1, iE3
-    REAL(DP), INTENT(OUT) :: Rout(iProcessMax)
+    ! Compact indexing, as in CalculateAllRout.
+    REAL(DP), INTENT(OUT) :: Rout(nProcessSel)
 
     ! Temporary arrays to hold the distinct R components for this theta
     REAL(DP) :: R1_th(nDistinctCasesMax)
     REAL(DP) :: R2_th(nDistinctCasesMax)
     REAL(DP) :: R3_th(nDistinctCasesMax)
-    INTEGER  :: iProcess, idx, iTrueCase, iTh, iCase
-    REAL(DP) :: costh
+    INTEGER  :: idx, iTh, iCase
 
     ! Arrays to hold the integrated components for the distinct cases ONLY
     REAL(DP) :: Int_R1(nDistinctCasesMax)
@@ -539,17 +1371,15 @@ CONTAINS
     Int_R2(:) = 0.0d0
     Int_R3(:) = 0.0d0
     DO iTh=1, nThetaScattering
-      costh = xa_cos_theta(iTh)
-      
-      CALL CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, &
+
+      CALL CalculateAllR1R2R3( E1, E3, T, Mu_e, Mu_mu, &
                                iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
         ! Only integrate the unique cases we actually need
         DO iCase = 1, nDistinctCases
-          iTrueCase = ChosenToTrueCaseMap(iCase)
-          Int_R1(iTrueCase) = Int_R1(iTrueCase) + R1_th(iTrueCase) * wa_cos_theta(iTh)
-          Int_R2(iTrueCase) = Int_R2(iTrueCase) + R2_th(iTrueCase) * wa_cos_theta(iTh)
-          Int_R3(iTrueCase) = Int_R3(iTrueCase) + R3_th(iTrueCase) * wa_cos_theta(iTh)
+          Int_R1(iCase) = Int_R1(iCase) + R1_th(iCase) * wa_cos_theta(iTh)
+          Int_R2(iCase) = Int_R2(iCase) + R2_th(iCase) * wa_cos_theta(iTh)
+          Int_R3(iCase) = Int_R3(iCase) + R3_th(iCase) * wa_cos_theta(iTh)
         END DO
 
     ENDDO
@@ -559,88 +1389,68 @@ CONTAINS
     ! -------------------------------------------------------------------
     ! 2. Map the integrated distinct cases back to the full iProcess array
     ! -------------------------------------------------------------------
-    DO iProcess = iProcessMin, iProcessMax
-      idx = iProcess - iProcessMin + 1
-      iTrueCase = iDistinctMap(iProcess)
+    DO idx = 1, nProcessSel
+      iCase = iRowToCase(idx)
 
       ! Apply the Lambdas to the integrated values once
-      Rout(idx) = lam1(idx) * Int_R1(iTrueCase) + &
-                  lam2(idx) * Int_R2(iTrueCase) + &
-                  lam3(idx) * Int_R3(iTrueCase)
+      Rout(idx) = lam1(idx) * Int_R1(iCase) + &
+                  lam2(idx) * Int_R2(iCase) + &
+                  lam3(idx) * Int_R3(iCase)
       
     END DO
-    ! Clamp it to zero...
+    ! Clamp it to zero. This is the angle-INTEGRATED zeroth moment, which is a
+    ! rate and must be non-negative. Note CalculateAllPhout deliberately does NOT
+    ! clamp: it returns Legendre moments, and Phi_l for l >= 1 is legitimately
+    ! negative over much of the (E1,E3) plane.
     Rout = MAX(Rout, 0.0d0)
     
   END SUBROUTINE CalculateAllRoutIntegrated
 
-  SUBROUTINE CalculateAllR1R2R3( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, R1, R2, R3 )
-    REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
+  SUBROUTINE CalculateAllR1R2R3( E1, E3, T, Mu_e, Mu_mu, iE1, iE3, iTh, R1, R2, R3 )
+
+    REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
     INTEGER , INTENT(IN)  :: iE1, iE3, iTh
+    ! R1/R2/R3 are indexed COMPACTLY (1..nDistinctCases), same as I0/I1/I2.
     REAL(DP), INTENT(OUT) :: R1(nDistinctCasesMax)
     REAL(DP), INTENT(OUT) :: R2(nDistinctCasesMax)
     REAL(DP), INTENT(OUT) :: R3(nDistinctCasesMax)
 
     REAL(DP) :: I0(nDistinctCasesMax), I1(nDistinctCasesMax), I2(nDistinctCasesMax)
-    INTEGER  :: iCase, iTrueCase, Index2, Index4
+    INTEGER  :: iCase, jFl2, jFl4
 
     ! Ensure unused cases are safely zeroed out
     R1 = 0.0d0; R2 = 0.0d0; R3 = 0.0d0
 
-    CALL CalculateDistinctI0I1I2( E1, E3, costh, T, Mu_e, Mu_mu, I0, I1, I2 )
-    
+    CALL CalculateDistinctI0I1I2( E1, E3, T, Mu_e, Mu_mu, iE1, iE3, iTh, I0, I1, I2 )
+
+    ! Guo Eq. 3. The 1/(16*pi*Delta^5) normalization is built into A/B/C at Init,
+    ! and the IMD case carries its own DeltaA^5 version in the same slots -- so
+    ! there is no branch and no mass-pair indirection left here. Indexing scalars
+    ! rather than passing A(:)/B(:)/C(:) array sections also avoids a dummy
+    ! temporary per call, which matters once this runs on a device.
     DO iCase = 1, nDistinctCases
-      iTrueCase = ChosenToTrueCaseMap(iCase)
-
-      IF (iTrueCase == i_IMD) THEN
-
-        ! IMD uses its own coefficient tables (built at (E1,-E3) / (E3,-E1)
-        ! with the DeltaA^5 normalization). R1 is process 33 (nu_bar_e has
-        ! energy E1); R2 is the E1 <-> E3 swap, i.e. process 34. R3 never
-        ! contributes because lam3 = 0 for both IMD processes.
-        R1(iTrueCase) = A_IMD(iE1, iE3, iTh, 1)*I2(iCase) &
-                      + B_IMD(iE1, iE3, iTh, 1)*I1(iCase) &
-                      + C_IMD(iE1, iE3, iTh, 1)*I0(iCase)
-        R2(iTrueCase) = A_IMD(iE1, iE3, iTh, 2)*I2(iCase) &
-                      + B_IMD(iE1, iE3, iTh, 2)*I1(iCase) &
-                      + C_IMD(iE1, iE3, iTh, 2)*I0(iCase)
-        R3(iTrueCase) = 0.0d0
-
+      IF ( IsIMD_Case(iCase) ) THEN
+        R1(iCase) = A_IMD(iE1,iE3,iTh,1)*I2(iCase) &
+                  + B_IMD(iE1,iE3,iTh,1)*I1(iCase) &
+                  + C_IMD(iE1,iE3,iTh,1)*I0(iCase)
+        R2(iCase) = A_IMD(iE1,iE3,iTh,2)*I2(iCase) &
+                  + B_IMD(iE1,iE3,iTh,2)*I1(iCase) &
+                  + C_IMD(iE1,iE3,iTh,2)*I0(iCase)
+        R3(iCase) = 0.0d0
       ELSE
-
-        Index2 = iABC_m2( iTrueCase )
-        Index4 = iABC_m4( iTrueCase )
-        
-        ! We populate the R arrays by the TRUE case index so they match what Phout expects later
-        CALL CalculateR1R2R3( E1, E3, costh, &
-            A_Scat(iE1, iE3, iTh, :), &
-            B_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-            C_Scat(iE1, iE3, iTh, Index2, Index4, :), &
-            I0(iCase), I1(iCase), I2(iCase), &
-            R1(iTrueCase), R2(iTrueCase), R3(iTrueCase) )
+        jFl2 = iIdx2(iCase)
+        jFl4 = iIdx4(iCase)
+        R1(iCase) = A_Scat(iE1,iE3,iTh,1)*I2(iCase) &
+                  + B_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I1(iCase) &
+                  + C_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I0(iCase)
+        R2(iCase) = A_Scat(iE1,iE3,iTh,2)*I2(iCase) &
+                  + B_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I1(iCase) &
+                  + C_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I0(iCase)
+        R3(iCase) = C_Scat(iE1,iE3,iTh,jFl2,jFl4,3)*I0(iCase)
       ENDIF
-
     ENDDO
 
   END SUBROUTINE CalculateAllR1R2R3
-
-  SUBROUTINE CalculateR1R2R3( E1, E3, costh, A, B, C, I0_val, I1_val, I2_val, R1, R2, R3 )
-
-    REAL(DP), INTENT(IN)  :: E1, E3, costh, I0_val, I1_val, I2_val
-    REAL(DP), INTENT(IN)  :: A(2), B(2), C(3) ! Notice that A3 and B3 are identically zero
-    REAL(DP), INTENT(OUT) :: R1, R2, R3
-
-    ! --- Delta (Guo Eq. 4) ---
-    ! Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
-    ! --- Notice that 1.0d0 / (16.0d0 * pi * Delta5) is built into A, B, C ---
-    ! In principle this function does not need costh as input but for clarity
-    ! we leave it in
-
-    R1 = A(1)*I2_val + B(1)*I1_val + C(1)*I0_val   ! Guo Eq. 3
-    R2 = A(2)*I2_val + B(2)*I1_val + C(2)*I0_val   ! Guo Eq. 3
-    R3 =                             C(3)*I0_val   ! Guo Eq. 3 
-
-  END SUBROUTINE CalculateR1R2R3
 
   SUBROUTINE SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPair)
 
@@ -676,80 +1486,51 @@ CONTAINS
 
   END SUBROUTINE SetChemPotDistinctCases
 
-  SUBROUTINE CalculateDistinctI0I1I2( E1, E3, costh, T, Mu_e, Mu_mu, I0, I1, I2 )
+  SUBROUTINE CalculateDistinctI0I1I2( E1, E3, T, Mu_e, Mu_mu, iE1, iE3, iTh, I0, I1, I2 )
 
-    REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
-    REAL(DP), INTENT(OUT) :: I0(nDistinctCases), I1(nDistinctCases), I2(nDistinctCases)
-    
-    REAL(DP) :: Delta, DeltaA, xMu_l2, xMu_l4, m2, m4, disc, k_val, E_minus, E_plus, Q
-    REAL(DP) :: I0m, I1m, I2m, I0p, I1p, I2p
-    REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
-    INTEGER  :: iCase, iTrueCase
+    ! All kinematics (E_minus, E_plus, phase-space masks) were tabulated at Init:
+    ! they depend only on (E1,E3,costh) and the case mass pair, never on T or the
+    ! chemical potentials. What is left here is the only genuinely thermodynamic
+    ! part, the incomplete Fermi-Dirac integrals.
+
+    REAL(DP), INTENT(IN)  :: E1, E3, T, Mu_e, Mu_mu
+    INTEGER , INTENT(IN)  :: iE1, iE3, iTh
+    ! Indexed compactly (1..nDistinctCases). Declared at the PARAMETER bound so the
+    ! dummy extent does not depend on mutable module state.
+    REAL(DP), INTENT(OUT) :: I0(nDistinctCasesMax), I1(nDistinctCasesMax), I2(nDistinctCasesMax)
+
+    REAL(DP) :: xMu_l2, xMu_l4, E3eff, MuSel(2)
+    REAL(DP) :: I0p, I1p, I2p
+    INTEGER  :: iCase, iMP
 
     I0 = 0.0d0
     I1 = 0.0d0
     I2 = 0.0d0
 
-    Delta = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
+    MuSel(1) = Mu_e
+    MuSel(2) = Mu_mu
 
-    ! There are nDistinctCases different cases:
-    CALL SetChemPotDistinctCases(Mu_e, Mu_mu, ChemPotPairDistinct)
+    DO iCase = 1, nDistinctCases
 
-    DO iCase=1,nDistinctCases
-      
-      iTrueCase = ChosenToTrueCaseMap(iCase)     
-      m2        = MassPairDistinct(iTrueCase,1)
-      m4        = MassPairDistinct(iTrueCase,2)
+      iMP = iMassPair_Case(iCase)
+      IF ( .NOT. Active_MP(iE1,iE3,iTh,iMP) ) CYCLE
 
-      xMu_l2 = ChemPotPairDistinct(iTrueCase,1)
-      xMu_l4 = ChemPotPairDistinct(iTrueCase,2)
+      xMu_l2 = ChemSign2(iCase) * MuSel( iChemSpecies2(iCase) )
+      xMu_l4 = ChemSign4(iCase) * MuSel( iChemSpecies4(iCase) )
 
-      Q = 0.5d0 * (m4**2 - m2**2)
+      ! IMD evaluates its I_s at (E1,-E3); scattering at (E1,E3).
+      E3eff = E3Sign_Case(iCase) * E3
 
-      IF (iTrueCase == i_IMD) THEN
+      CALL Compute_Is_Integrals( E1, E3eff, Eminus_MP(iE1,iE3,iTh,iMP), &
+                                 T, xMu_l2, xMu_l4, I0(iCase), I1(iCase), I2(iCase) )
 
-        ! ==============================================================
-        ! IMD kinematics (Guo Eqs. 16-19)
-        ! ==============================================================
-        k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
-        IF (k_val < k0_IMD) CYCLE   ! Theta function, Guo Eq. 16
-
-        DeltaA = SQRT(MAX(E1**2 + 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 17
-
-        disc = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 17
-        IF (disc < 0.0d0) CYCLE
-
-        E_minus = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) )   ! Guo Eq. 17
-        E_plus  = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) + DeltaA*SQRT(disc) )   ! Guo Eq. 17
-        E_minus = MAX(E_minus, m2)
-        E_plus  = MAX(E_plus , m2)
-        IF (E_minus >= E_plus) CYCLE
-
-        ! I_s = I_s(E_minus) - I_s(E_plus), both evaluated at (E1, -E3) (Guo Eq. 18).
-        ! Note these are E1 <-> E3 symmetric, which is why one distinct case
-        ! serves both process 33 and process 34.
-        CALL Compute_Is_Integrals( E1, -E3, E_minus, T, xMu_l2, xMu_l4, I0m, I1m, I2m )
-        CALL Compute_Is_Integrals( E1, -E3, E_plus , T, xMu_l2, xMu_l4, I0p, I1p, I2p )
-
-        I0(iCase) = I0m - I0p
-        I1(iCase) = I1m - I1p
-        I2(iCase) = I2m - I2p
-
-      ELSE
-
-        IF (Delta < 1.0d-10) RETURN   ! pathological collinear case
-        ! --- k (Guo Eq. 5): diverges at forward scattering mu=1 ---
-        IF (1.0d0 - costh < 1.0d-10) RETURN
-
-        k_val = Q / (E1 * E3 * (1.0d0 - costh))   ! Guo Eq. 5
-        disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - costh)) ! Guo Eq. 4
-        IF (disc < 0.0d0) CYCLE
-
-        E_minus = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) )   ! Guo Eq. 4
-        E_minus = MAX(E_minus, m2)
-
-        CALL Compute_Is_Integrals( E1, E3, E_minus, T, xMu_l2, xMu_l4, I0(iCase), I1(iCase), I2(iCase) )
-      
+      IF ( TwoSided_Case(iCase) ) THEN
+        ! I_s = I_s(E_minus) - I_s(E_plus)   (Guo Eq. 18)
+        CALL Compute_Is_Integrals( E1, E3eff, Eplus_MP(iE1,iE3,iTh,iMP), &
+                                   T, xMu_l2, xMu_l4, I0p, I1p, I2p )
+        I0(iCase) = I0(iCase) - I0p
+        I1(iCase) = I1(iCase) - I1p
+        I2(iCase) = I2(iCase) - I2p
       ENDIF
 
     ENDDO
@@ -760,9 +1541,9 @@ CONTAINS
 
     INTEGER,  INTENT(IN)  :: iE1
     REAL(DP), INTENT(IN)  :: E1, xT, Mu_e, Mu_mu
-    REAL(DP), INTENT(OUT) :: Phi0(iProcessMax - iProcessMin + 1)
+    REAL(DP), INTENT(OUT) :: Phi0(nProcessSel)
 
-    INTEGER  :: iE2, iProcess, iCase, iTrueCase, idx
+    INTEGER  :: iE2, iCase, iTrueCase, idx
     REAL(DP) :: E2, wE2, xMu_l2, xMu_l4, f2, f4, occ, xnode
     REAL(DP) :: val_H0I, val_H0II
     REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
@@ -829,9 +1610,8 @@ CONTAINS
 
     ENDDO
 
-    DO iProcess = iProcessMin, iProcessMax
-      idx = iProcess - iProcessMin + 1
-      iTrueCase = iDistinctMap(iProcess)
+    DO idx = 1, nProcessSel
+      iTrueCase = iDistinctMap( ProcessList(idx) )
 
       Phi0(idx) = lam1(idx) * integrand0I(iTrueCase) + &
                   lam2(idx) * integrand0II(iTrueCase)
@@ -845,12 +1625,10 @@ CONTAINS
     
     INTEGER , INTENT(IN)  :: iE1
     REAL(DP), INTENT(IN)  :: E1, xT, Mu_e, Mu_mu
-    REAL(DP), INTENT(OUT) :: Phout(iProcessMax - iProcessMin + 1, nL)
+    REAL(DP), INTENT(OUT) :: Phout(nProcessSel, nL)
     INTEGER , INTENT(IN)  :: nL
 
-    REAL(DP) :: ChemPotPairDistinct(nDistinctCasesMax,2)
-    REAL(DP) :: integrand0I(nDistinctCasesMax), integrand0II(nDistinctCasesMax)
-    REAL(DP) :: Phi0(iProcessMax - iProcessMin + 1)
+    REAL(DP) :: Phi0(nProcessSel)
     INTEGER  :: iL
     
     CALL CalculateAllPhi0_collinear( iE1, E1, xT, Mu_e, Mu_mu, Phi0 )

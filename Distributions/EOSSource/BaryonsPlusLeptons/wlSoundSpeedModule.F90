@@ -189,8 +189,8 @@ CONTAINS
       ! relativistic definition with enthalpy
       h = (1.0_dp + (Ebary + Eele + Emu + Erad)/cvel**2 + (Pbary + Pele + Pmu + Prad)/D/cvel**2)
       
-      Cs = SQRT(Gamma * (Pbary + Pele + Pmu + Prad) / (D*h))
-      Cs = SQRT(Gamma * (Pbary + Pele + Pmu + Erad) / (D))
+      !Cs = SQRT(Gamma * (Pbary + Pele + Pmu + Prad) / (D*h))
+      Cs = SQRT(Gamma * (Pbary + Pele + Pmu + Prad) / (D))
 
     ELSE
 

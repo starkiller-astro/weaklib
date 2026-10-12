@@ -6,6 +6,7 @@ PROGRAM wlTestFig56Guo
     ProcessIndexFromReactionString, &
     gauleg, FD
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllRoutIntegrated, &
     InitGeneralScatteringKernels, &
     FinalizeGeneralScatteringKernels
@@ -166,15 +167,15 @@ PROGRAM wlTestFig56Guo
 
   ! 2. nu_mu + e- -> nu_mu + e- (e- in, e- out)
   CALL ProcessIndexFromReactionString( process_string_Fig5(2), iProcess)
-  iProcess_Fig5_2 = iProcess - iProcessMin + 1
+  iProcess_Fig5_2 = ProcessRowIndex(iProcess)
 
   ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
   CALL ProcessIndexFromReactionString( process_string_Fig5(3), iProcess)
-  iProcess_Fig5_3 = iProcess - iProcessMin + 1
+  iProcess_Fig5_3 = ProcessRowIndex(iProcess)
 
   ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
   CALL ProcessIndexFromReactionString( process_string_Fig5(4), iProcess)
-  iProcess_Fig5_4 = iProcess - iProcessMin + 1
+  iProcess_Fig5_4 = ProcessRowIndex(iProcess)
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
@@ -235,15 +236,15 @@ PROGRAM wlTestFig56Guo
 
     ! 2. nu_mu + e- -> nu_mu + e- (e- in, e- out)
   CALL ProcessIndexFromReactionString( process_string_Fig6(2), iProcess)
-  iProcess_Fig6_2 = iProcess - iProcessMin + 1
+  iProcess_Fig6_2 = ProcessRowIndex(iProcess)
 
   ! 4. nu_bar_e + e- -> nu_bar_mu + mu- (e- in, mu- out)
   CALL ProcessIndexFromReactionString( process_string_Fig6(4), iProcess)
-  iProcess_Fig6_4 = iProcess - iProcessMin + 1
+  iProcess_Fig6_4 = ProcessRowIndex(iProcess)
 
   ! 5. nu_bar_e + e- + nu_mu -> mu-
   CALL ProcessIndexFromReactionString( process_string_Fig6(5), iProcess)
-  iProcess_Fig6_5 = iProcess - iProcessMin + 1
+  iProcess_Fig6_5 = ProcessRowIndex(iProcess)
 
   !============================================================================
   ! FIGURE 6: LOOP OVER ENERGY SCAN

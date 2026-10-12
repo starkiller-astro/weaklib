@@ -22,6 +22,7 @@ PROGRAM wlTestGeneralKernelNMS
   USE wlGeneralLeptonScatteringModule, ONLY: &
     ProcessIndexFromReactionString
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllPhout, &
     InitGeneralScatteringKernels, &
     FinalizeGeneralScatteringKernels, &
@@ -155,28 +156,28 @@ PROGRAM wlTestGeneralKernelNMS
   ! Map all indices correctly
   process_string = 'nu_e + mu- -> nu_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_lep = iProcess
+  iProcess_nue_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + mu- -> nu_bar_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_lep = iProcess
+  iProcess_nueb_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + mu- -> nu_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_lep = iProcess
+  iProcess_num_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + mu- -> nu_bar_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_lep = iProcess
+  iProcess_numb_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_e + mu+ -> nu_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_alep = iProcess
+  iProcess_nue_alep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + mu+ -> nu_bar_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_alep = iProcess
+  iProcess_nueb_alep = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + mu+ -> nu_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_alep = iProcess
+  iProcess_num_alep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + mu+ -> nu_bar_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_alep = iProcess
+  iProcess_numb_alep = ProcessRowIndex(iProcess)
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN

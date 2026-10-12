@@ -22,6 +22,7 @@ PROGRAM wlTestNLSOnRealTrajectory
   USE wlGeneralLeptonScatteringModule, ONLY: &
     ProcessIndexFromReactionString, gauleg
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllRoutIntegrated, &
     InitGeneralScatteringKernels, &
     FinalizeGeneralScatteringKernels, &
@@ -160,53 +161,53 @@ PROGRAM wlTestNLSOnRealTrajectory
   ! Map all indices correctly
   process_string = 'nu_e + mu- -> nu_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_mum = iProcess
+  iProcess_nue_mum = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + mu- -> nu_bar_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_mum = iProcess
+  iProcess_nueb_mum = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + mu- -> nu_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_mum = iProcess
+  iProcess_num_mum = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + mu- -> nu_bar_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_mum = iProcess
+  iProcess_numb_mum = ProcessRowIndex(iProcess)
   process_string = 'nu_e + mu+ -> nu_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_mup = iProcess
+  iProcess_nue_mup = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + mu+ -> nu_bar_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_mup = iProcess
+  iProcess_nueb_mup = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + mu+ -> nu_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_mup = iProcess
+  iProcess_num_mup = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + mu+ -> nu_bar_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_mup = iProcess
+  iProcess_numb_mup = ProcessRowIndex(iProcess)
 
   process_string = 'nu_e + e- -> nu_e + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_em = iProcess
+  iProcess_nue_em = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_em = iProcess
+  iProcess_nueb_em = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + e- -> nu_mu + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_em = iProcess
+  iProcess_num_em = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_em = iProcess
+  iProcess_numb_em = ProcessRowIndex(iProcess)
   process_string = 'nu_e + e+ -> nu_e + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_ep = iProcess
+  iProcess_nue_ep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + e+ -> nu_bar_e + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_ep = iProcess
+  iProcess_nueb_ep = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + e+ -> nu_mu + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_ep = iProcess
+  iProcess_num_ep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + e+ -> nu_bar_mu + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_ep = iProcess
+  iProcess_numb_ep = ProcessRowIndex(iProcess)
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN

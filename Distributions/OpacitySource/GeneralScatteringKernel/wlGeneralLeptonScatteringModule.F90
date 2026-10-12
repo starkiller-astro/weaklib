@@ -187,6 +187,7 @@ MODULE wlGeneralLeptonScatteringModule
   
   ! Integration parameters
   !--- Default quadrature resolution ---
+  REAL(DP), PARAMETER :: xi_tol         = 1.0d-8  ! threshold for the xi -> 0 branch
   REAL(DP), PARAMETER :: tfac           = 100.0d0
   REAL(DP), PARAMETER :: MaxExponent    = 100.0d0
   INTEGER, PARAMETER  :: nE3_default    = 32   ! GL points for E3 integral in opacity
@@ -203,6 +204,9 @@ MODULE wlGeneralLeptonScatteringModule
   PUBLIC :: GeneralAngleAveragedOutgoingScattering_Moments
   PUBLIC :: SelectLambdaFromProcessIndex
   PUBLIC :: Compute_Is_Integrals
+  PUBLIC :: Compute_Is_Integrals_FD   ! device-callable, pre-reduced arguments
+  PUBLIC :: f_gamma
+  PUBLIC :: xi_tol                    ! xi -> 0 branch threshold
   PUBLIC :: A1_f
   PUBLIC :: B1_f
   PUBLIC :: C1_f
@@ -1386,9 +1390,6 @@ CONTAINS
     REAL(DP), INTENT(IN)  :: E1, E3, E_minus, T, xMu_l2, xMu_l4
     REAL(DP), INTENT(OUT) :: I0, I1, I2
 
-    REAL(DP), PARAMETER :: xi_tol = 1.0d-8   ! Threshold for \xi -> 0 branch
-    INTEGER , PARAMETER :: n_pts  = 32       ! GL quadrature points
-
     REAL(DP) :: xi, y, eta, eta_prime
     REAL(DP) :: F0_eta, F1_eta, F2_eta
     REAL(DP) :: F0_etap, F1_etap, F2_etap
@@ -1404,6 +1405,15 @@ CONTAINS
 
     ! --- Lower Integration Limit (y = E_- / T) ---
     y = E_minus / T
+
+    IF ( CompleteFDIntegralsEvaluationMethod == 3 ) THEN
+      ! Fast path, and the ONLY one that is device-safe: methods 1 and 2 touch
+      ! mutable module state (GauLegInitialized / the polylog SAVE variables).
+      ! Delegating keeps host and device results identical by construction.
+      CALL Compute_Is_Integrals_FD( y, eta, eta_prime, T, f_gamma(xi), &
+                                    ABS(xi) < xi_tol, I0, I1, I2 )
+      RETURN
+    ENDIF
 
     SELECT CASE (CompleteFDIntegralsEvaluationMethod)
     CASE (1)
@@ -1428,26 +1438,12 @@ CONTAINS
       CALL Fermi_Dirac_Integrals( eta       - y, F0_eta , F1_eta , F2_eta )
       CALL Fermi_Dirac_Integrals( eta_prime - y, F0_etap, F1_etap, F2_etap )
 
-    CASE (3)
-
-      ! --- Evaluate F_s(eta, y) and F_s(eta_prime, y) using Fukushima (2015) routines ---
-      F0_eta = F0z_Fukushima( eta - y )
-      F1_eta = F1z_Fukushima( eta - y )
-      F2_eta = F2z_Fukushima( eta - y )
-
-      F0_etap = F0z_Fukushima( eta_prime - y )
-      F1_etap = F1z_Fukushima( eta_prime - y )
-      F2_etap = F2z_Fukushima( eta_prime - y )
-
     END SELECT
 
     IF (ABS(xi) < xi_tol) THEN
-      ! WRITE(*,*) 'Warning: Compute_Is_Integrals: |xi| < xi_tol; using degenerate limit for I_s integrals.'
       ! =====================================================================
       ! SPECIAL CASE: \xi -> 0 (Guo 2020 Eqs. 11a, 11b, 11c)
       ! =====================================================================
-      ! df0_dz = 1.0d0 / (EXP(MIN(y - eta, MaxExponent)) + 1.0d0)
-      ! df0_dz = 1.0d0 / (EXP(y - eta) + 1.0d0)
       df0_dz = EXP(MIN(eta - y, 30.0d0)) / (1.0_dp + EXP(MIN(eta - y, 30.0d0)))
 
       ! Using F_n'(z) relations from the text (Eq 11):
@@ -1474,9 +1470,89 @@ CONTAINS
 
     END IF
 
-  CONTAINS
+  END SUBROUTINE Compute_Is_Integrals
 
-  PURE FUNCTION f_gamma( z ) RESULT(res)
+  !================================================================================
+  ! Compute_Is_Integrals_FD
+  !
+  ! Method-3 (Fukushima) evaluation of the I_s integrals, with a PRE-REDUCED
+  ! argument list so that everything which does not vary with the angular
+  ! quadrature point can be hoisted out of the caller's innermost loop:
+  !
+  !   y            = E_minus / T          (the only per-theta quantity)
+  !   eta          = xMu_l2 / T
+  !   eta_prime    = (E3 - E1 + xMu_l4) / T
+  !   fg           = f_gamma(eta_prime - eta)
+  !   DoDegenerate = ( |eta_prime - eta| < xi_tol )
+  !
+  ! eta, eta_prime, fg and DoDegenerate depend only on (E1, E3, T, mu), so
+  ! hoisting them removes an EXP and two divides from the inner loop.
+  !
+  ! Contains no I/O, no ALLOCATE, no module-state writes and no internal
+  ! procedures: safe to call from inside an offloaded region.
+  !================================================================================
+  PURE SUBROUTINE Compute_Is_Integrals_FD( y, eta, eta_prime, T, fg, DoDegenerate, &
+                                           I0, I1, I2 )
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
+
+    REAL(DP), INTENT(IN)  :: y, eta, eta_prime, T, fg
+    LOGICAL , INTENT(IN)  :: DoDegenerate
+    REAL(DP), INTENT(OUT) :: I0, I1, I2
+
+    REAL(DP) :: F0_eta, F1_eta, F2_eta
+    REAL(DP) :: F0_etap, F1_etap, F2_etap
+    REAL(DP) :: df0_dz, ex
+
+    ! --- F_s(eta, y) via the Fukushima (2015) rational approximations ---
+    F0_eta = F0z_Fukushima( eta - y )
+    F1_eta = F1z_Fukushima( eta - y )
+    F2_eta = F2z_Fukushima( eta - y )
+
+    IF ( DoDegenerate ) THEN
+      ! =====================================================================
+      ! SPECIAL CASE: xi -> 0 (Guo 2020 Eqs. 11a-c), via L'Hopital.
+      ! The eta_prime integrals are not needed here.
+      ! =====================================================================
+      ex     = EXP(MIN(eta - y, 30.0d0))
+      df0_dz = ex / (1.0_dp + ex)
+
+      I0 = (T)    * df0_dz                                                  ! Eq. 11a
+      I1 = (T**2) * ( F0_eta + y * df0_dz )                                 ! Eq. 11b
+      I2 = (T**3) * ( 2.0d0 * F1_eta + 2.0d0 * y * F0_eta + y**2 * df0_dz ) ! Eq. 11c
+
+    ELSE
+      ! =====================================================================
+      ! GENERAL CASE: Guo 2020 Eqs. 7a, 7b, 7c
+      ! =====================================================================
+      F0_etap = F0z_Fukushima( eta_prime - y )
+      F1_etap = F1z_Fukushima( eta_prime - y )
+      F2_etap = F2z_Fukushima( eta_prime - y )
+
+      I0 = T * fg * ( F0_etap - F0_eta )                                    ! Eq. 7a
+
+      I1 = (T**2) * fg * ( (F1_etap - F1_eta) + &
+            y * (F0_etap - F0_eta) )                                        ! Eq. 7b
+
+      I2 = (T**3) * fg * ( (F2_etap - F2_eta) + &
+          2.0d0 * y * (F1_etap - F1_eta) + (y**2) * (F0_etap - F0_eta) )    ! Eq. 7c
+
+    END IF
+
+  END SUBROUTINE Compute_Is_Integrals_FD
+
+  !--- 1/(exp(z)-1), with both overflow limbs guarded. Promoted to module scope
+  !--- from inside Compute_Is_Integrals: host association in an internal
+  !--- procedure is unreliable inside a ROUTINE SEQ / DECLARE TARGET routine.
+  PURE ELEMENTAL FUNCTION f_gamma( z ) RESULT(res)
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
     REAL(DP), INTENT(IN) :: z
     REAL(DP) :: res
 
@@ -1489,8 +1565,6 @@ CONTAINS
     END IF
 
   END FUNCTION f_gamma
-
-  END SUBROUTINE Compute_Is_Integrals
 
   !================================================================================
   ! Helper Functions for Fermi-Dirac Integrals (Eq. 8, Eq. 9, Eq. 10)
@@ -1760,6 +1834,11 @@ CONTAINS
   PURE ELEMENTAL FUNCTION FD( E, mu, T )
     REAL(DP), INTENT(IN) :: E, mu, T
     REAL(DP) :: FD
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
 
     FD = 1.0d0 / (EXP(MIN((E - mu)/T, MaxExponent)) + 1.0d0)
 

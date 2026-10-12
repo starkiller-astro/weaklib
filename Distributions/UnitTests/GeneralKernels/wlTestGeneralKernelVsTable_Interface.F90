@@ -30,6 +30,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   USE wlGeneralLeptonScatteringModule, ONLY: &
     ProcessIndexFromReactionString
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllPhout, &
     InitGeneralScatteringKernels, &
     FinalizeGeneralScatteringKernels, &
@@ -371,28 +372,28 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   ! Map all indices correctly
   process_string = 'nu_e + e- -> nu_e + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueem = iProcess - iProcessMin + 1
+  iProcess_nueem = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + e- -> nu_bar_e + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nuebem = iProcess - iProcessMin + 1
+  iProcess_nuebem = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + e- -> nu_mu + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numem = iProcess - iProcessMin + 1
+  iProcess_numem = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + e- -> nu_bar_mu + e-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numbem = iProcess - iProcessMin + 1
+  iProcess_numbem = ProcessRowIndex(iProcess)
   process_string = 'nu_e + e+ -> nu_e + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueep = iProcess - iProcessMin + 1
+  iProcess_nueep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + e+ -> nu_bar_e + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nuebep = iProcess - iProcessMin + 1
+  iProcess_nuebep = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + e+ -> nu_mu + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numep = iProcess - iProcessMin + 1
+  iProcess_numep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + e+ -> nu_bar_mu + e+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numbep = iProcess - iProcessMin + 1
+  iProcess_numbep = ProcessRowIndex(iProcess)
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN

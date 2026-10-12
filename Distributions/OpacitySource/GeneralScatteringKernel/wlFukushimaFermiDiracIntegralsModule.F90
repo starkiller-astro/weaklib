@@ -24,6 +24,11 @@ PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
 
     REAL(DP), INTENT(IN) :: y
     REAL(DP)             :: fd
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
 
     REAL(DP) :: x, ex, t, s
     REAL(DP) :: num, den
@@ -108,6 +113,11 @@ PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
     
     REAL(DP), INTENT(IN) :: y
     REAL(DP)             :: fd
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
 
     REAL(DP) :: x, ex, t, s
     REAL(DP) :: num, den
@@ -196,6 +206,11 @@ PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
 
     REAL(DP), INTENT(IN) :: y
     REAL(DP)             :: fd
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
 
     REAL(DP) :: x, ex, t, s
     REAL(DP) :: num, den

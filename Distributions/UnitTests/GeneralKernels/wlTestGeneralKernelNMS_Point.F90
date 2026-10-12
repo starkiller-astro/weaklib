@@ -22,6 +22,7 @@ PROGRAM wlTestGeneralKernelNMS_Point
   USE wlGeneralLeptonScatteringModule, ONLY: &
     ProcessIndexFromReactionString
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllPhout, &
     InitGeneralScatteringKernels, &
     FinalizeGeneralScatteringKernels, &
@@ -165,33 +166,32 @@ PROGRAM wlTestGeneralKernelNMS_Point
   ! Map all indices correctly
   process_string = 'nu_e + mu- -> nu_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_lep = iProcess - iProcessMin + 1
+  iProcess_nue_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + mu- -> nu_bar_e + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_lep = iProcess - iProcessMin + 1
+  iProcess_nueb_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + mu- -> nu_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_lep = iProcess - iProcessMin + 1
+  iProcess_num_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + mu- -> nu_bar_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_lep = iProcess - iProcessMin + 1
+  iProcess_numb_lep = ProcessRowIndex(iProcess)
   process_string = 'nu_e + mu+ -> nu_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nue_alep = iProcess - iProcessMin + 1
+  iProcess_nue_alep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_e + mu+ -> nu_bar_e + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_nueb_alep = iProcess - iProcessMin + 1
+  iProcess_nueb_alep = ProcessRowIndex(iProcess)
   process_string = 'nu_mu + mu+ -> nu_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_num_alep = iProcess - iProcessMin + 1
+  iProcess_num_alep = ProcessRowIndex(iProcess)
   process_string = 'nu_bar_mu + mu+ -> nu_bar_mu + mu+'
   CALL ProcessIndexFromReactionString( process_string, iProcess)
-  iProcess_numb_alep = iProcess - iProcessMin + 1
+  iProcess_numb_alep = ProcessRowIndex(iProcess)
 
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
   !============================================================================
-  WRITE(*,*) 'Table done, now doing General Scattering Kernels'
   CALL SYSTEM_CLOCK(count_start, count_rate=count_rate)
   ! Make sure you are using the exact same chemical potential
   DO ii = 1, Inte_nPointE

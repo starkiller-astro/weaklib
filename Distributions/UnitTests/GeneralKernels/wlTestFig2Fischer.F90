@@ -6,6 +6,7 @@ PROGRAM wlTestFig2Fischer
     ProcessIndexFromReactionString, &
     gauleg
   USE wlGeneralLeptonScatteringModuleThornadoInterface, ONLY: &
+    ProcessRowIndex, &
     CalculateAllRoutIntegrated, &
     CalculateAllPhout, &
     InitGeneralScatteringKernels, &
@@ -75,40 +76,65 @@ PROGRAM wlTestFig2Fischer
   OPEN(UNIT=10, FILE='Fischer_Fig2_cond_a.dat',  STATUS='REPLACE', ACTION='WRITE')
   OPEN(UNIT=11, FILE='Fischer_Fig2_cond_b.dat',  STATUS='REPLACE', ACTION='WRITE')
 
+  !============================================================================
+  ! PRE-COMPUTE LIN-SPACED ENERGY GRID
+  !============================================================================
+  DO iE1 = 1, nE1
+    E1_arr(iE1) = E1_min + REAL(iE1-1, dp) * (E1_max - E1_min) / REAL(nE1-1, dp)
+  ENDDO
+
+  !============================================================================
+  ! PRE-COMPUTE LOG-SPACED ENERGY GRID
+  !============================================================================
+  DO iE1 = 1, nE1
+    E1_arr(iE1) = EXP( log_E1_min + REAL(iE1-1, dp) * (log_E1_max - log_E1_min) / REAL(nE1-1, dp) )
+  END DO
+
+  WRITE(*,*) 'Initializing Kernels'
+  CALL gauleg(  E3_min, E3_max, xa_E3, wa_E3, nE3  )
+  CALL InitGeneralScatteringKernels(  &
+      E1_arr,                         &
+      xa_E3,                          &
+      nE1,                            &
+      nE3,                            &
+      nTheta,                         &
+      iProcessMin_Option=iProcessMin, &
+      iProcessMax_Option=iProcessMax  )
+
   ! Initialize process strings
   process_string(1) = 'nu_mu + mu- -> nu_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string(1), iProcess)
-  iProcess_1 = iProcess - iProcessMin + 1
+  iProcess_1 = ProcessRowIndex(iProcess)
 
   process_string(2) = 'nu_mu + e- -> nu_mu + e-'
   CALL ProcessIndexFromReactionString( process_string(2), iProcess)
-  iProcess_2 = iProcess - iProcessMin + 1
+  iProcess_2 = ProcessRowIndex(iProcess)
 
   process_string(3) = 'nu_bar_mu + mu- -> nu_bar_mu + mu-'
   CALL ProcessIndexFromReactionString( process_string(3), iProcess)
-  iProcess_3 = iProcess - iProcessMin + 1
+  iProcess_3 = ProcessRowIndex(iProcess)
   
   process_string(4) = 'nu_bar_mu + e- -> nu_bar_mu + e-'
   CALL ProcessIndexFromReactionString( process_string(4), iProcess)
-  iProcess_4 = iProcess - iProcessMin + 1
+  iProcess_4 = ProcessRowIndex(iProcess)
 
   IF (Include_AntiLeptons) THEN
     ! Initialize process strings
     process_anti_string(1) = 'nu_mu + mu+ -> nu_mu + mu+'
     CALL ProcessIndexFromReactionString( process_anti_string(1), iProcess)
-    iProcess_Anti_1 = iProcess - iProcessMin + 1
+    iProcess_Anti_1 = ProcessRowIndex(iProcess)
 
     process_anti_string(2) = 'nu_mu + e+ -> nu_mu + e+'
     CALL ProcessIndexFromReactionString( process_anti_string(2), iProcess)
-    iProcess_Anti_2 = iProcess - iProcessMin + 1
+    iProcess_Anti_2 = ProcessRowIndex(iProcess)
 
     process_anti_string(3) = 'nu_bar_mu + mu+ -> nu_bar_mu + mu+'
     CALL ProcessIndexFromReactionString( process_anti_string(3), iProcess)
-    iProcess_Anti_3 = iProcess - iProcessMin + 1
+    iProcess_Anti_3 = ProcessRowIndex(iProcess)
     
     process_anti_string(4) = 'nu_bar_mu + e+ -> nu_bar_mu + e+'
     CALL ProcessIndexFromReactionString( process_anti_string(4), iProcess)
-    iProcess_Anti_4 = iProcess - iProcessMin + 1
+    iProcess_Anti_4 = ProcessRowIndex(iProcess)
   ENDIF
 
   ! Write Headers
@@ -136,30 +162,6 @@ PROGRAM wlTestFig2Fischer
   WRITE(11,'(A)') '# Col 4: ' // TRIM(ADJUSTL(process_string(3)))
   WRITE(11,'(A)') '# Col 5: ' // TRIM(ADJUSTL(process_string(4)))
   
-  !============================================================================
-  ! PRE-COMPUTE LIN-SPACED ENERGY GRID
-  !============================================================================
-  DO iE1 = 1, nE1
-    E1_arr(iE1) = E1_min + REAL(iE1-1, dp) * (E1_max - E1_min) / REAL(nE1-1, dp)
-  ENDDO
-
-  !============================================================================
-  ! PRE-COMPUTE LOG-SPACED ENERGY GRID
-  !============================================================================
-  DO iE1 = 1, nE1
-    E1_arr(iE1) = EXP( log_E1_min + REAL(iE1-1, dp) * (log_E1_max - log_E1_min) / REAL(nE1-1, dp) )
-  END DO
-
-  CALL gauleg(  E3_min, E3_max, xa_E3, wa_E3, nE3  )
-  CALL InitGeneralScatteringKernels(  &
-      E1_arr,                         &
-      xa_E3,                          &
-      nE1,                            &
-      nE3,                            &
-      nTheta,                         &
-      iProcessMin_Option=iProcessMin, &
-      iProcessMax_Option=iProcessMax  )
-
   !============================================================================
   ! FIGURE 2: LOOP OVER ENERGY SCAN
   !============================================================================
