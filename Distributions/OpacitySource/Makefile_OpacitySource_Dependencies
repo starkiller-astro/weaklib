@@ -31,3 +31,4 @@ wlCalculateAbEmOpacityModule.o: \
 wlNeutralCurrentCorrectionsModule.o: \
   wlKindModule.o \
   wlNeutralCurrentCorrectionsModule.F90
+include $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI/Makefile_OpacitySourceGSI_Dependencies
