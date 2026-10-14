@@ -107,7 +107,7 @@ CONTAINS
     REAL(DP), INTENT(OUT) :: OpEl
 
     ! LOCAL
-    REAL(DP) :: f3, baryons_term, phase_space_term, E3, phi2, phi4
+    REAL(DP) :: vacancy3, x3, z3, baryons_term, phase_space_term, E3, phi2, phi4
 
     E3 = E1 + (M2-M4) + (U2-U4)
 
@@ -122,9 +122,11 @@ CONTAINS
     baryons_term = ( n2 - n4 ) &
       / ( 1.0_dp - EXP( ( phi4 - phi2 ) / ( T * kmev ) ) )
     phase_space_term = E3**2 * SQRT(1.0d0 - (M3/E3)**2)
-    f3 = 1.0d0/(EXP((E3 - Mu3)/T/kmev) + 1.0d0)
+    x3 = ( E3-Mu3 ) / ( T*kmev )
+    z3 = EXP( -ABS(x3) )
+    vacancy3 = MERGE( 1.0_DP, z3, x3 >= 0.0_DP ) / ( 1.0_DP+z3 )
 
-    OpEl = C_Op_el * baryons_term * phase_space_term * (1.0d0 - f3)
+    OpEl = C_Op_el * baryons_term * phase_space_term * vacancy3
     OpEl = MAX( OpEl, 0.0_dp )
 
   END SUBROUTINE ElasticAbsorptionOpacity

@@ -114,7 +114,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   ! Building blocks exported for the 2-phase GPU integration layer
   ! (wlSemiLeptonicOpacityIntegrationModule2D)
   PUBLIC :: AmpCoeffsType, Calc_AmpCoeffs, Calc_Ampsq
-  PUBLIC :: Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD
+  PUBLIC :: Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD, FDPair
   PUBLIC :: opacity_unit_factor
 
 CONTAINS
@@ -247,9 +247,10 @@ SUBROUTINE Integral_2D &
       wE3 = wxa(j)*(E3_max - E3_min)
       E4 = Enu + E2 - E3
       CALL Calc_ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
-      xf3 = FD(E3, Mu3, T)
-      xf4 = FD(E4, Mu4, T)
-      res = res + xf2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*wE2*wE3/Enu**2
+      ! FD(-E,-mu,T) is the vacancy, without subtracting from one.
+      xf3 = FD(-E3, -Mu3, T)
+      xf4 = FD(-E4, -Mu4, T)
+      res = res + xf2*xf3*xf4*xamp*wE2*wE3/Enu**2
     END DO
   END DO
 
@@ -278,7 +279,7 @@ SUBROUTINE Integral_2D_D &
   INTEGER :: i,j
   REAL(DP) :: xamp
   REAL(DP) :: E2, E3, E4
-  REAL(DP) :: xf2,xf3,xf4
+  REAL(DP) :: xf2,xf3,xf4, xb2,xb3,xb4
   REAL(DP) :: p2min, p2max, p4max
   TYPE(AmpCoeffsType) :: Coeffs
 
@@ -299,19 +300,19 @@ SUBROUTINE Integral_2D_D &
     E3_min = xq0_min - Enu
     E3_max = xq0_max - Enu
     IF( E3_max - E3_min <= 0.0d0 ) CYCLE   ! empty kinematic window at this E2
-    xf2 = FD(E2, Mu2, T)
+    CALL FDPair(E2, Mu2, T, xf2, xb2)
   ! Loop over outgoing particle (i.e. particle 3)
     DO j=1,nE
       E3 = xa(j)*(E3_max - E3_min) + E3_min
       wE3 = wxa(j)*(E3_max - E3_min)
       E4 = Enu + E3 + E2
       CALL Calc_ampsq(Enu, E2, -E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
-      xf3 = FD(E3, Mu3, T)
-      xf4 = FD(E4, Mu4, T)
+      CALL FDPair(E3, Mu3, T, xf3, xb3)
+      CALL FDPair(E4, Mu4, T, xf4, xb4)
       IF(ReactionIndex.eq.3) THEN ! inverse decay
-        res = res + xf2*xf3*(1.0d0-xf4)*xamp*wE2*wE3/Enu**2
+        res = res + xf2*xf3*xb4*xamp*wE2*wE3/Enu**2
       ELSE IF(ReactionIndex.eq.4) THEN ! n decay, *blocking of neutrinos is not added*
-        res = res + (1.0d0-xf2)*(1.0d0-xf3)*xf4*xamp*wE2*wE3/Enu**2
+        res = res + xb2*xb3*xf4*xamp*wE2*wE3/Enu**2
       END IF
     END DO
   END DO
@@ -1197,7 +1198,7 @@ END SUBROUTINE gauleg
 
 PURE ELEMENTAL FUNCTION FD(E, mu, T)
   REAL(DP), INTENT(IN) :: E, mu, T
-  REAL(DP) :: FD, x
+  REAL(DP) :: FD, x, z
 #if defined(WEAKLIB_OMP_OL)
   !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -1210,19 +1211,30 @@ PURE ELEMENTAL FUNCTION FD(E, mu, T)
   END IF
 
   x = ( E - mu ) / T
-  IF( x >= 0.0d0 )THEN
-    IF( x > 700.0d0 )THEN
-      FD = 0.0d0
-    ELSE
-      FD = EXP(-x) / ( 1.0d0 + EXP(-x) )
-    END IF
-  ELSE
-    IF( x < -700.0d0 )THEN
-      FD = 1.0d0
-    ELSE
-      FD = 1.0d0 / ( 1.0d0 + EXP(x) )
-    END IF
-  END IF
+  z = EXP( -ABS(x) )
+  FD = MERGE( z, 1.0d0, x >= 0.0d0 ) * ( 1.0d0 / ( 1.0d0 + z ) )
 END FUNCTION
+
+PURE ELEMENTAL SUBROUTINE FDPair(E, mu, T, f, vacancy)
+  REAL(DP), INTENT(IN)  :: E, mu, T
+  REAL(DP), INTENT(OUT) :: f, vacancy
+  REAL(DP) :: x, z, inverse
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+  !$ACC ROUTINE SEQ
+#endif
+
+  IF( T <= 0.0d0 )THEN
+    f = MERGE( 1.0d0, 0.0d0, E < mu )
+    vacancy = 1.0d0-f
+    RETURN
+  END IF
+  x = ( E-mu ) / T
+  z = EXP( -ABS(x) )
+  inverse = 1.0d0 / ( 1.0d0+z )
+  f       = MERGE( z, 1.0d0, x >= 0.0d0 ) * inverse
+  vacancy = MERGE( 1.0d0, z, x >= 0.0d0 ) * inverse
+END SUBROUTINE FDPair
 
 END MODULE wlSemiLeptonicOpacityModule2D

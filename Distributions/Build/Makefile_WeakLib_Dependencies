@@ -4,3 +4,4 @@ include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBa
 # If you want to use the old helmholtz plus Tobias tables use this
 # include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/OldHelmPlusMuons/Makefile_EosBaryLep_Dependencies
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_Dependencies
+include $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel/Makefile_GeneralScatteringKernel_Dependencies

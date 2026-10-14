@@ -59,7 +59,7 @@ MODULE wlSemiLeptonicOpacityIntegrationModule2D
   USE wlEosConstantsModule, ONLY: pi, Gw_MeV, Vud, hbarc, hbar
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
     AmpCoeffsType, Calc_AmpCoeffs, Calc_Ampsq, &
-    Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD, gauleg, &
+    Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD, FDPair, gauleg, &
     opacity_unit_factor
 
   IMPLICIT NONE
@@ -253,7 +253,7 @@ SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res )
   !$ACC ROUTINE SEQ
 #endif
 
-  REAL(DP) :: E3, wE3, E4, xamp, xf3, xf4
+  REAL(DP) :: E3, wE3, E4, xamp, xf3, xf4, xb3, xb4
 
   res = 0.0d0
   IF( .NOT. RD%HasWindow ) RETURN
@@ -271,16 +271,16 @@ SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res )
                      CD%ReactionIndex, CD%IncludeCorrections, CD%Coeffs, xamp )
   END IF
 
-  xf3 = FD( E3, CD%Mu3, CD%T )
-  xf4 = FD( E4, CD%Mu4, CD%T )
+  CALL FDPair( E3, CD%Mu3, CD%T, xf3, xb3 )
+  CALL FDPair( E4, CD%Mu4, CD%T, xf4, xb4 )
 
   SELECT CASE(CD%ReactionIndex)
   CASE (1, 2)   ! captures
-    res = RD%f2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*RD%wE2*wE3/CD%Enu**2
+    res = RD%f2*xb3*xb4*xamp*RD%wE2*wE3/CD%Enu**2
   CASE (3)      ! inverse neutron decay
-    res = RD%f2*xf3*(1.0d0-xf4)*xamp*RD%wE2*wE3/CD%Enu**2
+    res = RD%f2*xf3*xb4*xamp*RD%wE2*wE3/CD%Enu**2
   CASE (4)      ! neutron decay (*neutrino blocking not included*)
-    res = (1.0d0-RD%f2)*(1.0d0-xf3)*xf4*xamp*RD%wE2*wE3/CD%Enu**2
+    res = FD(-RD%E2,-CD%Mu2,CD%T)*xb3*xf4*xamp*RD%wE2*wE3/CD%Enu**2
   END SELECT
 
 END SUBROUTINE CC2D_NodeKernel

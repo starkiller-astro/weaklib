@@ -3,6 +3,7 @@ $(WEAKLIB_DIR)/Distributions/Library: \
 $(WEAKLIB_DIR)/Distributions/EOSSource: \
 $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource/NeutralCurrentCorrections: \
 ..

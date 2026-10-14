@@ -4,8 +4,10 @@ include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/Makefile_EosBa
 # If you want to use the old helmholtz plus Tobias tables use this
 # include $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/OldHelmPlusMuons/Makefile_EosBaryLep_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/Makefile_OpacitySource_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel/Makefile_GeneralScatteringKernel_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI/Makefile_OpacitySourceGSI_ObjectFiles
 
 weaklib = \
-  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(WL_OPACITYSOURCE_GSI) \
+  $(WL_LIBRARY) $(WL_EOSSOURCE) $(WL_OPACITYSOURCE) $(WL_GENERAL_SCAT_KERN) \
+  $(WL_OPACITYSOURCE_GSI) \
   $(WL_EOSSOURCE_SPLIT)

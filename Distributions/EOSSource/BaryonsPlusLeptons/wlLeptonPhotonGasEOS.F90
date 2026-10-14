@@ -60,7 +60,7 @@ MODULE wlLeptonPhotonGasEOS
   END TYPE PhotonGasType
 
   PUBLIC :: LeptonGasEOS, PhotonGasEOS, GetPhotonLeptonGasEOS
-  PUBLIC :: ComputePairDegeneracy
+  PUBLIC :: ComputePairDegeneracy, ComputePairLeptonFraction
 
 CONTAINS
 
@@ -605,6 +605,39 @@ CONTAINS
     END IF
 
   END SUBROUTINE ComputePairDegeneracy
+
+
+  SUBROUTINE ComputePairLeptonFraction &
+    ( HelmTable, Temperature, Density, Eta, SignedYL, dYLdEta )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    REAL(DP), INTENT(IN)  :: Temperature, Density, Eta
+    REAL(DP), INTENT(OUT) :: SignedYL, dYLdEta
+
+    INTEGER :: jT
+    REAL(DP) :: A0, dLogA0dT, d2LogA0dT2, LogA0, Scale
+
+    CALL InterpolatePairScale &
+           ( HelmTable % PairTemperature, HelmTable % PairLogA0, &
+             HelmTable % PairDLogA0dT, Temperature, jT, &
+             A0, LogA0, dLogA0dT, d2LogA0dT2 )
+
+    IF( Density <= 0.0_DP .OR. A0 <= 0.0_DP )THEN
+      SignedYL = 0.0_DP
+      dYLdEta  = 0.0_DP
+      RETURN
+    END IF
+
+    Scale = rmu * A0 / Density
+    SignedYL = Scale * SINH( Eta )
+    dYLdEta  = Scale * COSH( Eta )
+
+  END SUBROUTINE ComputePairLeptonFraction
 
   SUBROUTINE EvaluatePairSymmetricExtension &
     ( HelmTable, Temperature, Density, SignedYL, LeptonGasState )
