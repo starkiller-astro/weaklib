@@ -213,8 +213,9 @@ CONTAINS
       LeptonGasState % s    = 0.0_dp
       LeptonGasState % dsdT = 0.0_dp
       LeptonGasState % dsdr = 0.0_dp
-
-      LeptonGasState % mu   = HelmTable % lepton_mass
+      
+      ! Maybe clipping to muon mass is numerically dangerous for detailed balance
+      LeptonGasState % mu   = 0.0_dp !HelmTable % lepton_mass. 
       RETURN
 
     ENDIF

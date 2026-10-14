@@ -581,14 +581,14 @@ CONTAINS
 
     ! IMD: Inverse Muon Decay (IMD) (Table I, 5a & 5b)
     CASE(33)  ! inverse muon decay (3->1)
-      lam1 = lam1_LFE ! LFE and IMD have the same lambdas
-      lam2 = lam2_LFE ! LFE and IMD have the same lambdas
-      lam3 = lam3_LFE ! LFE and IMD have the same lambdas
+      lam1 = lam1_LFC
+      lam2 = lam2_LFC
+      lam3 = lam3_LFC
 
     CASE(34)  ! inverse muon decay (3->1)
-      lam1 = lam1_LFC ! Same as above but now you switched places for neutrinos
-      lam2 = lam2_LFC ! Same as above but now you switched places for neutrinos
-      lam3 = lam3_LFC ! Same as above but now you switched places for neutrinos
+      lam1 = lam1_LFE
+      lam2 = lam2_LFE
+      lam3 = lam3_LFE
 
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
@@ -1692,7 +1692,10 @@ CONTAINS
         + Q*E1*(1.0d0 - mu)                                                        &
         * ( E1**3 - E1**2*E3*mu + E1*E3**2*(-2.0d0 + mu**2) + E3**3*mu )           &
         + Q**2 * ( E1**2*mu - E1*E3*(1.5d0 + 0.5d0*mu**2) + E3**2*mu )             &
-        + 0.5d0*E1*E3*(1.0d0 - mu**2) * (E1**2 - 2.0d0*E1*E3*mu + E3**2) * m2**2
+        - 0.5d0*E1*E3*(1.0d0 - mu**2) * (E1**2 - 2.0d0*E1*E3*mu + E3**2) * m2**2 
+    ! Last term in Lohs thesis (and therefore in the entire literature thereafter) 
+    ! has a plus sign. But it should be a minus sign. One can quickly verify this
+    ! using mathematica or sympy.
 
   END FUNCTION C1_f
 
