@@ -403,7 +403,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   REAL(DP) :: IjAP,tIjAP,IGPP,tIgPP,cplLAP,cplKAP,cplJAP,cplLPP,cplKPP,cplGPP
   REAL(DP) :: ampsq_ff0,ampsq_pseudo       
   REAL(DP) :: vb1,vc1,vb3,vc3,vg2,vg1,vg0,vgm1,vgm2,vh0,vh1,vh2
-  REAL(DP) :: dP,S2,S3,S4,S5,S6,S7,S8,S9
+  REAL(DP) :: deltaP,S2,S3,S4,S5,S6,S7,S8,S9
 
   Ampsq = 0.0d0
 
@@ -449,7 +449,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
 
   ! b^n - a^n = (b-a)*S_n with S_n = b*S_{n-1} + a^(n-1) (all terms
   ! positive, no cancellation for narrow windows)
-  dP = Pmax - Pmin
+  deltaP = Pmax - Pmin
   S2 = Pmax + Pmin
   S3 = Pmax*S2 + Pmin**2
   S4 = Pmax*S3 + Pmin**3
@@ -458,13 +458,13 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   S7 = Pmax*S6 + Pmin**6
   S8 = Pmax*S7 + Pmin**7
   S9 = Pmax*S8 + Pmin**8
-  PaD1  = dP
-  PaD3  = dP*S3
-  PaD5  = dP*S5
-  PaD7  = dP*S7
-  PaD9  = dP*S9
-  PaDm1 = -dP/(Pmax*Pmin)
-  PaDm3 = -dP*S3/(Pmax*Pmin)**3
+  PaD1  = deltaP
+  PaD3  = deltaP*S3
+  PaD5  = deltaP*S5
+  PaD7  = deltaP*S7
+  PaD9  = deltaP*S9
+  PaDm1 = -deltaP/(Pmax*Pmin)
+  PaDm3 = -deltaP*S3/(Pmax*Pmin)**3
 
   A = E1*E2f+0.5d0*(P1**2+P2**2)
   B = E3*E4f+0.5d0*(P3**2+P4**2)
@@ -483,18 +483,18 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
 
   IF( Pmax2 <= Pmin2 .OR. Pmin2 <= 0.0d0 ) RETURN
 
-  dP = Pmax2 - Pmin2
+  deltaP = Pmax2 - Pmin2
   S2 = Pmax2 + Pmin2
   S3 = Pmax2*S2 + Pmin2**2
   S4 = Pmax2*S3 + Pmin2**3
   S5 = Pmax2*S4 + Pmin2**4
   S6 = Pmax2*S5 + Pmin2**5
   S7 = Pmax2*S6 + Pmin2**6
-  PbD1  = dP
-  PbD3  = dP*S3
-  PbD5  = dP*S5
-  PbD7  = dP*S7
-  PbDm1 = -dP/(Pmax2*Pmin2)
+  PbD1  = deltaP
+  PbD3  = deltaP*S3
+  PbD5  = deltaP*S5
+  PbD7  = deltaP*S7
+  PbDm1 = -deltaP/(Pmax2*Pmin2)
 
   Ct = E1*E4f-0.5d0*(P1**2+P4**2)
   D = E2f*E3-0.5d0*(P2**2+P3**2)
@@ -521,7 +521,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
 
   IF( Pmax3 <= Pmin3 .OR. Pmin3 <= 0.0d0 ) RETURN
 
-  dP = Pmax3 - Pmin3
+  deltaP = Pmax3 - Pmin3
   S2 = Pmax3 + Pmin3
   S3 = Pmax3*S2 + Pmin3**2
   S4 = Pmax3*S3 + Pmin3**3
@@ -530,12 +530,12 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   S7 = Pmax3*S6 + Pmin3**6
   S8 = Pmax3*S7 + Pmin3**7
   S9 = Pmax3*S8 + Pmin3**8
-  PcD1  = dP
-  PcD3  = dP*S3
-  PcD5  = dP*S5
-  PcD7  = dP*S7
-  PcD9  = dP*S9
-  PcDm1 = -dP/(Pmax3*Pmin3)
+  PcD1  = deltaP
+  PcD3  = deltaP*S3
+  PcD5  = deltaP*S5
+  PcD7  = deltaP*S7
+  PcD9  = deltaP*S9
+  PcDm1 = -deltaP/(Pmax3*Pmin3)
 
   alp0 = (P1**2-P3**2)*(P2**2-P4**2)/4.0d0
   alp1 = E1*E2f + (P1**2+P2**2-P3**2-P4**2)/4.0d0
@@ -693,7 +693,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
         ! Pion pole |q| = sqrt(-ZAP) inside [Pmin3,Pmax3]: the closed forms
         ! are singular there, leave the pseudoscalar term at zero.
         IF( Pmin3 > sZAP .OR. Pmax3 < sZAP ) THEN
-        ! Inte1 = int_{Pmin3}^{Pmax3} dP/(P^2-ZAP), as a difference of logs
+        ! Inte1 = int_{Pmin3}^{Pmax3} deltaP/(P^2-ZAP), as a difference of logs
         ! (the arctanh addition formula fails if Pmax3*Pmin3 = ZAP)
         Inte1 = 0.5d0*( log(abs((Pmax3-sZAP)/(Pmax3+sZAP))) - log(abs((Pmin3-sZAP)/(Pmin3+sZAP))) )/sZAP
         Inte2 = -0.5d0*( Pmax3/(Pmax3**2-ZAP)-Pmin3/(Pmin3**2-ZAp) + Inte1 )/ZAp 
@@ -950,7 +950,7 @@ END SUBROUTINE Ebounds_D
 !  nonempty window. Extrema can only occur at branch stationary points
 !  (|q| = Enu, |q| = P2), at branch crossings (kinks of the min/max
 !  envelopes), or at window opening/closure points. Closure points and
-!  crossings are refined by bisection, with the analytic closure roots
+!  crossings are refined by regula falsi, with the analytic closure roots
 !  (Eqs. C11/C25) supplied by the caller as cheap breakpoint candidates.
 !  If the window never closes (possible for decay kinematics), the
 !  caller-supplied thermal cap q0_cap bounds q0 from above.
@@ -969,13 +969,18 @@ SUBROUTINE Q0_Window_Envelope( s3, Enu, P2, Mass3, Mass4, U4mE2, qRootsIn, nRoot
   !$ACC ROUTINE SEQ
 #endif
 
-  INTEGER , PARAMETER :: nCandMax = 8, nScanMax = 2*nCandMax + 2, nBisect = 60
-  REAL(DP) :: qCand(nCandMax), qScan(nScanMax)
-  LOGICAL  :: allowedScan(nScanMax), sgnScan(nScanMax), sgnA
-  REAL(DP) :: q_big, qa, qb, qm, q_eval, tmpq
+  ! Sign changes are refined by Illinois (modified regula falsi) on the
+  ! real-valued gap functions, stopping at |qb-qa| <= RootRelTolQ*q_big;
+  ! nRootIterMax only caps pathological cases (60 = old bisection cost)
+  INTEGER , PARAMETER :: nCandMax = 8, nScanMax = 2*nCandMax + 2, nRootIterMax = 60
+  REAL(DP), PARAMETER :: RootRelTolQ = 1.0d-13
+  REAL(DP) :: qCand(nCandMax), qScan(nScanMax), gScan(3,nScanMax)
+  LOGICAL  :: allowedScan(nScanMax)
+  REAL(DP) :: q_big, q_tol, qa, qb, qm, q_eval, tmpq
   INTEGER  :: i, j, k, nCand, nScan
 
   q_big = P2 + Enu + MAX(0.0d0, -U4mE2) + ABS(q0_cap) + 10.0d0
+  q_tol = RootRelTolQ*q_big
 
   ! Candidate |q| breakpoints: branch stationary points and closure roots
   nCand = 0
@@ -1014,34 +1019,22 @@ SUBROUTINE Q0_Window_Envelope( s3, Enu, P2, Mass3, Mass4, U4mE2, qRootsIn, nRoot
   xq0_min =  HUGE(1.0d0)
   xq0_max = -HUGE(1.0d0)
   DO i = 1, nScan
-    allowedScan(i) = ( SignTest(1, qScan(i)) )
+    CALL Gaps( qScan(i), gScan(:,i) )
+    allowedScan(i) = ( gScan(1,i) >= 0.0d0 )
     IF( allowedScan(i) ) THEN
       found = .TRUE.
       CALL UpdateEnvelope( qScan(i) )
     END IF
   END DO
 
-  ! Refine sign-change points by bisection and include them:
+  ! Refine sign-change points of the gap functions and include them:
   !   k = 1: window opening/closure (gap = WinHi - WinLo)
   !   k = 2: lower-branch crossing  (qL_min - qH_min), kink of WinLo
   !   k = 3: upper-branch crossing  (qL_max - qH_max), kink of WinHi
   DO k = 1, 3
-    DO i = 1, nScan
-      sgnScan(i) = SignTest(k, qScan(i))
-    END DO
     DO i = 1, nScan-1
-      IF( sgnScan(i) .NEQV. sgnScan(i+1) ) THEN
-        qa   = qScan(i)
-        qb   = qScan(i+1)
-        sgnA = sgnScan(i)
-        DO j = 1, nBisect
-          qm = 0.5d0*(qa + qb)
-          IF( SignTest(k, qm) .EQV. sgnA ) THEN
-            qa = qm
-          ELSE
-            qb = qm
-          END IF
-        END DO
+      IF( (gScan(k,i) >= 0.0d0) .NEQV. (gScan(k,i+1) >= 0.0d0) ) THEN
+        CALL FindSignChange( k, qScan(i), qScan(i+1), gScan(k,i), gScan(k,i+1), qa, qb )
         IF( k == 1 ) THEN
           ! take the endpoint on the allowed side of the boundary
           IF( allowedScan(i) ) THEN
@@ -1054,7 +1047,7 @@ SUBROUTINE Q0_Window_Envelope( s3, Enu, P2, Mass3, Mass4, U4mE2, qRootsIn, nRoot
         ELSE
           ! envelope kink: include only if inside the allowed set
           qm = 0.5d0*(qa + qb)
-          IF( SignTest(1, qm) ) THEN
+          IF( Gap(1, qm) >= 0.0d0 ) THEN
             found = .TRUE.
             CALL UpdateEnvelope( qm )
           END IF
@@ -1102,10 +1095,25 @@ CONTAINS
     qHmax = SQRT( (P2 + q)**2 + Mass4**2 ) + U4mE2
   END SUBROUTINE Branches
 
-  FUNCTION SignTest( kind, q ) RESULT( res )
+  SUBROUTINE Gaps( q, g )
+    REAL(DP), INTENT(IN)  :: q
+    REAL(DP), INTENT(OUT) :: g(3)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP) :: qLmin, qLmax, qHmin, qHmax
+    CALL Branches( q, qLmin, qLmax, qHmin, qHmax )
+    g(1) = MIN(qLmax,qHmax) - MAX(qLmin,qHmin)
+    g(2) = qLmin - qHmin
+    g(3) = qLmax - qHmax
+  END SUBROUTINE Gaps
+
+  FUNCTION Gap( kind, q ) RESULT( res )
     INTEGER , INTENT(IN) :: kind
     REAL(DP), INTENT(IN) :: q
-    LOGICAL :: res
+    REAL(DP) :: res
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -1114,11 +1122,49 @@ CONTAINS
     REAL(DP) :: qLmin, qLmax, qHmin, qHmax
     CALL Branches( q, qLmin, qLmax, qHmin, qHmax )
     SELECT CASE( kind )
-    CASE(1);  res = ( MIN(qLmax,qHmax) - MAX(qLmin,qHmin) >= 0.0d0 )
-    CASE(2);  res = ( qLmin - qHmin >= 0.0d0 )
-    CASE DEFAULT;  res = ( qLmax - qHmax >= 0.0d0 )
+    CASE(1);  res = MIN(qLmax,qHmax) - MAX(qLmin,qHmin)
+    CASE(2);  res = qLmin - qHmin
+    CASE DEFAULT;  res = qLmax - qHmax
     END SELECT
-  END FUNCTION SignTest
+  END FUNCTION Gap
+
+  SUBROUTINE FindSignChange( kind, qa0, qb0, fa0, fb0, qa, qb )
+    ! Illinois regula falsi on Gap(kind,q) over [qa0,qb0], qa0 < qb0, with
+    ! (fa0 >= 0) .NEQV. (fb0 >= 0). Returns a bracket [qa,qb] of the sign
+    ! change, qa on the side of fa0 and qb on the side of fb0 (same
+    ! convention as the plain bisection it replaces).
+    INTEGER , INTENT(IN)  :: kind
+    REAL(DP), INTENT(IN)  :: qa0, qb0, fa0, fb0
+    REAL(DP), INTENT(OUT) :: qa, qb
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP) :: fa, fb, qm, fm
+    INTEGER  :: it, side
+    LOGICAL  :: sgnA
+    qa = qa0;  qb = qb0
+    fa = fa0;  fb = fb0
+    sgnA = ( fa0 >= 0.0d0 )
+    side = 0
+    DO it = 1, nRootIterMax
+      IF( qb - qa <= q_tol ) EXIT
+      qm = ( qa*fb - qb*fa )/( fb - fa )
+      ! keep strictly inside the bracket (fa = 0 or round-off at the ends)
+      IF( .NOT. ( qm > qa .AND. qm < qb ) ) qm = 0.5d0*(qa + qb)
+      fm = Gap( kind, qm )
+      IF( (fm >= 0.0d0) .EQV. sgnA ) THEN
+        qa = qm;  fa = fm
+        IF( side == -1 ) fb = 0.5d0*fb   ! Illinois: unstick the qb end
+        side = -1
+      ELSE
+        qb = qm;  fb = fm
+        IF( side == +1 ) fa = 0.5d0*fa   ! Illinois: unstick the qa end
+        side = +1
+      END IF
+    END DO
+  END SUBROUTINE FindSignChange
 
   SUBROUTINE UpdateEnvelope( q )
     REAL(DP), INTENT(IN) :: q
