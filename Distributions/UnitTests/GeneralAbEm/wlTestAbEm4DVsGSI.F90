@@ -1,4 +1,20 @@
-PROGRAM wlTestGSI
+PROGRAM wlTestAbEm4DVsGSI
+
+  ! Compares the weaklib 2D (Opacity_CC_2D) and 4D CUBA (Opacity_CC_4D)
+  ! kernels with the original GSI 2D/4D codes. Requires USE_CUBA=TRUE.
+  !
+  ! Units: weaklib kernels return cm^-1 (reactions 1-3) and
+  ! (s cm^3 MeV)^-1 (reaction 4). The GSI codes return km^-1 for
+  ! reactions 1-3 (converted here) and (s cm^3 MeV)^-1 for reaction 4
+  ! (no conversion).
+  !
+  ! NOTE: Integration_D in wlSemiLeptonicOpacityModule4D currently applies
+  ! an extra 1/1.0d5 to the reaction-4 emissivity, so 4D-vs-GSI4D for
+  ! reaction 4 is expected to be off by a factor 1e-5 until that is fixed.
+  !
+  ! The GSI codes return G <= 0 for reactions 3,4 (|M|^2 clipped before the
+  ! crossing sign). Sign mismatches are counted and reported; relative
+  ! errors are computed on absolute values where both are nonzero.
 
   USE wlKindModule, ONLY: dp
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
@@ -27,6 +43,10 @@ PROGRAM wlTestGSI
 
   REAL(DP) :: t1, t2, t_start, t_end, t_2D, t_4D
   REAL(DP) :: t_2D_OLD, t_4D_OLD, err
+  REAL(DP) :: errMax2D(nApprox, nOp), errMax4D(nApprox, nOp)
+  INTEGER  :: nSign2D(nApprox, nOp), nSign4D(nApprox, nOp)
+  INTEGER  :: nNeg2D(nApprox, nOp)
+  REAL(DP), PARAMETER :: km_to_cm_inv = 1.0d-5
 
   ! GSI Constants, they will change the results!
   REAL(DP) , PARAMETER :: pi_GSI = 3.1415927d0, Gw_MeV_GSI = 1.166d-11, &
@@ -77,6 +97,12 @@ PROGRAM wlTestGSI
   OpaA_4D = 0.d0
   OpaA_4D_OLD = 0.d0
 
+  errMax2D = 0.0d0
+  errMax4D = 0.0d0
+  nSign2D  = 0
+  nSign4D  = 0
+  nNeg2D   = 0
+
   nDone = 0
   lastPrint = -1
   total = 4 * 4 * nThermoPoints
@@ -115,7 +141,8 @@ PROGRAM wlTestGSI
         call Opacity_CC_2D_GSI(j-1, k, NP, EnuA, OpaA_2D_OLD(:, i, j, k), &
                         xTem, cheml, chemn, chemp, massl, xMassn, xMassp, xUn, xUp)
         CALL CPU_TIME(t2)
-        OpaA_2D_OLD(:, i, j, k) = OpaA_2D_OLD(:, i, j, k) / 1.0d5 ! 1/km to 1/cm
+        ! 1/km to 1/cm for opacities; emissivity (k=4) is already in (s cm^3 MeV)^-1
+        IF (k <= 3) OpaA_2D_OLD(:, i, j, k) = OpaA_2D_OLD(:, i, j, k) * km_to_cm_inv
         t_2D_OLD = t_2D_OLD + t2 - t1
 
         CALL CPU_TIME(t1)
@@ -130,17 +157,22 @@ PROGRAM wlTestGSI
         call Opacity_CC_4D_GSI(j-1, k, NP, EnuA, OpaA_4D_OLD(:, i, j, k), &
                           xTem, cheml, chemn, chemp, massl, xMassn, xMassp, xUn, xUp)
         CALL CPU_TIME(t2)
-        OpaA_4D_OLD(:, i, j, k) = OpaA_4D_OLD(:, i, j, k) / 1.0d5 ! 1/km to 1/cm
+        ! 1/km to 1/cm for opacities; emissivity (k=4) is already in (s cm^3 MeV)^-1
+        IF (k <= 3) OpaA_4D_OLD(:, i, j, k) = OpaA_4D_OLD(:, i, j, k) * km_to_cm_inv
         t_4D_OLD = t_4D_OLD + t2 - t1
 
         ! Check 2D
-        Error = OpaA_2D_OLD(:, i, j, k) - OpaA_2D(:, i, j, k)
+        Error = ABS(OpaA_2D_OLD(:, i, j, k)) - ABS(OpaA_2D(:, i, j, k))
         err = 0.0d0
         DO l=1,NP
-          IF (OpaA_2D_OLD(l, i, j, k) > 0.0d0 .and. OpaA_2D(l, i, j, k) > 0.0d0) THEN
-            err = MAX( err, ABS(Error(l))/OpaA_2D_OLD(l, i, j, k) )
+          IF (OpaA_2D_OLD(l, i, j, k) /= 0.0d0 .and. OpaA_2D(l, i, j, k) /= 0.0d0) THEN
+            err = MAX( err, ABS(Error(l))/ABS(OpaA_2D_OLD(l, i, j, k)) )
           ENDIF
+          IF ( SignMismatch(OpaA_2D(l, i, j, k), OpaA_2D_OLD(l, i, j, k)) ) &
+            nSign2D(j, k) = nSign2D(j, k) + 1
+          IF ( OpaA_2D(l, i, j, k) < 0.0d0 ) nNeg2D(j, k) = nNeg2D(j, k) + 1
         END DO
+        errMax2D(j, k) = MAX( errMax2D(j, k), err )
 
         IF (err > 1.0d-5) THEN
           WRITE(*,*)
@@ -152,24 +184,22 @@ PROGRAM wlTestGSI
 
         IF ( ANY(OpaA_2D(:, i, j, k) < 0.0d0) ) THEN
           WRITE(*,*)
-          WRITE(*,*) '2D Error large', err
-          WRITE(*,*) '2D OLD', OpaA_2D_OLD(:, i, j, k)
+          WRITE(*,*) '2D NEW negative'
           WRITE(*,*) '2D NEW', OpaA_2D(:, i, j, k)
           WRITE(*,*) i, j, k
         ENDIF
 
-        Error = OpaA_4D_OLD(:, i, j, k) - OpaA_4D(:, i, j, k)
+        ! Check 4D
+        Error = ABS(OpaA_4D_OLD(:, i, j, k)) - ABS(OpaA_4D(:, i, j, k))
         err = 0.0d0
         DO l=1,NP
-          IF (OpaA_4D_OLD(l, i, j, k) > 0.0d0) THEN
-            err = MAX( err, ABS(Error(l))/OpaA_4D_OLD(l, i, j, k) )
+          IF (OpaA_4D_OLD(l, i, j, k) /= 0.0d0 .and. OpaA_4D(l, i, j, k) /= 0.0d0) THEN
+            err = MAX( err, ABS(Error(l))/ABS(OpaA_4D_OLD(l, i, j, k)) )
           ENDIF
+          IF ( SignMismatch(OpaA_4D(l, i, j, k), OpaA_4D_OLD(l, i, j, k)) ) &
+            nSign4D(j, k) = nSign4D(j, k) + 1
         END DO
-        ! IF (err > 5.0d-3) THEN
-        !   WRITE(*,*)
-        !   WRITE(*,*) '4D Error large', err
-        !   WRITE(*,*) i, j, k
-        ! ENDIF
+        errMax4D(j, k) = MAX( errMax4D(j, k), err )
 
       END DO
     END DO
@@ -182,6 +212,17 @@ PROGRAM wlTestGSI
   WRITE(*,'(A,f10.3)')   ' NEW 2D kernels       :', t_2D
   WRITE(*,'(A,f10.3)')   ' OLD 4D kernels       :', t_4D_old
   WRITE(*,'(A,f10.3)')   ' NEW 4D kernels       :', t_4D
+
+  WRITE(*,'(/,A)') ' Max rel. error on |values| (both nonzero) and sign mismatches'
+  WRITE(*,'(A,I8)') ' (sign mismatch = W>0 & G<=0, W<=0 & G>0, or opposite signs); samples per row:', &
+    NP * nThermoPoints
+  WRITE(*,'(A)') ' Reac Corr |  2D-vs-GSI2D  SignMis  W2D<0 |  4D-vs-GSI4D  SignMis'
+  DO k = 1, nOp
+    DO j = 1, nApprox
+      WRITE(*,'(2I5,A,ES13.4,2I8,A,ES13.4,I8)') k, j-1, ' |', errMax2D(j, k), &
+        nSign2D(j, k), nNeg2D(j, k), ' |', errMax4D(j, k), nSign4D(j, k)
+    END DO
+  END DO
   
   OPEN(200, file='OpaA_2D.bin', status='replace', form='unformatted', access='stream')
   WRITE(200) OpaA_2D
@@ -203,6 +244,15 @@ PROGRAM wlTestGSI
   DEALLOCATE(OpaA_2D, OpaA_2D_OLD, OpaA_4D, OpaA_4D_OLD)
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
-END PROGRAM wlTestGSI
+CONTAINS
+
+  LOGICAL FUNCTION SignMismatch(a, b)
+    REAL(DP), INTENT(IN) :: a, b
+    SignMismatch = ( a * b < 0.0d0 ) .OR. &
+                   ( a > 0.0d0 .AND. b <= 0.0d0 ) .OR. &
+                   ( a <= 0.0d0 .AND. b > 0.0d0 )
+  END FUNCTION SignMismatch
+
+END PROGRAM wlTestAbEm4DVsGSI
 
 

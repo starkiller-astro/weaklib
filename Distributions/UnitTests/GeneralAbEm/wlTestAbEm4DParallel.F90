@@ -1,4 +1,4 @@
-PROGRAM wlTestParallel4DGSI
+PROGRAM wlTestAbEm4DParallel
 
   USE omp_lib
   USE wlKindModule, ONLY: dp
@@ -11,6 +11,7 @@ PROGRAM wlTestParallel4DGSI
   implicit none
 
   INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4
+  INTEGER, PARAMETER :: nPointsMax = 100
   REAL(DP), PARAMETER :: masse = me , massm = mmu
 
   REAL(DP) :: EnuA(NP)
@@ -38,14 +39,16 @@ PROGRAM wlTestParallel4DGSI
   read(123,*)
 
   ! You can also set nThermoPoints to a smaller value for quick checks
-  nThermoPoints = 100
+  nThermoPoints = MIN(nThermoPoints, nPointsMax)
   ALLOCATE(OpaA_4D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(T(nThermoPoints), Rho(nThermoPoints), Ye(nThermoPoints), Ym(nThermoPoints))
   ALLOCATE(Mue(nThermoPoints), Mum(nThermoPoints), Mun(nThermoPoints), Mup(nThermoPoints))
   ALLOCATE(Un(nThermoPoints), Up(nThermoPoints), EffMassn(nThermoPoints), EffMassp(nThermoPoints))
 
+  ! Columns: T Rho Ye Ym Mue Mum Mun Mup Un Up M*n M*p
   DO i = 1, nThermoPoints
-     read(123,*) T(i), Rho(i), Ye(i), Ym(i), Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i)
+     read(123,*) T(i), Rho(i), Ye(i), Ym(i), Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i), &
+        EffMassn(i), EffMassp(i)
   END DO
   CLOSE(123)
 
@@ -128,6 +131,6 @@ PROGRAM wlTestParallel4DGSI
   CLOSE(200)
 
   DEALLOCATE(OpaA_4D)
-  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
+  DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
-END PROGRAM wlTestParallel4DGSI
+END PROGRAM wlTestAbEm4DParallel

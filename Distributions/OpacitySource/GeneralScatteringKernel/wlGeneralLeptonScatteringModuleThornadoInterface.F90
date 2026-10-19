@@ -308,6 +308,9 @@ CONTAINS
     REAL(DP), DIMENSION(nMassPairMax) :: MPm2, MPm4
     LOGICAL , DIMENSION(nMassPairMax) :: MPisIMD
 
+    ! A second Init without Finalize would re-ALLOCATE allocated arrays
+    IF ( ALLOCATED(E1_Grid) ) CALL FinalizeGeneralScatteringKernels()
+
     nThetaScattering = nTheta
     nE1_Grid         = nE1
     nE3_Grid         = nE3
@@ -350,6 +353,11 @@ CONTAINS
         WRITE(*,*) 'InitGeneralScatteringKernels: empty iProcessList_Option.'
         STOP
       ENDIF
+      IF ( nProcessSel > nProcessTotal ) THEN
+        WRITE(*,*) 'InitGeneralScatteringKernels: iProcessList_Option has more than ', &
+                   nProcessTotal, ' entries.'
+        STOP
+      ENDIF
       tmpList(1:nProcessSel) = iProcessList_Option(:)
 
     ELSE IF ( PRESENT(iGroupList_Option) ) THEN
@@ -358,6 +366,11 @@ CONTAINS
       DO idx = 1, SIZE(iGroupList_Option)
         iGroup = iGroupList_Option(idx)
         CALL ProcessesInGroup( iGroup, groupBuf, nInGroup )
+        IF ( nProcessSel + nInGroup > nProcessTotal ) THEN
+          WRITE(*,*) 'InitGeneralScatteringKernels: too many (or repeated) groups in ', &
+                     'iGroupList_Option.'
+          STOP
+        ENDIF
         DO iRow = 1, nInGroup
           nProcessSel = nProcessSel + 1
           tmpList(nProcessSel) = groupBuf(iRow)
@@ -685,8 +698,9 @@ CONTAINS
           C_Scat(iE1, iE3, iTh, :, :, :) = C_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
 
           ! ---------------- IMD coefficients --------------------------------
-          ! The "1" set is process 33 (nu_bar_e has energy E1), the "2" set is
-          ! its E1 <-> E3 swap (process 34). Particle 2 is the electron in
+          ! The "1" set enters with lam1, i.e. it is the one used by process 34
+          ! (lam1_LFE /= 0); the "2" set (E1 <-> E3 swap) enters with lam2 and is
+          ! used by process 33 (lam2_LFC /= 0). Particle 2 is the electron in
           ! BOTH orientations. C(3) is never needed since lam3 is always zero.
           A_IMD(iE1, iE3, iTh, 1) = A1_f(  E1, -E3, costh )        / (16.0d0 * pi * DeltaA5)
           A_IMD(iE1, iE3, iTh, 2) = A1_f(  E3, -E1, costh )        / (16.0d0 * pi * DeltaA5)
@@ -705,10 +719,14 @@ CONTAINS
 
             IF ( MPisIMD(idx) ) THEN
 
-              ! --- IMD (Guo Eqs. 16-17): all three guards are genuinely live
-              k_val    = Q / EEOneMinusMu                                     ! Guo Eq. 5
-              disc     = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / EEOneMinusMu     ! Guo Eq. 17
-              IsActive = ( k_val >= k0_IMD ) .AND. ( disc >= 0.0d0 )           ! Guo Eq. 16
+              ! --- IMD (Guo Eqs. 16-17): k diverges at mu -> 1 (and DeltaA -> 0
+              ! is the collinear case); guard before dividing, as in the scattering branch
+              IsActive = ( DeltaA >= 1.0d-10 ) .AND. ( OneMinusMu >= 1.0d-10 )
+              IF ( IsActive ) THEN
+                k_val    = Q / EEOneMinusMu                                   ! Guo Eq. 5
+                disc     = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / EEOneMinusMu   ! Guo Eq. 17
+                IsActive = ( k_val >= k0_IMD ) .AND. ( disc >= 0.0d0 )         ! Guo Eq. 16
+              ENDIF
 
               IF ( IsActive ) THEN
                 Em = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) ) ! Guo Eq. 17
@@ -1617,7 +1635,7 @@ CONTAINS
                   lam2(idx) * integrand0II(iTrueCase)
     END DO
 
-    Phi0(:) = Phi0(:) / E1**4 * 4066026.8989943061
+    Phi0(:) = Phi0(:) / E1**4 * 4066026.8989943061_DP
 
   END SUBROUTINE CalculateAllPhi0_collinear
 

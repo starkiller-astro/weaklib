@@ -29,13 +29,13 @@ clobber: clean
 
 wlCalculateSoundSpeed.o: \
   wlKindModule.o \
-  wlExtNumericalModule.o \
   wlEquationOfStateTableModule.o \
   wlIOModuleHDF.o \
   wlEOSIOModuleHDF.o \
   wlLeptonEOSTableModule.o \
   wlHelmIOModuleHDF.o \
-  wlHelmIOModuleHDF.o \
   wlLeptonPhotonGasEOS.o \
-  wlExtPhysicalConstantsModule.o \
-  wlSoundSpeedModule.o
+  wlInterpolationModule.o \
+  wlInterpolationUtilitiesModule.o \
+  wlSoundSpeedModule.o \
+  wlEOSComponentsSeparateInversionModule.o

@@ -3,7 +3,22 @@ https://git.gsi.de/nucastro_archive/supernovamuonicrates
 
 It is adapted and slightly modified.
 
-It requires the library CUBA (see README in the GitLab routines)
+Library modules in this directory:
+  wlSemiLeptonicOpacityModule2D.F90             2D Gauss-Legendre kernels (no CUBA)
+  wlSemiLeptonicOpacityIntegrationModule2D.F90  two-phase (GPU-oriented) driver
+                                                for the 2D kernels (no CUBA)
+  wlSemiLeptonicOpacityModule4D.F90             4D kernels, require CUBA
+                                                (only built with USE_CUBA=TRUE)
+
+Tests: the tests and the original GSI reference routines
+(Opacity_SemiLep_2D_GSI.f90, Opacity_SemiLep_4D_GSI.f90, ThermoConditions.dat)
+have moved to
+
+  Distributions/UnitTests/GeneralAbEm
+
+see the README.md there (targets: all / cuba / compare).
+
+The 4D routines require the library CUBA (see README in the GitLab routines)
 
 Work In Progress: Parallelization
 Right now it parallelizes very poorly. I have not tried to use CUBA 
@@ -16,10 +31,11 @@ Right now the way I am testing parallelization is to build CUBA with:
 ./configure
 make
 
-Then you have to link the libcuba.a library by setting the CUBA_PATH in the
-Makefile
+Then point CUBA_DIR to the directory containing libcuba.a
+(e.g. export CUBA_DIR=$HOME/installed_packages/Cuba-4.2.2) and build with
+USE_CUBA=TRUE (e.g. 'make cuba USE_CUBA=TRUE' in UnitTests/GeneralAbEm/Executables).
 
-When you run the ./test_parallel, you have to also set 
+When you run the parallel 4D test (wlTestAbEm4DParallel), you have to also set 
 export CUBACORES=0
 export CUBACORESMAX=0
 to force CUBA to use only one thread. This speeds up the computation significantly,
@@ -34,3 +50,10 @@ Other doubts/questions
 If you compile with -fdefault-real-8 it should be fine, but it is still kinda weird to not
 do it explicitly. So in my routines I changed all of them
 - Not sure what Tfac is. but it is 100 in the 4D routines and 150 in the 2D routines...
+- The threadprivate declaration in wlSemiLeptonicOpacityModule4D.F90 is guarded by
+  '#if defined(USE_OMP)', but the build system defines WEAKLIB_OMP (not USE_OMP), so the
+  module globals are currently NOT threadprivate and the OpenMP 4D loop is racy. This
+  may be part of the poor/negative scaling seen in wlTestAbEm4DParallel.
+- Integration_D in wlSemiLeptonicOpacityModule4D.F90 divides the reaction-4 emissivity
+  by an extra 1.0d5 (it is already in (s cm^3 MeV)^-1), so 4D emissivities are 1e-5 too
+  small compared to the 2D module and the GSI code (seen in wlTestAbEm4DVsGSI).

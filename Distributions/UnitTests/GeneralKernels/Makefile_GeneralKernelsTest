@@ -10,6 +10,7 @@ include $(WEAKLIB_DIR)/TableCreator/Build/Makefile_WeakLib_ObjectFiles
 all: wlTestElasticOpacity \
      wlTestFig56Guo \
      wlTestFig2Fischer \
+     wlTestFig5Fischer \
      wlTestGeneralKernelVsTable \
      wlTestGeneralKernelNMS \
      wlTestNLSOnRealTrajectory \
@@ -27,6 +28,12 @@ wlTestFig2Fischer: \
 	$(weaklib) wlTestFig2Fischer.o
 	$(FLINKER) $(FLAGS) -o wlTestFig2Fischer_$(MACHINE) \
 	$(weaklib) wlTestFig2Fischer.o \
+	$(LIBRARIES)
+
+wlTestFig5Fischer: \
+	$(weaklib) wlTestFig5Fischer.o
+	$(FLINKER) $(FLAGS) -o wlTestFig5Fischer_$(MACHINE) \
+	$(weaklib) wlTestFig5Fischer.o \
 	$(LIBRARIES)
 
 wlTestFig56Guo: \

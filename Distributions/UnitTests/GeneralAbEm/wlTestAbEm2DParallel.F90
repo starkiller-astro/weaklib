@@ -1,4 +1,4 @@
-PROGRAM wlTestParallel2DGSI
+PROGRAM wlTestAbEm2DParallel
 
   USE omp_lib
   USE wlKindModule, ONLY: dp
@@ -17,6 +17,7 @@ PROGRAM wlTestParallel2DGSI
   implicit none
 
   INTEGER, PARAMETER :: NP = 60, nOp = 4, nApprox = 4, nE_2D = 40
+  INTEGER, PARAMETER :: nPointsMax = 200 ! up to 1000 in ThermoConditions.dat (~5 min on 4 threads)
   REAL(DP), PARAMETER :: masse = me , massm = mmu
 
   REAL(DP) :: EnuA(NP)
@@ -50,7 +51,7 @@ PROGRAM wlTestParallel2DGSI
   read(123,*)
 
   ! You can also set nThermoPoints to a smaller value for quick checks
-  nThermoPoints = 1000
+  nThermoPoints = MIN(nThermoPoints, nPointsMax)
   ALLOCATE(OpaA_2D(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(OpaA_2D_parallel(NP, nThermoPoints, nApprox, nOp))
   ALLOCATE(OpaA_2D_wrapped(NP, nThermoPoints, nApprox, nOp))
@@ -62,8 +63,10 @@ PROGRAM wlTestParallel2DGSI
   ALLOCATE(xa(nE_2D))
   ALLOCATE(wxa(nE_2D))
 
+  ! Columns: T Rho Ye Ym Mue Mum Mun Mup Un Up M*n M*p
   DO i = 1, nThermoPoints
-     read(123,*) T(i), Rho(i), Ye(i), Ym(i), Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i)
+     read(123,*) T(i), Rho(i), Ye(i), Ym(i), Mue(i), Mum(i), Mun(i), Mup(i), Un(i), Up(i), &
+        EffMassn(i), EffMassp(i)
   END DO
   CLOSE(123)
 
@@ -257,8 +260,9 @@ PROGRAM wlTestParallel2DGSI
   ! WRITE(200) OpaA_2D
   ! CLOSE(200)
 
-  DEALLOCATE(OpaA_2D, OpaA_2D_collapsed)
+  DEALLOCATE(OpaA_2D, OpaA_2D_parallel, OpaA_2D_wrapped, OpaA_2D_collapsed)
+  DEALLOCATE(Store2DIntegral, xa, wxa)
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
-END PROGRAM wlTestParallel2DGSI
+END PROGRAM wlTestAbEm2DParallel
 

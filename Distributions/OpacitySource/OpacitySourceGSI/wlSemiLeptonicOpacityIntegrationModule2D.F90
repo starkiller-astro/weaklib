@@ -80,7 +80,7 @@ MODULE wlSemiLeptonicOpacityIntegrationModule2D
 
   ! ---- phase-1 output: one E2 quadrature row
   TYPE, PUBLIC :: CC2D_RowData
-    REAL(DP) :: E2 = 0.0d0, wE2 = 0.0d0, f2 = 0.0d0
+    REAL(DP) :: E2 = 0.0d0, wE2 = 0.0d0, f2 = 0.0d0, b2 = 0.0d0   ! b2 = 1 - f2
     REAL(DP) :: E3_min = 0.0d0, E3_max = 0.0d0
     LOGICAL  :: HasWindow = .FALSE.
   END TYPE CC2D_RowData
@@ -217,7 +217,8 @@ SUBROUTINE CC2D_RowSetup( CD, NodeE2, WeightE2, RD )
 
   E2     = NodeE2*(CD%E2_max - CD%E2_min) + CD%E2_min
   RD%wE2 = WeightE2*(CD%E2_max - CD%E2_min)
-  P2     = SQRT( (E2 - CD%U2)**2 - CD%Mass2**2 )
+  P2     = SQRT( MAX( (E2 - CD%U2)**2 - CD%Mass2**2, 0.0d0 ) )
+  E2     = SQRT( P2**2 + CD%Mass2**2 ) + CD%U2   ! on-shell E2 consistent with P2
 
   IF( CD%ReactionIndex <= 2 ) THEN
     CALL Ebounds( E2, CD%Enu, CD%T, P2, CD%Mass2, CD%Mass3, CD%Mass4, CD%U2, CD%U4, &
@@ -233,6 +234,7 @@ SUBROUTINE CC2D_RowSetup( CD, NodeE2, WeightE2, RD )
 
   RD%E2        = E2
   RD%f2        = FD( E2, CD%Mu2, CD%T )
+  RD%b2        = FD( CD%Mu2, E2, CD%T )   ! 1 - f2 without cancellation
   RD%HasWindow = ( RD%E3_max - RD%E3_min > 0.0d0 )
 
 END SUBROUTINE CC2D_RowSetup
@@ -253,7 +255,7 @@ SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res )
   !$ACC ROUTINE SEQ
 #endif
 
-  REAL(DP) :: E3, wE3, E4, xamp, xf3, xf4
+  REAL(DP) :: E3, wE3, E4, xamp
 
   res = 0.0d0
   IF( .NOT. RD%HasWindow ) RETURN
@@ -271,16 +273,14 @@ SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res )
                      CD%ReactionIndex, CD%IncludeCorrections, CD%Coeffs, xamp )
   END IF
 
-  xf3 = FD( E3, CD%Mu3, CD%T )
-  xf4 = FD( E4, CD%Mu4, CD%T )
-
+  ! 1 - f_k is evaluated as FD(mu_k, E_k, T) (no cancellation)
   SELECT CASE(CD%ReactionIndex)
   CASE (1, 2)   ! captures
-    res = RD%f2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*RD%wE2*wE3/CD%Enu**2
+    res = RD%f2*FD( CD%Mu3, E3, CD%T )*FD( CD%Mu4, E4, CD%T )*xamp*RD%wE2*wE3/CD%Enu**2
   CASE (3)      ! inverse neutron decay
-    res = RD%f2*xf3*(1.0d0-xf4)*xamp*RD%wE2*wE3/CD%Enu**2
+    res = RD%f2*FD( E3, CD%Mu3, CD%T )*FD( CD%Mu4, E4, CD%T )*xamp*RD%wE2*wE3/CD%Enu**2
   CASE (4)      ! neutron decay (*neutrino blocking not included*)
-    res = (1.0d0-RD%f2)*(1.0d0-xf3)*xf4*xamp*RD%wE2*wE3/CD%Enu**2
+    res = RD%b2*FD( CD%Mu3, E3, CD%T )*FD( E4, CD%Mu4, CD%T )*xamp*RD%wE2*wE3/CD%Enu**2
   END SELECT
 
 END SUBROUTINE CC2D_NodeKernel

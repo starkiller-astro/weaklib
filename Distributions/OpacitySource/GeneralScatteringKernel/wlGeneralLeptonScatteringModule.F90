@@ -42,8 +42,8 @@
 !!!
 !!! I_s integrals can be computed using GL integration, polylogarithm, or Fukushima (2015) formulae
 !!!
-!!! Units: R_out/R_in in MeV^-4 (natural units hbar=c=1 absorbed throughout).
-!!!   Opacity: chi [cm^-1] = (1/(2*pi*hbarc)^3) * integral R_out*E3^2 dE3 d(costh)
+!!! Units: R_out/R_in in MeV^-2 (natural units hbar=c=1 absorbed throughout).
+!!!   Opacity: chi [cm^-1] = 2*pi/((2*pi)^3*hbarc) * integral R_out*E3^2 dE3 d(costh)  (Guo Eq. 12)
 !!!
 !!! nE3:      GL points for E3 energy integral in GeneralScatteringOpacity (default 32)
 !!! nTheta: GL points for costheta integral in GeneralScatteringOpacity (default 8)
@@ -55,8 +55,7 @@ MODULE wlGeneralLeptonScatteringModule
   USE wlEosConstantsModule, ONLY: &
     pi, Gw_MeV, hbarc, sin2W, me, cvel
   USE wlPolylogModule, ONLY: &
-    Fermi_Dirac_Integrals, &
-    Init_Polylogarithms 
+    Fermi_Dirac_Integrals
   USE wlFukushimaFermiDiracIntegralsModule, ONLY: &
     F0z_Fukushima, &
     F1z_Fukushima, &
@@ -618,7 +617,7 @@ CONTAINS
   !   Appears in collision integral increasing F_{nu_l2}(E1).
   !
   !   Detailed balance (Guo Eq. 13 / Fischer Eq. B29):
-  !     R_in(E1,E3) = R_out(E1,E3) * exp((E1-E3+xMu_l2-xMu_l4)/T)
+  !     R_in(E1,E3) = R_out(E1,E3) * exp((E3-E1-xMu_l2+xMu_l4)/T)
   !
   !  Inputs:
   !    E1        -- incoming nu_l2 energy [MeV]
@@ -677,13 +676,19 @@ CONTAINS
       END DO
       
     ENDDO
-    ! factors of 1/2 and 3/2 to match Bruenn
-    Phout(1) = Phout(1) * conv_fac * 0.5d0
-    Phout(2) = Phout(2) * conv_fac * 1.5d0
+    ! (l+1/2) normalisation for every moment (Bruenn 1/2, 3/2, 5/2, ...); no write beyond nL
+    DO iL = 1, nL
+      Phout(iL) = Phout(iL) * conv_fac * ( (iL-1) + 0.5d0 )
+    END DO
 
-    ! --- Phin from detailed balance 
     Delta_mu = xMu_l2 - xMu_l4
-    exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )
+    IF ( ProcessIndex == 33 .OR. ProcessIndex == 34 ) THEN
+      ! IMD: Phout is the absorption kernel R_A, Phin the emission kernel R_D (Guo Eq. 21)
+      exponent = MIN( -(E1 + E3 + Delta_mu) / xT, MaxExponent )
+    ELSE
+      ! --- Phin from detailed balance (Guo Eq. 13)
+      exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )
+    END IF
     Phin = Phout * EXP(exponent)
 
   END SUBROUTINE CalculatePhoutPhin
@@ -700,12 +705,16 @@ CONTAINS
 
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
-    ! --- compute R_out with f2*(1-f4) factors ---
-    CALL GeneralScatteringRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
-
-    ! --- R_in from detailed balance 
     Delta_mu = xMu_l2 - xMu_l4
-    exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )   ! Guo Eq. 13
+    IF ( ProcessIndex == 33 .OR. ProcessIndex == 34 ) THEN
+      ! --- IMD 3->1: R_A (Guo Eqs. 15-17), Rin = R_D (Guo Eq. 21)
+      CALL InverseMuonDecayRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
+      exponent = MIN( -(E1 + E3 + Delta_mu) / xT, MaxExponent )
+    ELSE
+      ! --- compute R_out with f2*(1-f4) factors ---
+      CALL GeneralScatteringRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
+      exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )   ! Guo Eq. 13
+    END IF
 
     Rin = Rout * EXP(exponent)   ! Guo Eq. 13
 
@@ -729,8 +738,8 @@ CONTAINS
     REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
     REAL(DP) :: conv_fac, lam1, lam2, lam3
 
-    IF (ProcessIndex /= 33) THEN
-      WRITE(*,*) 'Error: InverseMuonDecayOpacity only valid for ProcessIndex=33 (nu_bar_e + e- + nu_mu -> mu-).'
+    IF (ProcessIndex /= 33 .AND. ProcessIndex /= 34) THEN
+      WRITE(*,*) 'Error: InverseMuonDecayOpacity only valid for ProcessIndex=33 or 34 (inverse muon decay).'
       STOP
     END IF
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
@@ -749,7 +758,7 @@ CONTAINS
 
     Opacity = 0.0d0
     
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 2.0d0 * pi / ( (2.0d0 * pi)**3 * hbarc )   ! Guo Eq. 12: d3p3 = E3^2 dE3 dmu dphi
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -794,8 +803,8 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
-    IF (ProcessIndex /= 33) THEN
-      WRITE(*,*) 'Error: InverseMuonDecayEmissivity only valid for ProcessIndex=33 (nu_bar_e + e- + nu_mu -> mu-).'
+    IF (ProcessIndex /= 33 .AND. ProcessIndex /= 34) THEN
+      WRITE(*,*) 'Error: InverseMuonDecayEmissivity only valid for ProcessIndex=33 or 34 (inverse muon decay).'
       STOP
     END IF
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
@@ -814,7 +823,7 @@ CONTAINS
 
     Emissivity = 0.0d0
     
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 2.0d0 * pi / ( (2.0d0 * pi)**3 * hbarc )   ! Guo Eq. 12: d3p3 = E3^2 dE3 dmu dphi
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -831,7 +840,8 @@ CONTAINS
         wcos_theta = wa_cos_theta(iTheta)
 
         CALL InverseMuonDecayRout( E1, E3, cos_theta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
-        Emissivity = Emissivity + Rout * wcos_theta * E3**2 * wE3 * conv_fac * (1.0d0 - f_nu3)  ! include nu3 occupation factor
+        Emissivity = Emissivity + Rout * wcos_theta * E3**2 * wE3 * conv_fac * (1.0d0 - f_nu3) &
+                   * EXP( MAX( -(E1 + E3 + xMu_l2 - xMu_l4) / xT, -700.0d0 ) )   ! Guo Eq. 21 (floor only guards underflow)
       END DO
     ENDDO
 
@@ -861,7 +871,7 @@ CONTAINS
     DoFullIntegration = .FALSE.
     IF (PRESENT(DoFullIntegration_in)) DoFullIntegration = DoFullIntegration_in
 
-    IF (ProcessIndex == 33) THEN
+    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
       CALL InverseMuonDecayOpacity( E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4, &
                                    ProcessIndex, Opacity_tot, nE3, nTheta )
       RETURN
@@ -891,7 +901,7 @@ CONTAINS
     ! --- Dummy Arguments ---
     REAL(DP), INTENT(IN)  :: E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4
     INTEGER , INTENT(IN)  :: ProcessIndex
-    REAL(DP), DIMENSION(3,nE3), INTENT(OUT) :: Opacity_array(:,:)
+    REAL(DP), INTENT(OUT) :: Opacity_array(:,:)
     INTEGER , INTENT(IN) :: nE3, nTheta
     INTEGER , INTENT(IN), OPTIONAL :: nPhi_in
     LOGICAL , INTENT(IN), OPTIONAL :: IsFinalStateFree_in
@@ -932,7 +942,7 @@ CONTAINS
     
     ! This is correct but I need to rederive why. Everyone uses different conventions... 
     ! Start with Lohs and Mezzacappa and Bruenn 1993 perhaps
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 0.5d0 / ( (2.0d0 * pi)**3 * hbarc )   ! Int dcos(th) dOmega' = 2 x 2pi Int dmu: average over th
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -982,7 +992,7 @@ CONTAINS
     ! --- Dummy Arguments ---
     REAL(DP), INTENT(IN)  :: E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4
     INTEGER , INTENT(IN)  :: ProcessIndex
-    REAL(DP), DIMENSION(3,nE3), INTENT(OUT) :: Opacity_array(:,:)
+    REAL(DP), INTENT(OUT) :: Opacity_array(:,:)
     INTEGER , INTENT(IN) :: nE3, nTheta
     LOGICAL , INTENT(IN), OPTIONAL :: IsFinalStateFree_in
 
@@ -1015,7 +1025,7 @@ CONTAINS
 
     Opacity_array = 0.0d0
     
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 2.0d0 * pi / ( (2.0d0 * pi)**3 * hbarc )   ! Guo Eq. 12: d3p3 = E3^2 dE3 dmu dphi
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -1091,7 +1101,7 @@ CONTAINS
 
     Opacity_array = 0.0d0
     
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc ) 
+    conv_fac = 2.0d0 * pi / ( (2.0d0 * pi)**3 * hbarc )   ! Guo Eq. 12: d3p3 = E3^2 dE3 dmu dphi
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -1282,10 +1292,12 @@ CONTAINS
 
     ! --- Delta (Guo Eq. 17) ---
     DeltaA = SQRT(MAX(E1**2 + 2.0d0*E1*E3*mu + E3**2, 0.0d0))   ! Guo Eq. 4
-    !IF (DeltaA < 1.0d-10) RETURN   ! pathological collinear case
+    IF (DeltaA < 1.0d-10) RETURN   ! pathological collinear case
 
     ! --- k (Guo Eq. 5): diverges at forward scattering mu=1 ---
-    !IF (1.0d0 - mu < 1.0d-10) RETURN   ! mu -> 1: E_minus -> inf, no phase space
+    ! mu -> 1: k = Q/(E1 E3 (1-mu)) -> inf (division by zero at a single,
+    ! measure-zero angle; guard against FPE traps / Inf-Inf = NaN in disc)
+    IF (1.0d0 - mu < 1.0d-10) RETURN
 
     k_val = Q / (E1 * E3 * (1.0d0 - mu))   ! Guo Eq. 5
 
@@ -1408,7 +1420,7 @@ CONTAINS
 
     IF ( CompleteFDIntegralsEvaluationMethod == 3 ) THEN
       ! Fast path, and the ONLY one that is device-safe: methods 1 and 2 touch
-      ! mutable module state (GauLegInitialized / the polylog SAVE variables).
+      ! mutable module state (GauLegInitialized) or are not device-annotated.
       ! Delegating keeps host and device results identical by construction.
       CALL Compute_Is_Integrals_FD( y, eta, eta_prime, T, f_gamma(xi), &
                                     ABS(xi) < xi_tol, I0, I1, I2 )
@@ -1433,7 +1445,6 @@ CONTAINS
 
     CASE (2)
 
-      CALL Init_Polylogarithms()
       ! --- Evaluate F_s(eta, y) and F_s(eta_prime, y) using polylog-based functions ---
       CALL Fermi_Dirac_Integrals( eta       - y, F0_eta , F1_eta , F2_eta )
       CALL Fermi_Dirac_Integrals( eta_prime - y, F0_etap, F1_etap, F2_etap )
@@ -1556,7 +1567,11 @@ CONTAINS
     REAL(DP), INTENT(IN) :: z
     REAL(DP) :: res
 
-    IF (z > MaxExponent) THEN
+    IF (ABS(z) < xi_tol) THEN
+      ! Singular at z = 0 (EXP(z)-1 = 0 for |z| < ~1e-16: division by zero).
+      ! Callers use the xi -> 0 branch for |xi| < xi_tol and ignore this value.
+      res = 0.0d0
+    ELSE IF (z > MaxExponent) THEN
       res = EXP(-z)                  ! Avoid overflow in exp(z)
     ELSE IF (z < -MaxExponent) THEN
       res = - 1.0d0                  ! Avoid overflow in exp(-z)
@@ -1758,12 +1773,12 @@ CONTAINS
   SUBROUTINE gaulag(x, w, n, alf)
     IMPLICIT NONE
     INTEGER, INTENT(IN)  :: n
-    REAL(8), INTENT(IN)  :: alf
-    REAL(8), INTENT(OUT) :: x(n), w(n)
+    REAL(DP), INTENT(IN)  :: alf
+    REAL(DP), INTENT(OUT) :: x(n), w(n)
     
     INTEGER :: i, its, j
-    REAL(8) :: ai, p1, p2, p3, pp, z, z1
-    REAL(8), PARAMETER :: EPS = 1.0d-14
+    REAL(DP) :: ai, p1, p2, p3, pp, z, z1
+    REAL(DP), PARAMETER :: EPS = 1.0d-14
     INTEGER, PARAMETER :: MAXIT = 50
     
     DO i = 1, n
@@ -1800,7 +1815,7 @@ CONTAINS
       
       ! Store root and compute weight
       x(i) = z
-      w(i) = -EXP(gammln(alf + n) - gammln(REAL(n, 8))) / (pp * n * p2)
+      w(i) = -EXP(gammln(alf + n) - gammln(REAL(n, DP))) / (pp * n * p2)
     END DO
   END SUBROUTINE gaulag
 
@@ -1810,10 +1825,10 @@ CONTAINS
   !=======================================================================
   FUNCTION gammln(xx)
     IMPLICIT NONE
-    REAL(8), INTENT(IN) :: xx
-    REAL(8) :: gammln
-    REAL(8) :: ser, tmp, x, y
-    REAL(8), SAVE :: cof(6) = (/ 76.18009172947146d0, -86.50532032941677d0, &
+    REAL(DP), INTENT(IN) :: xx
+    REAL(DP) :: gammln
+    REAL(DP) :: ser, tmp, x, y
+    REAL(DP), PARAMETER :: cof(6) = (/ 76.18009172947146d0, -86.50532032941677d0, &
                                 24.01409824083091d0, -1.231739572450155d0, &
                                   0.1208650973866179d-2, -0.5395239384953d-5 /)
     INTEGER :: j

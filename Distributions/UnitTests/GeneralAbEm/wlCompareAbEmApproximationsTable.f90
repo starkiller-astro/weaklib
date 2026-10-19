@@ -1,4 +1,14 @@
-PROGRAM wlCompareOpacities
+PROGRAM wlCompareAbEmApproximationsTable
+
+  ! Same comparison as wlCompareAbEmApproximations, but on a sub-grid of
+  ! the EOS/opacity table (rho index > iRho_min, T index <= iT_max, three
+  ! Ye values) at the opacity-table energies, for electron flavour only.
+  ! Also compares the Horowitz weak-magnetism correction with the Chimera
+  ! implementation (cc_weak_mag_weaklib, from TableCreator).
+  !
+  ! EOSMODE_3D     : wl-EOS-SFHo-15-25-50.h5 (bare nucleon masses, U = 0)
+  ! EOSMODE_COMPOSE: BaryonsPlusPhotonsPlusLeptonsEOS.h5 (+ Helmholtz tables)
+  ! The 4D kernels are only available when compiled with USE_CUBA=TRUE.
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
@@ -15,8 +25,10 @@ PROGRAM wlCompareOpacities
   USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
     Opacity_CC_2D
+#ifdef WEAKLIB_CUBA
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
+#endif
   USE wlCalculateAbEmOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
     ElasticAbsorptionOpacityNue, &
@@ -35,7 +47,7 @@ PROGRAM wlCompareOpacities
   INTEGER , PARAMETER :: nOutTerminal = 10000
   LOGICAL , PARAMETER :: UseReddy = .TRUE.
   LOGICAL , PARAMETER :: IncldudeGSI_2D = .TRUE.
-  LOGICAL , PARAMETER :: IncldudeGSI_4D = .FALSE.
+  LOGICAL , PARAMETER :: IncldudeGSI_4D = .FALSE. ! only used with USE_CUBA=TRUE
   REAL(DP), PARAMETER :: masse = me , massm = mmu
   REAL(DP), PARAMETER :: massn = mn, massp = mp
 
@@ -86,6 +98,7 @@ PROGRAM wlCompareOpacities
   FileName_EOS = "BaryonsPlusPhotonsPlusLeptonsEOS.h5"
   CALL ReadEquationOfStateTableHDF( EOSTable, FileName_EOS )
   CALL ReadHelmholtzTableHDF( HelmTableElectrons, FileName_EOS, "HelmTableElectrons"  )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons, FileName_EOS, "HelmTableMuons"  )
 #endif 
 
   ! Read Opacity Table
@@ -155,7 +168,7 @@ PROGRAM wlCompareOpacities
   t_2D  = 0.0d0
   t_4D  = 0.0d0
   iCount = 0
-#ifdef USE_OMP
+#ifdef WEAKLIB_OMP
   !$OMP PARALLEL DO COLLAPSE(3) &
   !$OMP PRIVATE(iYe_table, xD, xT, xYe, xMumu, xMue, xMun, xMup, &
   !$OMP xXn, xXp, xUn, xUp, xMn_eff, xMp_eff, xMul, xMl, l, k, j, t1, t2), &
@@ -232,6 +245,7 @@ PROGRAM wlCompareOpacities
             END DO
           ENDIF
 
+#ifdef WEAKLIB_CUBA
           IF (IncldudeGSI_4D) THEN
             DO k = 1, nOp
               DO j = 1, nApprox
@@ -243,6 +257,7 @@ PROGRAM wlCompareOpacities
               END DO
             END DO
           ENDIF
+#endif
 
           iCount = iCount + 1
           IF (MOD(iCount, nOutTerminal) == 0) THEN
@@ -253,7 +268,7 @@ PROGRAM wlCompareOpacities
       END DO
     END DO
   END DO
-#ifdef USE_OMP
+#ifdef WEAKLIB_OMP
   !$OMP END PARALLEL DO
 #endif
 
@@ -310,59 +325,38 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 
   TYPE(LeptonGasType) :: ElectronGasState
   TYPE(LeptonGasType) :: MuonGasState
-  REAL(DP) :: Yp, min_M, OS_M_new
+  REAL(DP) :: Yp
   INTEGER  :: iDV
 
   Yp = Ye + Ym
 
 #ifdef EOSMODE_3D
-  ! Shift chemical potential
-  ! Apply the shift for proton chemical potential
+  ! The 3D (old weaklib) table stores the nucleon chemical potentials
+  ! without rest mass and shifted by -dmnp (TableCreator wlTableFinisher);
+  ! the relativistic ones are rebuilt as in the table creator
+  ! (abem_nucleons_Reddy_et_al_1998_weaklib.f90):
+  !   Mun = cmpn + dmnp + mn,  Mup = cmpp + dmnp + mp. The shift is
+  ! applied to the interpolated values: the EOS table is NOT modified
+  ! (it is shared between OpenMP threads and ApplyEOS is called many times).
   iDV = EOSTable % DV % Indices % iProtonChemicalPotential
-  ASSOCIATE( Mp_T  => EOSTable % DV % Variables(iDV) % Values(:,:,:), &
-             OS_Mp => EOSTable % DV % Offsets(iDV) )
-
-  IF ( OS_Mp > 0.0d0 ) THEN
-    min_M = -0.5d0 * OS_Mp
-  ELSE
-    min_M = MINVAL( 10.0d0**Mp_T )
-  ENDIF
-  OS_M_new = -2.0d0 * MIN( 0.0d0, min_M + mp + dmnp )
-  Mp_T     = LOG10( 10.0d0**Mp_T - OS_Mp + mp + dmnp + OS_M_new)
-  OS_Mp    = OS_M_new
-
-  CALL LogInterpolateSingleVariable   &
-    ( D, T, Yp, &
-      EOSTable % TS % States(iEOS_Rho) % Values, &
-      EOSTable % TS % States(iEOS_T) % Values,   &
-      EOSTable % TS % States(iEOS_Yp) % Values,  &
-      OS_Mp, &
-      Mp_T, Mup )
-  END ASSOCIATE
-
-  ! Apply the shift for neutron chemical potential
-  iDV = EOSTable % DV % Indices % iNeutronChemicalPotential
-  ASSOCIATE( Mn_T  => EOSTable % DV % Variables(iDV) % Values(:,:,:), &
-             OS_Mn => EOSTable % DV % Offsets(iDV) )
-
-  IF ( OS_Mn > 0.0d0 ) THEN
-    min_M = -0.5d0 * OS_Mn
-  ELSE
-    min_M = MINVAL( 10.0d0**Mn_T )
-  ENDIF
-  OS_M_new = -2.0d0 * MIN( 0.0d0, min_M + mp + dmnp )
-  Mn_T     = LOG10( 10.0d0**Mn_T - OS_Mn + mp + dmnp + OS_M_new)
-  OS_Mn    = OS_M_new
-
   CALL LogInterpolateSingleVariable   &
       ( D, T, Yp, &
         EOSTable % TS % States(iEOS_Rho) % Values, &
         EOSTable % TS % States(iEOS_T) % Values,   &
         EOSTable % TS % States(iEOS_Yp) % Values,  &
-        OS_Mn, &
-        Mn_T, Mun )
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mup )
+  Mup = Mup + dmnp + mp
 
-  END ASSOCIATE
+  iDV = EOSTable % DV % Indices % iNeutronChemicalPotential
+  CALL LogInterpolateSingleVariable   &
+      ( D, T, Yp, &
+        EOSTable % TS % States(iEOS_Rho) % Values, &
+        EOSTable % TS % States(iEOS_T) % Values,   &
+        EOSTable % TS % States(iEOS_Yp) % Values,  &
+        EOSTable % DV % Offsets(iDV), &
+        EOSTable % DV % Variables(iDV) % Values(:,:,:), Mun )
+  Mun = Mun + dmnp + mn
 #else
   iDV = EOSTable % DV % Indices % iNeutronChemicalPotential
   CALL LogInterpolateSingleVariable   &
@@ -463,10 +457,10 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
   CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
   Mue = ElectronGasState % mu
 
-  ! Electrons
+  ! Muons
   MuonGasState % t   = T
   MuonGasState % rho = D
-  MuonGasState % yL  = Ye
+  MuonGasState % yL  = Ym
   CALL LeptonGasEOS(HelmTableMuons, MuonGasState)
   Mumu = MuonGasState % mu
 
@@ -474,4 +468,4 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 
 END SUBROUTINE ApplyEOS
 
-END PROGRAM wlCompareOpacities
+END PROGRAM wlCompareAbEmApproximationsTable

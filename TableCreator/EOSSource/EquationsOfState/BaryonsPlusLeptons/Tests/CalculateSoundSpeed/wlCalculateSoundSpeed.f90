@@ -1,501 +1,268 @@
 PROGRAM wlCalculateSoundSpeed
-    
-  USE wlKindModule, ONLY: dp
-  USE wlExtNumericalModule, ONLY: zero, one, pi
-  USE wlEquationOfStateTableModule
-  USE wlIOModuleHDF
-  USE wlEOSIOModuleHDF
+
+  ! Computes the adiabatic index Gamma1 and the sound speed from
+  ! BaryonsPlusPhotonsPlusLeptonsEOS.h5 at every node of the reference table
+  ! wl-EOS-SFHo-15-25-50.h5 (no muons) with
+  !
+  !   Separate : baryon table interpolated and differentiated, leptons and
+  !              photons (value and derivatives) from Helmholtz at the exact
+  !              point. The baryon pressure is interpolated log-trilinearly,
+  !              except in cells where it is <= 0 at some corner: there it is
+  !              interpolated linearly in (log D, log T, Yp)
+  !   Combined : baryons + leptons + photons summed at the cell corners, then
+  !              the log-trilinear interpolant of the total is differentiated
+  !
+  ! Both are computed by CalculateSoundSpeed in wlSoundSpeedModule.
+  !
+  ! The results and the reference values are written to SoundSpeed.bin
+  ! (stream access, no record markers), in this order:
+  !
+  !   int32   nD, nT, nYe
+  !   float64 D(nD), T(nT), Ye(nYe)
+  !   float64 Gamma1(nD,nT,nYe,3)     [ Reference, Separate, Combined ]
+  !   float64 Cs    (nD,nT,nYe,3)     [ Reference, Separate, Combined ]
+  !   int32   NegativeP(nD,nT,nYe)    1 if the baryon P is <= 0 in the cell
+  !
+  ! Points outside the new table, with invalid reference values, or where
+  ! a method fails (NaN or <= 0) are NaN. Plot with plot_sound_speed.py.
+
+  USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: &
+    IEEE_VALUE, &
+    IEEE_QUIET_NAN, &
+    IEEE_IS_NAN
+  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: &
+    INT32
+  USE wlKindModule, ONLY: &
+    dp
+  USE wlEquationOfStateTableModule, ONLY: &
+    EquationOfStateTableType, &
+    EquationOfStateCompOSETableType
+  USE wlIOModuleHDF, ONLY: &
+    InitializeHDF, &
+    FinalizeHDF
+  USE wlEOSIOModuleHDF, ONLY: &
+    ReadEquationOfStateTableHDF
   USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType
   USE wlHelmIOModuleHDF, ONLY: &
     ReadHelmholtzTableHDF
-  USE wlLeptonPhotonGasEOS, ONLY: &
-    PhotonGasType, LeptonGasType, &
-    PhotonGasEOS , LeptonGasEOS , &
-    GetPhotonLeptonGasEOS
-  USE wlExtPhysicalConstantsModule, ONLY: kmev, rmu, kmev_inv, ergmev, me, cvel
-  USE wlSoundSpeedModule
-    
-    IMPLICIT NONE
-    
-    TYPE(HelmTableType) :: HelmTableElectrons
-    TYPE(HelmTableType) :: HelmTableMuons
-    TYPE(LeptonGasType) :: ElectronGasState
-    TYPE(EquationOfStateTableType) :: EOSBaryonTable, EOSFullTable, EOSBaryonPlusEleTable
-    
-    INTEGER :: nRho, nTemp, nYp, iAbar, iZbar, iBE, iPressure, iRho, iTemp, iYp, iXp, iXa, iXn, iXh, &
-        iEnergy, iEntropy, iMue, iMun, iMup, iRho_transition, ics2, iGamma1
-    
-    REAL(dp) :: press_baryons, press_electrons, press_total
-    REAL(dp) :: s_baryons, s_electrons, s_total
-    REAL(dp) :: eps_baryons, eps_electrons, eps_total
-    REAL(dp) :: mue_baryons, mue_electrons, mue_total
-    REAL(dp) :: mup_baryons, mup_total, mun_baryons, mun_total
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    
-    REAL(DP) :: OS_P, OS_E, OS_S
-    REAL(DP) :: D, T, Yp, Ye, Ym, cs2, Gamma
-    REAL(dp), ALLOCATABLE :: eos_table(:,:,:,:), Pe(:,:,:), Ee(:,:,:), &
-        P_T(:,:,:), S_T(:,:,:), E_T(:,:,:), D_T(:), T_T(:), Yp_T(:)
-    
-    LOGICAL :: RedHDF5Table, SeparateContributions
-    INTEGER :: igamma = 3
-    INTEGER :: iP_bary, iS_bary, iE_bary
-    
-    REAL(DP) :: tBegin, tEnd
-    
-    CHARACTER(len=128) :: BaryonEOSTableName, FullEOSTableName, BaryonPlusEleName
+  USE wlInterpolationUtilitiesModule, ONLY: &
+    GetIndexAndDelta_Lin, &
+    GetIndexAndDelta_Log
+  USE wlSoundSpeedModule, ONLY: &
+    CalculateSoundSpeed
 
-    RedHDF5Table = .false.
-    SeparateContributions = .true.
-    
-    IF (RedHDF5Table) THEN
-        FullEOSTableName = 'FullEOS_interpolated.h5'
-        BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS_interpolated.h5'
-    ELSE
-        FullEOSTableName = 'FullEOS.h5'
-        BaryonEOSTableName = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5'
-    ENDIF
-    
-    BaryonPlusEleName = 'csBaryonPlusEle.h5'
-    
-    ! read in baryon table -------------------------------
-    CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
+  IMPLICIT NONE
 
-    ! read in muon table
-    CALL ReadHelmholtzTableHDF( HelmTableMuons, BaryonEOSTableName, "HelmTableMuons" )
+  INTEGER,  PARAMETER :: iReference = 1, iSeparate = 2, iCombined = 3
+  CHARACTER(8), PARAMETER :: MethodNames(3) = [ 'Ref.    ', 'Separate', 'Combined' ]
 
-    ! read in helmholtz table
-    CALL ReadHelmholtzTableHDF( HelmTableElectrons, BaryonEOSTableName, "HelmTableElectrons" )
-    
-    ! read in full table -------------------------------
-    CALL ReadEquationOfStateTableHDF( EOSFullTable, FullEOSTableName )
-    
-    nRho = EOSBaryonTable % TS % nPoints(1)
-    nTemp = EOSBaryonTable % TS % nPoints(2)
-    nYp = EOSBaryonTable % TS % nPoints(3)
-    
-    iXp = EOSBaryonTable % DV % Indices % iProtonMassFraction
-    iXn = EOSBaryonTable % DV % Indices % iNeutronMassFraction
-    iXa = EOSBaryonTable % DV % Indices % iAlphaMassFraction
-    iXh = EOSBaryonTable % DV % Indices % iHeavyMassFraction
-    iAbar = EOSBaryonTable % DV % Indices % iHeavyMassNumber
-    iZbar = EOSBaryonTable % DV % Indices % iHeavyChargeNumber
-    iBE = EOSBaryonTable % DV % Indices % iHeavyBindingEnergy
-    iPressure = EOSBaryonTable % DV % Indices % iPressure
-    iEntropy = EOSBaryonTable % DV % Indices % iEntropyPerBaryon
-    iEnergy = EOSBaryonTable % DV % Indices % iInternalEnergyDensity
-    iMue = EOSBaryonTable % DV % Indices % iElectronChemicalPotential
-    iMup = EOSBaryonTable % DV % Indices % iProtonChemicalPotential
-    iMun = EOSBaryonTable % DV % Indices % iNeutronChemicalPotential
-    ics2 = EOSBaryonTable % DV % Indices % iThermalEnergy
-    iGamma1 = EOSBaryonTable % DV % Indices % iGamma1
-    
-    ! Initialize electron and combined tables 
-    EOSBaryonPlusEleTable = EOSBaryonTable
-    
-    iP_bary = EOSBaryonTable % DV % Indices % iPressure
-    iS_bary = EOSBaryonTable % DV % Indices % iEntropyPerBaryon
-    iE_bary = EOSBaryonTable % DV % Indices % iInternalEnergyDensitY
+  CHARACTER(len=128), PARAMETER :: &
+    BaryonEOSTableName    = 'BaryonsPlusPhotonsPlusLeptonsEOS.h5', &
+    ReferenceEOSTableName = 'wl-EOS-SFHo-15-25-50.h5', &
+    OutputFileName        = 'SoundSpeed.bin'
 
-    OS_P = EOSBaryonTable % DV % Offsets(iP_bary)
-    OS_S = EOSBaryonTable % DV % Offsets(iS_bary)
-    OS_E = EOSBaryonTable % DV % Offsets(iE_bary)
-    
-    ALLOCATE( Pe(nRho, nTemp, nYp) )
-    ALLOCATE( Ee(nRho, nTemp, nYp) )
-    DO iRho=1,nRho
-        DO iTemp=1,nTemp
-            DO iYp=1,nYp
-                
-              D  = EOSBaryonTable % TS % States(1) % Values(iRho)
-              T  = EOSBaryonTable % TS % States(1) % Values(iTemp)
-              Ye = EOSBaryonTable % TS % States(1) % Values(iYp)
-              Ym = 0.0_dp
+  TYPE(EquationOfStateCompOSETableType) :: EOSBaryonTable
+  TYPE(EquationOfStateTableType)        :: EOSReferenceTable
+  TYPE(HelmTableType) :: HelmTableElectrons
+  TYPE(HelmTableType) :: HelmTableMuons
 
-              ElectronGasState % T    = T
-              ElectronGasState % rho  = D
-              ElectronGasState % yL   = Ye
+  ! --- New table (baryons only): P stored linearly, E and S as log10(X+OS)
+  REAL(dp), ALLOCATABLE :: D_T(:), T_T(:), Yp_T(:)
+  REAL(dp), ALLOCATABLE :: P_T(:,:,:), E_T(:,:,:), S_T(:,:,:)
+  REAL(dp) :: OS_P, OS_E, OS_S
 
-              CALL LeptonGasEOS(HelmTableElectrons, ElectronGasState)
+  ! --- Reference table: all variables stored as log10(X+OS)
+  REAL(dp), ALLOCATABLE :: D_R(:), T_R(:), Ye_R(:)
+  INTEGER  :: iP_R, iG_R
+  REAL(dp) :: OS_P_R, OS_G_R
 
-              CALL GetPhotonLeptonGasEOS(D, T, Ye, 0.0_dp, &
-                  HelmTableElectrons, HelmTableMuons, P_LeptPhot, E_LeptPhot, S_LeptPhot)
+  REAL(dp),       ALLOCATABLE :: Gamma(:,:,:,:), Cs(:,:,:,:)
+  INTEGER(INT32), ALLOCATABLE :: NegativeP(:,:,:)
 
-              Ee(iRho,iTemp,iYp) = E_LeptPhot
-              Pe(iRho,iTemp,iYp) = P_LeptPhot
-              
-              press_baryons = (EOSBaryonTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
-                  EOSBaryonTable % DV % Offsets(iPressure)
-              press_electrons = P_LeptPhot
-              press_total = (EOSFullTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp)) - &
-                  EOSFullTable % DV % Offsets(iPressure)
-              
-              s_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
-                  EOSBaryonTable % DV % Offsets(iEntropy)
-              s_electrons = S_LeptPhot * rmu * kmev_inv / ergmev
-              s_total = 10.0d0**(EOSFullTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp)) - &
-                  EOSFullTable % DV % Offsets(iEntropy)
-              
-              eps_baryons = 10.0d0**(EOSBaryonTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
-                  EOSBaryonTable % DV % Offsets(iEnergy)
-              eps_electrons = E_LeptPhot
-              eps_total = 10.0d0**(EOSFullTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp)) - &
-                  EOSFullTable % DV % Offsets(iEnergy)
-              
-              mue_baryons = EOSBaryonTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
-                  EOSBaryonTable % DV % Offsets(iMue)
-              mue_electrons = ElectronGasState % mu
-              mue_total = EOSFullTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) - &
-                  EOSFullTable % DV % Offsets(iMue)
-              
-              mup_baryons = EOSBaryonTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &
-                  EOSBaryonTable % DV % Offsets(iMup)
-              mup_total = EOSFullTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) - &
-                  EOSFullTable % DV % Offsets(iMup)
-              
-              mun_baryons = EOSBaryonTable % DV % Variables(imun) % Values(iRho,iTemp,iYp) - &
-                  EOSBaryonTable % DV % Offsets(imun)
-              mun_total = EOSFullTable % DV % Variables(imun) % Values(iRho,iTemp,iYp) - &
-                  EOSFullTable % DV % Offsets(imun)
-              
-              EOSBaryonPlusEleTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp) = press_baryons + press_electrons
-              EOSBaryonPlusEleTable % DV % Variables(iEntropy) % Values(iRho,iTemp,iYp) = s_baryons + s_electrons
-              EOSBaryonPlusEleTable % DV % Variables(iEnergy) % Values(iRho,iTemp,iYp) = eps_baryons + eps_electrons
-              EOSBaryonPlusEleTable % DV % Variables(iMue) % Values(iRho,iTemp,iYp) = mue_electrons
-              EOSBaryonPlusEleTable % DV % Variables(iMup) % Values(iRho,iTemp,iYp) = mup_baryons
-              EOSBaryonPlusEleTable % DV % Variables(iMun) % Values(iRho,iTemp,iYp) = mun_baryons
-              EOSBaryonPlusEleTable % DV % Variables(iXp) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iXp) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(iXn) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iXn) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(iXa) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iXa) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(iXh) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iXh) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(iAbar) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iAbar) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(iZbar) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iZbar) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(iBE) % Values(iRho,iTemp,iYp) = & 
-                  EOSBaryonTable % DV % Variables(iBE) % Values(iRho,iTemp,iYp)
-              EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = 0.0d0
-              EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = 0.0d0
+  INTEGER  :: iD, iT, iYe, iMethod, iUnit
+  INTEGER  :: nPoints, nInvalidRef, nInvalid(3), nSeparateCloser
+  INTEGER  :: iD_T, iT_T, iYp_T
+  REAL(dp) :: dD_T, dT_T, dYp_T
+  REAL(dp) :: D, T, Ye, Ym, P_Ref, NaN
+  REAL(dp) :: ErrG(3), ErrCs(3)
+  REAL(dp) :: MaxErrG(3), SumErrG(3), MaxErrCs(3), SumErrCs(3)
 
-            END DO
+  NaN = IEEE_VALUE( 0.0_dp, IEEE_QUIET_NAN )
+
+  CALL InitializeHDF( )
+
+  CALL ReadEquationOfStateTableHDF( EOSBaryonTable, BaryonEOSTableName )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, BaryonEOSTableName, "HelmTableElectrons" )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons    , BaryonEOSTableName, "HelmTableMuons"     )
+
+  CALL ReadEquationOfStateTableHDF( EOSReferenceTable, ReferenceEOSTableName )
+
+  CALL FinalizeHDF( )
+
+  ! --- Unpack new table ---
+
+  ASSOCIATE( TState => EOSBaryonTable % TS, DV => EOSBaryonTable % DV )
+
+  ALLOCATE( D_T (TState % nPoints(TState % Indices % iRho)) )
+  ALLOCATE( T_T (TState % nPoints(TState % Indices % iT  )) )
+  ALLOCATE( Yp_T(TState % nPoints(TState % Indices % iYe )) )
+  D_T  = TState % States(TState % Indices % iRho) % Values
+  T_T  = TState % States(TState % Indices % iT  ) % Values
+  Yp_T = TState % States(TState % Indices % iYe ) % Values
+
+  OS_P = DV % Offsets(DV % Indices % iPressure)
+  OS_E = DV % Offsets(DV % Indices % iInternalEnergyDensity)
+  OS_S = DV % Offsets(DV % Indices % iEntropyPerBaryon)
+
+  ALLOCATE( P_T(SIZE(D_T),SIZE(T_T),SIZE(Yp_T)) )
+  ALLOCATE( E_T(SIZE(D_T),SIZE(T_T),SIZE(Yp_T)) )
+  ALLOCATE( S_T(SIZE(D_T),SIZE(T_T),SIZE(Yp_T)) )
+  P_T = DV % Variables(DV % Indices % iPressure             ) % Values
+  E_T = DV % Variables(DV % Indices % iInternalEnergyDensity) % Values
+  S_T = DV % Variables(DV % Indices % iEntropyPerBaryon     ) % Values
+
+  END ASSOCIATE
+
+  ! --- Unpack reference table ---
+
+  ASSOCIATE( TState => EOSReferenceTable % TS, DV => EOSReferenceTable % DV )
+
+  ALLOCATE( D_R (TState % nPoints(TState % Indices % iRho)) )
+  ALLOCATE( T_R (TState % nPoints(TState % Indices % iT  )) )
+  ALLOCATE( Ye_R(TState % nPoints(TState % Indices % iYe )) )
+  D_R  = TState % States(TState % Indices % iRho) % Values
+  T_R  = TState % States(TState % Indices % iT  ) % Values
+  Ye_R = TState % States(TState % Indices % iYe ) % Values
+
+  iP_R   = DV % Indices % iPressure
+  iG_R   = DV % Indices % iGamma1
+  OS_P_R = DV % Offsets(iP_R)
+  OS_G_R = DV % Offsets(iG_R)
+
+  END ASSOCIATE
+
+  ALLOCATE( Gamma    (SIZE(D_R),SIZE(T_R),SIZE(Ye_R),3) )
+  ALLOCATE( Cs       (SIZE(D_R),SIZE(T_R),SIZE(Ye_R),3) )
+  ALLOCATE( NegativeP(SIZE(D_R),SIZE(T_R),SIZE(Ye_R)  ) )
+  Gamma     = NaN
+  Cs        = NaN
+  NegativeP = 0
+
+  ! --- Evaluate at every reference node ---
+
+  nPoints         = 0
+  nInvalidRef     = 0
+  nInvalid        = 0
+  nSeparateCloser = 0
+  MaxErrG  = 0.0_dp; SumErrG  = 0.0_dp
+  MaxErrCs = 0.0_dp; SumErrCs = 0.0_dp
+
+  Ym = 0.0_dp ! The reference table has no muons
+
+  DO iYe = 1, SIZE(Ye_R)
+    DO iT = 1, SIZE(T_R)
+      DO iD = 1, SIZE(D_R)
+
+        D  = D_R (iD)
+        T  = T_R (iT)
+        Ye = Ye_R(iYe)
+
+        IF ( D  < D_T (1) .OR. D  > D_T (SIZE(D_T )) .OR. &
+             T  < T_T (1) .OR. T  > T_T (SIZE(T_T )) .OR. &
+             Ye < Yp_T(1) .OR. Ye > Yp_T(SIZE(Yp_T)) ) CYCLE
+
+        Gamma(iD,iT,iYe,iReference) &
+          = 10.0_dp**EOSReferenceTable % DV % Variables(iG_R) % Values(iD,iT,iYe) - OS_G_R
+        P_Ref &
+          = 10.0_dp**EOSReferenceTable % DV % Variables(iP_R) % Values(iD,iT,iYe) - OS_P_R
+
+        ! --- Placeholder / unphysical reference values ---
+        IF ( Gamma(iD,iT,iYe,iReference) <= 1.0d-20 .OR. P_Ref <= 0.0_dp ) THEN
+          Gamma(iD,iT,iYe,iReference) = NaN
+          nInvalidRef = nInvalidRef + 1
+          CYCLE
+        END IF
+
+        Cs(iD,iT,iYe,iReference) = SQRT( Gamma(iD,iT,iYe,iReference) * P_Ref / D )
+
+        DO iMethod = iSeparate, iCombined
+          CALL CalculateSoundSpeed &
+                 ( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, S_T, OS_S, &
+                   HelmTableElectrons, HelmTableMuons, &
+                   Gamma(iD,iT,iYe,iMethod), Cs(iD,iT,iYe,iMethod), iMethod == iSeparate )
         END DO
-    END DO
-    
-    ALLOCATE( eos_table(nRho, nTemp, nYp, 3) )
-    ALLOCATE( P_T(nRho, nTemp, nYp) )
-    ALLOCATE( E_T(nRho, nTemp, nYp) )
-    ALLOCATE( S_T(nRho, nTemp, nYp) )
-    ALLOCATE( D_T(nRho) )
-    ALLOCATE( T_T(nTemp) )
-    ALLOCATE( Yp_T(nYp) )
 
-    WRITE(*,*) 'start stcol'
-    CALL CPU_TIME( tBegin )
-    ! SOME DEFINITION
-    CALL CalculateSeparateSoundSpeed(nRho, nTemp, nYp, &
-        (EOSBaryonTable % DV % Variables(iPressure) % Values(:,:,:)) - OS_P, Pe, &
-        10.0d0**(EOSBaryonTable % DV % Variables(iEnergy) % Values(:,:,:)) - OS_E, Ee, &
-        OS_E, &
-        EOSBaryonTable % TS % States(1) % Values(:),  &
-        EOSBaryonTable % TS % States(2) % Values(:),  &
-        EOSBaryonTable % TS % States(3) % Values(:),  &
-        EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values, &
-        EOSBaryonPlusEleTable % DV % Variables(ics2) % Values )
-    CALL CPU_TIME( tEnd )
-    WRITE(*,*) 'end stcol:', tEnd - tBegin 
+        ! --- Flag cells where the baryon pressure is <= 0 at some corner ---
+        CALL GetIndexAndDelta_Log( D , D_T , iD_T , dD_T  )
+        CALL GetIndexAndDelta_Log( T , T_T , iT_T , dT_T  )
+        CALL GetIndexAndDelta_Lin( Ye, Yp_T, iYp_T, dYp_T )
+        IF ( MINVAL( P_T(iD_T:iD_T+1,iT_T:iT_T+1,iYp_T:iYp_T+1) ) <= 0.0_dp ) &
+          NegativeP(iD,iT,iYe) = 1
 
-    ! ! ANOTHER DEFINITION BUT THIS ONE IS FOR THE FULL TABLE SO PROB NOT NEEDED
-    ! eos_table(:,:,:,1) = EOSBaryonPlusEleTable % DV % Variables(iPressure) % Values(:,:,:)
-    ! eos_table(:,:,:,2) = EOSBaryonPlusEleTable % DV % Variables(iEntropy) % Values(:,:,:)
-    ! eos_table(:,:,:,3) = EOSBaryonPlusEleTable % DV % Variables(iEnergy) % Values(:,:,:)
-    
-    ! CALL derivatives_production(igamma, nRho, nTemp, nYp, &
-        ! LOG10(EOSBaryonPlusEleTable % TS % States(1) % Values(:)), &
-        ! LOG10(EOSBaryonPlusEleTable % TS % States(2) % Values(:)), &
-        ! EOSBaryonPlusEleTable % TS % States(3) % Values(:), &
-        ! eos_table, OS_E, &
-        ! EOSBaryonPlusEleTable % DV % Variables(ics2) % Values, &
-        ! EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values )
-
-    D_T = EOSBaryonTable % TS % States(1) % Values(:)
-    T_T = EOSBaryonTable % TS % States(2) % Values(:)
-    Yp_T = EOSBaryonTable % TS % States(3) % Values(:)
-    P_T = EOSBaryonTable % DV % Variables(iPressure) % Values(:,:,:)
-    E_T = EOSBaryonTable % DV % Variables(iEnergy) % Values(:,:,:)
-    S_T = EOSBaryonTable % DV % Variables(iEntropy) % Values(:,:,:)
-    
-    ! Do some housekeeping
-    WRITE(*,*) 'start bollig'
-    CALL CPU_TIME( tBegin )
-    DO iRho=1,nRho
-        DO iTemp=1,nTemp
-            DO iYp=1,nYp	
-                
-                ! BOLLIG DEFINITION
-                D = EOSBaryonTable % TS % States(1) % Values(iRho)
-                T = EOSBaryonTable % TS % States(2) % Values(iTemp)
-                Yp = EOSBaryonTable % TS % States(3) % Values(iYp)
-                
-                Ye = Yp
-                Ym = 1.0d-2
-                
-                CALL CalculateSoundSpeed( D, T, Ye, Ym, D_T, T_T, Yp_T, P_T, OS_P, E_T, OS_E, S_T, OS_S, &
-                    HelmTableElectrons, HelmTableMuons, Gamma, cs2, SeparateContributions)
-
-                EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = cs2
-                EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = Gamma			
-                
-                IF (EOSBaryonPlusEleTable % DV % Variables(iPressure) % Values(iRho,iTemp,iYp) .le. 0.0d0) THEN
-                    EOSBaryonPlusEleTable % DV % Variables(ics2) % Values(iRho,iTemp,iYp) = 0.0d0
-                    EOSBaryonPlusEleTable % DV % Variables(iGamma1) % Values(iRho,iTemp,iYp) = 0.0d0
-                END IF
-                
-            END DO
+        ! --- Failed results (NaN or non-positive) are flagged as NaN ---
+        DO iMethod = iSeparate, iCombined
+          IF ( .NOT. ( Gamma(iD,iT,iYe,iMethod) > 0.0_dp ) .OR. &
+               .NOT. ( Cs   (iD,iT,iYe,iMethod) > 0.0_dp ) ) THEN
+            Gamma(iD,iT,iYe,iMethod) = NaN
+            Cs   (iD,iT,iYe,iMethod) = NaN
+            nInvalid(iMethod) = nInvalid(iMethod) + 1
+          END IF
         END DO
+        IF ( ANY( IEEE_IS_NAN( Gamma(iD,iT,iYe,iSeparate:iCombined) ) ) ) CYCLE
+
+        nPoints = nPoints + 1
+
+        ErrG  = ABS( Gamma(iD,iT,iYe,:) - Gamma(iD,iT,iYe,iReference) ) &
+                / Gamma(iD,iT,iYe,iReference)
+        ErrCs = ABS( Cs   (iD,iT,iYe,:) - Cs   (iD,iT,iYe,iReference) ) &
+                / Cs   (iD,iT,iYe,iReference)
+
+        MaxErrG  = MAX( MaxErrG , ErrG  )
+        MaxErrCs = MAX( MaxErrCs, ErrCs )
+        SumErrG  = SumErrG  + ErrG
+        SumErrCs = SumErrCs + ErrCs
+
+        IF ( ErrG(iSeparate) < ErrG(iCombined) ) nSeparateCloser = nSeparateCloser + 1
+
+      END DO
     END DO
-    CALL CPU_TIME( tEnd )
-    WRITE(*,*) 'end bollig:', tEnd - tBegin 
+  END DO
 
-    CALL InitializeHDF( )
-    WRITE (*,*) "Starting HDF write: Baryonic + Electrons EOS"
-    CALL WriteEquationOfStateTableHDF( EOSBaryonPlusEleTable, BaryonPlusEleName )
-    CALL FinalizeHDF( )
+  ! --- Output ---
 
-    DEALLOCATE(eos_table)
-    
-CONTAINS
+  OPEN( NEWUNIT = iUnit, FILE = TRIM( OutputFileName ), ACCESS = 'STREAM', &
+        FORM = 'UNFORMATTED', STATUS = 'REPLACE' )
+  WRITE( iUnit ) INT( SIZE(D_R), INT32 ), INT( SIZE(T_R), INT32 ), INT( SIZE(Ye_R), INT32 )
+  WRITE( iUnit ) D_R, T_R, Ye_R
+  WRITE( iUnit ) Gamma
+  WRITE( iUnit ) Cs
+  WRITE( iUnit ) NegativeP
+  CLOSE( iUnit )
 
-    SUBROUTINE CalculateSeparateSoundSpeed(nrho, ntemp, nye, Pb_in, Pe_in, Eb_in, Ee_in, Eb_shift, rho, temp, ye, Gamma, cs2)
-    
-        INTEGER, INTENT(IN) :: nrho, ntemp, nye
-        REAL(DP), INTENT(IN) :: Pb_in(nrho,ntemp,nye), Pe_in(nrho,ntemp,nye), Eb_in(nrho,ntemp,nye), Ee_in(nrho,ntemp,nye)
-        
-        REAL(DP) :: Eb_shift
-        REAL(DP), INTENT(OUT) :: Gamma(nrho,ntemp,nye), cs2(nrho,ntemp,nye)
-        REAL(DP) :: Pb(nrho,ntemp,nye), Pe(nrho,ntemp,nye)
-        REAL(DP) :: Eb(nrho,ntemp,nye), Ee(nrho,ntemp,nye)
-        REAL(DP) :: dlnEbdlnT(nrho,ntemp,nye), dlnEedlnT(nrho,ntemp,nye)
-        REAL(DP) :: dlnPbdlnT(nrho,ntemp,nye), dlnPedlnT(nrho,ntemp,nye)
-        REAL(DP) :: dlnPbdlnrho(nrho,ntemp,nye), dlnPedlnrho(nrho,ntemp,nye)
-        REAL(DP) :: rho(nrho), temp(ntemp), ye(nye)
-    
-        integer :: i,j,k
-        REAL(DP) :: f1, f2, x1, x2
-        
-        do k=1,nye
-            do i=1,nrho
-                do j=1,ntemp
-                
-                    if (Pb_in(i,j,k) .lt. 0.0d0) then
-                        Pb(i,j,k) = 1.0d-30
-                    else
-                        Pb(i,j,k) = Pb_in(i,j,k)
-                    endif
-                    if (Pe_in(i,j,k) .lt. 0.0d0) then
-                        Pe(i,j,k) = 1.0d-30
-                    else
-                        Pe(i,j,k) = Pe_in(i,j,k)
-                    endif					
-                    
-                enddo
-            enddo
-        enddo
-        
-        Eb = Eb_in
-        Ee = Ee_in
-        
-        do k=1,nye
-            do i=1,nrho
-                ! Energy
-                do j=2,ntemp-1
-                    x1 = LOG10(temp(j-1))
-                    f1 = LOG10(Ee(i,j-1,k))
-                    x2 = LOG10(temp(j+1))
-                    f2 = LOG10(Ee(i,j+1,k))
-                    dlnEedlnT(i,j,k) = (f2-f1)/(x2-x1)
-                enddo
-                
-                ! boundaries: one-sided derivative
-                x2 = LOG10(temp(2))
-                x1 = LOG10(temp(1))
-                f2 = LOG10(Ee(i,2,k))
-                f1 = LOG10(Ee(i,1,k))
-                dlnEedlnT(i,1,k) = (f2-f1)/(x2-x1)
+  ! --- Summary ---
 
-                x2 = LOG10(temp(ntemp))
-                x1 = LOG10(temp(ntemp-1))
-                f2 = LOG10(Ee(i,ntemp,k))
-                f1 = LOG10(Ee(i,ntemp-1,k))
-                dlnEedlnT(i,1,k) = (f2-f1)/(x2-x1)
-                
-                do j=2,ntemp-1
-                    x1 = LOG10(temp(j-1))
-                    f1 = LOG10(Eb(i,j-1,k))
-                    x2 = LOG10(temp(j+1))
-                    f2 = LOG10(Eb(i,j+1,k))
-                    dlnEbdlnT(i,j,k) = (f2-f1)/(x2-x1)
-                enddo
-                
-                ! boundaries: one-sided derivative
-                x2 = LOG10(temp(2))
-                x1 = LOG10(temp(1))
-                f2 = LOG10(Eb(i,2,k))
-                f1 = LOG10(Eb(i,1,k))
-                dlnEbdlnT(i,1,k) = (f2-f1)/(x2-x1) 
+  WRITE(*,*)
+  WRITE(*,'(A,I8,A,I6,A)') ' Compared at ', nPoints, ' reference nodes (', &
+    nInvalidRef, ' skipped: invalid reference Gamma1 or P)'
+  WRITE(*,'(A,I8,A)') ' Nodes in cells with baryon P <= 0: ', &
+    COUNT( NegativeP == 1 ), ' (Separate interpolates P linearly there)'
+  WRITE(*,'(A,2I8)') ' Failed results (NaN or <= 0), Separate / Combined: ', &
+    nInvalid(iSeparate:iCombined)
+  WRITE(*,*)
+  WRITE(*,'(A)') ' Relative error w.r.t. reference'
+  WRITE(*,'(A4,A10,4A14)') '', 'Method', 'max Gamma1', 'mean Gamma1', 'max cs', 'mean cs'
+  DO iMethod = iSeparate, iCombined
+    WRITE(*,'(A4,A10,4ES14.3)') '', MethodNames(iMethod), &
+      MaxErrG (iMethod), SumErrG (iMethod) / DBLE( MAX( nPoints, 1 ) ), &
+      MaxErrCs(iMethod), SumErrCs(iMethod) / DBLE( MAX( nPoints, 1 ) )
+  END DO
+  WRITE(*,'(A,F6.1,A)') ' Separate closer to the reference Gamma1 at ', &
+    100.0_dp * DBLE( nSeparateCloser ) / DBLE( MAX( nPoints, 1 ) ), ' % of the points'
+  WRITE(*,*)
+  WRITE(*,'(A)') ' Results written to ' // TRIM( OutputFileName )
 
-                x2 = LOG10(temp(ntemp))
-                x1 = LOG10(temp(ntemp-1))
-                f2 = LOG10(Eb(i,ntemp,k))
-                f1 = LOG10(Eb(i,ntemp-1,k))
-                dlnEbdlnT(i,1,k) = (f2-f1)/(x2-x1)
-                
-                ! Pressure
-                do j=2,ntemp-1
-                    x1 = LOG10(temp(j-1))
-                    f1 = LOG10(Pe(i,j-1,k))
-                    x2 = LOG10(temp(j+1))
-                    f2 = LOG10(Pe(i,j+1,k))
-                    dlnPedlnT(i,j,k) = (f2-f1)/(x2-x1)
-                enddo
-                
-                ! boundaries: one-sided derivative
-                x2 = LOG10(temp(2))
-                x1 = LOG10(temp(1))
-                f2 = LOG10(Pe(i,2,k))
-                f1 = LOG10(Pe(i,1,k))
-                dlnPedlnT(i,1,k) = (f2-f1)/(x2-x1)
+  DEALLOCATE( D_T, T_T, Yp_T, P_T, E_T, S_T )
+  DEALLOCATE( D_R, T_R, Ye_R, Gamma, Cs, NegativeP )
 
-                x2 = LOG10(temp(ntemp))
-                x1 = LOG10(temp(ntemp-1))
-                f2 = LOG10(Pe(i,ntemp,k))
-                f1 = LOG10(Pe(i,ntemp-1,k))
-                dlnPedlnT(i,1,k) = (f2-f1)/(x2-x1)
-                
-                do j=2,ntemp-1
-                    x1 = LOG10(temp(j-1))
-                    f1 = LOG10(Pb(i,j-1,k))
-                    x2 = LOG10(temp(j+1))
-                    f2 = LOG10(Pb(i,j+1,k))
-                    dlnPbdlnT(i,j,k) = (f2-f1)/(x2-x1)
-                enddo
-                
-                ! boundaries: one-sided derivative
-                x2 = LOG10(temp(2))
-                x1 = LOG10(temp(1))
-                f2 = LOG10(Pb(i,2,k))
-                f1 = LOG10(Pb(i,1,k))
-                dlnPbdlnT(i,1,k) = (f2-f1)/(x2-x1)
-
-                x2 = LOG10(temp(ntemp))
-                x1 = LOG10(temp(ntemp-1))
-                f2 = LOG10(Pb(i,ntemp,k))
-                f1 = LOG10(Pb(i,ntemp-1,k))
-                dlnPbdlnT(i,1,k) = (f2-f1)/(x2-x1)	
-            enddo
-        enddo		
-    
-        do k=1,nye
-            do j=1,ntemp
-                do i=2,nrho-1
-                    x1 = LOG10(rho(i-1))
-                    x2 = LOG10(rho(i+1))
-                    f1 = LOG10(Pe(i-1,j,k))
-                    f2 = LOG10(Pe(i+1,j,k))
-                    dlnPedlnrho(i,j,k) = (f2-f1)/(x2-x1)
-                enddo
-                
-                ! boundaries: one-sided derivative
-                x1 = LOG10(rho(1))
-                x2 = LOG10(rho(2))
-                f1 = LOG10(Pe(1,j,k))
-                f2 = LOG10(Pe(2,j,k))
-                dlnPedlnrho(i,j,k) = (f2-f1)/(x2-x1)
-
-                x1 = LOG10(rho(nrho-1))
-                x2 = LOG10(rho(nrho))
-                f1 = LOG10(Pe(nrho-1,j,k))
-                f2 = LOG10(Pe(nrho,j,k))
-                dlnPedlnrho(i,j,k) = (f2-f1)/(x2-x1)
-
-                do i=2,nrho-1
-                    x1 = LOG10(rho(i-1))
-                    x2 = LOG10(rho(i+1))
-                    f1 = LOG10(Pb(i-1,j,k))
-                    f2 = LOG10(Pb(i+1,j,k))
-                    dlnPbdlnrho(i,j,k) = (f2-f1)/(x2-x1)
-                enddo
-                
-                ! boundaries: one-sided derivative
-                x1 = LOG10(rho(1))
-                x2 = LOG10(rho(2))
-                f1 = LOG10(Pb(1,j,k))
-                f2 = LOG10(Pb(2,j,k))
-                dlnPbdlnrho(i,j,k) = (f2-f1)/(x2-x1)
-
-                x1 = LOG10(rho(nrho-1))
-                x2 = LOG10(rho(nrho))
-                f1 = LOG10(Pb(nrho-1,j,k))
-                f2 = LOG10(Pb(nrho,j,k))
-                dlnPbdlnrho(i,j,k) = (f2-f1)/(x2-x1)
-            enddo
-        enddo
-    
-        ! Handle special cases where the baryonic pressures and/or energies are negative 
-        do k=1,nye
-            do j=1,ntemp
-                do i=1,nrho		
-                    IF (Pb(i,j,k) == 0.0d0) THEN
-                        dlnPbdlnrho(i,j,k) = 0.0d0
-                        dlnPbdlnT(i,j,k) = 0.0d0
-                    ENDIF
-
-                    IF (Eb(i,j,k) == 0.0d0) THEN
-                        dlnEbdlnT(i,j,k) = 0.0d0
-                    ENDIF
-
-                enddo
-            enddo
-        enddo	
-        
-        do k=1,nye
-            do j=1,ntemp
-                do i=1,nrho	
-                    Gamma(i,j,k) = (Pb(i,j,k) * dlnPbdlnrho(i,j,k) + Pe(i,j,k) * dlnPedlnrho(i,j,k) + &
-                        (Pb(i,j,k) * dlnPbdlnT(i,j,k) + Pe(i,j,k) * dlnPedlnT(i,j,k))**2.0d0 / &
-                        ((Eb(i,j,k) * dlnEbdlnT(i,j,k) + Ee(i,j,k) * dlnEedlnT(i,j,k)) * rho(i) ) ) / &
-                        (Pb(i,j,k) + Pe(i,j,k))
-    
-                    cs2(i,j,k) = Gamma(i,j,k) * (Pb(i,j,k) + Pe(i,j,k)) / rho(i) 
-                    cs2(i,j,k) = Gamma(i,j,k) * (Pb(i,j,k) + Pe(i,j,k)) / &
-                    (Pb(i,j,k) + Pe(i,j,k) + (Eb(i,j,k) - Eb_shift + Ee(i,j,k) - &
-                    0.511d0 / rmu * ergmev * ye(k) + cvel**2) * rho(i) ) * cvel**2
-                                        
-                enddo
-                ! i = 160
-                ! WRITE(*,*) Pb(i,j,k) * dlnPbdlnrho(i,j,k) + Pe(i,j,k) * dlnPedlnrho(i,j,k), &
-                ! (Pb(i,j,k) * dlnPbdlnT(i,j,k) + Pe(i,j,k) * dlnPedlnT(i,j,k))**2.0d0, &
-                ! (Eb(i,j,k) * dlnEbdlnT(i,j,k) + Ee(i,j,k) * dlnEedlnT(i,j,k)) * rho(i) , &
-                ! Gamma(i,j,k), cs2(i,j,k)
-
-                ! WRITE(*,*) cs2(i,j,k), Gamma(i,j,k), Eb(i,j,k) , dlnEbdlnT(i,j,k), Ee(i,j,k) , dlnEedlnT(i,j,k), Eb_shift
-
-            enddo
-        enddo
-        ! WRITE(*,*) MAXVAL(cs2), MINVAL(cs2)
-        ! WRITE(*,*) MAXVAL(Gamma), MINVAL(Gamma)
-        ! WRITE(*,*)
-        ! WRITE(*,*) MAXVAL(Pb), MAXVAL(Pe)
-        ! WRITE(*,*) MINVAL(Pb), MINVAL(Pe)
-        ! WRITE(*,*)
-        ! WRITE(*,*) MAXVAL(Eb), MAXVAL(Ee)
-        ! WRITE(*,*) MINVAL(Eb), MINVAL(Ee)
-        ! WRITE(*,*)
-        
-    END SUBROUTINE CalculateSeparateSoundSpeed
-    
-END PROGRAM wlCalculateSoundSpeed				
+END PROGRAM wlCalculateSoundSpeed

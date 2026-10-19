@@ -3,9 +3,9 @@
 !!! Andreas Lohs & Gang Guo
 !!! neutrino CC opacity is given by 2D integrals
 !!! processes to be considered in this routine
-!!! ReactionIndex=1: v + n -> e- + p  (oapcity in 1/km)
-!!! ReactionIndex=2: vb + p -> e+ + n (opacity in 1/km)
-!!! ReactionIndex=3: vb + p + e- -> n (opacity in 1/km)
+!!! ReactionIndex=1: v + n -> e- + p  (opacity in 1/cm)
+!!! ReactionIndex=2: vb + p -> e+ + n (opacity in 1/cm)
+!!! ReactionIndex=3: vb + p + e- -> n (opacity in 1/cm)
 !!! ReactionIndex=4: n -> vb + e- + p [emissivity in v/(s cm^3 MeV)]
 
 !!! nE defined in module: the No. of grids used in gaussian
@@ -49,6 +49,8 @@ MODULE wlSemiLeptonicOpacityModule2D
   !      Dnp=1.293d0, massA=1.0d3,massV=840.d0 , GfVud2 = (Gw_MeV*Vud)**2
   REAL(DP), PARAMETER :: F2wm0 = gamma_p - gamma_n - 1.0d0
   REAL(DP), PARAMETER :: Tfac  = 100.0d0
+  REAL(DP), PARAMETER :: TfacMin = 30.0d0         ! min. cutoff above rest mass (dilute matter)
+  REAL(DP), PARAMETER :: FD_MaxExponent = 700.0d0  ! EXP overflow guard in FD
   REAL(DP), PARAMETER :: gasq  = ga**2
   REAL(DP), PARAMETER :: gvsq  = gv**2
   REAL(DP), PARAMETER :: gva   = gv*ga
@@ -107,7 +109,7 @@ MODULE wlSemiLeptonicOpacityModule2D
 ! relativsitic disperstion relation for nucleons,
 ! E2=SQRT(p^2+Mass2^2)+U2
 ! Outputs:
-! (7) OpaA(NP): opacities in km^-1; for neutron decay, emissivities
+! (7) OpaA(NP): opacities in cm^-1 (output_in_km_inverse = .false.); for neutron decay, emissivities
 ! in (s cm^3 MeV)^-1
 !     **** blocking factor of final state neutrinos in neutron decay
 !     is not considered ****
@@ -217,7 +219,7 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
   REAL(DP) :: wE2, wE3
   INTEGER  :: i, j
   REAL(DP) :: xamp, E2, E3, E4
-  REAL(DP) :: xf2,xf3,xf4
+  REAL(DP) :: xf2,xb3,xb4   ! f2, 1-f3, 1-f4
   REAL(DP) :: p2min, p2max
   TYPE(AmpCoeffsType) :: Coeffs
 
@@ -233,7 +235,8 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
   DO i=1, nE
     E2 = xa(i)*(E2_max - E2_min) + E2_min
     wE2 = wxa(i)*(E2_max - E2_min)
-    P2 = SQRT( (E2 - U2)**2 - Mass2**2 )
+    P2 = SQRT( MAX( (E2 - U2)**2 - Mass2**2, 0.0d0 ) )
+    E2 = SQRT( P2**2 + Mass2**2 ) + U2   ! on-shell E2 consistent with P2
     CALL Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
     E3_min = Enu - xq0_max
     E3_max = Enu - xq0_min
@@ -245,15 +248,15 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
       wE3 = wxa(j)*(E3_max - E3_min)
       E4 = Enu + E2 - E3
       CALL Calc_ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
-      xf3 = FD(E3, Mu3, T)
-      xf4 = FD(E4, Mu4, T)
-      res = res + xf2*(1.0d0-xf3)*(1.0d0-xf4)*xamp*wE2*wE3/Enu**2
+      xb3 = FD(Mu3, E3, T)
+      xb4 = FD(Mu4, E4, T)
+      res = res + xf2*xb3*xb4*xamp*wE2*wE3/Enu**2
     END DO
   END DO
 
-  ! This is in 1/km
+  ! This is in 1/cm (hbarc in MeV cm)
   res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
-  ! This is in 1/km or 1/cm, depending on the value of output_in_km_inverse
+  ! opacity_unit_factor = 1 unless output_in_km_inverse is set
   res = res*opacity_unit_factor
 
 END SUBROUTINE Integral_2D
@@ -276,7 +279,7 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   INTEGER :: i,j
   REAL(DP) :: xamp
   REAL(DP) :: E2, E3, E4
-  REAL(DP) :: xf2,xf3,xf4
+  REAL(DP) :: xf2,xf3,xf4,xb2,xb3,xb4   ! f_k and 1-f_k
   REAL(DP) :: p2min, p2max, p4max
   TYPE(AmpCoeffsType) :: Coeffs
 
@@ -292,32 +295,36 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   DO i=1, nE
     E2 = xa(i)*(E2_max - E2_min) + E2_min
     wE2 = wxa(i)*(E2_max - E2_min)
-    P2 = SQRT( (E2-U2)**2 - Mass2**2 )
+    P2 = SQRT( MAX( (E2-U2)**2 - Mass2**2, 0.0d0 ) )
+    E2 = SQRT( P2**2 + Mass2**2 ) + U2   ! on-shell E2 consistent with P2
     CALL Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, ReactionIndex, xq0_min, xq0_max )
     E3_min = xq0_min - Enu
     E3_max = xq0_max - Enu
     IF( E3_max - E3_min <= 0.0d0 ) CYCLE   ! empty kinematic window at this E2
     xf2 = FD(E2, Mu2, T)
+    xb2 = FD(Mu2, E2, T)
   ! Loop over outgoing particle (i.e. particle 3)
     DO j=1,nE
       E3 = xa(j)*(E3_max - E3_min) + E3_min
       wE3 = wxa(j)*(E3_max - E3_min)
       E4 = Enu + E3 + E2
       CALL Calc_ampsq(Enu, E2, -E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
-      xf3 = FD(E3, Mu3, T)
-      xf4 = FD(E4, Mu4, T)
       IF(ReactionIndex.eq.3) THEN ! inverse decay
-        res = res + xf2*xf3*(1.0d0-xf4)*xamp*wE2*wE3/Enu**2
+        xf3 = FD(E3, Mu3, T)
+        xb4 = FD(Mu4, E4, T)
+        res = res + xf2*xf3*xb4*xamp*wE2*wE3/Enu**2
       ELSE IF(ReactionIndex.eq.4) THEN ! n decay, *blocking of neutrinos is not added*
-        res = res + (1.0d0-xf2)*(1.0d0-xf3)*xf4*xamp*wE2*wE3/Enu**2
+        xb3 = FD(Mu3, E3, T)
+        xf4 = FD(E4, Mu4, T)
+        res = res + xb2*xb3*xf4*xamp*wE2*wE3/Enu**2
       END IF
     END DO
   END DO
 
   IF(ReactionIndex.eq.3) THEN
-  ! This is in 1/km
+  ! This is in 1/cm (hbarc in MeV cm)
     res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
-  ! This is in 1/km or 1/cm, depending on the value of output_in_km_inverse
+  ! opacity_unit_factor = 1 unless output_in_km_inverse is set
     res = res*opacity_unit_factor
   ELSE IF(ReactionIndex.eq.4) THEN
     res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
@@ -392,9 +399,11 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   REAL(DP) :: tm3sq,tbet0,raw_ampsq
   REAL(DP) :: txi1,Ia2,tgam0,Ib2,txi3,Ic2,Id2,Ie2,Ig2,Ih2,Ij2,Ik2,Il2
   REAL(DP) :: cplE2,cplG2,cplH2,cplJ2,cplK2,cplL2
-  REAL(DP) :: YAP,ZAP,Inte1,Inte2,IlAP,IlPP,IkAP,tIkAP,IkPP,tIkPP
-  REAL(DP) :: IjAP,tIjAP,IGPP,tIgPP,TanArg,LogArg,cplLAP,cplKAP,cplJAP,cplLPP,cplKPP,cplGPP
+  REAL(DP) :: ZAP,sZAP,Inte1,Inte2,IlAP,IlPP,IkAP,tIkAP,IkPP,tIkPP
+  REAL(DP) :: IjAP,tIjAP,IGPP,tIgPP,cplLAP,cplKAP,cplJAP,cplLPP,cplKPP,cplGPP
   REAL(DP) :: ampsq_ff0,ampsq_pseudo       
+  REAL(DP) :: vb1,vc1,vb3,vc3,vg2,vg1,vg0,vgm1,vgm2,vh0,vh1,vh2
+  REAL(DP) :: dP,S2,S3,S4,S5,S6,S7,S8,S9
 
   Ampsq = 0.0d0
 
@@ -410,15 +419,17 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   E4 = E1 + E2 - E3
   E4f = E4 - U4
   E2f = E2 - U2
+  ! Off-shell particle (outside the kinematic window): no contribution.
+  ! The radicands are tested before the SQRT so that no NaN is ever
+  ! produced (FPE traps in debug builds, NaN tests removed by fast-math).
+  IF( E3**2 - Mass3**2 < 0.0d0 ) RETURN
+  IF( (E2 - U2)**2 - Mass2**2 < 0.0d0 ) RETURN
+  IF( (E4 - U4)**2 - Mass4**2 < 0.0d0 ) RETURN
+
   P1 = E1
   P3 = SQRT( E3**2 - Mass3**2 )
   P2 = SQRT( (E2 - U2)**2 - Mass2**2 )
   P4 = SQRT( (E4 - U4)**2 - Mass4**2 )
-
-  IF( P1 .ne. P1) RETURN
-  IF( P2 .ne. P2) RETURN
-  IF( P3 .ne. P3) RETURN
-  IF( P4 .ne. P4) RETURN
 
   IF ((P1+P2)>(P3+P4)) THEN
      Pmax = P3+P4
@@ -431,13 +442,29 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
      Pmin = ABS(P3-P4)
   endif
 
-  PaD1  = Pmax - Pmin
-  PaD3  = Pmax**3 - Pmin**3
-  PaD5  = Pmax**5 - Pmin**5
-  PaD7  = Pmax**7 - Pmin**7
-  PaD9  = Pmax**9 - Pmin**9
-  PaDm1 = 1.0d0/Pmax - 1.0d0/Pmin
-  PaDm3 = 1.0d0/Pmax**3 - 1.0d0/Pmin**3
+  ! No overlap of the angular ranges: no allowed configuration. Pmin = 0
+  ! (P1 = P2 and P3 = P4 exactly) is a measure-zero point where the 1/Pmin
+  ! terms below are singular; skip it.
+  IF( Pmax <= Pmin .OR. Pmin <= 0.0d0 ) RETURN
+
+  ! b^n - a^n = (b-a)*S_n with S_n = b*S_{n-1} + a^(n-1) (all terms
+  ! positive, no cancellation for narrow windows)
+  dP = Pmax - Pmin
+  S2 = Pmax + Pmin
+  S3 = Pmax*S2 + Pmin**2
+  S4 = Pmax*S3 + Pmin**3
+  S5 = Pmax*S4 + Pmin**4
+  S6 = Pmax*S5 + Pmin**5
+  S7 = Pmax*S6 + Pmin**6
+  S8 = Pmax*S7 + Pmin**7
+  S9 = Pmax*S8 + Pmin**8
+  PaD1  = dP
+  PaD3  = dP*S3
+  PaD5  = dP*S5
+  PaD7  = dP*S7
+  PaD9  = dP*S9
+  PaDm1 = -dP/(Pmax*Pmin)
+  PaDm3 = -dP*S3/(Pmax*Pmin)**3
 
   A = E1*E2f+0.5d0*(P1**2+P2**2)
   B = E3*E4f+0.5d0*(P3**2+P4**2)
@@ -454,11 +481,20 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
     Pmin2 = ABS(P3-P2)
   endif
 
-  PbD1  = Pmax2 - Pmin2
-  PbD3  = Pmax2**3 - Pmin2**3
-  PbD5  = Pmax2**5 - Pmin2**5
-  PbD7  = Pmax2**7 - Pmin2**7
-  PbDm1 = 1.0d0/Pmax2 - 1.0d0/Pmin2
+  IF( Pmax2 <= Pmin2 .OR. Pmin2 <= 0.0d0 ) RETURN
+
+  dP = Pmax2 - Pmin2
+  S2 = Pmax2 + Pmin2
+  S3 = Pmax2*S2 + Pmin2**2
+  S4 = Pmax2*S3 + Pmin2**3
+  S5 = Pmax2*S4 + Pmin2**4
+  S6 = Pmax2*S5 + Pmin2**5
+  S7 = Pmax2*S6 + Pmin2**6
+  PbD1  = dP
+  PbD3  = dP*S3
+  PbD5  = dP*S5
+  PbD7  = dP*S7
+  PbDm1 = -dP/(Pmax2*Pmin2)
 
   Ct = E1*E4f-0.5d0*(P1**2+P4**2)
   D = E2f*E3-0.5d0*(P2**2+P3**2)
@@ -483,12 +519,23 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
     Pmin3 = ABS(P2-P4)
   endif
 
-  PcD1  = Pmax3 - Pmin3
-  PcD3  = Pmax3**3 - Pmin3**3
-  PcD5  = Pmax3**5 - Pmin3**5
-  PcD7  = Pmax3**7 - Pmin3**7
-  PcD9  = Pmax3**9 - Pmin3**9
-  PcDm1 = 1.0d0/Pmax3 - 1.0d0/Pmin3
+  IF( Pmax3 <= Pmin3 .OR. Pmin3 <= 0.0d0 ) RETURN
+
+  dP = Pmax3 - Pmin3
+  S2 = Pmax3 + Pmin3
+  S3 = Pmax3*S2 + Pmin3**2
+  S4 = Pmax3*S3 + Pmin3**3
+  S5 = Pmax3*S4 + Pmin3**4
+  S6 = Pmax3*S5 + Pmin3**5
+  S7 = Pmax3*S6 + Pmin3**6
+  S8 = Pmax3*S7 + Pmin3**7
+  S9 = Pmax3*S8 + Pmin3**8
+  PcD1  = dP
+  PcD3  = dP*S3
+  PcD5  = dP*S5
+  PcD7  = dP*S7
+  PcD9  = dP*S9
+  PcDm1 = -dP/(Pmax3*Pmin3)
 
   alp0 = (P1**2-P3**2)*(P2**2-P4**2)/4.0d0
   alp1 = E1*E2f + (P1**2+P2**2-P3**2-P4**2)/4.0d0
@@ -537,6 +584,8 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   raw_ampsq = Coeffs%cplA*Ia + Coeffs%cplB*Ib + Coeffs%cplC*Ic + Coeffs%cplD*Id + cplE*Ie + cplG*Ig + cplH*Ih + cplJ*Ij &
        + cplK*Ik + cplL*Il
 
+  ampsq_ff0    = 0.0d0
+  ampsq_pseudo = 0.0d0
   ! Apply crossing symmetry minus sign for 3-to-1 and 1-to-3 processes
   IF (ReactionIndex == 3 .OR. ReactionIndex == 4) THEN
      Ampsq = max(0.0d0, -raw_ampsq)
@@ -566,6 +615,21 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
        *eps0*eps1+del0*eps1**2)*PaD1-(del1*eps0**2+2.0d0*del0*eps0*eps1)*PaDm1-1.0d0/3.0d0*del0*eps0**2*PaDm3)
 
     Ic2 = 4.0d0*( 0.5d0*Icp + 2.0d0*txi1*Ic - 2.0d0*tbet0*Icm )
+    ! <(p1.p3) q*^2>_phi = <p1.p3><q*^2> - 2 Var(p1vec.p3vec), Var = p1perp^2 p3perp^2/2:
+    ! Ic2 -= 16 pi^2 Int dp (A-p^2/2)^2 p1perp^2 p3perp^2, with (u=p^2)
+    ! p1perp^2 = -(u - b1 + c1/u)/4, b1 = 2(P1^2+P2^2), c1 = (P1^2-P2^2)^2 (same for 3,4)
+    vb1 = 2.0d0*(P1**2+P2**2);  vc1 = (P1**2-P2**2)**2
+    vb3 = 2.0d0*(P3**2+P4**2);  vc3 = (P3**2-P4**2)**2
+    vg2 = 1.0d0; vg1 = -(vb1+vb3); vg0 = vb1*vb3+vc1+vc3
+    vgm1 = -(vb1*vc3+vb3*vc1); vgm2 = vc1*vc3
+    vh0 = A**2; vh1 = -A; vh2 = 0.25d0
+    Ic2 = Ic2 - pi**2*( (vh2*vg2)                    *PaD9/9.0d0 &
+                      + (vh2*vg1+vh1*vg2)            *PaD7/7.0d0 &
+                      + (vh2*vg0+vh1*vg1+vh0*vg2)    *PaD5/5.0d0 &
+                      + (vh2*vgm1+vh1*vg0+vh0*vg1)   *PaD3/3.0d0 &
+                      + (vh2*vgm2+vh1*vgm1+vh0*vg0)  *PaD1       &
+                      - (vh1*vgm2+vh0*vgm1)          *PaDm1      &
+                      - (vh0*vgm2)                   *PaDm3/3.0d0 )
 
 
     txi3 = 0.5d0*tm3sq-E1*E3+(P1**2+P3**2)/2.0d0
@@ -603,7 +667,6 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
 !!! adding pseudoscalar terms w/o form factor dependence
   IF(IncludeCorrections(2) .eq. 1) THEN
 
-    YAP = 0.25d0*AmassSq+tm3sq-2.0d0*E1*E3+P1**2+P3**2
     ZAP = mpi**2-tm3sq+2.0d0*E1*E3-P1**2-P3**2
 
     ! The branches below cover ZAP>0 and ZAP<0 only; initialize so that the
@@ -626,9 +689,13 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
         tIgPP = pi**2*( ZAP**2*Inte2 - 2.0d0*ZAP*Inte1 +PcD1 )
       ELSE IF(ZAP<0.0d0) THEN
         ZAP = -ZAP
-        TanArg = sqrt(ZAP)*PcD1/(Pmax3*Pmin3-ZAP)
-        LogArg = abs((1.0d0+TanArg)/(1.0d0-TanArg))
-        Inte1 = 0.5d0*log(LogArg)/sqrt(ZAP)
+        sZAP = sqrt(ZAP)
+        ! Pion pole |q| = sqrt(-ZAP) inside [Pmin3,Pmax3]: the closed forms
+        ! are singular there, leave the pseudoscalar term at zero.
+        IF( Pmin3 > sZAP .OR. Pmax3 < sZAP ) THEN
+        ! Inte1 = int_{Pmin3}^{Pmax3} dP/(P^2-ZAP), as a difference of logs
+        ! (the arctanh addition formula fails if Pmax3*Pmin3 = ZAP)
+        Inte1 = 0.5d0*( log(abs((Pmax3-sZAP)/(Pmax3+sZAP))) - log(abs((Pmin3-sZAP)/(Pmin3+sZAP))) )/sZAP
         Inte2 = -0.5d0*( Pmax3/(Pmax3**2-ZAP)-Pmin3/(Pmin3**2-ZAp) + Inte1 )/ZAp 
         ILAp = 4.0d0*pi**2*Inte1
         Ilpp = 4.0d0*pi**2*inte2
@@ -636,6 +703,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
         tIkPP = 2.0d0*pi**2*(ZAP*Inte2+Inte1)
         tIjAp = 4.0d0*pi**2*alp0*( 1.0d0/ZAP*PcDm1  +1.0d0/ZAP*inte1 )
         tIgPP = pi**2*( ZAP**2*Inte2+2.0d0*ZAP*Inte1  +PcD1)
+        END IF
       END IF
 
     ELSE IF(IncludeCorrections(3) .eq. 1) THEN
@@ -650,9 +718,10 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
         tIgPP = 4.0d0*pi**2/AmassSq*( ZAP**2*MassMy*Inte2 - (2.0d0*ZAP*MassMy+ZAp**2)*Inte1+(ZAP+MassMy)*PcD1-PcD3/3.0d0 ) 
       ELSE IF (ZAP<0.0d0) THEN
         ZAP = -ZAP
-        TanArg = sqrt(ZAP)*PcD1/(Pmax3*Pmin3-ZAP)
-        LogArg = abs((1.0d0+TanArg)/(1.0d0-TanArg))
-        Inte1 = 0.5d0*log(LogArg)/sqrt(ZAP)
+        sZAP = sqrt(ZAP)
+        ! Pion pole inside the window: see the IncludeCorrections(3)=0 branch
+        IF( Pmin3 > sZAP .OR. Pmax3 < sZAP ) THEN
+        Inte1 = 0.5d0*( log(abs((Pmax3-sZAP)/(Pmax3+sZAP))) - log(abs((Pmin3-sZAP)/(Pmin3+sZAP))) )/sZAP
         Inte2 = -0.5d0*( Pmax3/(Pmax3**2-ZAP)-Pmin3/(Pmin3**2-ZAp) + Inte1 )/ZAp 
         ILAp = 16.0d0*pi**2/AmassSq*(MassMy*Inte1-PcD1)
         Ilpp = 16.0d0*pi**2/AmassSq*( MassMy*inte2 - inte1 )
@@ -661,6 +730,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
         tIjAp = 16.0d0*pi**2/AmassSq*alp0*( (MassMy+ZAP)/ZAP*PcDm1+MassMy/ZAP*inte1 )
         tIgPP = 4.0d0*pi**2/AmassSq*( ZAP**2*MassMy*Inte2 - (-2.0d0*ZAP*MassMy+ZAp**2)*Inte1 +(-ZAP+MassMy)*PcD1&
        -PcD3/3.0d0 ) 
+        END IF
       END IF
     END IF
 
@@ -684,6 +754,12 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
       IF(Ampsq+ampsq_pseudo>=0.0d0) Ampsq=Ampsq+ampsq_pseudo
     END IF
 
+  ! Crossing (Guo Eq. 39): for the 3-body channels EVERY term of |M|^2 (LO, WM, FF, PS)
+  ! changes sign. Apply the sign to the full sum once, then clip once.
+  IF (ReactionIndex == 3 .OR. ReactionIndex == 4) THEN
+    Ampsq = MAX(0.0d0, -(raw_ampsq + ampsq_ff0 + ampsq_pseudo))
+  END IF
+
 END SUBROUTINE Calc_Ampsq
 
 SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
@@ -693,7 +769,7 @@ SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_ma
   ! On an empty window a zero-width interval is returned (the E3
   ! integration in Integral_2D then skips this E2 node).
 
-  REAL(DP), INTENT(INOUT) :: E2
+  REAL(DP), INTENT(IN)  :: E2   ! on-shell: E2 = SQRT(P2**2+Mass2**2)+U2 (set by caller)
   REAL(DP), INTENT(IN)  :: Enu, T, P2, Mass2, Mass3, Mass4, U2, U4
   REAL(DP), INTENT(OUT) :: xq0_min, xq0_max
 #if defined(WEAKLIB_OMP_OL)
@@ -705,8 +781,6 @@ SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_ma
   REAL(DP) :: qRoots(4), tmp1, tmp2, xA, xB, xC, disc
   INTEGER  :: nRoots
   LOGICAL  :: found
-
-  E2 = SQRT( P2**2 + Mass2**2 ) + U2
 
   ! Window-closure roots, Eq. C11 (guarded; used as breakpoint candidates)
   nRoots = 0
@@ -754,8 +828,11 @@ SUBROUTINE Range_pn( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max )
 
   REAL(DP) :: tmp,mpt,Epr,Esq,Equ,p2a,p2b,p20,F0,Finf,Fmax,Fmin
 
+  ! Thermal cutoff mu-U+Tfac*T, but at least TfacMin*T above the rest
+  ! mass: mu-U+Tfac*T alone drops below Mass2 in dilute matter (SQRT of a
+  ! negative number). Unchanged wherever mu-U >= Mass2-(Tfac-TfacMin)*T.
   p2min = 0.0d0
-  p2max = SQRT( (Tfac*T + Mu2 - U2)**2 - Mass2**2 )
+  p2max = SQRT( MAX(Mu2 - U2 + Tfac*T, Mass2 + TfacMin*T)**2 - Mass2**2 )
 
   mpt = Mass4 + Mass3
   F0 = SQRT(Enu**2 + mpt**2) + U4 - Mass2 - U2
@@ -796,7 +873,7 @@ END SUBROUTINE Range_pn
 
 SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, ReactionIndex, xq0_min, xq0_max )
 
-  REAL(DP), INTENT(INOUT) :: E2
+  REAL(DP), INTENT(IN)  :: E2   ! on-shell: E2 = SQRT(P2**2+Mass2**2)+U2 (set by caller)
   REAL(DP), INTENT(IN)  :: Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max
   INTEGER,  INTENT(IN)  :: ReactionIndex
   REAL(DP), INTENT(OUT) :: xq0_min, xq0_max
@@ -816,8 +893,6 @@ SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, R
   REAL(DP) :: q0_cap
   INTEGER  :: nRoots
   LOGICAL  :: found
-
-  E2 = SQRT( P2**2 + Mass2**2 ) + U2
 
   ! Thermal cap on q0 for the open-window case:
   !  reaction 3: q0 = Enu + E3, absorbed lepton cut off by its occupation
@@ -1004,7 +1079,6 @@ CONTAINS
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
-    IF( q /= q ) RETURN                        ! NaN guard
     IF( q < 0.0d0 .OR. q > q_big ) RETURN
     IF( nCand >= nCandMax ) RETURN
     nCand = nCand + 1
@@ -1076,10 +1150,11 @@ SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIn
   REAL(DP) :: F0, Fmax
 
   p2min = 0.0d0
-  p4max = SQRT( (Tfac*T + Mu4 - U4)**2 - Mass4**2 )
+  ! Thermal cutoffs as in Range_pn
+  p4max = SQRT( MAX(Mu4 - U4 + Tfac*T, Mass4 + TfacMin*T)**2 - Mass4**2 )
   SELECT CASE(ReactionIndex)
   CASE (3)
-    p2max = SQRT( (Tfac*T + Mu2 - U2)**2 - Mass2**2 )
+    p2max = SQRT( MAX(Mu2 - U2 + Tfac*T, Mass2 + TfacMin*T)**2 - Mass2**2 )
   CASE (4)
     p2min = SQRT( (max(Mass2,Mu2-Tfac*T-U2))**2 - Mass2**2 )
     p2max = SQRT( (SQRT(p4max**2+Mass4**2)+U4-U2)**2-Mass2**2 )
@@ -1192,7 +1267,10 @@ PURE ELEMENTAL FUNCTION FD(E, mu, T)
   !$ACC ROUTINE SEQ
 #endif
 
-  FD = 1.0d0 / (EXP((E - mu)/T) + 1.0d0)
+  ! 1 - f is computed as FD(mu, E, T) (arguments swapped), which avoids the
+  ! cancellation in 1 - FD(E, mu, T) deep in the Fermi sea. The exponent is
+  ! clamped to avoid overflow; f underflows gracefully to 0.
+  FD = 1.0d0 / (EXP(MIN((E - mu)/T, FD_MaxExponent)) + 1.0d0)
 END FUNCTION
 
 END MODULE wlSemiLeptonicOpacityModule2D

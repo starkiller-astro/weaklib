@@ -107,7 +107,7 @@ CONTAINS
     REAL(DP), INTENT(OUT) :: OpEl
 
     ! LOCAL
-    REAL(DP) :: f3, baryons_term, phase_space_term, E3, phi2, phi4
+    REAL(DP) :: f3, baryons_term, phase_space_term, E3, phi2, phi4, xb
 
     E3 = E1 + (M2-M4) + (U2-U4)
 
@@ -119,14 +119,42 @@ CONTAINS
     phi2 = Mu2 - M2_eff - U2
     phi4 = Mu4 - M4_eff - U4
 
-    baryons_term = (n2 - n4)/( 1.0d0 - EXP((phi4 - phi2)/T/kmev))
+    ! baryons_term = (n2 - n4)/(1 - EXP(xb)), written without the 0/0 at
+    ! phi4 = phi2 and without overflow for large xb
+    xb = (phi4 - phi2)/T/kmev
+    IF (ABS(xb) < 1.0d-12) THEN
+      ! limit xb -> 0: n4 -> n2*EXP(xb) (non-degenerate), so the ratio -> n2
+      baryons_term = n2
+    ELSE IF (xb <= 0.0d0) THEN
+      baryons_term = (n2 - n4)/(-ExpM1(xb))
+    ELSE
+      ! numerator and denominator multiplied by EXP(-xb)
+      baryons_term = (n4 - n2)*EXP(-xb)/(-ExpM1(-xb))
+    END IF
     phase_space_term = E3**2 * SQRT(1.0d0 - (M3/E3)**2)
-    f3 = 1.0d0/(EXP((E3 - Mu3)/T/kmev) + 1.0d0)
+    f3 = 1.0d0/(EXP(MIN((E3 - Mu3)/T/kmev, 100.0_DP)) + 1.0d0)
 
     OpEl = C_Op_el * baryons_term * phase_space_term * (1.0d0 - f3)
     OpEl = MAX( OpEl, 0.0_dp )
     
   END SUBROUTINE ElasticAbsorptionOpacity
+
+  ! EXP(x) - 1 without cancellation for small |x|
+  PURE FUNCTION ExpM1(x) RESULT(r)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP), INTENT(IN) :: x
+    REAL(DP) :: r, u
+    IF (ABS(x) < 1.0d-5) THEN
+      r = x*(1.0d0 + x*(0.5d0 + x/6.0d0))
+    ELSE
+      u = EXP(x)                    ! Kahan: (u-1)*x/LOG(u) keeps full precision
+      r = (u - 1.0d0)*x/LOG(u)
+    END IF
+  END FUNCTION ExpM1
 
   SUBROUTINE CalculateHorowitzWeakMagRecoil(E, WeakMagRecNuLep, WeakMagRecNuLepBar)
   ! This is Taken from Tobias' Fischer routines. In principle it can be

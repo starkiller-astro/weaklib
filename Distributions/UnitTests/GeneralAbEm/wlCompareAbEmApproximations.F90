@@ -1,4 +1,14 @@
-PROGRAM wlCompareOpacities
+PROGRAM wlCompareAbEmApproximations
+
+  ! Compares, along the ThermoConditions.dat points, the 2D CC kernels
+  ! (Opacity_CC_2D, optionally the 4D CUBA kernels) with the elastic
+  ! (Bruenn-like) absorption opacities of wlCalculateAbEmOpacityModule and
+  ! with the tabulated EmAb opacities. Thermodynamic quantities are
+  ! recomputed from the EOS table at (T, Rho, Ye) of each point.
+  !
+  ! EOSMODE_3D     : wl-EOS-SFHo-15-25-50.h5 (bare nucleon masses, U = 0)
+  ! EOSMODE_COMPOSE: BaryonsPlusPhotonsPlusLeptonsEOS.h5 (+ Helmholtz tables)
+  ! The 4D kernels are only available when compiled with USE_CUBA=TRUE.
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
@@ -18,8 +28,10 @@ PROGRAM wlCompareOpacities
   USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
     Opacity_CC_2D
+#ifdef WEAKLIB_CUBA
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
+#endif
   USE wlCalculateAbEmOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
     ElasticAbsorptionOpacityNue, &
@@ -38,7 +50,7 @@ PROGRAM wlCompareOpacities
   INTEGER , PARAMETER :: nOutTerminal = 100
   LOGICAL , PARAMETER :: UseReddy = .TRUE.
   LOGICAL , PARAMETER :: IncldudeGSI_2D = .TRUE.
-  LOGICAL , PARAMETER :: IncldudeGSI_4D = .FALSE.
+  LOGICAL , PARAMETER :: IncldudeGSI_4D = .FALSE. ! only used with USE_CUBA=TRUE
   REAL(DP), PARAMETER :: masse = me , massm = mmu
   REAL(DP), PARAMETER :: massn = mn, massp = mp
 
@@ -64,19 +76,26 @@ PROGRAM wlCompareOpacities
   REAL(DP), ALLOCATABLE :: OpaA_El(:,:,:,:), OpaA_El_bare(:,:,:,:), OpaA_Table(:,:,:)
   REAL(DP), ALLOCATABLE :: OpaA_2D(:,:,:,:), OpaA_4D(:,:,:,:), OpaA_2D_OLD(:,:,:,:)
   REAL(DP), ALLOCATABLE :: xT(:), xD(:), xYe(:), xYm(:)
+  REAL(DP), ALLOCATABLE :: xMue_in(:), xMum_in(:), xMun_in(:), xMup_in(:), &
+                           xUn_in(:), xUp_in(:), xMn_eff_in(:), xMp_eff_in(:)
 
   REAL(DP) :: xYp, xMumu, xMue, xMun, xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff, xMl, xMul
 
-  REAL(DP) :: buffer
   REAL(DP) :: t1, t2, t_start, t_end, t_2D_OLD, t_2D, t_4D, t_El, t_Tab
   REAL(DP) :: err
-  CHARACTER(len=128) :: FileName_EmAb
+  CHARACTER(len=128) :: FileName_EmAb, FileName_EOS
 
   CALL MPI_INIT( ierr )
 
-  CALL ReadEquationOfStateTableHDF( EOSTable, "BaryonsPlusPhotonsPlusLeptonsEOS.h5" )
-  CALL ReadHelmholtzTableHDF( HelmTableElectrons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5", "HelmTableElectrons" )
-  CALL ReadHelmholtzTableHDF( HelmTableMuons, "BaryonsPlusPhotonsPlusLeptonsEOS.h5", "HelmTableMuons" )
+#ifdef EOSMODE_3D
+  FileName_EOS = "wl-EOS-SFHo-15-25-50.h5"
+  CALL ReadEquationOfStateTableHDF( EOSTable, FileName_EOS )
+#else
+  FileName_EOS = "BaryonsPlusPhotonsPlusLeptonsEOS.h5"
+  CALL ReadEquationOfStateTableHDF( EOSTable, FileName_EOS )
+  CALL ReadHelmholtzTableHDF( HelmTableElectrons, FileName_EOS, "HelmTableElectrons" )
+  CALL ReadHelmholtzTableHDF( HelmTableMuons, FileName_EOS, "HelmTableMuons" )
+#endif
 
   iEOS_Rho = EOSTable % TS % Indices % iRho
   iEOS_T   = EOSTable % TS % Indices % iT
@@ -104,11 +123,19 @@ PROGRAM wlCompareOpacities
   ALLOCATE(OpaA_Table(NP, nThermoPoints, nOp))
   ALLOCATE(xT(nThermoPoints) , xD(nThermoPoints), &
            xYe(nThermoPoints), xYm(nThermoPoints))
+  ALLOCATE(xMue_in(nThermoPoints), xMum_in(nThermoPoints), &
+           xMun_in(nThermoPoints), xMup_in(nThermoPoints), &
+           xUn_in(nThermoPoints), xUp_in(nThermoPoints), &
+           xMn_eff_in(nThermoPoints), xMp_eff_in(nThermoPoints))
 
+  ! Columns: T[MeV] Rho Ye Ym Mue Mum Mun Mup Un Up M*n M*p
+  ! Only (T, Rho, Ye) are used below, the rest is recomputed from the EOS
+  ! table so that it is consistent with the opacity table.
   DO i = 1, nThermoPoints
     READ(123,*) xT(i), xD(i), xYe(i), xYm(i), &
-      buffer, buffer, buffer, buffer, buffer, buffer, buffer, buffer
-    xT(i) = xT(i) * kmev_inv
+      xMue_in(i), xMum_in(i), xMun_in(i), xMup_in(i), &
+      xUn_in(i), xUp_in(i), xMn_eff_in(i), xMp_eff_in(i)
+    xT(i) = xT(i) * kmev_inv ! MeV to K
   END DO
   CLOSE(123)
   
@@ -123,7 +150,7 @@ PROGRAM wlCompareOpacities
        FileName_EmAb_Option                 &
        = FileName_EmAb, &
        EquationOfStateTableName_Option      &
-       = "BaryonsPlusPhotonsPlusLeptonsEOS.h5",  &
+       = FileName_EOS,  &
        Verbose_Option = .TRUE. )
   CALL FinalizeHDF( )
   WRITE(*,*) 'Done Reading Tables'
@@ -229,6 +256,7 @@ PROGRAM wlCompareOpacities
         END DO
       END IF
             
+#ifdef WEAKLIB_CUBA
       IF (IncldudeGSI_4D) THEN
         DO k = 1, nOp
           DO j = 1, nApprox
@@ -240,6 +268,7 @@ PROGRAM wlCompareOpacities
           END DO
         END DO
       ENDIF
+#endif
 
       iCount = iCount + 1
       IF (MOD(iCount, nOutTerminal) == 0) WRITE(*,*) 'Done with', iCount
@@ -299,6 +328,7 @@ PROGRAM wlCompareOpacities
 
   DEALLOCATE(OpaA_2D_OLD, OpaA_2D, OpaA_4D, OpaA_El, OpaA_Table)
   DEALLOCATE(xT, xD, xYe, xYm)
+  DEALLOCATE(xMue_in, xMum_in, xMun_in, xMup_in, xUn_in, xUp_in, xMn_eff_in, xMp_eff_in)
 
 CONTAINS
 
@@ -306,6 +336,14 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 
   REAL(DP), INTENT(IN)  :: T, D, Ye, Ym
   REAL(DP), INTENT(OUT) :: Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, Mp_eff
+
+  ! The 3D (old weaklib) table stores the nucleon chemical potentials
+  ! without rest mass and shifted by -dmnp (TableCreator wlTableFinisher);
+  ! the relativistic ones are rebuilt as in the table creator
+  ! (abem_nucleons_Reddy_et_al_1998_weaklib.f90):
+  !   Mun = cmpn + dmnp + mn,  Mup = cmpp + dmnp + mp. The shift is
+  ! applied to the interpolated values: the table is never modified.
+  REAL(DP), PARAMETER   :: dmnp = 1.29333922d0
 
   TYPE(LeptonGasType) :: MuonGasState
   TYPE(LeptonGasType) :: ElectronGasState
@@ -333,8 +371,10 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
         EOSTable % DV % Variables(iDV) % Values(:,:,:), Mup )
 
 #ifdef EOSMODE_3D
-  Mn_eff = 0.0d0
-  Mp_eff = 0.0d0
+  Mun    = Mun + dmnp + mn
+  Mup    = Mup + dmnp + mp
+  Mn_eff = mn
+  Mp_eff = mp
   Up     = 0.0d0
   Un     = 0.0d0
 #else
@@ -421,6 +461,6 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 
 END SUBROUTINE ApplyEOS
 
-END PROGRAM wlCompareOpacities
+END PROGRAM wlCompareAbEmApproximations
 
 

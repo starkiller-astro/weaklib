@@ -52,13 +52,18 @@ MODULE wlLeptonPhotonGasEOS
       
   END TYPE PhotonGasType
 
-  PUBLIC :: LeptonGasEOS, PhotonGasEOS, GetPhotonLeptonGasEOS
+  PUBLIC :: LeptonGasEOS, PhotonGasEOS, GetPhotonLeptonGasEOS, GetPhotonLeptonGasEOS_dT
   
 CONTAINS
 
   ! Wrapper to make this call easy
   SUBROUTINE GetPhotonLeptonGasEOS(D, T, Ye, Ym, &
     HelmTableElectrons, HelmTableMuons, P, E, S)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
 
     REAL(DP), INTENT(IN)  :: D, T, Ye, Ym
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
@@ -107,6 +112,69 @@ CONTAINS
     S = S + LeptonGasState % s
 
   END SUBROUTINE GetPhotonLeptonGasEOS
+
+  ! Same as GetPhotonLeptonGasEOS, but also returns temperature derivatives
+  ! at constant density (used by the temperature inversion)
+  SUBROUTINE GetPhotonLeptonGasEOS_dT(D, T, Ye, Ym, &
+    HelmTableElectrons, HelmTableMuons, P, E, S, dPdT, dEdT, dSdT)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    REAL(DP), INTENT(IN)  :: D, T, Ye, Ym
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
+    TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    REAL(DP), INTENT(OUT) :: P, E, S
+    REAL(DP), INTENT(OUT) :: dPdT, dEdT, dSdT
+
+    ! LOCAL
+    TYPE(PhotonGasType) :: PhotonGasState
+    TYPE(LeptonGasType) :: LeptonGasState
+
+    ! Do photons first 
+    PhotonGasState % rho = D
+    PhotonGasState % T   = T
+
+    CALL PhotonGasEOS(PhotonGasState)
+
+    P    = PhotonGasState % p
+    E    = PhotonGasState % e
+    S    = PhotonGasState % s
+    dPdT = PhotonGasState % dpdT
+    dEdT = PhotonGasState % dedT
+    dSdT = PhotonGasState % dsdT
+
+    ! Then electrons
+    LeptonGasState % rho = D
+    LeptonGasState % T   = T
+    LeptonGasState % yL  = Ye
+
+    CALL LeptonGasEOS(HelmTableElectrons, LeptonGasState)
+
+    P    = P    + LeptonGasState % p
+    E    = E    + LeptonGasState % e
+    S    = S    + LeptonGasState % s
+    dPdT = dPdT + LeptonGasState % dpdT
+    dEdT = dEdT + LeptonGasState % dedT
+    dSdT = dSdT + LeptonGasState % dsdT
+
+    ! Then muons
+    LeptonGasState % rho = D
+    LeptonGasState % T   = T
+    LeptonGasState % yL  = Ym
+
+    CALL LeptonGasEOS(HelmTableMuons, LeptonGasState)
+
+    P    = P    + LeptonGasState % p
+    E    = E    + LeptonGasState % e
+    S    = S    + LeptonGasState % s
+    dPdT = dPdT + LeptonGasState % dpdT
+    dEdT = dEdT + LeptonGasState % dedT
+    dSdT = dSdT + LeptonGasState % dsdT
+
+  END SUBROUTINE GetPhotonLeptonGasEOS_dT
 
   SUBROUTINE PhotonGasEOS(PhotonGasState)
 #if defined(WEAKLIB_OMP_OL)

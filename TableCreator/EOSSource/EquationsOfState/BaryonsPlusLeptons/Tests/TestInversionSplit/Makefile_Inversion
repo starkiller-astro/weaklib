@@ -19,7 +19,8 @@ wlInversion = \
 	$(SHAREDMODULES) \
   $(COMMON_MODS_OBJ)
   
-all: wlEOSComposeInversionTest wlEOSComposeInversionTestOnePointEnergy
+all: wlEOSComposeInversionTest wlEOSComposeInversionTestOnePointEnergy \
+     wlEOSLeaveOneOutInterpolationTest
 
 wlEOSComposeInversionTest: \
 	$(wlInversion) wlEOSComposeInversionTest.o
@@ -31,6 +32,12 @@ wlEOSComposeInversionTestOnePointEnergy: \
 	$(wlInversion) wlEOSComposeInversionTestOnePointEnergy.o
 	$(FLINKER) $(FLAGS) -o wlEOSComposeInversionTestOnePointEnergy_$(MACHINE) \
 	$(wlInversion) wlEOSComposeInversionTestOnePointEnergy.o \
+	$(LIBRARIES)
+
+wlEOSLeaveOneOutInterpolationTest: \
+	$(wlInversion) wlEOSLeaveOneOutInterpolationTest.o
+	$(FLINKER) $(FLAGS) -o wlEOSLeaveOneOutInterpolationTest_$(MACHINE) \
+	$(wlInversion) wlEOSLeaveOneOutInterpolationTest.o \
 	$(LIBRARIES)
 
 clean:
@@ -46,6 +53,7 @@ wlEOSComposeInversionTest.o: \
   wlEOSIOModuleHDF.o \
   wlInterpolationModule.o \
   wlInterpolationUtilitiesModule.o \
+  wlEOSInversionModule.o \
   wlEOSComponentsCombinedInversionModule.o \
   wlEOSComponentsSeparateInversionModule.o \
 	wlHelmIOModuleHDF.o \
@@ -69,3 +77,12 @@ wlEOSComposeInversionTestOnePointEnergy.o: \
   wlExtPhysicalConstantsModule.o \
   wlEOSComposeInversionTestOnePointEnergy.F90
 
+wlEOSLeaveOneOutInterpolationTest.o: \
+  wlKindModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlHelmIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+  wlEOSLeaveOneOutInterpolationTest.F90

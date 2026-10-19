@@ -72,8 +72,6 @@ CONTAINS
     INTEGER  :: iD, iT, iYp, iL_D, iL_T, iL_Yp
     REAL(DP) :: eos_table(3,3,3,3), cs2_temp(3,3,3), gamma_temp(3,3,3)
 
-    REAL(DP) :: LocalOffset
-
     TYPE(LeptonGasType) :: ElectronGasState
     TYPE(LeptonGasType) :: MuonGasState
     TYPE(PhotonGasType) :: PhotonGasState
@@ -151,17 +149,43 @@ CONTAINS
       aT  = 1.0_dp / ( T * LOG10( T_T(iT+1) / T_T(iT) ) )
       aYp = ln10   / ( Yp_T(iYp+1) - Yp_T(iYp) )
       
-      LocalOffset = MINVAL( P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) )
-      IF (LocalOffset .lt. 0.0_dp) THEN
-          LocalOffset = -1.1d0*LocalOffset
+      ! The baryon pressure is stored linearly and can be negative. Where it
+      ! is <= 0 at some corner of the cell, a log interpolation (with a local
+      ! offset) makes dP/dD unreliable, so it is interpolated linearly in
+      ! (log D, log T, Yp) there instead
+      IF ( MINVAL( P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) ) <= 0.0_dp ) THEN
+
+        ASSOCIATE( p => P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) )
+
+        Pbary &
+          = ( 1.0_dp - dYp ) * ( ( 1.0_dp - dT ) * ( ( 1.0_dp - dD ) * p(1,1,1) + dD * p(2,1,1) )   &
+                             +            dT   * ( ( 1.0_dp - dD ) * p(1,2,1) + dD * p(2,2,1) ) ) &
+          +            dYp   * ( ( 1.0_dp - dT ) * ( ( 1.0_dp - dD ) * p(1,1,2) + dD * p(2,1,2) )   &
+                             +            dT   * ( ( 1.0_dp - dD ) * p(1,2,2) + dD * p(2,2,2) ) )
+
+        ! aD / ln10 = d(dD)/dD and aT / ln10 = d(dT)/dT
+        dPbarydD &
+          = ( ( 1.0_dp - dYp ) * ( ( 1.0_dp - dT ) * ( p(2,1,1) - p(1,1,1) )   &
+                                 +            dT   * ( p(2,2,1) - p(1,2,1) ) ) &
+            +            dYp   * ( ( 1.0_dp - dT ) * ( p(2,1,2) - p(1,1,2) )   &
+                                 +            dT   * ( p(2,2,2) - p(1,2,2) ) ) ) * aD / ln10
+
+        dPbarydT &
+          = ( ( 1.0_dp - dYp ) * ( ( 1.0_dp - dD ) * ( p(1,2,1) - p(1,1,1) )   &
+                                 +            dD   * ( p(2,2,1) - p(2,1,1) ) ) &
+            +            dYp   * ( ( 1.0_dp - dD ) * ( p(1,2,2) - p(1,1,2) )   &
+                                 +            dD   * ( p(2,2,2) - p(2,1,2) ) ) ) * aT / ln10
+
+        END ASSOCIATE
+
       ELSE
-          LocalOffset = 0.0_dp
-      ENDIF
-      
-      CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, LocalOffset, &
-          LOG10( P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + LocalOffset ), Pbary, &
-          dPbarydD, dPbarydT )
+
+        CALL LinearInterpDeriv_Array_Point &
+            ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, 0.0_dp, &
+            LOG10( P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) ), Pbary, &
+            dPbarydD, dPbarydT )
+
+      END IF
       
       CALL LinearInterpDeriv_Array_Point &
           ( iD, iT, iYp, dD, dT, dYp, aD, aT, aYp, OS_E, E_T, Ebary, &

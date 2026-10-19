@@ -1,0 +1,190 @@
+WEAKLIB_DIR ?= $(HOME)/weaklib
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Build
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
+
+# Needed only by the 'compare' targets (cc_weak_mag_weaklib and its modules)
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Makefile_Opacity_FullWeakPhysics_Dependencies
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_ObjectFiles
+include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefile_Dependencies
+
+VPATH += \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera
+
+# CUBA (Vegas) is only needed by the 4D kernels: link it only when requested
+ifeq ($(USE_CUBA),TRUE)
+  CUBA_LIB = -L$(CUBA_DIR) -lcuba
+else
+  CUBA_LIB =
+endif
+
+CHIMERA_WM = \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o \
+  cc_weak_mag_weaklib.o
+
+.DEFAULT_GOAL := all
+
+# Default: 2D kernels only, no CUBA needed
+all: wlTestAbEm2DVsGSI \
+     wlTestAbEm2DParallel \
+     wlTestAbEm2DVsTable
+
+# 4D (CUBA) kernels: make cuba USE_CUBA=TRUE
+cuba: check_cuba \
+      wlTestAbEm4DVsGSI \
+      wlTestAbEm4DParallel
+
+# Comparison with elastic approximation / tables (needs EOS + opacity tables)
+compare: wlCompareAbEmApproximations \
+         wlCompareAbEmApproximationsTable
+
+check_cuba:
+ifneq ($(USE_CUBA),TRUE)
+	$(error The 'cuba' targets require USE_CUBA=TRUE (and CUBA_DIR set))
+endif
+
+wlTestAbEm2DVsGSI: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestAbEm2DVsGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm2DVsGSI_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestAbEm2DVsGSI.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm2DParallel: \
+	$(weaklib) wlTestAbEm2DParallel.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm2DParallel_$(MACHINE) \
+	$(weaklib) wlTestAbEm2DParallel.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm2DVsTable: \
+	$(weaklib) wlTestAbEm2DVsTable.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm2DVsTable_$(MACHINE) \
+	$(weaklib) wlTestAbEm2DVsTable.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm4DVsGSI: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestAbEm4DVsGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm4DVsGSI_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestAbEm4DVsGSI.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm4DParallel: \
+	$(weaklib) wlTestAbEm4DParallel.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm4DParallel_$(MACHINE) \
+	$(weaklib) wlTestAbEm4DParallel.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlCompareAbEmApproximations: \
+	$(weaklib) wlCompareAbEmApproximations.o
+	$(FLINKER) $(FLAGS) -o wlCompareAbEmApproximations_$(MACHINE) \
+	$(weaklib) wlCompareAbEmApproximations.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlCompareAbEmApproximationsTable: \
+	$(weaklib) $(CHIMERA_WM) wlCompareAbEmApproximationsTable.o
+	$(FLINKER) $(FLAGS) -o wlCompareAbEmApproximationsTable_$(MACHINE) \
+	$(weaklib) $(CHIMERA_WM) wlCompareAbEmApproximationsTable.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+clean:
+	rm -f *.o *.mod *.ld *.acc.s
+
+clobber: clean
+	rm -f *_$(MACHINE)
+
+.PHONY: all cuba compare check_cuba clean clobber
+
+numerical_module.o: \
+  wlKindModule.o
+
+physcnst_module.o: \
+  wlKindModule.o \
+  numerical_module.o
+
+PRB_CNTL_MODULE.o: \
+  wlKindModule.o
+
+cc_weak_mag_weaklib.o: \
+  wlKindModule.o \
+  numerical_module.o \
+  physcnst_module.o \
+  PRB_CNTL_MODULE.o
+
+wlTestAbEm2DVsGSI.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlSemiLeptonicOpacityIntegrationModule2D.o \
+  Opacity_SemiLep_2D_GSI.o
+
+wlTestAbEm2DParallel.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlSemiLeptonicOpacityIntegrationModule2D.o
+
+wlTestAbEm2DVsTable.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlSemiLeptonicOpacityIntegrationModule2D.o \
+  wlOpacityTableModule.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlOpacityFieldsModule.o \
+  wlInterpolationModule.o \
+  wlIOModuleHDF.o \
+  wlEquationOfStateTableModule.o
+
+wlTestAbEm4DVsGSI.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlSemiLeptonicOpacityModule4D.o \
+  Opacity_SemiLep_2D_GSI.o \
+  Opacity_SemiLep_4D_GSI.o
+
+wlTestAbEm4DParallel.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule4D.o
+
+wlCompareAbEmApproximations.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlInterpolationModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+  wlHelmIOModuleHDF.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlCalculateAbEmOpacityModule.o \
+  wlOpacityTableModule.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlOpacityFieldsModule.o
+
+wlCompareAbEmApproximationsTable.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlInterpolationModule.o \
+  wlEquationOfStateTableModule.o \
+  wlIOModuleHDF.o \
+  wlEOSIOModuleHDF.o \
+  wlLeptonEOSTableModule.o \
+  wlLeptonPhotonGasEOS.o \
+  wlHelmIOModuleHDF.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlCalculateAbEmOpacityModule.o \
+  wlOpacityTableModule.o \
+  wlOpacityTableIOModuleHDF.o \
+  wlOpacityFieldsModule.o \
+  cc_weak_mag_weaklib.o
+
+ifeq ($(USE_CUBA),TRUE)
+wlCompareAbEmApproximations.o: wlSemiLeptonicOpacityModule4D.o
+wlCompareAbEmApproximationsTable.o: wlSemiLeptonicOpacityModule4D.o
+endif

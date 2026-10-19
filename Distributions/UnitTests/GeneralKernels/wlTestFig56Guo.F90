@@ -34,6 +34,9 @@ PROGRAM wlTestFig56Guo
   REAL(DP), PARAMETER :: MuNumu_a = -20.0d0
 
   ! Condition (b)
+  ! Below ~5 MeV, Guo's Fig. 6 nu_bar_e + p and inverse neutron decay curves are
+  ! straight log-log interpolations between sparse energy nodes (~1 and ~5 MeV);
+  ! the exact threshold edges computed here only agree with Guo at those nodes.
   REAL(DP), PARAMETER :: T_b      = 15.2d0
   REAL(DP), PARAMETER :: MuE_b    = 44.4d0
   REAL(DP), PARAMETER :: MuMu_b   = 37.3d0
@@ -46,7 +49,7 @@ PROGRAM wlTestFig56Guo
   REAL(DP), PARAMETER :: MuNue_b  = 7.1d0
   REAL(DP), PARAMETER :: MuNumu_b = 1.3d0
 
-  INTEGER , PARAMETER :: WhichCorrection = 1   ! LO+WM+PS+FF (same convention as Guo)
+  INTEGER , PARAMETER :: WhichCorrection = 3   ! LO+WM+PS+FF (same convention as Guo)
   INTEGER , PARAMETER :: iProcessMin = 1
   INTEGER , PARAMETER :: iProcessMax = 34
   REAL(DP)            :: Rout_Int(iProcessMax - iProcessMin + 1)
@@ -102,6 +105,7 @@ PROGRAM wlTestFig56Guo
   process_string_Fig6(3) = 'nu_bar_e + e- + p -> n'
   process_string_Fig6(4) = 'nu_bar_e + e- -> nu_bar_mu + mu-'
   process_string_Fig6(5) = 'nu_bar_e + e- + nu_mu -> mu-'
+  process_string_Fig6(5) = 'nu_mu + e- + nu_bar_e -> mu-'
 
   !--- Write Headers ---
   ! Fig 5 Condition (a)
