@@ -2,7 +2,7 @@ MODULE wlLeptonPhotonGasEOS
 
   USE wlKindModule, ONLY: dp
   USE wlLeptonEOSTableModule, ONLY: &
-    HelmTableType
+    HelmTableType, ComputeClassicalPairScales, nPairDensityTerms
   USE wlHelmholtzEOS
   USE wlEosConstantsModule, ONLY: &
     pi, rmu, kerg, cvel, &
@@ -11,12 +11,20 @@ MODULE wlLeptonPhotonGasEOS
   IMPLICIT NONE
   PRIVATE
 
-  ! The pair-symmetric representation agrees with the full Fermi gas through
-  ! linear order in the net lepton density.  Use it directly for small eta
-  ! and blend its Helmholtz free energy into the table over a finite interval.
-  ! At the outer edge the first omitted relative correction is O(eta^2).
-  REAL(DP), PARAMETER, PUBLIC :: PairSymmetricEtaMin = 5.0e-3_DP
-  REAL(DP), PARAMETER, PUBLIC :: PairSymmetricEtaMax = 2.0e-2_DP
+  ! A grand-pressure expansion through eta^14 supplies the regular Fermi
+  ! pair limit. Join its Helmholtz free energy to the regularized table;
+  ! all outputs, including mu and compressibility, use that same potential.
+  ! These thresholds refer to asinh(n/A0), not to a floor on net density.
+  REAL(DP), PARAMETER, PUBLIC :: PairSymmetricEtaMin = 0.5_DP
+  REAL(DP), PARAMETER, PUBLIC :: PairSymmetricEtaMax = 1.0_DP
+
+  ! Derivatives of one free-energy density F(T,n), n the signed net
+  ! lepton number density. Store density derivatives in scaled form to
+  ! avoid forming 1/n**2 near pair symmetry. Fn remains unscaled so that
+  ! a representable chemical potential is not lost when n*Fn underflows.
+  TYPE, PRIVATE :: LeptonFreeEnergyType
+    REAL(DP) :: F, FT, FTT, Fn, nFTn, nnFnn
+  END TYPE LeptonFreeEnergyType
 
   TYPE, PUBLIC :: LeptonGasType
 
@@ -187,20 +195,28 @@ CONTAINS
     plep, elep, slep, etalep
 
     !..for the interpolations
-    INTEGER  :: iat, jat
-    REAL(DP) :: free, df_d, df_t, df_tt, df_dt
+    INTEGER  :: iat, jat, iCornerD, iCornerT, iCorner, iDerivative
+    REAL(DP) :: free, df_d, df_t, df_tt, df_dt, df_dd
     REAL(DP) :: xt, xd, mxt, mxd, fi(36),   &
     si0t, si1t, si2t, si0mt, si1mt, si2mt,  &
     si0d, si1d, si2d, si0md, si1md, si2md,  &
     dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt,  &
     dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md,  &
-    ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt
+    ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, &
+    ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md
 
     ! extra variables I added that were previously allocated
     REAL(DP) :: smallt, smalld, hight, highd
     REAL(DP) :: tstp, dstp, dstpi, tstpi
     TYPE(HelmholtzStateType) :: HelmState
+    TYPE(LeptonFreeEnergyType) :: TableFreeEnergy
+    TYPE(LeptonFreeEnergyType) :: ReferenceFreeEnergy
+    TYPE(LeptonGasType) :: ReferenceState
+    REAL(DP) :: ReferenceDerivatives(9)
     REAL(DP) :: etaPair, sign_yL
+    REAL(DP) :: DiluteWeight(6)
+    TYPE(LeptonGasType) :: DiluteState
+    TYPE(LeptonFreeEnergyType) :: DilutePotential
 
     temp = LeptonGasState % T
     den  = LeptonGasState % rho
@@ -234,13 +250,29 @@ CONTAINS
 
     ENDIF
 
-    IF ( yL*den > HelmTable % maxdens .OR. &
+    IF ( (yL*den*HelmTable%DensityScale) > HelmTable % maxdens .OR. &
          temp   > HelmTable % maxtemp ) THEN
 
       STOP 'LeptonGasEOS: density or temperature is too high for the table'
       RETURN
 
     ENDIF
+
+    ! In the nondegenerate massive-gas regime the analytic relativistic
+    ! gas is more accurate than interpolating a cancelling rest-mass term.
+    ! The common-potential transition is controlled by occupation, not by
+    ! an arbitrary net-density floor or the lower edge of a particular file.
+    CALL ComputeDilutePairWeight &
+           ( HelmTable, temp, den, sign_yL*yL, DiluteWeight )
+    IF( DiluteWeight(1) > 0.0_DP )THEN
+      CALL EvaluatePairSymmetricExtension &
+             ( HelmTable, temp, den, sign_yL*yL, DiluteState, &
+               DilutePotential, Classical_Option=.TRUE. )
+      IF( DiluteWeight(1) >= 1.0_DP )THEN
+        LeptonGasState = DiluteState
+        RETURN
+      END IF
+    END IF
 
     ! The logarithmic net-density coordinate is ill-conditioned near pair
     ! symmetry: the chemical potential is recovered by cancelling its rest
@@ -249,10 +281,21 @@ CONTAINS
     ! not merely below the first net-density table point.
     CALL ComputePairDegeneracy &
            ( HelmTable, temp, den, sign_yL * yL, etaPair )
-    IF ( yL*den <= HelmTable % mindens .OR. &
+    IF ( (yL*den*HelmTable%DensityScale) <= HelmTable % mindens .OR. &
          ABS(etaPair) <= PairSymmetricEtaMin ) THEN
-      CALL EvaluatePairSymmetricExtension &
-             ( HelmTable, temp, den, sign_yL * yL, LeptonGasState )
+      IF( ABS(etaPair) <= PairSymmetricEtaMax )THEN
+        CALL EvaluateFermiPairExtension &
+               ( HelmTable, temp, den, sign_yL*yL, LeptonGasState, TableFreeEnergy )
+      ELSE
+        CALL EvaluatePairSymmetricExtension &
+               ( HelmTable, temp, den, sign_yL*yL, LeptonGasState, TableFreeEnergy )
+      END IF
+      IF( DiluteWeight(1) > 0.0_DP )THEN
+        CALL BlendLeptonFreeEnergy &
+               ( den*sign_yL*yL/rmu, DiluteWeight, DilutePotential, TableFreeEnergy )
+        CALL SetLeptonStateFromFreeEnergy &
+               ( temp, den, sign_yL*yL, TableFreeEnergy, LeptonGasState )
+      END IF
       RETURN
     END IF
 
@@ -267,7 +310,7 @@ CONTAINS
     tstpi = 1.0_dp / tstp
     dstpi = 1.0_dp / dstp
 
-    din   = yL * den
+    din   = (yL*den*HelmTable%DensityScale)
 
     !..initialize
     deni    = 1.0_dp/den
@@ -275,8 +318,8 @@ CONTAINS
 
     !..ion section: removed in this
 
-    !..enter the table with yL*den
-    din = yL*den
+    !..enter the table with (yL*den*HelmTable%DensityScale)
+    din = (yL*den*HelmTable%DensityScale)
 
     !..hash locate this temperature and density
     jat = INT( (LOG10(temp) - LOG10(smallt))*tstpi ) + 1
@@ -322,6 +365,23 @@ CONTAINS
     fi(34) = HelmTable % fddtt(iat+1,jat)
     fi(35) = HelmTable % fddtt(iat,jat+1)
     fi(36) = HelmTable % fddtt(iat+1,jat+1)
+
+    ! Interpolate the departure from the analytic pair gas. The original
+    ! specific potential contains -P0/d and a classical log(d) term;
+    ! interpolating those large terms directly need not retain convexity
+    ! on the coarse first density interval. Subtract the SAME reference
+    ! and all its derivatives at the corners, and add it back exactly.
+    DO iCornerT=0,1
+    DO iCornerD=0,1
+      iCorner=1+iCornerD+2*iCornerT
+      CALL EvaluatePairSymmetricExtension &
+        (HelmTable,HelmTable%t(jat+iCornerT),HelmTable%d(iat+iCornerD)/HelmTable%DensityScale, &
+         1.0_DP,ReferenceState,SpecificDerivatives_Option=ReferenceDerivatives)
+      DO iDerivative=1,9
+        fi(iCorner+4*(iDerivative-1))=fi(iCorner+4*(iDerivative-1))-ReferenceDerivatives(iDerivative)
+      END DO
+    END DO
+    END DO
 
     !..various differences
     xt  = MAX( (temp - HelmTable % t(jat)) * HelmTable % dti(jat), 0.0_dp)
@@ -372,6 +432,13 @@ CONTAINS
     ddsi1mt = -ddpsi1(mxt)*HelmTable % dti (jat)
     ddsi2mt =  ddpsi2(mxt)
 
+    ddsi0d  =  ddpsi0(xd)*HelmTable % dd2i(iat)
+    ddsi1d  =  ddpsi1(xd)*HelmTable % ddi (iat)
+    ddsi2d  =  ddpsi2(xd)
+    ddsi0md =  ddpsi0(mxd)*HelmTable % dd2i(iat)
+    ddsi1md = -ddpsi1(mxd)*HelmTable % ddi (iat)
+    ddsi2md =  ddpsi2(mxd)
+
     !..the free energy
     free  = h5( fi, &
       si0t,   si1t,   si2t,   si0mt,   si1mt,   si2mt, &
@@ -397,144 +464,35 @@ CONTAINS
       dsi0t,  dsi1t,  dsi2t,  dsi0mt,  dsi1mt,  dsi2mt, &
       dsi0d,  dsi1d,  dsi2d,  dsi0md,  dsi1md,  dsi2md)
 
-    !..now get the pressure derivative with density, chemical potential, and
-    !..lepton positron number densities
-    !..get the interpolation weight functions
-    si0t   =  xpsi0(xt )
-    si1t   =  xpsi1(xt ) * HelmTable % dt(jat)
+    df_dd = h5( fi, &
+      si0t,   si1t,   si2t,   si0mt,   si1mt,   si2mt, &
+      ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md)
 
-    si0mt  =  xpsi0(mxt)
-    si1mt  = -xpsi1(mxt) * HelmTable % dt(jat)
-
-    si0d   =  xpsi0(xd )
-    si1d   =  xpsi1(xd ) * HelmTable % dd(iat)
-
-    si0md  =  xpsi0(mxd)
-    si1md  = -xpsi1(mxd) * HelmTable % dd(iat)
-
-    !..derivatives of weight functions
-    dsi0t  = xdpsi0(xt ) * HelmTable % dti(jat)
-    dsi1t  = xdpsi1(xt )
-
-    dsi0mt = -xdpsi0(mxt) * HelmTable % dti(jat)
-    dsi1mt =  xdpsi1(mxt)
-
-    dsi0d  =  xdpsi0(xd ) * HelmTable % ddi(iat)
-    dsi1d  =  xdpsi1(xd )
-
-    dsi0md = -xdpsi0(mxd) * HelmTable % ddi(iat)
-    dsi1md =  xdpsi1(mxd)
-
-    !..look in the pressure derivative only once
-    fi(1)  = HelmTable % dpdf  (iat,jat)
-    fi(2)  = HelmTable % dpdf  (iat+1,jat)
-    fi(3)  = HelmTable % dpdf  (iat,jat+1)
-    fi(4)  = HelmTable % dpdf  (iat+1,jat+1)
-    fi(5)  = HelmTable % dpdft (iat,jat)
-    fi(6)  = HelmTable % dpdft (iat+1,jat)
-    fi(7)  = HelmTable % dpdft (iat,jat+1)
-    fi(8)  = HelmTable % dpdft (iat+1,jat+1)
-    fi(9)  = HelmTable % dpdfd (iat,jat)
-    fi(10) = HelmTable % dpdfd (iat+1,jat)
-    fi(11) = HelmTable % dpdfd (iat,jat+1)
-    fi(12) = HelmTable % dpdfd (iat+1,jat+1)
-    fi(13) = HelmTable % dpdfdt(iat,jat)
-    fi(14) = HelmTable % dpdfdt(iat+1,jat)
-    fi(15) = HelmTable % dpdfdt(iat,jat+1)
-    fi(16) = HelmTable % dpdfdt(iat+1,jat+1)
-
-    !..pressure derivative with density
-    dplep_dd  = h3(   fi, &
-        si0t,   si1t,   si0mt,   si1mt, &
-        si0d,   si1d,   si0md,   si1md)
-    dplep_dd  = MAX( yL * dplep_dd, 0.0_dp )
-
-    !..look in the lepton chemical potential table only once
-    fi(1)  = HelmTable % ef  (iat,jat)
-    fi(2)  = HelmTable % ef  (iat+1,jat)
-    fi(3)  = HelmTable % ef  (iat,jat+1)
-    fi(4)  = HelmTable % ef  (iat+1,jat+1)
-    fi(5)  = HelmTable % eft (iat,jat)
-    fi(6)  = HelmTable % eft (iat+1,jat)
-    fi(7)  = HelmTable % eft (iat,jat+1)
-    fi(8)  = HelmTable % eft (iat+1,jat+1)
-    fi(9)  = HelmTable % efd (iat,jat)
-    fi(10) = HelmTable % efd (iat+1,jat)
-    fi(11) = HelmTable % efd (iat,jat+1)
-    fi(12) = HelmTable % efd (iat+1,jat+1)
-    fi(13) = HelmTable % efdt(iat,jat)
-    fi(14) = HelmTable % efdt(iat+1,jat)
-    fi(15) = HelmTable % efdt(iat,jat+1)
-    fi(16) = HelmTable % efdt(iat+1,jat+1)
-
-    !..lepton chemical potential etalep
-    etalep  = h3( fi, &
-        si0t,   si1t,   si0mt,   si1mt, &
-        si0d,   si1d,   si0md,   si1md)
-
-    !..look in the number density table only once
-    fi(1)  = HelmTable % xf  (iat,jat)
-    fi(2)  = HelmTable % xf  (iat+1,jat)
-    fi(3)  = HelmTable % xf  (iat,jat+1)
-    fi(4)  = HelmTable % xf  (iat+1,jat+1)
-    fi(5)  = HelmTable % xft (iat,jat)
-    fi(6)  = HelmTable % xft (iat+1,jat)
-    fi(7)  = HelmTable % xft (iat,jat+1)
-    fi(8)  = HelmTable % xft (iat+1,jat+1)
-    fi(9)  = HelmTable % xfd (iat,jat)
-    fi(10) = HelmTable % xfd (iat+1,jat)
-    fi(11) = HelmTable % xfd (iat,jat+1)
-    fi(12) = HelmTable % xfd (iat+1,jat+1)
-    fi(13) = HelmTable % xfdt(iat,jat)
-    fi(14) = HelmTable % xfdt(iat+1,jat)
-    fi(15) = HelmTable % xfdt(iat,jat+1)
-    fi(16) = HelmTable % xfdt(iat+1,jat+1)
-
-    !..dplep_dd at high temperatures and low densities is below the
-    !..floating point limit of the subtraction of two large terms.
-    !..since dplep_dd doesn't enter the maxwell relations at all, use the
-    !..bicubic interpolation done above instead of this one
-    x        = din * din
-    plep     = x   * df_d
-    dplep_dt = x   * df_dt
-
-    x        =  yL    * yL
-    slep     = -df_t  * yL
-    dslep_dt = -df_tt * yL
-    dslep_dd = -df_dt * x
-
-    elep     = yL*free + temp * slep
-    delep_dt = temp * dslep_dt
-    delep_dd = x * df_d + temp * dslep_dd
-
-    !..maxwell relations; each is 0.0_dp IF the consistency is perfect
-    ! x   = den * den
-    ! dse = temp*dslep_dt/delep_dt - 1.0_dp
-    ! dpe = (delep_dd*x + temp*dplep_dt)/pres - 1.0_dp
-    ! dsp = -dslep_dd*x/dplep_dt - 1.0_dp
-
-    LeptonGasState % p    = plep
-    LeptonGasState % dpdT = dplep_dt
-    LeptonGasState % dpdr = dplep_dd
-
-    LeptonGasState % e    = elep + HelmTable % lepton_mass / rmu * ergmev * yL
-    LeptonGasState % dedT = delep_dt
-    LeptonGasState % dedr = delep_dd
-
-    LeptonGasState % s    = slep     / (kmev * ergmev / rmu)
-    LeptonGasState % dsdT = dslep_dt / (kmev * ergmev / rmu)
-    LeptonGasState % dsdr = dslep_dd / (kmev * ergmev / rmu)
-
-    ! do not forget to add back mass of the lepton!
-    LeptonGasState % mu = etalep*temp*kmev + HelmTable % lepton_mass
-    LeptonGasState % mu = sign_yL * LeptonGasState % mu
+    ! The tabulated Helmholtz potential is per unit net lepton mass
+    ! density d=rho*|Y|. Include rest energy before differentiating.
+    ! Chemical potential and compressibility must come from this same
+    ! interpolant, not independent bicubic ef/dpdf tables at the join.
+    CALL EvaluatePairSymmetricExtension &
+      (HelmTable,temp,den,sign_yL*yL,ReferenceState,ReferenceFreeEnergy)
+    TableFreeEnergy % F = din*free + ReferenceFreeEnergy%F
+    TableFreeEnergy % FT = din*df_t + ReferenceFreeEnergy%FT
+    TableFreeEnergy % FTT = din*df_tt + ReferenceFreeEnergy%FTT
+    TableFreeEnergy % Fn = sign_yL &
+      / HelmTable%NumberPerMass*(free+din*df_d) + ReferenceFreeEnergy%Fn
+    TableFreeEnergy % nFTn = din*(df_t+din*df_dt)+ReferenceFreeEnergy%nFTn
+    TableFreeEnergy % nnFnn = din*din*(2.0_DP*df_d+din*df_dd)+ReferenceFreeEnergy%nnFnn
 
     IF( ABS(etaPair) < PairSymmetricEtaMax .OR. &
-        yL*den < HelmTable % d(2) )THEN
-      CALL BlendPairSymmetricThermodynamics &
-             ( HelmTable, temp, den, sign_yL*yL, etaPair, &
-               LeptonGasState )
+        (yL*den*HelmTable%DensityScale) < HelmTable%d(2) )THEN
+      CALL BlendPairSymmetricFreeEnergy &
+        (HelmTable,temp,den,sign_yL*yL,etaPair,TableFreeEnergy)
     END IF
+    IF( DiluteWeight(1) > 0.0_DP )THEN
+      CALL BlendLeptonFreeEnergy &
+             ( den*sign_yL*yL/rmu, DiluteWeight, DilutePotential, TableFreeEnergy )
+    END IF
+    CALL SetLeptonStateFromFreeEnergy &
+      (temp,den,sign_yL*yL,TableFreeEnergy,LeptonGasState)
 
     ! There are some negatives in the table
     IF (LeptonGasState % p < 0.0_dp .OR. &
@@ -591,20 +549,32 @@ CONTAINS
     REAL(DP) :: A0, dLogA0dT, d2LogA0dT2, LogA0, nNet
 
     CALL InterpolatePairScale &
-           ( HelmTable % PairTemperature, HelmTable % PairLogA0, &
-             HelmTable % PairDLogA0dT, Temperature, jT, &
+           ( HelmTable % PairTemperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable % PairLogA0, &
+             HelmTable % PairDLogA0dT, HelmTable % PairD2LogA0dT2, Temperature, jT, &
              A0, LogA0, dLogA0dT, d2LogA0dT2 )
 
     nNet = Density * SignedYL / rmu
-    IF( A0 > 0.0_DP )THEN
-      Eta = ASINH( nNet / A0 )
-    ELSE IF( nNet == 0.0_DP )THEN
-      Eta = 0.0_DP
-    ELSE
-      Eta = SIGN( LOG(2.0_DP*ABS(nNet)) - LogA0, nNet )
-    END IF
+    Eta = PairDegeneracyFromScale(nNet,A0,LogA0)
 
   END SUBROUTINE ComputePairDegeneracy
+
+
+  REAL(DP) FUNCTION PairDegeneracyFromScale(nNet,A0,LogA0) RESULT(Eta)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP), INTENT(IN) :: nNet,A0,LogA0
+    IF( nNet == 0.0_DP )THEN
+      Eta=0.0_DP
+    ELSE IF( ABS(nNet) <= A0 )THEN
+      Eta=ASINH(nNet/A0)
+    ELSE
+      ! asinh(n/A) without overflowing n/A, even if A is subnormal.
+      Eta=SIGN(LOG(ABS(nNet))-LogA0+LOG(1.0_DP+HYPOT(1.0_DP,A0/nNet)),nNet)
+    END IF
+  END FUNCTION PairDegeneracyFromScale
 
 
   SUBROUTINE ComputePairLeptonFraction &
@@ -621,10 +591,12 @@ CONTAINS
 
     INTEGER :: jT
     REAL(DP) :: A0, dLogA0dT, d2LogA0dT2, LogA0, Scale
+    REAL(DP) :: Series(3,nPairDensityTerms), value, slope
+    INTEGER :: j
 
     CALL InterpolatePairScale &
-           ( HelmTable % PairTemperature, HelmTable % PairLogA0, &
-             HelmTable % PairDLogA0dT, Temperature, jT, &
+           ( HelmTable % PairTemperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable % PairLogA0, &
+             HelmTable % PairDLogA0dT, HelmTable % PairD2LogA0dT2, Temperature, jT, &
              A0, LogA0, dLogA0dT, d2LogA0dT2 )
 
     IF( Density <= 0.0_DP .OR. A0 <= 0.0_DP )THEN
@@ -634,13 +606,26 @@ CONTAINS
     END IF
 
     Scale = rmu * A0 / Density
-    SignedYL = Scale * SINH( Eta )
-    dYLdEta  = Scale * COSH( Eta )
+    IF( ABS(Eta) <= 1.0_DP )THEN
+      CALL InterpolatePairDensitySeries(HelmTable,Temperature,Series)
+      value = Series(1,nPairDensityTerms)
+      slope = REAL(2*nPairDensityTerms-1,DP)*value
+      DO j = nPairDensityTerms-1, 1, -1
+        value = value*Eta*Eta+Series(1,j)
+        slope = slope*Eta*Eta+REAL(2*j-1,DP)*Series(1,j)
+      END DO
+      SignedYL = Scale*value*Eta
+      dYLdEta = Scale*slope
+    ELSE
+      SignedYL = Scale*SINH(Eta)
+      dYLdEta = Scale*COSH(Eta)
+    END IF
 
   END SUBROUTINE ComputePairLeptonFraction
 
   SUBROUTINE EvaluatePairSymmetricExtension &
-    ( HelmTable, Temperature, Density, SignedYL, LeptonGasState )
+    ( HelmTable, Temperature, Density, SignedYL, LeptonGasState, &
+      FreeEnergy_Option, SpecificDerivatives_Option, Classical_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -650,6 +635,9 @@ CONTAINS
     TYPE(HelmTableType), INTENT(IN)    :: HelmTable
     REAL(DP), INTENT(IN)               :: Temperature, Density, SignedYL
     TYPE(LeptonGasType), INTENT(INOUT) :: LeptonGasState
+    TYPE(LeptonFreeEnergyType), INTENT(OUT), OPTIONAL :: FreeEnergy_Option
+    REAL(DP), INTENT(OUT), OPTIONAL :: SpecificDerivatives_Option(9)
+    LOGICAL, INTENT(IN), OPTIONAL :: Classical_Option
 
     INTEGER :: jT
     REAL(DP) :: A0, AMinusR, dLogA0dT, d2LogA0dT2, LogA0
@@ -657,34 +645,40 @@ CONTAINS
     REAL(DP) :: F, F_T, F_TT, F_n, F_Tn
     REAL(DP) :: G, G_T, G_TT, eta, nNet, P0, P0_T, P0_TT
     REAL(DP) :: R, entropyUnit, LogP0, theta
+    REAL(DP) :: d,ratioA,ratioN,delta,deltaT,deltaTT,pTT,K,K0,KT,KTT
+    REAL(DP) :: LogZ2, LZ21, LZ22, LogD, LD1, LD2, LE1, LE2
+    REAL(DP) :: CorrectionD, CorrectionE, CorrectionFn
+
+    LeptonGasState%T = Temperature
+    LeptonGasState%rho = Density
+    LeptonGasState%yL = SignedYL
 
     CALL InterpolatePairScale &
-           ( HelmTable % PairTemperature, HelmTable % PairLogP0, &
-             HelmTable % PairDLogP0dT, Temperature, jT, &
+           ( HelmTable % PairTemperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable % PairLogP0, &
+             HelmTable % PairDLogP0dT, HelmTable % PairD2LogP0dT2, Temperature, jT, &
              P0, LogP0, dLogP0dT, d2LogP0dT2 )
     CALL InterpolatePairScale &
-           ( HelmTable % PairTemperature, HelmTable % PairLogA0, &
-             HelmTable % PairDLogA0dT, Temperature, jT, &
+           ( HelmTable % PairTemperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable % PairLogA0, &
+             HelmTable % PairDLogA0dT, HelmTable % PairD2LogA0dT2, Temperature, jT, &
              A0, LogA0, dLogA0dT, d2LogA0dT2 )
 
-    theta = kmev * Temperature
-    nNet  = Density * SignedYL / rmu
-
-    IF( A0 > 0.0_DP )THEN
-      eta = ASINH( nNet / A0 )
-      R   = HYPOT( A0, nNet )
-    ELSE
-      ! A0 can underflow only where the pair background is physically
-      ! negligible.  Use the classical logarithmic limit without dividing by
-      ! the underflowed value.
-      IF( nNet == 0.0_DP )THEN
-        eta = 0.0_DP
-        R   = 0.0_DP
-      ELSE
-        eta = SIGN( LOG( 2.0_DP * ABS(nNet) ) - LogA0, nNet )
-        R   = ABS(nNet)
+    IF( PRESENT(Classical_Option) )THEN
+      IF( Classical_Option )THEN
+        CALL ComputeClassicalPairScales &
+               ( Temperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable%HbarC, LogA0, dLogA0dT, d2LogA0dT2 )
+        A0 = EXP(LogA0)
+        LogP0 = LogA0 + LOG(HelmTable%ThermalConstant*Temperature*ergmev)
+        P0 = EXP(LogP0)
+        dLogP0dT = dLogA0dT + 1.0_DP/Temperature
+        d2LogP0dT2 = d2LogA0dT2 - 1.0_DP/(Temperature*Temperature)
       END IF
     END IF
+
+    theta = HelmTable%ThermalConstant * Temperature
+    nNet  = Density * SignedYL / rmu
+
+    eta = PairDegeneracyFromScale(nNet,A0,LogA0)
+    R = HYPOT(A0,nNet)
 
     IF( R > 0.0_DP )THEN
       AMinusR = -nNet * ( nNet / ( A0 + R ) )
@@ -704,25 +698,55 @@ CONTAINS
     P0_TT = P0 * ( d2LogP0dT2 + dLogP0dT*dLogP0dT )
 
     F    = -P0 + ergmev * theta * G
-    F_T  = -P0_T + ergmev * ( kmev * G + theta * G_T )
-    F_TT = -P0_TT + ergmev * ( 2.0_DP * kmev * G_T &
+    F_T  = -P0_T + ergmev * ( HelmTable%ThermalConstant * G + theta * G_T )
+    F_TT = -P0_TT + ergmev * ( 2.0_DP * HelmTable%ThermalConstant * G_T &
                                + theta * G_TT )
     F_n  = ergmev * theta * eta
     IF( R > 0.0_DP )THEN
-      F_Tn = ergmev * ( kmev * eta &
+      F_Tn = ergmev * ( HelmTable%ThermalConstant * eta &
                         - theta * ( nNet / R ) * dLogA0dT )
     ELSE
       F_Tn = 0.0_DP
     END IF
 
-    LeptonGasState % p    = P0 + ergmev * theta * ( R - A0 )
+    CorrectionD = 0.0_DP
+    CorrectionE = 0.0_DP
+    IF( PRESENT(Classical_Option) )THEN
+      IF( Classical_Option )THEN
+        ! First Fermi correction to the Legendre-transformed dilute gas:
+        ! F_FD=F_MB+D+2D(n/A0)^2+O(f_max^2), D=theta*Z_2/4.
+        ! Z_2=2 Z_1(T/2). Keep the density-dependent term in logarithms:
+        ! D can underflow while D(n/A0)^2 remains representable.
+        CALL ComputeClassicalPairScales &
+               ( 0.5_DP*Temperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable%HbarC, LogZ2, LZ21, LZ22 )
+        LogD = LOG(ergmev*theta/2.0_DP)+LogZ2
+        LD1 = 1.0_DP/Temperature+0.5_DP*LZ21
+        LD2 = -1.0_DP/(Temperature*Temperature)+0.25_DP*LZ22
+        LE1 = LD1-2.0_DP*dLogA0dT
+        LE2 = LD2-2.0_DP*d2LogA0dT2
+        CorrectionD = EXP(LogD)
+        CorrectionFn = 0.0_DP
+        IF( nNet /= 0.0_DP )THEN
+          CorrectionE = EXP(LogD+LOG(2.0_DP)+2.0_DP*(LOG(ABS(nNet))-LogA0))
+          CorrectionFn = SIGN(EXP(LogD+LOG(4.0_DP)+LOG(ABS(nNet))-2.0_DP*LogA0),nNet)
+        END IF
+        F = F+CorrectionD+CorrectionE
+        F_T = F_T+CorrectionD*LD1+CorrectionE*LE1
+        F_TT = F_TT+CorrectionD*(LD1*LD1+LD2)+CorrectionE*(LE1*LE1+LE2)
+        F_n = F_n+CorrectionFn
+        F_Tn = F_Tn+CorrectionFn*LE1
+      END IF
+    END IF
+
+    LeptonGasState % p    = P0 - ergmev * theta * AMinusR+CorrectionE-CorrectionD
     LeptonGasState % dpdT = nNet * F_Tn - F_T
     IF( R > 0.0_DP )THEN
-      LeptonGasState % dpdr = ABS(SignedYL) * ergmev * theta &
-                              / rmu * ABS( nNet / R )
+      LeptonGasState % dpdr = ( ABS(SignedYL) / rmu ) * ergmev * theta &
+                              * ABS( nNet / R )
     ELSE
       LeptonGasState % dpdr = 0.0_DP
     END IF
+    LeptonGasState % dpdr = LeptonGasState%dpdr+2.0_DP*CorrectionE/Density
 
     LeptonGasState % e    = ( F - Temperature * F_T ) / Density
     LeptonGasState % dedT = -Temperature * F_TT / Density
@@ -737,160 +761,417 @@ CONTAINS
       ( -nNet * F_Tn + F_T ) &
       / ( Density * Density ) / entropyUnit
 
-    LeptonGasState % mu = theta * eta
+    LeptonGasState % mu = F_n / ergmev
+
+    IF( PRESENT(FreeEnergy_Option) )THEN
+      FreeEnergy_Option%F = F
+      FreeEnergy_Option%FT = F_T
+      FreeEnergy_Option%FTT = F_TT
+      FreeEnergy_Option%Fn = F_n
+      FreeEnergy_Option%nFTn = nNet*F_Tn
+      FreeEnergy_Option%nnFnn = 0.0_DP
+      IF( R > 0.0_DP ) FreeEnergy_Option%nnFnn = ergmev*theta*nNet*(nNet/R)
+      FreeEnergy_Option%nnFnn = FreeEnergy_Option%nnFnn+2.0_DP*CorrectionE
+    END IF
+    IF( PRESENT(SpecificDerivatives_Option) )THEN
+      d=Density*ABS(SignedYL)*HelmTable%DensityScale
+      ratioA=A0/R
+      ratioN=nNet/R
+      delta=-AMinusR
+      deltaT=-dLogA0dT*ratioA*delta
+      deltaTT=delta*(-d2LogA0dT2*ratioA &
+        +dLogA0dT**2*ratioA*(ratioA-ratioN**2))
+      pTT=P0_TT+ergmev*(2.0_DP*HelmTable%ThermalConstant*deltaT+theta*deltaTT)
+      K0=nNet*ratioN
+      K=ergmev*theta*K0
+      KT=ergmev*K0*(HelmTable%ThermalConstant-theta*dLogA0dT*ratioA**2)
+      KTT=ergmev*K0*(-2.0_DP*HelmTable%ThermalConstant*dLogA0dT*ratioA**2 &
+        +theta*(-d2LogA0dT2*ratioA**2 &
+                +dLogA0dT**2*(ratioA**4-2.0_DP*ratioA**2*ratioN**2)))
+      SpecificDerivatives_Option(1)=F/d-HelmTable%lepton_mass*HelmTable%NumberPerMass*ergmev
+      SpecificDerivatives_Option(2)=F_T/d
+      SpecificDerivatives_Option(3)=F_TT/d
+      SpecificDerivatives_Option(4)=LeptonGasState%p/(d*d)
+      ! Match h5 packing: f,ft,ftt,fd,fdd,fdt,fddt,fdtt,fddtt.
+      SpecificDerivatives_Option(5)=(K-2.0_DP*LeptonGasState%p)/(d*d*d)
+      SpecificDerivatives_Option(6)=LeptonGasState%dpdT/(d*d)
+      SpecificDerivatives_Option(7)=(KT-2.0_DP*LeptonGasState%dpdT)/(d*d*d)
+      SpecificDerivatives_Option(8)=pTT/(d*d)
+      SpecificDerivatives_Option(9)=(KTT-2.0_DP*pTT)/(d*d*d)
+    END IF
 
   END SUBROUTINE EvaluatePairSymmetricExtension
 
-  SUBROUTINE BlendPairSymmetricThermodynamics &
-    ( HelmTable, Temperature, Density, SignedYL, Eta, TableState )
+  SUBROUTINE InterpolatePairDensitySeries &
+    ( HelmTable, Temperature, Series )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    REAL(DP), INTENT(IN) :: Temperature
+    REAL(DP), INTENT(OUT) :: Series(3,nPairDensityTerms)
+    REAL(DP) :: h, x, y, f0, f1, m0, m1, q0, q1
+    INTEGER :: jT, j, nT
 
-    TYPE(HelmTableType), INTENT(IN)    :: HelmTable
-    REAL(DP), INTENT(IN)               :: Temperature, Density, SignedYL, Eta
-    TYPE(LeptonGasType), INTENT(INOUT) :: TableState
+    nT = SIZE(HelmTable%PairTemperature)
+    jT = INT(LOG(Temperature/HelmTable%PairTemperature(1)) &
+             /LOG(HelmTable%PairTemperature(nT)/HelmTable%PairTemperature(1))*REAL(nT-1,DP))+1
+    jT = MAX(1,MIN(jT,nT-1))
+    h = LOG(HelmTable%PairTemperature(jT+1)/HelmTable%PairTemperature(jT))
+    x = MAX(0.0_DP,MIN(LOG(Temperature/HelmTable%PairTemperature(jT))/h,1.0_DP))
+    y = 1.0_DP-x
+    Series(:,1) = [1.0_DP,0.0_DP,0.0_DP]
+    DO j = 2, nPairDensityTerms
+      f0 = HelmTable%PairDensitySeries(1,j-1,jT)
+      f1 = HelmTable%PairDensitySeries(1,j-1,jT+1)
+      m0 = HelmTable%PairDensitySeries(2,j-1,jT)
+      m1 = HelmTable%PairDensitySeries(2,j-1,jT+1)
+      q0 = HelmTable%PairDensitySeries(3,j-1,jT)
+      q1 = HelmTable%PairDensitySeries(3,j-1,jT+1)
+      Series(1,j) = psi0(x)*f0+psi0(y)*f1+h*(psi1(x)*m0-psi1(y)*m1) &
+                      +h*h*(psi2(x)*q0+psi2(y)*q1)
+      Series(2,j) = (dpsi0(x)*f0-dpsi0(y)*f1)/h+dpsi1(x)*m0+dpsi1(y)*m1 &
+                      +h*(dpsi2(x)*q0-dpsi2(y)*q1)
+      Series(3,j) = (ddpsi0(x)*f0+ddpsi0(y)*f1)/(h*h) &
+                      +(ddpsi1(x)*m0-ddpsi1(y)*m1)/h+ddpsi2(x)*q0+ddpsi2(y)*q1
+    END DO
 
-    INTEGER :: jT
-    REAL(DP) :: A0, dLogA0dT, d2LogA0dT2, LogA0
-    REAL(DP) :: DeltaEta, EtaAbs, Eta_n, Eta_T, nNet, RatioN, R
-    REAL(DP) :: u, w, w_n, w_rho, w_T
-    REAL(DP) :: wa, waEta, wa_n, wa_T
-    REAL(DP) :: wd, wdLog, wd_n
-    REAL(DP) :: LogDensityWidth, NetMassDensity
-    REAL(DP) :: Difference, OldValue
-    TYPE(LeptonGasType) :: AnalyticState
+  END SUBROUTINE InterpolatePairDensitySeries
 
-    CALL EvaluatePairSymmetricExtension &
-           ( HelmTable, Temperature, Density, SignedYL, AnalyticState )
+  SUBROUTINE EvaluateFermiPairExtension &
+    ( HelmTable, Temperature, Density, SignedYL, State, Potential )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    REAL(DP), INTENT(IN) :: Temperature, Density, SignedYL
+    TYPE(LeptonGasType), INTENT(OUT) :: State
+    TYPE(LeptonFreeEnergyType), INTENT(OUT) :: Potential
+    REAL(DP) :: Series(3,nPairDensityTerms), A0, LogA, LA1, LA2, P0, LogP, LP1, LP2
+    REAL(DP) :: eta, eta2, ratio, value, slope, step, power, theta, nNet, etaT
+    REAL(DP) :: pressure, pressureT, pressureTT, nT, LX, LXX, c, ct, ctt
+    INTEGER :: jT, j, iteration
+
     CALL InterpolatePairScale &
-           ( HelmTable % PairTemperature, HelmTable % PairLogA0, &
-             HelmTable % PairDLogA0dT, Temperature, jT, &
-             A0, LogA0, dLogA0dT, d2LogA0dT2 )
+           ( HelmTable%PairTemperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable%PairLogA0, &
+             HelmTable%PairDLogA0dT, HelmTable%PairD2LogA0dT2, Temperature, jT, A0, LogA, LA1, LA2 )
+    CALL InterpolatePairScale &
+           ( HelmTable%PairTemperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable%PairLogP0, &
+             HelmTable%PairDLogP0dT, HelmTable%PairD2LogP0dT2, Temperature, jT, P0, LogP, LP1, LP2 )
+    IF( A0 <= TINY(1.0_DP) )THEN
+      CALL EvaluatePairSymmetricExtension(HelmTable,Temperature,Density,SignedYL,State,Potential)
+      RETURN
+    END IF
+    CALL InterpolatePairDensitySeries(HelmTable,Temperature,Series)
+    nNet = Density*SignedYL/rmu
+    ratio = nNet/A0
+    eta = ASINH(ratio)
+    ! Only the regular, bounded near-pair interval enters this inversion.
+    ! This is not a nested thermodynamic solve: seven polynomial terms,
+    ! with a positive slope and a few scalar Newton corrections.
+    DO iteration = 1, 12
+      eta2 = eta*eta
+      value = Series(1,nPairDensityTerms)
+      slope = REAL(2*nPairDensityTerms-1,DP)*value
+      DO j = nPairDensityTerms-1, 1, -1
+        value = value*eta2+Series(1,j)
+        slope = slope*eta2+REAL(2*j-1,DP)*Series(1,j)
+      END DO
+      value = value*eta
+      step = (value-ratio)/slope
+      eta = eta-step
+      IF( ABS(step) <= 8.0_DP*EPSILON(eta)*MAX(ABS(eta),TINY(eta)) ) EXIT
+    END DO
+    theta = HelmTable%ThermalConstant*Temperature
+    LX = Temperature*LA1
+    LXX = Temperature*Temperature*LA2+LX
+    pressure = P0
+    pressureT = P0*LP1
+    pressureTT = P0*(LP1*LP1+LP2)
+    nT = 0.0_DP
+    power = eta
+    DO j = 1, nPairDensityTerms
+      c = ergmev*theta*A0/REAL(2*j,DP)
+      ct = c*((1.0_DP+LX)*Series(1,j)+Series(2,j))/Temperature
+      ctt = c*((LX*LX+LX+LXX)*Series(1,j) &
+                 +(1.0_DP+2.0_DP*LX)*Series(2,j)+Series(3,j))/(Temperature*Temperature)
+      pressure = pressure+c*Series(1,j)*power*eta
+      pressureT = pressureT+ct*power*eta
+      pressureTT = pressureTT+ctt*power*eta
+      nT = nT+(LX*Series(1,j)+Series(2,j))*power
+      power = power*eta*eta
+    END DO
+    etaT = -nT/(Temperature*slope)
+    Potential%F = nNet*ergmev*theta*eta-pressure
+    Potential%FT = nNet*ergmev*HelmTable%ThermalConstant*eta-pressureT
+    Potential%FTT = -pressureTT+ergmev*theta*A0*slope*etaT*etaT
+    Potential%Fn = ergmev*theta*eta
+    Potential%nFTn = nNet*ergmev*HelmTable%ThermalConstant*(eta+Temperature*etaT)
+    Potential%nnFnn = ergmev*theta*nNet*(ratio/slope)
+    CALL SetLeptonStateFromFreeEnergy(Temperature,Density,SignedYL,Potential,State)
 
-    nNet = Density * SignedYL / rmu
-    R = HYPOT( A0, nNet )
+  END SUBROUTINE EvaluateFermiPairExtension
+
+  SUBROUTINE SetLeptonStateFromFreeEnergy &
+    (Temperature,Density,SignedYL,Potential,State)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP), INTENT(IN) :: Temperature,Density,SignedYL
+    TYPE(LeptonFreeEnergyType), INTENT(IN) :: Potential
+    TYPE(LeptonGasType), INTENT(INOUT) :: State
+    REAL(DP) :: nNet,EntropyUnit,InternalEnergy
+    nNet = Density*SignedYL/rmu
+    EntropyUnit = kmev*ergmev/rmu
+    InternalEnergy = Potential%F-Temperature*Potential%FT
+    State%T = Temperature
+    State%rho = Density
+    State%yL = SignedYL
+    State%mu = Potential%Fn/ergmev
+    State%p = nNet*Potential%Fn-Potential%F
+    State%dpdT = Potential%nFTn-Potential%FT
+    State%dpdr = Potential%nnFnn/Density
+    State%e = InternalEnergy/Density
+    State%dedT = -Temperature*Potential%FTT/Density
+    State%dedr = (nNet*Potential%Fn-Temperature*Potential%nFTn &
+      -InternalEnergy)/(Density*Density)
+    State%s = -Potential%FT/(Density*EntropyUnit)
+    State%dsdT = -Potential%FTT/(Density*EntropyUnit)
+    State%dsdr = (Potential%FT-Potential%nFTn)/(Density*Density*EntropyUnit)
+  END SUBROUTINE SetLeptonStateFromFreeEnergy
+
+
+  SUBROUTINE ComputeDilutePairWeight &
+    ( HelmTable, Temperature, Density, SignedYL, Weight )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    REAL(DP), INTENT(IN) :: Temperature, Density, SignedYL
+    REAL(DP), INTENT(OUT) :: Weight(6)
+    REAL(DP) :: a, LogA, LA1, LA2, A0, nNet, R, eta, rN, rZ
+    REAL(DP) :: wa, wa1, wa2, wb, wb1, wb2, aT, aTT
+    REAL(DP) :: bT, bTT, bZ, bZZ, bTZ, h, u1, u2
+
+    Weight = 0.0_DP
+    a = HelmTable%lepton_mass/(HelmTable%ThermalConstant*Temperature)
+    IF( a <= 12.0_DP ) RETURN
+    CALL ComputeClassicalPairScales &
+           ( Temperature, HelmTable%lepton_mass, HelmTable%ThermalConstant, HelmTable%HbarC, LogA, LA1, LA2 )
+    A0 = EXP(LogA)
+    nNet = Density*SignedYL/rmu
+    eta = ABS(PairDegeneracyFromScale(nNet,A0,LogA))
+    h = HYPOT(1.0_DP,eta)
+    IF( a-h <= 12.0_DP ) RETURN
+
+    ! The maximum occupation is < exp(-12). Including the first Fermi
+    ! correction leaves an O(exp(-24)) dilute error at the inner edge.
+    ! z=log|n|. Store w,w_z,w_zz,w_T,w_TT,w_Tz.
+    CALL SmoothTransition(a-12.0_DP,4.0_DP,wa,wa1,wa2)
+    ! A smooth even weight is essential at n=0. A weight depending on
+    ! |eta| would introduce a cusp into F and a spurious finite mu(0+).
+    CALL SmoothTransition(a-h-12.0_DP,4.0_DP,wb,wb1,wb2)
+    R = HYPOT(A0,nNet)
+    rN = 0.0_DP
+    rZ = 0.0_DP
+    IF( R > 0.0_DP )THEN
+      rN = ABS(nNet)/R
+      rZ = rN*(A0/R)**2
+    END IF
+    aT = -a/Temperature
+    aTT = 2.0_DP*a/(Temperature*Temperature)
+    u1 = eta/h
+    u2 = 1.0_DP/(h*h*h)
+    bZ = -u1*rN
+    bZZ = -u2*rN*rN-u1*rZ
+    bT = u1*rN*LA1-a/Temperature
+    bTT = aTT-(u2*rN*rN+u1*rZ)*LA1*LA1+u1*rN*LA2
+    bTZ = (u2*rN*rN+u1*rZ)*LA1
+    Weight(1) = wa*wb
+    Weight(2) = wa*wb1*bZ
+    Weight(3) = wa*(wb2*bZ*bZ+wb1*bZZ)
+    Weight(4) = wa1*aT*wb+wa*wb1*bT
+    Weight(5) = (wa2*aT*aT+wa1*aTT)*wb &
+                  +2.0_DP*wa1*aT*wb1*bT+wa*(wb2*bT*bT+wb1*bTT)
+    Weight(6) = wa1*aT*wb1*bZ+wa*(wb2*bT*bZ+wb1*bTZ)
+
+  END SUBROUTINE ComputeDilutePairWeight
+
+  SUBROUTINE BlendLeptonFreeEnergy &
+    ( nNet, Weight, Reference, Potential )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP), INTENT(IN) :: nNet, Weight(6)
+    TYPE(LeptonFreeEnergyType), INTENT(IN) :: Reference
+    TYPE(LeptonFreeEnergyType), INTENT(INOUT) :: Potential
+    TYPE(LeptonFreeEnergyType) :: Difference
+    REAL(DP) :: w, wz, wzz, wt, wtt, wtz
+
+    w = Weight(1)
+    wz = Weight(2)
+    wzz = Weight(3)
+    wt = Weight(4)
+    wtt = Weight(5)
+    wtz = Weight(6)
+    Difference%F = Reference%F-Potential%F
+    Difference%FT = Reference%FT-Potential%FT
+    Difference%FTT = Reference%FTT-Potential%FTT
+    Difference%Fn = Reference%Fn-Potential%Fn
+    Difference%nFTn = Reference%nFTn-Potential%nFTn
+    Difference%nnFnn = Reference%nnFnn-Potential%nnFnn
+    Potential%F = Potential%F+w*Difference%F
+    Potential%FT = Potential%FT+w*Difference%FT+wt*Difference%F
+    Potential%FTT = Potential%FTT+w*Difference%FTT &
+                     +2.0_DP*wt*Difference%FT+wtt*Difference%F
+    Potential%Fn = Potential%Fn+w*Difference%Fn
+    IF( nNet /= 0.0_DP ) Potential%Fn = Potential%Fn+(wz/nNet)*Difference%F
+    Potential%nFTn = Potential%nFTn+w*Difference%nFTn &
+                      +wz*Difference%FT+wt*(nNet*Difference%Fn)+wtz*Difference%F
+    Potential%nnFnn = Potential%nnFnn+w*Difference%nnFnn &
+                      +2.0_DP*wz*(nNet*Difference%Fn)+(wzz-wz)*Difference%F
+
+  END SUBROUTINE BlendLeptonFreeEnergy
+
+  SUBROUTINE SmoothTransition(Value,Width,W,W1,W2)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    REAL(DP), INTENT(IN) :: Value,Width
+    REAL(DP), INTENT(OUT) :: W,W1,W2
+    REAL(DP) :: u
+    u = MAX(0.0_DP,MIN(Value/Width,1.0_DP))
+    W = u**3*(10.0_DP+u*(-15.0_DP+6.0_DP*u))
+    W1 = 30.0_DP*u*u*(1.0_DP-u)**2/Width
+    W2 = 60.0_DP*u*(1.0_DP-u)*(1.0_DP-2.0_DP*u)/(Width*Width)
+  END SUBROUTINE SmoothTransition
+
+
+  SUBROUTINE BlendPairSymmetricFreeEnergy &
+    (HelmTable,Temperature,Density,SignedYL,Eta,TablePotential)
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+    TYPE(HelmTableType), INTENT(IN) :: HelmTable
+    REAL(DP), INTENT(IN) :: Temperature,Density,SignedYL,Eta
+    TYPE(LeptonFreeEnergyType), INTENT(INOUT) :: TablePotential
+    TYPE(LeptonFreeEnergyType) :: Analytic,Difference
+    TYPE(LeptonGasType) :: AnalyticState
+    INTEGER :: jT
+    REAL(DP) :: A0,LogA0,LA1,LA2,nNet,R,rN,rZ
+    REAL(DP) :: wa,wa1,wa2,wd,wd1,wd2,waZ,waZZ,waT,waTT,waTZ
+    REAL(DP) :: w,wZ,wZZ,wT,wTT,wTZ
+
+    CALL EvaluateFermiPairExtension &
+      (HelmTable,Temperature,Density,SignedYL,AnalyticState,Analytic)
+    CALL InterpolatePairScale &
+      (HelmTable%PairTemperature,HelmTable%lepton_mass,HelmTable%ThermalConstant,HelmTable%PairLogA0, &
+       HelmTable%PairDLogA0dT, HelmTable % PairD2LogA0dT2,Temperature,jT,A0,LogA0,LA1,LA2)
+    nNet = Density*SignedYL/rmu
+    R = HYPOT(A0,nNet)
     IF( R <= 0.0_DP .OR. nNet == 0.0_DP )THEN
-      TableState = AnalyticState
+      TablePotential = Analytic
       RETURN
     END IF
 
-    EtaAbs  = ABS(Eta)
-    DeltaEta = PairSymmetricEtaMax - PairSymmetricEtaMin
-    u = ( EtaAbs - PairSymmetricEtaMin ) / DeltaEta
-    u = MAX( 0.0_DP, MIN( u, 1.0_DP ) )
-    wa = u*u*u * ( 10.0_DP + u * ( -15.0_DP + 6.0_DP*u ) )
-    waEta = 30.0_DP*u*u*(1.0_DP-u)*(1.0_DP-u) / DeltaEta
+    ! z=log|n|. Work with derivatives in z rather than 1/n**2.
+    ! rN=d|eta|/dz; rZ=d rN/dz. Both are bounded.
+    rN = ABS(nNet)/R
+    rZ = rN*(A0/R)**2
+    CALL SmoothTransition(ABS(Eta)-PairSymmetricEtaMin, &
+      PairSymmetricEtaMax-PairSymmetricEtaMin,wa,wa1,wa2)
+    waZ = wa1*rN
+    waZZ = wa2*rN*rN+wa1*rZ
+    waT = -wa1*rN*LA1
+    waTT = wa2*(rN*LA1)**2+wa1*(rZ*LA1*LA1-rN*LA2)
+    waTZ = -(wa2*rN*rN+wa1*rZ)*LA1
+    CALL SmoothTransition(LOG(Density*ABS(SignedYL)*HelmTable%DensityScale/HelmTable%d(1)), &
+      LOG(HelmTable%d(2)/HelmTable%d(1)),wd,wd1,wd2)
+    w = wa*wd
+    wZ = waZ*wd+wa*wd1
+    wZZ = waZZ*wd+2.0_DP*waZ*wd1+wa*wd2
+    wT = waT*wd
+    wTT = waTT*wd
+    wTZ = waTZ*wd+waT*wd1
 
-    RatioN = ABS(nNet) / R
-    Eta_n  = SIGN( 1.0_DP, nNet ) / R
-    Eta_T  = -RatioN * dLogA0dT
-
-    wa_n  = waEta * Eta_n
-    wa_T  = waEta * Eta_T
-
-    NetMassDensity = Density * ABS(SignedYL)
-    LogDensityWidth = LOG( HelmTable % d(2) / HelmTable % d(1) )
-    u = LOG( NetMassDensity / HelmTable % d(1) ) / LogDensityWidth
-    u = MAX( 0.0_DP, MIN( u, 1.0_DP ) )
-    wd = u*u*u * ( 10.0_DP + u * ( -15.0_DP + 6.0_DP*u ) )
-    wdLog = 30.0_DP*u*u*(1.0_DP-u)*(1.0_DP-u) / LogDensityWidth
-    wd_n  = wdLog / nNet
-
-    w    = wa * wd
-    w_n  = wa_n*wd + wa*wd_n
-    w_T  = wa_T * wd
-    w_rho = w_n * nNet / Density
-
-    OldValue = TableState % p
-    Difference = OldValue - AnalyticState % p
-    TableState % p = AnalyticState % p + w*Difference
-    TableState % dpdT = AnalyticState % dpdT &
-                         + w*(TableState % dpdT-AnalyticState % dpdT) &
-                         + w_T*Difference
-    TableState % dpdr = AnalyticState % dpdr &
-                         + w*(TableState % dpdr-AnalyticState % dpdr) &
-                         + w_rho*Difference
-
-    OldValue = TableState % e
-    Difference = OldValue - AnalyticState % e
-    TableState % e = AnalyticState % e + w*Difference
-    TableState % dedT = AnalyticState % dedT &
-                         + w*(TableState % dedT-AnalyticState % dedT) &
-                         + w_T*Difference
-    TableState % dedr = AnalyticState % dedr &
-                         + w*(TableState % dedr-AnalyticState % dedr) &
-                         + w_rho*Difference
-
-    OldValue = TableState % s
-    Difference = OldValue - AnalyticState % s
-    TableState % s = AnalyticState % s + w*Difference
-    TableState % dsdT = AnalyticState % dsdT &
-                         + w*(TableState % dsdT-AnalyticState % dsdT) &
-                         + w_T*Difference
-    TableState % dsdr = AnalyticState % dsdr &
-                         + w*(TableState % dsdr-AnalyticState % dsdr) &
-                         + w_rho*Difference
-
-    TableState % mu = AnalyticState % mu &
-                       + w*(TableState % mu-AnalyticState % mu)
-
-  END SUBROUTINE BlendPairSymmetricThermodynamics
+    Difference%F = TablePotential%F-Analytic%F
+    Difference%FT = TablePotential%FT-Analytic%FT
+    Difference%FTT = TablePotential%FTT-Analytic%FTT
+    Difference%Fn = TablePotential%Fn-Analytic%Fn
+    Difference%nFTn = TablePotential%nFTn-Analytic%nFTn
+    Difference%nnFnn = TablePotential%nnFnn-Analytic%nnFnn
+    ! Differentiate F=Fa+w*(Ft-Fa), including every weight derivative.
+    TablePotential%F = Analytic%F+w*Difference%F
+    TablePotential%FT = Analytic%FT+w*Difference%FT+wT*Difference%F
+    TablePotential%FTT = Analytic%FTT+w*Difference%FTT &
+      +2.0_DP*wT*Difference%FT+wTT*Difference%F
+    TablePotential%Fn = Analytic%Fn+w*Difference%Fn+(wZ/nNet)*Difference%F
+    TablePotential%nFTn = Analytic%nFTn+w*Difference%nFTn &
+      +wZ*Difference%FT+wT*(nNet*Difference%Fn)+wTZ*Difference%F
+    TablePotential%nnFnn = Analytic%nnFnn+w*Difference%nnFnn &
+      +2.0_DP*wZ*(nNet*Difference%Fn)+(wZZ-wZ)*Difference%F
+  END SUBROUTINE BlendPairSymmetricFreeEnergy
 
   SUBROUTINE InterpolatePairScale &
-    ( TemperatureGrid, LogScale, dLogScaledT, Temperature, jT_Option, &
-      Scale, LogScaleValue, dLogdT, d2LogdT2 )
+    (TemperatureGrid,LeptonMass,ThermalConstant,LogScale,dLogScaledT,d2LogScaledT2,Temperature,jT_Option, &
+     Scale,LogScaleValue,dLogdT,d2LogdT2)
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
-
-    REAL(DP), DIMENSION(:), INTENT(IN) :: TemperatureGrid
-    REAL(DP), DIMENSION(:), INTENT(IN) :: LogScale, dLogScaledT
-    REAL(DP), INTENT(IN) :: Temperature
+    REAL(DP), INTENT(IN) :: TemperatureGrid(:),LogScale(:),dLogScaledT(:),d2LogScaledT2(:)
+    REAL(DP), INTENT(IN) :: Temperature, LeptonMass, ThermalConstant
     INTEGER, INTENT(OUT) :: jT_Option
-    REAL(DP), INTENT(OUT) :: Scale, LogScaleValue, dLogdT, d2LogdT2
-
-    INTEGER :: jT, nT
-    REAL(DP) :: dT, f0, f1, h00, h01, h10, h11
-    REAL(DP) :: m0, m1, value, x
-
-    nT = SIZE(TemperatureGrid)
-    jT = INT( ( LOG10(Temperature) - LOG10(TemperatureGrid(1)) ) &
-              / ( LOG10(TemperatureGrid(nT)) &
-                  - LOG10(TemperatureGrid(1)) ) * REAL(nT-1,DP) ) + 1
-    jT = MAX( 1, MIN( jT, nT-1 ) )
-
-    dT = TemperatureGrid(jT+1) - TemperatureGrid(jT)
-    x  = ( Temperature - TemperatureGrid(jT) ) / dT
-    x  = MAX( 0.0_DP, MIN( x, 1.0_DP ) )
-    f0 = LogScale(jT)
-    f1 = LogScale(jT+1)
-    m0 = dLogScaledT(jT)
-    m1 = dLogScaledT(jT+1)
-
-    h00 =  2.0_DP*x**3 - 3.0_DP*x*x + 1.0_DP
-    h10 =         x**3 - 2.0_DP*x*x + x
-    h01 = -2.0_DP*x**3 + 3.0_DP*x*x
-    h11 =         x**3 -        x*x
-    value = h00*f0 + h10*dT*m0 + h01*f1 + h11*dT*m1
-
-    dLogdT = ( ( 6.0_DP*x*x - 6.0_DP*x ) * f0 &
-                + ( 3.0_DP*x*x - 4.0_DP*x + 1.0_DP ) * dT*m0 &
-                + ( -6.0_DP*x*x + 6.0_DP*x ) * f1 &
-                + ( 3.0_DP*x*x - 2.0_DP*x ) * dT*m1 ) / dT
-    d2LogdT2 = ( ( 12.0_DP*x - 6.0_DP ) * f0 &
-                   + ( 6.0_DP*x - 4.0_DP ) * dT*m0 &
-                   + ( -12.0_DP*x + 6.0_DP ) * f1 &
-                   + ( 6.0_DP*x - 2.0_DP ) * dT*m1 ) / ( dT*dT )
-
-    Scale         = EXP(value)
-    LogScaleValue = value
-    jT_Option     = jT
-
+    REAL(DP), INTENT(OUT) :: Scale,LogScaleValue,dLogdT,d2LogdT2
+    INTEGER :: jT,nT
+    REAL(DP) :: dT,x,y,f0,f1,m0,m1,q0,q1,value,a,a0,a1,hx,hxx
+    nT=SIZE(TemperatureGrid)
+    jT=INT((LOG10(Temperature)-LOG10(TemperatureGrid(1))) &
+      /(LOG10(TemperatureGrid(nT))-LOG10(TemperatureGrid(1)))*REAL(nT-1,DP))+1
+    jT=MAX(1,MIN(jT,nT-1))
+    ! Interpolate in log T after removing the known Boltzmann exponent.
+    ! In particular, do not interpolate -m/(kT) or differentiate it by
+    ! differences: at the cold edge that destroyed entropy and heat capacity.
+    dT=LOG(TemperatureGrid(jT+1)/TemperatureGrid(jT))
+    x=MAX(0.0_DP,MIN(LOG(Temperature/TemperatureGrid(jT))/dT,1.0_DP))
+    y=1.0_DP-x
+    a=LeptonMass/(ThermalConstant*Temperature)
+    a0=LeptonMass/(ThermalConstant*TemperatureGrid(jT))
+    a1=LeptonMass/(ThermalConstant*TemperatureGrid(jT+1))
+    f0=LogScale(jT)+a0
+    f1=LogScale(jT+1)+a1
+    m0=TemperatureGrid(jT)*dLogScaledT(jT)-a0
+    m1=TemperatureGrid(jT+1)*dLogScaledT(jT+1)-a1
+    q0=TemperatureGrid(jT)**2*d2LogScaledT2(jT) &
+         +TemperatureGrid(jT)*dLogScaledT(jT)+a0
+    q1=TemperatureGrid(jT+1)**2*d2LogScaledT2(jT+1) &
+         +TemperatureGrid(jT+1)*dLogScaledT(jT+1)+a1
+    value=psi0(x)*f0+psi0(y)*f1+dT*(psi1(x)*m0-psi1(y)*m1) &
+      +dT*dT*(psi2(x)*q0+psi2(y)*q1)
+    hx=(dpsi0(x)*f0-dpsi0(y)*f1)/dT+dpsi1(x)*m0+dpsi1(y)*m1 &
+      +dT*(dpsi2(x)*q0-dpsi2(y)*q1)
+    hxx=(ddpsi0(x)*f0+ddpsi0(y)*f1)/(dT*dT) &
+      +(ddpsi1(x)*m0-ddpsi1(y)*m1)/dT+ddpsi2(x)*q0+ddpsi2(y)*q1
+    dLogdT=(hx+a)/Temperature
+    d2LogdT2=(hxx-hx-2.0_DP*a)/(Temperature*Temperature)
+    LogScaleValue=value-a
+    Scale=EXP(LogScaleValue)
+    jT_Option=jT
   END SUBROUTINE InterpolatePairScale
 
   ! These are all the functions used fro the interpolation

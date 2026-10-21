@@ -2,7 +2,7 @@ MODULE wlLeptonEOSTableModule
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
-    ergmev, cm3fm3, kmev, kmev_inv, rmu, pi, hbarc
+    ergmev, cm3fm3, kmev, kmev_inv, rmu, pi, hbarc_Default => hbarc
 
   IMPLICIT NONE
   PRIVATE
@@ -11,6 +11,15 @@ MODULE wlLeptonEOSTableModule
   INTEGER, PARAMETER, PUBLIC :: iTempMax=201, iDenMax=541
   INTEGER, PARAMETER, PUBLIC :: nPairExtensionPoints=1025
   INTEGER, PARAMETER :: nPairQuadraturePoints=128
+  INTEGER, PARAMETER, PUBLIC :: nPairDensityTerms=7
+  ! Explicit preset for the supplied muon Helm tables. These CGS inputs
+  ! belong to this table model, not to the global weak-interaction constants.
+  ! Order: rest energy, Boltzmann constant, hbar*c, number per mass.
+  REAL(DP), PARAMETER, PUBLIC :: MuonHelmGeneratorConstants(4) = &
+    [ 1.8835371982e-25_DP * 29979245800.0_DP**2, &
+      1.3806490000000002e-16_DP, &
+      1.0545718176461563e-27_DP * 29979245800.0_DP, &
+      6.02214076e23_DP ]
 
   TYPE, PUBLIC :: HelmTableType
 
@@ -66,8 +75,13 @@ MODULE wlLeptonEOSTableModule
     REAL(DP), DIMENSION(:), ALLOCATABLE :: PairTemperature
     REAL(DP), DIMENSION(:), ALLOCATABLE :: PairLogP0
     REAL(DP), DIMENSION(:), ALLOCATABLE :: PairDLogP0dT
+    REAL(DP), DIMENSION(:), ALLOCATABLE :: PairD2LogP0dT2
     REAL(DP), DIMENSION(:), ALLOCATABLE :: PairLogA0
     REAL(DP), DIMENSION(:), ALLOCATABLE :: PairDLogA0dT
+    REAL(DP), DIMENSION(:), ALLOCATABLE :: PairD2LogA0dT2
+    ! Normalized odd-density Taylor coefficients Q_j/A0 and their first
+    ! two log-temperature derivatives, j=2..7. Q_1=A0 is stored above.
+    REAL(DP), DIMENSION(:,:,:), ALLOCATABLE :: PairDensitySeries
 
     ! miniDenm and maxiDenm possible densities
     REAL(DP) :: mintemp
@@ -76,6 +90,13 @@ MODULE wlLeptonEOSTableModule
     REAL(DP) :: maxdens
 
     REAL(DP) :: lepton_mass ! To distinguish electrons and muons
+    ! Internal energy quantities use the existing runtime MeV-to-erg
+    ! conversion, keeping API units unchanged. The gas itself uses the
+    ! generator's physical constants. Defaults preserve legacy tables.
+    REAL(DP) :: ThermalConstant = kmev
+    REAL(DP) :: HbarC = hbarc_Default
+    REAL(DP) :: NumberPerMass = 1.0_DP/rmu
+    REAL(DP) :: DensityScale = 1.0_DP
 
   END TYPE HelmTableType
 
@@ -83,8 +104,50 @@ MODULE wlLeptonEOSTableModule
   PUBLIC DeallocateHelmholtzTable
   PUBLIC ReadHelmEOSdat
   PUBLIC InitializePairSymmetricExtension
+  PUBLIC ComputeClassicalPairScales
 
 CONTAINS
+
+  SUBROUTINE ComputeClassicalPairScales &
+    ( Temperature, LeptonMass, ThermalConstant, HbarC, LogA0, LA1, LA2 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#endif
+
+    ! Relativistic Maxwell--Boltzmann gas, including both charges. Only
+    ! used for a=m/(kT)>=12. The 16-term K_2 asymptotic expansion is checked
+    ! against the Bessel integral in the regression test. Logarithms retain
+    ! the pair scale even when the physical pair density underflows.
+    REAL(DP), INTENT(IN) :: Temperature, LeptonMass, ThermalConstant, HbarC
+    REAL(DP), INTENT(OUT) :: LogA0, LA1, LA2
+    INTEGER :: j
+    REAL(DP) :: a, theta, term, series, series1, series2, q1, q2
+
+    theta = ThermalConstant * Temperature
+    a = LeptonMass / theta
+    series = 1.0_DP
+    series1 = 0.0_DP
+    series2 = 0.0_DP
+    term = 1.0_DP
+    DO j = 1, 16
+      term = term * ( 16.0_DP - REAL((2*j-1)**2,DP) ) &
+                  / ( 8.0_DP * REAL(j,DP) * a )
+      series = series + term
+      series1 = series1 + REAL(j,DP) * term
+      series2 = series2 + REAL(j*j,DP) * term
+    END DO
+    q1 = series1 / series
+    q2 = series2 / series - q1*q1
+    LogA0 = LOG(2.0_DP/(pi*pi)) + 2.0_DP*LOG(LeptonMass) &
+              + LOG(theta) - 3.0_DP*LOG(HbarC) &
+              + 0.5_DP*LOG(pi/(2.0_DP*a)) - a + LOG(series)
+    LA1 = ( 1.5_DP + a + q1 ) / Temperature
+    LA2 = ( -1.5_DP - 2.0_DP*a + q2 - q1 ) &
+            / ( Temperature * Temperature )
+
+  END SUBROUTINE ComputeClassicalPairScales
 
   SUBROUTINE AllocateHelmholtzTable( HelmTable, nPoints )
 
@@ -135,8 +198,11 @@ CONTAINS
     ALLOCATE( HelmTable % PairTemperature( nPairExtensionPoints ) )
     ALLOCATE( HelmTable % PairLogP0      ( nPairExtensionPoints ) )
     ALLOCATE( HelmTable % PairDLogP0dT   ( nPairExtensionPoints ) )
+    ALLOCATE( HelmTable % PairD2LogP0dT2 ( nPairExtensionPoints ) )
     ALLOCATE( HelmTable % PairLogA0      ( nPairExtensionPoints ) )
     ALLOCATE( HelmTable % PairDLogA0dT   ( nPairExtensionPoints ) )
+    ALLOCATE( HelmTable % PairD2LogA0dT2 ( nPairExtensionPoints ) )
+    ALLOCATE( HelmTable % PairDensitySeries(3,nPairDensityTerms-1,nPairExtensionPoints) )
 
   END SUBROUTINE AllocateHelmholtzTable
 
@@ -185,8 +251,11 @@ CONTAINS
     DEALLOCATE( HelmTable % PairTemperature )
     DEALLOCATE( HelmTable % PairLogP0 )
     DEALLOCATE( HelmTable % PairDLogP0dT )
+    DEALLOCATE( HelmTable % PairD2LogP0dT2 )
     DEALLOCATE( HelmTable % PairLogA0 )
     DEALLOCATE( HelmTable % PairDLogA0dT )
+    DEALLOCATE( HelmTable % PairD2LogA0dT2 )
+    DEALLOCATE( HelmTable % PairDensitySeries )
 
   END SUBROUTINE DeallocateHelmholtzTable
 
@@ -334,55 +403,129 @@ CONTAINS
         = 10.0_DP**( LogTMin + REAL(iT-1,DP) * dLogT )
       CALL ComputePairSymmetricScales &
              ( HelmTable % PairTemperature(iT), HelmTable % lepton_mass, &
-               Nodes, Weights, &
-               HelmTable % PairLogP0(iT), HelmTable % PairLogA0(iT) )
+               HelmTable%ThermalConstant, HelmTable%HbarC, Nodes, Weights, &
+               HelmTable % PairLogP0(iT), HelmTable % PairLogA0(iT), &
+               HelmTable % PairDLogP0dT(iT), HelmTable % PairD2LogP0dT2(iT), &
+               HelmTable % PairDLogA0dT(iT), HelmTable % PairD2LogA0dT2(iT) )
+      CALL ComputePairDensitySeries &
+             ( HelmTable%PairTemperature(iT), HelmTable%lepton_mass, HelmTable%ThermalConstant, Nodes, Weights, &
+               HelmTable%PairDensitySeries(:,:,iT) )
     END DO
 
-    CALL ComputeNodalDerivative &
-           ( HelmTable % PairTemperature, HelmTable % PairLogP0, &
-             HelmTable % PairDLogP0dT )
-    CALL ComputeNodalDerivative &
-           ( HelmTable % PairTemperature, HelmTable % PairLogA0, &
-             HelmTable % PairDLogA0dT )
 
   END SUBROUTINE InitializePairSymmetricExtension
 
-  SUBROUTINE ComputePairSymmetricScales &
-    ( Temperature, LeptonMass, Nodes, Weights, LogP0, LogA0 )
+  SUBROUTINE ComputePairDensitySeries &
+    ( Temperature, LeptonMass, ThermalConstant, Nodes, Weights, Series )
 
-    REAL(DP), INTENT(IN)  :: Temperature, LeptonMass
+    REAL(DP), INTENT(IN) :: Temperature, LeptonMass, ThermalConstant
+    REAL(DP), INTENT(IN) :: Nodes(nPairQuadraturePoints), Weights(nPairQuadraturePoints)
+    REAL(DP), INTENT(OUT) :: Series(3,nPairDensityTerms-1)
+    REAL(DP) :: c(0:2*nPairDensityTerms+1), sums(3,nPairDensityTerms)
+    REAL(DP) :: a, z, x, E, f, weight, convolution, fact, r, rx
+    INTEGER :: iQ, i, j, k, order
+
+    a = LeptonMass/(ThermalConstant*Temperature)
+    IF( a > 50.0_DP )THEN
+      fact = 1.0_DP
+      Series = 0.0_DP
+      DO j = 2, nPairDensityTerms
+        fact = fact*REAL((2*j-2)*(2*j-1),DP)
+        Series(1,j-1) = 1.0_DP/fact
+      END DO
+      RETURN
+    END IF
+    sums = 0.0_DP
+    DO iQ = 1, nPairQuadraturePoints
+      z = 0.5_DP*(Nodes(iQ)+1.0_DP)
+      x = z/(1.0_DP-z)
+      E = SQRT(x*x+a*a)
+      f = EXP(-E)/(1.0_DP+EXP(-E))
+      c(0) = f
+      ! Normalized Taylor coefficients, not large factorial derivatives.
+      ! f'(eta)=f-f^2 supplies a stable power-series recurrence.
+      DO i = 1, 2*nPairDensityTerms+1
+        convolution = 0.0_DP
+        DO k = 0, i-1
+          convolution = convolution+c(k)*c(i-1-k)
+        END DO
+        c(i) = (c(i-1)-convolution)/REAL(i,DP)
+      END DO
+      weight = 0.5_DP*Weights(iQ)*x*x/(1.0_DP-z)**2
+      DO j = 1, nPairDensityTerms
+        order = 2*j-1
+        sums(1,j) = sums(1,j)+weight*c(order)
+        sums(2,j) = sums(2,j)+weight*E*REAL(order+1,DP)*c(order+1)
+        sums(3,j) = sums(3,j)+weight*(E*E*REAL((order+1)*(order+2),DP)*c(order+2) &
+                                      -E*REAL(order+1,DP)*c(order+1))
+      END DO
+    END DO
+    DO j = 2, nPairDensityTerms
+      r = sums(1,j)/sums(1,1)
+      rx = (sums(2,j)-r*sums(2,1))/sums(1,1)
+      Series(1,j-1) = r
+      Series(2,j-1) = rx
+      Series(3,j-1) = (sums(3,j)-r*sums(3,1)-2.0_DP*rx*sums(2,1))/sums(1,1)
+    END DO
+
+  END SUBROUTINE ComputePairDensitySeries
+
+  SUBROUTINE ComputePairSymmetricScales &
+    ( Temperature, LeptonMass, ThermalConstant, HbarC, Nodes, Weights, LogP0, LogA0, LP1, LP2, LA1, LA2 )
+
+    REAL(DP), INTENT(IN)  :: Temperature, LeptonMass, ThermalConstant, HbarC
     REAL(DP), INTENT(IN)  :: Nodes(nPairQuadraturePoints)
     REAL(DP), INTENT(IN)  :: Weights(nPairQuadraturePoints)
     REAL(DP), INTENT(OUT) :: LogP0, LogA0
+    REAL(DP), INTENT(OUT) :: LP1,LP2,LA1,LA2
 
     REAL(DP), PARAMETER :: LogTwo = LOG( 2.0_DP )
     REAL(DP), PARAMETER :: LogThree = LOG( 3.0_DP )
     REAL(DP), PARAMETER :: LogPi = LOG( pi )
 
-    INTEGER :: iQ
+    INTEGER :: iQ,j
     REAL(DP) :: a, E, f, IntP, IntA, theta, x, z
     REAL(DP) :: LogK2, LogCommon
+    REAL(DP) :: IntU,IntUT,IntA1,IntA2,Weight,ff,Term,Series,Series1,Series2,q1,q2
 
-    theta = kmev * Temperature
+    theta = ThermalConstant * Temperature
     a     = LeptonMass / theta
 
     IF( a > 50.0_DP )THEN
 
       ! Maxwell--Boltzmann limit.  Work in logarithms because the symmetric
       ! muon-pair background is exponentially small at low temperature.
-      LogK2 = 0.5_DP * LOG( pi / ( 2.0_DP * a ) ) - a &
-              + LOG( 1.0_DP + 15.0_DP / ( 8.0_DP * a ) &
-                     + 105.0_DP / ( 128.0_DP * a * a ) )
+      Series=1.0_DP
+      Series1=0.0_DP
+      Series2=0.0_DP
+      Term=1.0_DP
+      DO j=1,8
+        Term=Term*(16.0_DP-REAL((2*j-1)**2,DP))/(8.0_DP*REAL(j,DP)*a)
+        Series=Series+Term
+        Series1=Series1+REAL(j,DP)*Term
+        Series2=Series2+REAL(j*j,DP)*Term
+      END DO
+      q1=Series1/Series
+      q2=Series2/Series-q1*q1
+      LogK2 = 0.5_DP * LOG( pi / ( 2.0_DP * a ) ) - a + LOG(Series)
       LogCommon = LOG( 2.0_DP / ( pi * pi ) ) &
                   + 2.0_DP * LOG( LeptonMass ) + LOG( theta ) &
                   - 3.0_DP * LOG( hbarc ) + LogK2
       LogP0 = LogCommon + LOG( theta ) + LOG( ergmev )
       LogA0 = LogCommon
+      LA1=(1.5_DP+a+q1)/Temperature
+      LA2=(-1.5_DP-2.0_DP*a+q2-q1)/(Temperature*Temperature)
+      LP1=LA1+1.0_DP/Temperature
+      LP2=LA2-1.0_DP/(Temperature*Temperature)
 
     ELSE
 
       IntP = 0.0_DP
       IntA = 0.0_DP
+      IntU = 0.0_DP
+      IntUT = 0.0_DP
+      IntA1 = 0.0_DP
+      IntA2 = 0.0_DP
       DO iQ = 1, nPairQuadraturePoints
         z = 0.5_DP * ( Nodes(iQ) + 1.0_DP )
         x = z / ( 1.0_DP - z )
@@ -396,14 +539,25 @@ CONTAINS
                       * x**4 / E * f / ( 1.0_DP - z )**2
         IntA = IntA + 0.5_DP * Weights(iQ) &
                       * x*x * f * ( 1.0_DP - f ) / ( 1.0_DP - z )**2
+        Weight=0.5_DP*Weights(iQ)*x*x/(1.0_DP-z)**2
+        ff=f*(1.0_DP-f)
+        IntU=IntU+Weight*E*f
+        IntUT=IntUT+Weight*E*E*ff
+        IntA1=IntA1+Weight*E*ff*(1.0_DP-2.0_DP*f)
+        IntA2=IntA2+Weight*ff*(E*E*(1.0_DP-6.0_DP*f+6.0_DP*f*f) &
+                    -2.0_DP*E*(1.0_DP-2.0_DP*f))
       END DO
 
       LogP0 = LogTwo - LogThree - 2.0_DP * LogPi &
-              + 4.0_DP * LOG(theta) - 3.0_DP * LOG(hbarc) &
+              + 4.0_DP * LOG(theta) - 3.0_DP * LOG(HbarC) &
               + LOG(IntP) + LOG(ergmev)
       LogA0 = LogTwo - 2.0_DP * LogPi &
-              + 3.0_DP * LOG(theta) - 3.0_DP * LOG(hbarc) &
+              + 3.0_DP * LOG(theta) - 3.0_DP * LOG(HbarC) &
               + LOG(IntA)
+      LP1=(1.0_DP+3.0_DP*IntU/IntP)/Temperature
+      LP2=(3.0_DP*IntUT/IntP)/(Temperature*Temperature)-LP1*LP1
+      LA1=(IntA1/IntA)/Temperature
+      LA2=(IntA2/IntA)/(Temperature*Temperature)-LA1*LA1
 
     END IF
 
@@ -455,33 +609,5 @@ CONTAINS
 
   END SUBROUTINE ComputeGaussLegendreRule
 
-  SUBROUTINE ComputeNodalDerivative( X, F, dFdX )
-
-    REAL(DP), DIMENSION(:), INTENT(IN)  :: X, F
-    REAL(DP), DIMENSION(:), INTENT(OUT) :: dFdX
-
-    INTEGER :: i, n
-    REAL(DP) :: h0, h1
-
-    n = SIZE(X)
-    h0 = X(2) - X(1)
-    h1 = X(3) - X(2)
-    dFdX(1) = -( 2.0_DP*h0 + h1 ) / ( h0 * ( h0 + h1 ) ) * F(1) &
-               + ( h0 + h1 ) / ( h0 * h1 ) * F(2) &
-               - h0 / ( h1 * ( h0 + h1 ) ) * F(3)
-    DO i = 2, n - 1
-      h0 = X(i)   - X(i-1)
-      h1 = X(i+1) - X(i)
-      dFdX(i) = -h1 / ( h0 * ( h0 + h1 ) ) * F(i-1) &
-                 + ( h1 - h0 ) / ( h0 * h1 ) * F(i) &
-                 + h0 / ( h1 * ( h0 + h1 ) ) * F(i+1)
-    END DO
-    h0 = X(n-1) - X(n-2)
-    h1 = X(n)   - X(n-1)
-    dFdX(n) = h1 / ( h0 * ( h0 + h1 ) ) * F(n-2) &
-               - ( h0 + h1 ) / ( h0 * h1 ) * F(n-1) &
-               + ( h0 + 2.0_DP*h1 ) / ( h1 * ( h0 + h1 ) ) * F(n)
-
-  END SUBROUTINE ComputeNodalDerivative
 
 END MODULE wlLeptonEOSTableModule

@@ -833,6 +833,10 @@ CONTAINS
     CALL MPI_BCAST( min_max_helm, 4, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
     CALL MPI_BCAST( HelmTable % lepton_mass, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % ThermalConstant, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % HbarC, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % NumberPerMass, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % DensityScale, 1, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
     IF ( myid /= rootproc ) THEN
         HelmTable % nPointsDen = helm_dims(1)
@@ -864,8 +868,13 @@ CONTAINS
     CALL MPI_BCAST( HelmTable % PairTemperature, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( HelmTable % PairLogP0, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( HelmTable % PairDLogP0dT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % PairD2LogP0dT2, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( HelmTable % PairLogA0, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
     CALL MPI_BCAST( HelmTable % PairDLogA0dT, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+    CALL MPI_BCAST( HelmTable % PairD2LogA0dT2, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
+
+    i_count = SIZE(HelmTable%PairDensitySeries)
+    CALL MPI_BCAST( HelmTable % PairDensitySeries, i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )
 
     i_count = HelmTable % nPointsDen * HelmTable % nPointsTemp
     CALL MPI_BCAST( HelmTable % f,     i_count, MPI_DOUBLE_PRECISION, rootproc, COMMUNICATOR, ierr )

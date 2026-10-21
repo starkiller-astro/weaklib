@@ -1,6 +1,8 @@
 MODULE wlHelmIOModuleHDF
 
     USE wlKindModule, ONLY: dp
+    USE wlEosConstantsModule, ONLY: ergmev, rmu
+    USE MPI, ONLY: MPI_Abort, MPI_COMM_WORLD
     USE wlLeptonEOSTableModule, ONLY: &
         HelmTableType, &
         AllocateHelmholtzTable, &
@@ -46,6 +48,10 @@ CONTAINS
     datasize1d = 1
     buffer(1) = HelmTable % lepton_mass
     CALL WriteHDF( "LeptonMass", buffer, group_id, datasize1d )
+    datasize1d = 4
+    CALL WriteHDF( "ThermodynamicConstantsCGS", &
+      [ HelmTable%lepton_mass*ergmev, HelmTable%ThermalConstant*ergmev, &
+        HelmTable%HbarC*ergmev, HelmTable%NumberPerMass ], group_id, datasize1d )
 
     datasize1d = HelmTable % nPointsDen
     CALL WriteHDF( "Density", HelmTable % d, group_id, datasize1d )
@@ -122,11 +128,15 @@ CONTAINS
 
   END SUBROUTINE WriteHelmholtzTableHDF
 
-  SUBROUTINE ReadHelmholtzTableHDF( HelmTable, FileName, WhichTableName )
+  SUBROUTINE ReadHelmholtzTableHDF &
+    ( HelmTable, FileName, WhichTableName, Constants_Option )
 
     TYPE(HelmTableType), INTENT(INOUT)  :: HelmTable
     CHARACTER(len=*), INTENT(IN) :: FileName
     CHARACTER(len=*), INTENT(IN) :: WhichTableName
+    ! Legacy files omit generator constants. An explicit table-specific
+    ! preset can supply them; self-describing files take precedence.
+    REAL(DP), INTENT(IN), OPTIONAL :: Constants_Option(4)
 
     INTEGER(HID_T) :: file_id
     INTEGER(HID_T) :: group_id
@@ -134,6 +144,9 @@ CONTAINS
     INTEGER(HSIZE_T) :: datasize1d(1)
 
     REAL(dp), DIMENSION(1) :: buffer
+    REAL(dp) :: GasConstants(4)
+    LOGICAL :: HasConstants
+    INTEGER :: ierr
     INTEGER,  DIMENSION(2) :: nPoints
 
     CALL OpenFileHDF( FileName, .false., file_id )
@@ -154,6 +167,30 @@ CONTAINS
     datasize1d = 1
     CALL ReadHDF( "LeptonMass", buffer, group_id, datasize1d )
     HelmTable % lepton_mass = buffer(1)
+    CALL H5LEXISTS_F(group_id,'ThermodynamicConstantsCGS',HasConstants,hdferr)
+    GasConstants = [ HelmTable%lepton_mass*ergmev, HelmTable%ThermalConstant*ergmev, &
+                     HelmTable%HbarC*ergmev, HelmTable%NumberPerMass ]
+    IF( HasConstants )THEN
+      datasize1d = 4
+      CALL ReadHDF('ThermodynamicConstantsCGS',GasConstants,group_id,datasize1d)
+    ELSE IF( PRESENT(Constants_Option) )THEN
+      GasConstants = Constants_Option
+    END IF
+    IF( ANY(GasConstants <= 0.0_DP) )THEN
+      WRITE(*,*) 'ReadHelmholtzTableHDF: invalid generator constants in ',TRIM(WhichTableName)
+      CALL MPI_Abort(MPI_COMM_WORLD,1,ierr)
+    END IF
+    HelmTable%lepton_mass = GasConstants(1)/ergmev
+    HelmTable%ThermalConstant = GasConstants(2)/ergmev
+    HelmTable%HbarC = GasConstants(3)/ergmev
+    HelmTable%NumberPerMass = GasConstants(4)
+    ! Preserve the evolution's physical n=rho*Y/rmu. Only the lookup
+    ! coordinate changes to the generator convention d_gen=n/N_A_gen.
+    HelmTable%DensityScale = 1.0_DP/(rmu*HelmTable%NumberPerMass)
+    IF( HasConstants .OR. PRESENT(Constants_Option) )THEN
+      WRITE(*,'(A,A)') '  Helm gas constants: ',TRIM(WhichTableName)
+      WRITE(*,'(A,4ES24.15E3)') '    rest[erg], k, hbar*c, number/mass: ',GasConstants
+    END IF
     CALL CloseGroupHDF( group_id )
 
     datasize2d = (/ HelmTable % nPointsDen, HelmTable % nPointsTemp /)
