@@ -14,8 +14,8 @@ include ../../../Makefile.h
 # Import thornado Makefiles
 WEAKLIB_DIR = ../../
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_GPU
-include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Defines
+include $(WEAKLIB_DIR)/Distributions/Build/Makefile_Path
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_ObjectFiles
 include $(WEAKLIB_DIR)/Distributions/Build/Makefile_WeakLib_Dependencies
 
@@ -27,8 +27,11 @@ else
   FFLAGS = $(FFLAGS_OPT)
 endif
 FFLAGS += $(FFLAGS_HDF5)
-ifeq ($(USE_GPU),TRUE)
+ifeq ($(USE_CUDA),TRUE)
   FFLAGS += $(FFLAGS_CUDA)
+endif
+ifeq ($(USE_HIP),TRUE)
+  FFLAGS += $(FFLAGS_ROCM)
 endif
 ifeq ($(USE_OACC),TRUE)
   FFLAGS += $(FFLAGS_OACC)
@@ -37,7 +40,11 @@ ifeq ($(USE_OMP_OL),TRUE)
   FFLAGS += $(FFLAGS_OMP_OL)
 endif
 ifeq ($(USE_OMP),TRUE)
+ifdef OPENMP_FORTRAN
+  FFLAGS += $(OPENMP_FORTRAN)
+else
   FFLAGS += $(OPENMP)
+endif
 endif
 
 # command for generating a library
