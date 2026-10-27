@@ -78,6 +78,11 @@ wlTestGeneralKernelVsTable_Interface: \
 	$(weaklib) wlTestGeneralKernelVsTable_Interface.o \
 	$(LIBRARIES)
 
+# Uses the semi-leptonic 2D front end (OpacitySource/GeneralEmAb)
+wlTestFig56Guo.o: \
+  wlKindModule.o \
+  wlSemiLeptonicOpacityModule2D.o
+
 clean:
 	rm -f *.o *.mod *.ld *.acc.s
 

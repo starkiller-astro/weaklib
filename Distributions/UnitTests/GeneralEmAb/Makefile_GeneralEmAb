@@ -11,7 +11,8 @@ include $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera/Makefi
 
 VPATH += \
 $(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics: \
-$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera
+$(WEAKLIB_DIR)/TableCreator/OpacitySource/FullWeakPhysics/Chimera: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb/OriginalGSIroutines
 
 # CUBA (Vegas) is only needed by the 4D kernels: link it only when requested
 ifeq ($(USE_CUBA),TRUE)
@@ -31,6 +32,9 @@ CHIMERA_WM = \
 # Default: 2D kernels only, no CUBA needed
 all: wlTestAbEm2DVsGSI \
      wlTestAbEm2DParallel \
+     wlTestAbEm2DConvergence \
+     wlTestAbEm2DCompareSchemes \
+     wlTestAbEm2DFastSettings \
      wlTestAbEm2DVsTable
 
 # 4D (CUBA) kernels: make cuba USE_CUBA=TRUE
@@ -57,6 +61,24 @@ wlTestAbEm2DParallel: \
 	$(weaklib) wlTestAbEm2DParallel.o
 	$(FLINKER) $(FLAGS) -o wlTestAbEm2DParallel_$(MACHINE) \
 	$(weaklib) wlTestAbEm2DParallel.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm2DConvergence: \
+	$(weaklib) wlTestAbEm2DConvergence.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm2DConvergence_$(MACHINE) \
+	$(weaklib) wlTestAbEm2DConvergence.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm2DCompareSchemes: \
+	$(weaklib) wlTestAbEm2DCompareSchemes.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm2DCompareSchemes_$(MACHINE) \
+	$(weaklib) wlTestAbEm2DCompareSchemes.o \
+	$(LIBRARIES) $(CUBA_LIB)
+
+wlTestAbEm2DFastSettings: \
+	$(weaklib) wlTestAbEm2DFastSettings.o
+	$(FLINKER) $(FLAGS) -o wlTestAbEm2DFastSettings_$(MACHINE) \
+	$(weaklib) wlTestAbEm2DFastSettings.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
 wlTestAbEm2DVsTable: \
@@ -125,6 +147,21 @@ wlTestAbEm2DParallel.o: \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o \
   wlSemiLeptonicOpacityIntegrationModule2D.o
+
+wlTestAbEm2DConvergence.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o
+
+wlTestAbEm2DCompareSchemes.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o
+
+wlTestAbEm2DFastSettings.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o \
+  wlSemiLeptonicOpacityModule2D.o
 
 wlTestAbEm2DVsTable.o: \
   wlKindModule.o \

@@ -1,0 +1,52 @@
+2D integration methods of the semi-leptonic CC rates (GeneralEmAb).
+
+All methods are stateless kernels (Opacity_CC_2D_<Method>_Nodes) that
+take the Gauss-Legendre rules on [0,1] as arguments; Opacity_CC_2D (front
+end ../wlSemiLeptonicOpacityModule2D.F90) calls them with the rules
+computed once by InitOpacity_CC_2D (../wlSemiLeptonicNodes2D.F90). They
+get all physics from
+../wlSemiLeptonicPhysicsModule2D.F90; they differ only in the quadrature.
+The method is chosen by InitOpacity_CC_2D(nE, Method_Option); without
+Method_Option it is the compile-time default, make
+EMAB2D_METHOD=MOMENTUM|ENERGY|TAIL (default MOMENTUM).
+
+  wlSemiLeptonicIntegration2D_Energy.F90      ENERGY, the "STANDARD" method
+      Linear Gauss-Legendre in the nucleon energy E2 (outer) and lepton
+      energy E3 (inner), nE x nE nodes: the layout of the original GSI
+      routines (../OriginalGSIroutines). Opacity_CC_2D_Energy_Nodes
+      (independent E2 and E3 rules; Init uses gauleg(nE) for both). Kinks and
+      SQRT endpoints of the integrand are not resolved, so it converges
+      slowly (~n^-3).
+
+  wlSemiLeptonicIntegration2D_Momentum.F90    MOMENTUM, the DEFAULT method
+      Outer integral in the nucleon momentum p2, split at the two-body
+      thresholds of the lepton window (P2_Segments); inner integral in the
+      lepton momentum p3, split at the kinks of the angle-integrated |M|^2
+      (E3_Segments). nE nodes per outer segment, Inner_Rule(nE) =
+      MAX(6,MIN(12,nE/4)) nodes per inner segment. Thermal cutoff Tfac = 30
+      above the kinematic threshold. Opacity_CC_2D_Momentum_Nodes
+      (explicit outer and inner rules; Init uses gauleg(nE) and Inner_Rule(nE)).
+
+  wlSemiLeptonicIntegration2D_Tail.F90        TAIL
+      Kink- and Fermi-edge-split finite segments with endpoint clustering
+      plus a 12-point Gauss-Laguerre tail (scale T) instead of a thermal
+      cutoff. Most accurate (corrections 0-2 ~1e-6 at nE = 12); used as the
+      reference in the comparison tests. Opacity_CC_2D_Tail_Nodes
+      (Init uses gauleg(nE)).
+
+  wlSemiLeptonicOpacityIntegrationModule2D.F90
+      Two-phase (GPU-oriented) driver of the MOMENTUM method
+      (CC2D_PrepareCall / CC2D_SetInnerRule / CC2D_RowSetup(CD, iE2, RD) /
+      CC2D_NodeKernel / CC2D_ApplyPrefactor and per-reaction wrappers),
+      reading the rules of InitOpacity_CC_2D; bit-identical to
+      Opacity_CC_2D with the MOMENTUM method.
+
+Measured against the Tail reference (ThermoConditions.dat, 1-300 MeV,
+corrections 0-2, muons, serial cost relative to the GSI code at Ngrids = 50):
+  GSI code (Ngrids = 50)   max pointwise error 5.3e-3, median 7.7e-4    1x
+  ENERGY, nE = 50          max 3.2e-3, median 3.1e-5                    ~1.2x
+  MOMENTUM, nE = 24        max 2.2e-2 (muonic reactions 3/4), median 7e-5   5.4x
+  MOMENTUM, nE = 32        max 1.2e-3, median 2.2e-5                    3.1x
+  MOMENTUM, nE = 50        max 3.7e-5, median 5.9e-7                    1.3x
+Correction 3 (form factors) is limited to a few % above ~170 MeV in every
+method by the discontinuous form-factor term.

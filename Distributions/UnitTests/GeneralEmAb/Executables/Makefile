@@ -16,4 +16,4 @@ USE_CUBA   ?= FALSE
 # Run 'make clobber' when switching EOSMODE or USE_CUBA.
 EOSMODE ?= 3D
 
-include ../Makefile_GeneralAbEm
+include ../Makefile_GeneralEmAb

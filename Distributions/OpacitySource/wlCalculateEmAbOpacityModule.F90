@@ -124,7 +124,7 @@ CONTAINS
     xb = (phi4 - phi2)/T/kmev
     IF (ABS(xb) < 1.0d-12) THEN
       ! limit xb -> 0: n4 -> n2*EXP(xb) (non-degenerate), so the ratio -> n2
-      baryons_term = n2
+      baryons_term = n2 
     ELSE IF (xb <= 0.0d0) THEN
       baryons_term = (n2 - n4)/(-ExpM1(xb))
     ELSE

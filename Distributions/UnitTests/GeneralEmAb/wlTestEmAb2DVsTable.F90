@@ -2,7 +2,10 @@ PROGRAM wlTestAbEm2DVsTable
 
   !===========================================================================
   !  Compare the 2D semi-leptonic absorption opacity
-  !  (wlSemiLeptonicOpacityModule2D, Guo/Lohs formalism) with the
+  !  (OpacitySource/GeneralEmAb: wlSemiLeptonicOpacityModule2D with the
+  !  default integration method of this build, printed at the start; the
+  !  integration-module run is the MOMENTUM two-phase driver; Guo/Lohs
+  !  formalism) with the
   !  tabulated EmAb opacity on free nucleons (Reddy et al. 1998 x
   !  Horowitz weak-magnetism factor, see TableCreator/OpacitySource/
   !  FullWeakPhysics/wlCreateOpacityTable.F90 and Chimera/
@@ -56,8 +59,7 @@ PROGRAM wlTestAbEm2DVsTable
   USE wlOpacityTableIOModuleHDF, ONLY: &
     ReadOpacityTableHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-    Opacity_CC_2D_PrecomputedNodes, &
-    gauleg
+    Opacity_CC_2D, InitOpacity_CC_2D, iEmAb2D_Default
   USE wlSemiLeptonicOpacityIntegrationModule2D, ONLY: &
     NuAbsorptionOnNeutrons, &
     NuBarAbsorptionOnProtons
@@ -126,7 +128,6 @@ PROGRAM wlTestAbEm2DVsTable
   REAL(dp), ALLOCATABLE :: EtaNu(:,:,:)                            ! degeneracy of the eq. neutrino
 
   !--------- misc -----------------------------------------------------------
-  REAL(dp) :: xa(nE_quad), wxa(nE_quad)
   INTEGER  :: IncludeCorrections(3)
   INTEGER  :: i, iE, iS, j, k, l, ierr, nRead, iYeSel(nYeSel)
   REAL(dp) :: TMeV, eta, buffer, rho_in, T_in, Ye_in, cmp(3)
@@ -342,7 +343,7 @@ PROGRAM wlTestAbEm2DVsTable
   !------------------------------------------------------
   !    2D semi-leptonic opacity
   !------------------------------------------------------
-  CALL gauleg( 0.0d0, 1.0d0, xa, wxa, nE_quad )
+  CALL InitOpacity_CC_2D( nE_quad )   ! quadrature nodes, computed once
 
   SELECT CASE( WhichCorrection )
   CASE (0) ; IncludeCorrections = [ 0, 0, 0 ]
@@ -351,7 +352,8 @@ PROGRAM wlTestAbEm2DVsTable
   CASE DEFAULT ; IncludeCorrections = [ 1, 1, 1 ]
   END SELECT
 
-  WRITE(*,*) 'Computing 2D opacities (Opacity_CC_2D_PrecomputedNodes) ...'
+  WRITE(*,'(A,I2,A)') ' Computing 2D opacities (Opacity_CC_2D, method', &
+      iEmAb2D_Default, ') ...'
   CALL SYSTEM_CLOCK( count_start, count_rate = count_rate )
 #if defined(WEAKLIB_OMP)
   !$OMP PARALLEL DO SCHEDULE(dynamic) COLLAPSE(2) PRIVATE( TMeV )
@@ -359,14 +361,14 @@ PROGRAM wlTestAbEm2DVsTable
   DO i = 1, nPoints
     DO iE = 1, nE
       TMeV = P_T(i) * kmev
-      CALL Opacity_CC_2D_PrecomputedNodes &
+      CALL Opacity_CC_2D &
              ( WhichCorrection, 1, Energy(iE), KappaA_2D(iE,i,iNu_e), TMeV, &
                P_Mue(i), P_Mun(i), P_Mup(i), me, mn_Chimera, mp_Chimera, &
-               0.0d0, 0.0d0, nE_quad, xa, wxa )
-      CALL Opacity_CC_2D_PrecomputedNodes &
+               0.0d0, 0.0d0 )
+      CALL Opacity_CC_2D &
              ( WhichCorrection, 2, Energy(iE), KappaA_2D(iE,i,iNu_e_bar), TMeV, &
                P_Mue(i), P_Mun(i), P_Mup(i), me, mn_Chimera, mp_Chimera, &
-               0.0d0, 0.0d0, nE_quad, xa, wxa )
+               0.0d0, 0.0d0 )
     END DO
   END DO
 #if defined(WEAKLIB_OMP)
@@ -389,11 +391,11 @@ PROGRAM wlTestAbEm2DVsTable
         CALL NuAbsorptionOnNeutrons &
                ( Energy(iE), TMeV, P_Mue(i), P_Mun(i), P_Mup(i), me, &
                  mn_Chimera, mp_Chimera, 0.0d0, 0.0d0, IncludeCorrections, &
-                 nE_quad, xa, wxa, xa, wxa, KappaA_Int(iE,i,iNu_e) )
+                 KappaA_Int(iE,i,iNu_e) )
         CALL NuBarAbsorptionOnProtons &
                ( Energy(iE), TMeV, P_Mue(i), P_Mun(i), P_Mup(i), me, &
                  mn_Chimera, mp_Chimera, 0.0d0, 0.0d0, IncludeCorrections, &
-                 nE_quad, xa, wxa, xa, wxa, KappaA_Int(iE,i,iNu_e_bar) )
+                 KappaA_Int(iE,i,iNu_e_bar) )
       END DO
     END DO
 #if defined(WEAKLIB_OMP)
@@ -480,7 +482,7 @@ PROGRAM wlTestAbEm2DVsTable
   WRITE(*,'(A)') '                                              wall [s]   per eval [s]   / table'
   WRITE(*,'(A,ES12.4,ES14.4,ES12.4)') ' Table interpolation (EOS mu + EmAb)    : ', &
     t_Table, t_Table / nEval, 1.0d0
-  WRITE(*,'(A,ES12.4,ES14.4,ES12.4)') ' 2D (Opacity_CC_2D_PrecomputedNodes)    : ', &
+  WRITE(*,'(A,ES12.4,ES14.4,ES12.4)') ' 2D (Opacity_CC_2D)                    : ', &
     t_2D, t_2D / nEval, t_2D / MAX( t_Table, TINY(1.0d0) )
   IF( DoIntegrationModule )THEN
     WRITE(*,'(A,ES12.4,ES14.4,ES12.4)') ' 2D (integration module wrappers)       : ', &

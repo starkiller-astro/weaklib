@@ -1,0 +1,45 @@
+wlSemiLeptonicPhysicsModule2D.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
+wlSemiLeptonicIntegration2D_Momentum.o: \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
+wlSemiLeptonicIntegration2D_Energy.o: \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
+wlSemiLeptonicIntegration2D_Tail.o: \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlSemiLeptonicIntegration2D_Momentum.o \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
+wlSemiLeptonicNodes2D.o: \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlSemiLeptonicIntegration2D_Momentum.o \
+  wlKindModule.o
+
+wlSemiLeptonicOpacityModule2D.o: \
+  wlSemiLeptonicNodes2D.o \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlSemiLeptonicIntegration2D_Energy.o \
+  wlSemiLeptonicIntegration2D_Momentum.o \
+  wlSemiLeptonicIntegration2D_Tail.o \
+  wlKindModule.o
+
+wlSemiLeptonicOpacityIntegrationModule2D.o: \
+  wlSemiLeptonicNodes2D.o \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlSemiLeptonicIntegration2D_Momentum.o \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
+ifeq ($(USE_CUBA),TRUE)
+  wlSemiLeptonicOpacityModule4D.o: \
+    wlKindModule.o \
+    wlEosConstantsModule.o
+endif

@@ -1,0 +1,19 @@
+Original GSI routines for the semi-leptonic CC rates (Guo et al. 2020),
+from https://git.gsi.de/nucastro_archive/supernovamuonicrates.
+
+  Opacity_SemiLep_2D_GSI.f90   2D integrals (linear Gauss-Legendre in E2 and
+                               E3, Ngrids = 50 hardcoded, Tfac = 150)
+  Opacity_SemiLep_4D_GSI.f90   4D integrals (Vegas, needs CUBA)
+
+They are kept unchanged and are NOT part of the weaklib library; the unit
+tests in Distributions/UnitTests/GeneralEmAb compile them as reference.
+Known issues of this copy (fixed in the weaklib modules of ../):
+  - Calc_Ampsq clamps |M|^2 >= 0 BEFORE the crossing sign of the inverse
+    decay / decay channels is applied (res = -res afterwards), so
+    reactions 3 and 4 come out zero (corrections 0-1) or negative (2-3).
+  - REAL(4) literals (e.g. 5./7.) in the form-factor block cancel
+    catastrophically at large nucleon momentum (correction 3; up to O(1)
+    errors for muonic inverse decay / decay).
+  - The variance term of the form-factor average (Ic2) is missing.
+  - Older constants (Vud = 0.97427, Gf = 1.166e-11): ~6e-4 offset.
+  - Results are in km^-1 for reactions 1-3.

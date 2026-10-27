@@ -1,15 +1,22 @@
 PROGRAM wlTestAbEm2DParallel
 
+  ! Timing and consistency of the MOMENTUM integration method
+  ! (OpacitySource/GeneralEmAb) in serial and with OpenMP: Opacity_CC_2D
+  ! after InitOpacity_CC_2D(nE_2D, iEmAb2D_Momentum), the per-reaction
+  ! wrappers and the collapsed two-phase loop of
+  ! wlSemiLeptonicOpacityIntegrationModule2D (the GPU driver of that
+  ! method). All of them read the quadrature rules computed once by Init.
+
   USE omp_lib
   USE wlKindModule, ONLY: dp
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-    Opacity_CC_2D
+    Opacity_CC_2D, InitOpacity_CC_2D, FinalizeOpacity_CC_2D, iEmAb2D_Momentum
   USE wlSemiLeptonicOpacityIntegrationModule2D, ONLY: &
     NuAbsorptionOnNeutrons, NuBarAbsorptionOnProtons, &
     InverseNeutronDecay, NeutronEmissivity, &
     CC2D_CallData, CC2D_RowData, &
-    CC2D_PrepareCall, CC2D_RowSetup, CC2D_NodeKernel, CC2D_ApplyPrefactor, &
-    gauleg
+    CC2D_PrepareCall, CC2D_RowSetup, CC2D_NodeKernel, &
+    CC2D_ApplyPrefactor, nE3Max
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mn, mp, me, mmu, mpi, &
    Vud, massA, massV, gamma_p, gamma_n
@@ -32,7 +39,6 @@ PROGRAM wlTestAbEm2DParallel
   TYPE(CC2D_CallData) :: CD
   TYPE(CC2D_RowData)  :: RD(nE_2D)
 
-  REAL(DP), allocatable :: xa(:), wxa(:)
   REAL(DP), allocatable :: Store2DIntegral(:,:,:)
   REAL(DP) :: OpaA_dummy
   REAL(DP) :: t_tot, t_start, t_end, t_serial
@@ -59,9 +65,7 @@ PROGRAM wlTestAbEm2DParallel
   ALLOCATE(T(nThermoPoints), Rho(nThermoPoints), Ye(nThermoPoints), Ym(nThermoPoints))
   ALLOCATE(Mue(nThermoPoints), Mum(nThermoPoints), Mul(nThermoPoints), Mun(nThermoPoints), Mup(nThermoPoints))
   ALLOCATE(Un(nThermoPoints), Up(nThermoPoints), EffMassn(nThermoPoints), EffMassp(nThermoPoints))
-  ALLOCATE(Store2DIntegral(nE_2D, nE_2D, nOp))
-  ALLOCATE(xa(nE_2D))
-  ALLOCATE(wxa(nE_2D))
+  ALLOCATE(Store2DIntegral(nE_2D, nE3Max, nOp))
 
   ! Columns: T Rho Ye Ym Mue Mum Mun Mup Un Up M*n M*p
   DO i = 1, nThermoPoints
@@ -80,13 +84,16 @@ PROGRAM wlTestAbEm2DParallel
 
   OpaA_2D = 0.d0
 
+  ! Quadrature rules of the momentum method, computed once
+  CALL InitOpacity_CC_2D( nE_2D, iEmAb2D_Momentum )
+
   CALL SYSTEM_CLOCK(count_start, count_rate=count_rate)
   DO j = 1, nApprox
   DO k = 1, nOp
   DO i = 1, nThermoPoints
   DO l=1, NP
     CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-          T(i), Mul(i), Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE_2D)
+          T(i), Mul(i), Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i))
   END DO
   END DO
   END DO
@@ -95,14 +102,14 @@ PROGRAM wlTestAbEm2DParallel
   t_2D_serial = REAL(count_end - count_start) / REAL(count_rate)
 
   CALL SYSTEM_CLOCK(count_interm)
-  !$OMP PARALLEL DO COLLAPSE(4) &
+  !$OMP PARALLEL DO COLLAPSE(4) SCHEDULE(DYNAMIC) &
   !$OMP PRIVATE(i, j, k, l)
   DO j = 1, nApprox
   DO k = 1, nOp
   DO i = 1, nThermoPoints
   DO l=1, NP
     CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D_parallel(l, i, j, k), &
-          T(i), Mul(i), Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE_2D)
+          T(i), Mul(i), Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i))
   END DO
   END DO
   END DO
@@ -111,10 +118,8 @@ PROGRAM wlTestAbEm2DParallel
   CALL SYSTEM_CLOCK(count_end)
   t_2D = REAL(count_end - count_interm) / REAL(count_rate)
 
-  CALL gauleg(0.d0, 1.d0, xa, wxa, nE_2D)
-
   CALL SYSTEM_CLOCK(count_interm)
-  !$OMP PARALLEL DO COLLAPSE(3) &
+  !$OMP PARALLEL DO COLLAPSE(3) SCHEDULE(DYNAMIC) &
   !$OMP PRIVATE(i, j, k, l, IncludeCorrections)
   DO j = 1, nApprox
   DO i = 1, nThermoPoints
@@ -142,16 +147,16 @@ PROGRAM wlTestAbEm2DParallel
     ! per-reaction particle mapping happens inside the integration module
     CALL NuAbsorptionOnNeutrons(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
         EffMassn(i), EffMassp(i), Un(i), Up(i), &
-        IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 1))
+        IncludeCorrections, OpaA_2D_wrapped(l, i, j, 1))
     CALL NuBarAbsorptionOnProtons(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
         EffMassn(i), EffMassp(i), Un(i), Up(i), &
-        IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 2))
+        IncludeCorrections, OpaA_2D_wrapped(l, i, j, 2))
     CALL InverseNeutronDecay(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
         EffMassn(i), EffMassp(i), Un(i), Up(i), &
-        IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 3))
+        IncludeCorrections, OpaA_2D_wrapped(l, i, j, 3))
     CALL NeutronEmissivity(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
         EffMassn(i), EffMassp(i), Un(i), Up(i), &
-        IncludeCorrections, nE_2D, xa, wxa, xa, wxa, OpaA_2D_wrapped(l, i, j, 4))
+        IncludeCorrections, OpaA_2D_wrapped(l, i, j, 4))
   END DO
   END DO
   END DO
@@ -161,7 +166,7 @@ PROGRAM wlTestAbEm2DParallel
 
   CALL SYSTEM_CLOCK(count_interm)
   OpaA_2D_collapsed = 0.0d0
-  !$OMP PARALLEL DO COLLAPSE(3) &
+  !$OMP PARALLEL DO COLLAPSE(3) SCHEDULE(DYNAMIC) &
   !$OMP PRIVATE(i, j, k, l, iE2, iE3, Store2DIntegral, IncludeCorrections, CD, RD)
   DO i = 1, nThermoPoints
   DO j = 1, nApprox
@@ -193,15 +198,15 @@ PROGRAM wlTestAbEm2DParallel
           EffMassn(i), EffMassp(i), Un(i), Up(i), IncludeCorrections, CD)
 
       DO iE2 = 1, nE_2D
-        CALL CC2D_RowSetup(CD, xa(iE2), wxa(iE2), RD(iE2))
+        CALL CC2D_RowSetup(CD, iE2, RD(iE2))
       END DO
 
       Store2DIntegral(:,:,k) = 0.0d0
       !$OMP PARALLEL DO COLLAPSE(2) &
       !$OMP PRIVATE( iE2, iE3 )
       DO iE2=1,nE_2D
-      DO iE3=1,nE_2D
-        CALL CC2D_NodeKernel(CD, RD(iE2), xa(iE3), wxa(iE3), Store2DIntegral(iE2,iE3,k))
+      DO iE3=1,nE3Max
+        CALL CC2D_NodeKernel(CD, RD(iE2), iE3, Store2DIntegral(iE2,iE3,k))
       END DO
       END DO
       !$OMP END PARALLEL DO
@@ -261,7 +266,8 @@ PROGRAM wlTestAbEm2DParallel
   ! CLOSE(200)
 
   DEALLOCATE(OpaA_2D, OpaA_2D_parallel, OpaA_2D_wrapped, OpaA_2D_collapsed)
-  DEALLOCATE(Store2DIntegral, xa, wxa)
+  DEALLOCATE(Store2DIntegral)
+  CALL FinalizeOpacity_CC_2D()
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
 END PROGRAM wlTestAbEm2DParallel

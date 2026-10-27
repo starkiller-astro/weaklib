@@ -18,7 +18,7 @@ PROGRAM wlTestAbEm4DVsGSI
 
   USE wlKindModule, ONLY: dp
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-    Opacity_CC_2D
+    Opacity_CC_2D, InitOpacity_CC_2D
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
   USE wlEosConstantsModule, ONLY: &
@@ -111,6 +111,7 @@ PROGRAM wlTestAbEm4DVsGSI
   t_4D = 0.0d0
   t_2D_OLD = 0.0d0
   t_4D_OLD = 0.0d0
+  CALL InitOpacity_CC_2D( nE_2D )   ! 2D quadrature nodes, computed once
   DO j = 1, nApprox
     DO k = 1, nOp
       DO i = 1, nThermoPoints
@@ -132,7 +133,7 @@ PROGRAM wlTestAbEm4DVsGSI
         CALL CPU_TIME(t1)
         DO l=1, NP
           call Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-                xTem, cheml, chemn, chemp, massl, xMassn, xMassp, xUn, xUp, nE_2D)
+                xTem, cheml, chemn, chemp, massl, xMassn, xMassp, xUn, xUp)
         END DO
         CALL CPU_TIME(t2)
         t_2D = t_2D + t2 - t1

@@ -11,7 +11,7 @@ PROGRAM wlTestFig56Guo
     InitGeneralScatteringKernels, &
     FinalizeGeneralScatteringKernels
   USE wlSemiLeptonicOpacityModule2D,   ONLY: &
-    Opacity_CC_2D
+    Opacity_CC_2D, InitOpacity_CC_2D
 
   IMPLICIT NONE
 
@@ -181,6 +181,9 @@ PROGRAM wlTestFig56Guo
   CALL ProcessIndexFromReactionString( process_string_Fig5(4), iProcess)
   iProcess_Fig5_4 = ProcessRowIndex(iProcess)
 
+  ! 2D CC quadrature nodes (resolution nE3), computed once
+  CALL InitOpacity_CC_2D( nE3 )
+
   !============================================================================
   ! FIGURE 5: LOOP OVER ENERGY SCAN
   !============================================================================
@@ -191,7 +194,7 @@ PROGRAM wlTestFig56Guo
     ! 1. nu_mu + n -> mu- + p (Produces muon)
     CALL Opacity_CC_2D(WhichCorrection, 1, E1, chi_numu_n_mu_p, &
                         T_a, MuMu_a, MuN_a, MuP_a, mmu,      &
-                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
+                        mn_eff_a, mp_eff_a, Un_a, Up_a)
     chi_numu_n_mu_p = chi_numu_n_mu_p  
     
     Rout_avg_2 = 0.0d0
@@ -215,7 +218,7 @@ PROGRAM wlTestFig56Guo
     ! --- CONDITION (B) --- 
     CALL Opacity_CC_2D(WhichCorrection, 1, E1, chi_numu_n_mu_p, &
                         T_b, MuMu_b, MuN_b, MuP_b, mmu,      &
-                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
+                        mn_eff_b, mp_eff_b, Un_b, Up_b)
     chi_numu_n_mu_p = chi_numu_n_mu_p  
     
     Rout_avg_2 = 0.0d0
@@ -260,13 +263,13 @@ PROGRAM wlTestFig56Guo
     ! 1. nu_bar_e + p -> e+ + n (Involves positron)
     CALL Opacity_CC_2D(WhichCorrection, 2, E1, chi1, &
                         T_a, MuE_a, MuN_a, MuP_a, me,      &
-                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
+                        mn_eff_a, mp_eff_a, Un_a, Up_a)
     chi1 = chi1  
             
     ! 3. nu_bar_e + e- + p -> n (Involves electron)
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_a, MuE_a, MuN_a, MuP_a, me,      &
-                        mn_eff_a, mp_eff_a, Un_a, Up_a, nE3)
+                        mn_eff_a, mp_eff_a, Un_a, Up_a)
     chi3 = chi3  
             
     Rout_avg_2 = 0.0d0
@@ -290,13 +293,13 @@ PROGRAM wlTestFig56Guo
     ! 1. nu_bar_e + p -> e+ + n (Involves positron)
     CALL Opacity_CC_2D(WhichCorrection, 2, E1, chi1, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
-                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
+                        mn_eff_b, mp_eff_b, Un_b, Up_b)
     chi1 = chi1  
             
     ! 3. nu_bar_e + e- + p -> n (Involves electron)
     CALL Opacity_CC_2D(WhichCorrection, 3, E1, chi3, &
                         T_b, MuE_b, MuN_b, MuP_b, me,      &
-                        mn_eff_b, mp_eff_b, Un_b, Up_b, nE3)
+                        mn_eff_b, mp_eff_b, Un_b, Up_b)
     chi3 = chi3
             
     Rout_avg_2 = 0.0d0

@@ -1,16 +1,26 @@
 PROGRAM wlTestAbEm2DVsGSI
 
   !=========================================================================
-  !  Accuracy test for the semi-leptonic charged-current 2D kernels.
+  !  Accuracy test for the semi-leptonic charged-current 2D kernels
+  !  (OpacitySource/GeneralEmAb) against the original GSI code
+  !  (GeneralEmAb/OriginalGSIroutines).
   !
   !  For every thermodynamic point in ThermoConditions.dat (up to
   !  nPointsMax), every neutrino energy, reaction (1-4) and correction
   !  level (0-3) it computes:
   !
-  !    W : wlSemiLeptonicOpacityModule2D :: Opacity_CC_2D
-  !    P : wlSemiLeptonicOpacityModule2D :: Opacity_CC_2D_PrecomputedNodes
-  !    I : wlSemiLeptonicOpacityIntegrationModule2D wrappers
+  !    W : wlSemiLeptonicOpacityModule2D :: Opacity_CC_2D after
+  !        InitOpacity_CC_2D(nE) (default method of this build,
+  !        iEmAb2D_Default; printed at the start)
+  !    P : the stateless kernel of the same method
+  !        (Opacity_CC_2D_<Method>_Nodes) with quadrature rules built here
+  !        (gauleg, Inner_Rule): checks that Opacity_CC_2D and its node
+  !        tables reproduce the kernel bitwise
+  !    I : wlSemiLeptonicOpacityIntegrationModule2D wrappers (two-phase
+  !        driver of the MOMENTUM method)
   !    G : original GSI reference code (Opacity_SemiLep_2D_GSI.f90)
+  !  W = I bitwise only holds when the default is MOMENTUM (the default
+  !  build); with EMAB2D_METHOD=ENERGY|TAIL W-I shows the method difference.
   !
   !  and reports per (reaction, correction):
   !    - W vs P and W vs I (expected to agree bitwise)
@@ -39,7 +49,9 @@ PROGRAM wlTestAbEm2DVsGSI
 
   USE wlKindModule, ONLY: dp
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-    Opacity_CC_2D, Opacity_CC_2D_PrecomputedNodes, gauleg
+    Opacity_CC_2D, InitOpacity_CC_2D, gauleg, Inner_Rule, &
+    Opacity_CC_2D_Energy_Nodes, Opacity_CC_2D_Momentum_Nodes, Opacity_CC_2D_Tail_Nodes, &
+    iEmAb2D_Default, iEmAb2D_Energy, iEmAb2D_Momentum, iEmAb2D_Tail
   USE wlSemiLeptonicOpacityIntegrationModule2D, ONLY: &
     NuAbsorptionOnNeutrons, NuBarAbsorptionOnProtons, &
     InverseNeutronDecay, NeutronEmissivity
@@ -68,7 +80,8 @@ PROGRAM wlTestAbEm2DVsGSI
       Dnp_GSI = 1.293d0, massA_GSI = 1.0d3, massV_GSI = 840.0d0, &
       F2wm0_GSI = 3.706d0
 
-  REAL(DP) :: EnuA(nEnu), xa(nE), wxa(nE)
+  REAL(DP) :: EnuA(nEnu), xa(nE), wxa(nE), x3(12), w3(12)
+  INTEGER  :: nE3
   REAL(DP) :: massl, mu_nubar, DBpref, DBratio
   INTEGER  :: IncludeCorrections(3)
   INTEGER  :: i, j, k, l, nThermoPoints, nPoints, nSamples, iS
@@ -132,6 +145,13 @@ PROGRAM wlTestAbEm2DVsGSI
 
   WRITE(*,'(/,A,I6,A,I4,A,I4)') ' Thermo points:', nPoints, '   energies:', nEnu, '   nE:', nE
   WRITE(*,'(A,L2)') ' DoMuons:', DoMuons
+  IF( iEmAb2D_Default == iEmAb2D_Momentum ) THEN
+    WRITE(*,'(A,I2,A)') ' Default 2D integration method (W, P):', iEmAb2D_Default, &
+        '  (MOMENTUM: W = I expected bitwise)'
+  ELSE
+    WRITE(*,'(A,I2,A)') ' Default 2D integration method (W, P):', iEmAb2D_Default, &
+        '  (not MOMENTUM: W - I is the method difference)'
+  END IF
 
   ALLOCATE(Opa_W(nEnu, nPoints, nCorr, nReac))
   ALLOCATE(Opa_P(nEnu, nPoints, nCorr, nReac))
@@ -145,7 +165,10 @@ PROGRAM wlTestAbEm2DVsGSI
   Opa_G = 0.0d0
   DB    = 0.0d0
 
+  ! Quadrature: nodes once for Opacity_CC_2D (W, I) and locally for P
+  CALL InitOpacity_CC_2D( nE )
   CALL gauleg(0.d0, 1.d0, xa, wxa, nE)
+  CALL Inner_Rule( nE, nE3, x3, w3 )
 
   ! W: Opacity_CC_2D
   CALL SYSTEM_CLOCK(count_start, count_rate=count_rate)
@@ -154,7 +177,7 @@ PROGRAM wlTestAbEm2DVsGSI
   DO i = 1, nPoints
   DO l = 1, nEnu
     CALL Opacity_CC_2D(j-1, k, EnuA(l), Opa_W(l,i,j,k), T(i), Mul(i), Mun(i), Mup(i), &
-          massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE)
+          massl, EffMassn(i), EffMassp(i), Un(i), Up(i))
   END DO
   END DO
   END DO
@@ -162,14 +185,23 @@ PROGRAM wlTestAbEm2DVsGSI
   CALL SYSTEM_CLOCK(count_end)
   t_W = REAL(count_end - count_start, DP) / REAL(count_rate, DP)
 
-  ! P: Opacity_CC_2D_PrecomputedNodes
+  ! P: stateless kernel of the default method with local rules
   CALL SYSTEM_CLOCK(count_start)
   DO k = 1, nReac
   DO j = 1, nCorr
   DO i = 1, nPoints
   DO l = 1, nEnu
-    CALL Opacity_CC_2D_PrecomputedNodes(j-1, k, EnuA(l), Opa_P(l,i,j,k), T(i), Mul(i), &
-          Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE, xa, wxa)
+    SELECT CASE( iEmAb2D_Default )
+    CASE( iEmAb2D_Energy )
+      CALL Opacity_CC_2D_Energy_Nodes(j-1, k, EnuA(l), Opa_P(l,i,j,k), T(i), Mul(i), &
+            Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE, xa, wxa, nE, xa, wxa)
+    CASE( iEmAb2D_Tail )
+      CALL Opacity_CC_2D_Tail_Nodes(j-1, k, EnuA(l), Opa_P(l,i,j,k), T(i), Mul(i), &
+            Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE, xa, wxa)
+    CASE DEFAULT
+      CALL Opacity_CC_2D_Momentum_Nodes(j-1, k, EnuA(l), Opa_P(l,i,j,k), T(i), Mul(i), &
+            Mun(i), Mup(i), massl, EffMassn(i), EffMassp(i), Un(i), Up(i), nE, xa, wxa, nE3, x3, w3)
+    END SELECT
   END DO
   END DO
   END DO
@@ -177,8 +209,8 @@ PROGRAM wlTestAbEm2DVsGSI
   CALL SYSTEM_CLOCK(count_end)
   t_P = REAL(count_end - count_start, DP) / REAL(count_rate, DP)
 
-  ! I: integration module wrappers. IncludeCorrections mapping is the
-  ! same as in Opacity_CC_2D_PrecomputedNodes: (WM, PS, FF)
+  ! I: integration module wrappers (nodes from InitOpacity_CC_2D).
+  ! IncludeCorrections mapping as in the 2D kernels: (WM, PS, FF)
   CALL SYSTEM_CLOCK(count_start)
   DO j = 1, nCorr
     SELECT CASE(j-1)
@@ -195,16 +227,16 @@ PROGRAM wlTestAbEm2DVsGSI
     DO l = 1, nEnu
       CALL NuAbsorptionOnNeutrons(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
           EffMassn(i), EffMassp(i), Un(i), Up(i), &
-          IncludeCorrections, nE, xa, wxa, xa, wxa, Opa_I(l,i,j,1))
+          IncludeCorrections, Opa_I(l,i,j,1))
       CALL NuBarAbsorptionOnProtons(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
           EffMassn(i), EffMassp(i), Un(i), Up(i), &
-          IncludeCorrections, nE, xa, wxa, xa, wxa, Opa_I(l,i,j,2))
+          IncludeCorrections, Opa_I(l,i,j,2))
       CALL InverseNeutronDecay(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
           EffMassn(i), EffMassp(i), Un(i), Up(i), &
-          IncludeCorrections, nE, xa, wxa, xa, wxa, Opa_I(l,i,j,3))
+          IncludeCorrections, Opa_I(l,i,j,3))
       CALL NeutronEmissivity(EnuA(l), T(i), Mul(i), Mun(i), Mup(i), massl, &
           EffMassn(i), EffMassp(i), Un(i), Up(i), &
-          IncludeCorrections, nE, xa, wxa, xa, wxa, Opa_I(l,i,j,4))
+          IncludeCorrections, Opa_I(l,i,j,4))
     END DO
     END DO
   END DO
@@ -407,7 +439,7 @@ PROGRAM wlTestAbEm2DVsGSI
 
   WRITE(*,'(/,A)')        ' Timings [s]'
   WRITE(*,'(A,F10.3)')    '   W (Opacity_CC_2D)           :', t_W
-  WRITE(*,'(A,F10.3)')    '   P (PrecomputedNodes)        :', t_P
+  WRITE(*,'(A,F10.3)')    '   P (stateless _Nodes kernel) :', t_P
   WRITE(*,'(A,F10.3)')    '   I (integration wrappers)    :', t_I
   WRITE(*,'(A,F10.3)')    '   G (GSI reference)           :', t_G
   WRITE(*,'(/,A)')        ' Per-sample values written to AbEm2DVsGSI.dat'

@@ -1,0 +1,18 @@
+# Semi-leptonic CC emission/absorption (GeneralEmAb): shared physics, the
+# three 2D integration methods (IntegrationMethods/), the front end
+# wlSemiLeptonicOpacityModule2D and the two-phase driver of the momentum
+# method. The default method of Opacity_CC_2D is set by EMAB2D_METHOD
+# (Distributions/Build/Makefile_Defines).
+WL_GENERAL_EMAB = \
+  wlSemiLeptonicPhysicsModule2D.o \
+  wlSemiLeptonicIntegration2D_Momentum.o \
+  wlSemiLeptonicIntegration2D_Energy.o \
+  wlSemiLeptonicIntegration2D_Tail.o \
+  wlSemiLeptonicNodes2D.o \
+  wlSemiLeptonicOpacityModule2D.o \
+  wlSemiLeptonicOpacityIntegrationModule2D.o
+
+ifeq ($(USE_CUBA),TRUE)
+  WL_GENERAL_EMAB += \
+    wlSemiLeptonicOpacityModule4D.o
+endif

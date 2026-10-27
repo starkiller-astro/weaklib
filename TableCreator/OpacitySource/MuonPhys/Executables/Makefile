@@ -11,6 +11,8 @@ USE_OACC   ?= FALSE
 USE_OMP    ?= TRUE
 USE_CUBA   ?= FALSE
 
-EOSMODE = 3D
+# COMPOSE: the program reads BaryonsPlusPhotonsPlusLeptonsEOS.h5 and needs the
+# muon chemical potential (in 3D mode ApplyEOS sets Mumu = 0)
+EOSMODE = COMPOSE
 
 include ../Makefile_CreateTable

@@ -2,7 +2,7 @@ PROGRAM wlCreate4DAbEmOpacityTable
 
   USE wlKindModule, ONLY: dp  
   USE HDF5
-  USE wlEosConstantsModule, ONLY: kmev
+  USE wlEosConstantsModule, ONLY: kmev, mmu
   USE wlInterpolationModule, ONLY: &
     LogInterpolateSingleVariable
   USE wlEquationOfStateTableModule
@@ -12,11 +12,10 @@ PROGRAM wlCreate4DAbEmOpacityTable
   USE wlLeptonPhotonGasEOS
   USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-  Opacity_CC_2D
+  Opacity_CC_2D, InitOpacity_CC_2D, FinalizeOpacity_CC_2D
   USE wlCalculateAbEmOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
-    ElasticAbsorptionOpacityNue, &
-    CalculateHorowitzWeakMagRecoil
+    ElasticAbsorptionOpacityNue
   USE wlOpacityTableModule, ONLY: &
     OpacityTableType, &
     DeAllocateOpacityTable
@@ -32,7 +31,7 @@ PROGRAM wlCreate4DAbEmOpacityTable
   INTEGER :: i, j, k, l, nThermoPoints, iE2, iE3
 
   INTEGER :: icount, nCount
-  REAL(DP), allocatable :: OpaA_2D(:,:,:,:,:,:), WeakMagCorrLep(:), WeakMagCorrLepBar(:)
+  REAL(DP), allocatable :: OpaA_2D(:,:,:,:,:,:)
   REAL(DP), allocatable :: T(:), Rho(:), Ye(:), Ym(:), E(:)
   INTEGER :: nE, nRho, nT, nYe, nYm, iE, iRho, iT, iYe, iYm, ierr
   INTEGER :: iEOS_Rho, iEOS_T, iEOS_Yp, iRho_Op, iT_Op, iYe_Op
@@ -87,7 +86,7 @@ PROGRAM wlCreate4DAbEmOpacityTable
   ALLOCATE( Rho(nRho) )
   ALLOCATE( Ye(nYe) )
   ALLOCATE( Ym(nYm) )
-  ALLOCATE( E(nE), WeakMagCorrLep(nE), WeakMagCorrLepBar(nE) )
+  ALLOCATE( E(nE) )
 
   T = OpacityTable % TS % States(iT_Op) % Values
   Rho = OpacityTable % TS % States(iRho_Op) % Values
@@ -98,15 +97,19 @@ PROGRAM wlCreate4DAbEmOpacityTable
   WRITE(*,*) Ym
   ALLOCATE( OpaA_2D(nYm, nYe, nT, nRho, nE, 2) )
 
-  DO iE = 1, nE
-    CALL CalculateHorowitzWeakMagRecoil(E(iE), WeakMagCorrLep(iE), WeakMagCorrLepBar(iE))
-  END DO
+  ! No Horowitz weak-magnetism/recoil factor: correction level 3 of
+  ! Opacity_CC_2D already includes weak magnetism (and full kinematics,
+  ! hence recoil); multiplying by CalculateHorowitzWeakMagRecoil would
+  ! count weak magnetism twice.
+
+  ! 2D quadrature nodes (default integration method), computed once
+  CALL InitOpacity_CC_2D( nE_2D )
 
   iCount = 0
   nCount = nT * nRho * nYe * nYm * nE
-  !$OMP PARALLEL DO COLLAPSE(5) &
+  !$OMP PARALLEL DO COLLAPSE(5) SCHEDULE(DYNAMIC) &
   !$OMP PRIVATE(iT, iRho, iYe, iYm, iE, xMumu, xMue, xMun, &
-  !$OMP xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff)
+  !$OMP xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff, xMul, xMl)
   DO iT=1, nT
   DO iRho=1, nRho
   DO iYe=1, nYe
@@ -115,19 +118,21 @@ PROGRAM wlCreate4DAbEmOpacityTable
     CALL ApplyEOS(T(iT), Rho(iRho), Ye(iYe), Ym(iYm), &
       xMumu, xMue, xMun, xMup, xXn, xXp, xUn, xUp, xMn_eff, xMp_eff)
 
+    ! Muonic channels: relativistic muon chemical potential (incl. rest mass)
+    xMul = xMumu
+    xMl  = mmu
+
     CALL Opacity_CC_2D(3, 1, E(iE), OpaA_2D(iYm, iYe, iT, iRho, iE, 1), &
-          T(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp, nE_2D)
+          T(iT)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp)
 
     CALL Opacity_CC_2D(3, 2, E(iE), OpaA_2D(iYm, iYe, iT, iRho, iE, 2), &
-          T(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp, nE_2D)
+          T(iT)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp)
 
-    OpaA_2D(iYm, iYe, iT, iRho, iE, 1) = OpaA_2D(iYm, iYe, iT, iRho, iE, 1) * WeakMagCorrLep(iE)
-    OpaA_2D(iYm, iYe, iT, iRho, iE, 2) = OpaA_2D(iYm, iYe, iT, iRho, iE, 2) * WeakMagCorrLepBar(iE)
-
+    !$OMP ATOMIC
+    iCount = iCount + 1
     IF ( MOD(iCount, 10000) .EQ. 0 ) THEN
       WRITE(*,*) iCount, '/', nCount
     ENDIF
-    iCount = iCount + 1
 
   END DO
   END DO
@@ -140,6 +145,7 @@ PROGRAM wlCreate4DAbEmOpacityTable
   WRITE(200) OpaA_2D
   CLOSE(200)
 
+  CALL FinalizeOpacity_CC_2D()
   DEALLOCATE(OpaA_2D)
   DEALLOCATE(T, Rho, Ye, Ym, E)
 

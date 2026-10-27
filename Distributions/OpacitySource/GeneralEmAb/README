@@ -1,0 +1,116 @@
+GeneralEmAb: semi-leptonic charged-current emission/absorption
+(nu + n <-> l- + p, nubar + p <-> l+ + n, inverse neutron decay and
+neutron decay emissivity, l = e or mu) from the full-kinematics 2D/4D
+integrals of Guo et al. 2020, based on the GSI open source GitLab code
+https://git.gsi.de/nucastro_archive/supernovamuonicrates
+
+Directory layout
+  wlSemiLeptonicOpacityModule2D.F90   FRONT END: InitOpacity_CC_2D,
+                                      Opacity_CC_2D, FinalizeOpacity_CC_2D, and
+                                      the stateless kernels
+                                      Opacity_CC_2D_Energy_Nodes / _Momentum_Nodes
+                                      / _Tail_Nodes (rules passed as arguments).
+  wlSemiLeptonicNodes2D.F90           quadrature state: the method and its
+                                      Gauss-Legendre rules, computed once by
+                                      InitOpacity_CC_2D and copied to the device.
+  wlSemiLeptonicPhysicsModule2D.F90   physics shared by all 2D methods: constants,
+                                      angle-integrated |M|^2, kinematic windows,
+                                      thermal cutoffs, Fermi-Dirac factors, gauleg.
+  wlSemiLeptonicOpacityModule4D.F90   4D kernels (Vegas/CUBA, only with USE_CUBA=TRUE).
+  IntegrationMethods/                 the 2D integration methods (see its README):
+      wlSemiLeptonicIntegration2D_Energy.F90     ENERGY   = "STANDARD", GSI-like
+      wlSemiLeptonicIntegration2D_Momentum.F90   MOMENTUM = DEFAULT
+      wlSemiLeptonicIntegration2D_Tail.F90       TAIL (no thermal cutoff)
+      wlSemiLeptonicOpacityIntegrationModule2D.F90  two-phase (GPU-oriented)
+                                      driver of the MOMENTUM method
+  OriginalGSIroutines/                the original GSI code, unchanged, used as
+                                      reference by the unit tests (see its README).
+
+Integration methods (all share the same physics and give the same rates
+to within their quadrature errors)
+  ENERGY ("standard"): linear Gauss-Legendre in the nucleon energy E2 and
+      the lepton energy E3, nE x nE nodes, i.e. the layout of the original
+      GSI routines (Ngrids = 50 there).
+  MOMENTUM (default): integration in the nucleon momentum p2 and lepton
+      momentum p3, with both domains split at their kinks/thresholds.
+      nE outer nodes per segment, MAX(6,MIN(12,nE/4)) inner nodes per
+      segment. Fastest at a given accuracy; recommended (muons: nE = 32,
+      better than the GSI code at Ngrids = 50 everywhere and ~3x faster;
+      nE = 24 for speed, ~5x faster).
+  TAIL: kink/Fermi-split segments with a Gauss-Laguerre tail instead of the
+      thermal cutoff Tfac; most accurate (reference for the tests), ~3-5x
+      the cost of MOMENTUM at equal nE.
+
+Calling sequence (the quadrature nodes are computed only once)
+  CALL InitOpacity_CC_2D( nE [, Method_Option] )     ! host, once
+  CALL Opacity_CC_2D( WhichCorrection, ReactionIndex, Enu, OpaA, &
+                      T, Mul, Mun, Mup, ml, mn, mp, Un, Up )
+                                                     ! host or device
+  CALL FinalizeOpacity_CC_2D()
+  InitOpacity_CC_2D stores the method and its rules in fixed-size module
+  arrays (wlSemiLeptonicNodes2D) that are declared on the device
+  (OMP DECLARE TARGET / ACC DECLARE CREATE) and updated by Init, so
+  Opacity_CC_2D can be called inside offloaded loops with no extra data
+  mapping. Call Init on the host BEFORE any offloaded region that uses
+  Opacity_CC_2D; re-initialization (other nE or method) is allowed between
+  kernels. Opacity_CC_2D returns 0 if Init was not called. Method_Option =
+  iEmAb2D_Energy / iEmAb2D_Momentum / iEmAb2D_Tail selects the method at
+  run time (default iEmAb2D_Default, below). The two-phase driver of the
+  momentum method uses the same tables (CC2D_RowSetup(CD, iE2, RD),
+  iE2 = 1..nE2_CC2D).
+
+Switching the default method (Method_Option not given)
+  make EMAB2D_METHOD=MOMENTUM   (default)
+  make EMAB2D_METHOD=ENERGY     (the standard, GSI-like method)
+  make EMAB2D_METHOD=TAIL
+  (sets -DWEAKLIB_EMAB2D_<METHOD>, see Distributions/Build/Makefile_Defines;
+  run 'make clobber' after changing it). The selected method is the integer
+  parameter iEmAb2D_Default of wlSemiLeptonicOpacityModule2D. The meaning of
+  nE depends on the method (see above).
+
+Tests: Distributions/UnitTests/GeneralEmAb (see the README.md there):
+comparison with the GSI code, convergence in nE, the three methods against
+each other, parallel consistency, and the cheapest settings for a
+physically weighted accuracy metric.
+
+The 4D routines require the library CUBA (see README in the GitLab routines)
+
+Work In Progress: Parallelization
+Right now it parallelizes very poorly. I have not tried to use CUBA 
+built-in parallel capabilities, I am not sure they would interact well 
+with thornado/Flash-X. So my idea was to have CUBA run in serial, and
+parallelize the loops over energies and grid points. But that also 
+seems to be slow. 
+
+Right now the way I am testing parallelization is to build CUBA with:
+./configure
+make
+
+Then point CUBA_DIR to the directory containing libcuba.a
+(e.g. export CUBA_DIR=$HOME/installed_packages/Cuba-4.2.2) and build with
+USE_CUBA=TRUE (e.g. 'make cuba USE_CUBA=TRUE' in UnitTests/GeneralEmAb/Executables).
+
+When you run the parallel 4D test (wlTestAbEm4DParallel), you have to also set 
+export CUBACORES=0
+export CUBACORESMAX=0
+to force CUBA to use only one thread. This speeds up the computation significantly,
+but it still scales horribly. Not sure why. I also had to declare all the variables
+in the 2D and 4D modules as threadprivate, but maybe that is not the best option?
+Have to investigate this more. Maybe the overhead is caused by Vegas being called 
+N times on N threads? I still don't understand why the parallel can be SLOWER than
+the serial...
+
+Other doubts/questions
+- In the original routines there are lots of REAL(4) numbers (i.e. 1.0 instead of 1.0d0, etc...)
+If you compile with -fdefault-real-8 it should be fine, but it is still kinda weird to not
+do it explicitly. So in my routines I changed all of them
+- Tfac is a thermal cutoff in units of T on the Fermi-Dirac tails (150 in the GSI 2D code,
+  100 in the 4D code; 30, measured from the kinematic threshold, in the 2D methods here;
+  the TAIL method needs none).
+- The threadprivate declaration in wlSemiLeptonicOpacityModule4D.F90 is guarded by
+  '#if defined(USE_OMP)', but the build system defines WEAKLIB_OMP (not USE_OMP), so the
+  module globals are currently NOT threadprivate and the OpenMP 4D loop is racy. This
+  may be part of the poor/negative scaling seen in wlTestAbEm4DParallel.
+- Integration_D in wlSemiLeptonicOpacityModule4D.F90 divides the reaction-4 emissivity
+  by an extra 1.0d5 (it is already in (s cm^3 MeV)^-1), so 4D emissivities are 1e-5 too
+  small compared to the 2D module and the GSI code (seen in wlTestAbEm4DVsGSI).

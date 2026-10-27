@@ -27,7 +27,7 @@ PROGRAM wlCompareAbEmApproximations
     GetPhotonLeptonGasEOS
   USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-    Opacity_CC_2D
+    Opacity_CC_2D, InitOpacity_CC_2D
 #ifdef WEAKLIB_CUBA
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
@@ -175,6 +175,7 @@ PROGRAM wlCompareAbEmApproximations
   t_2D  = 0.0d0
   t_4D  = 0.0d0
   iCount = 0
+  CALL InitOpacity_CC_2D( nE_2D )   ! 2D quadrature nodes, computed once
   DO i = 1, nThermoPoints
 
     xYm(i) = 0.0d0
@@ -249,7 +250,7 @@ PROGRAM wlCompareAbEmApproximations
           DO j = 1, nApprox
             CALL CPU_TIME(t1)
             CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, i, j, k), &
-                  xT(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp, nE_2D)
+                  xT(i)*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp)
             CALL CPU_TIME(t2)
             t_2D = t_2D + t2 - t1
           END DO

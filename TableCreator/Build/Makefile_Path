@@ -3,6 +3,7 @@ $(WEAKLIB_DIR)/Distributions/Library: \
 $(WEAKLIB_DIR)/Distributions/EOSSource: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource: \
 $(WEAKLIB_DIR)/TableCreator/SharedModules: \
-$(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb/IntegrationMethods: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel: \
 ..

@@ -5,7 +5,8 @@ $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons: \
 $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/4DTable: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource: \
 $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel: \
-$(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb: \
+$(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb/IntegrationMethods: \
 ..
 
 # VPATH += \
@@ -15,5 +16,6 @@ $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI: \
 # $(WEAKLIB_DIR)/Distributions/EOSSource/BaryonsPlusLeptons/4DTable: \
 # $(WEAKLIB_DIR)/Distributions/OpacitySource: \
 # $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralScatteringKernel: \
-# $(WEAKLIB_DIR)/Distributions/OpacitySource/OpacitySourceGSI: \
+# $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb: \
+# $(WEAKLIB_DIR)/Distributions/OpacitySource/GeneralEmAb/IntegrationMethods: \
 # ..

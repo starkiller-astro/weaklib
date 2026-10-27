@@ -24,7 +24,7 @@ PROGRAM wlCompareAbEmApproximationsTable
   USE wlLeptonPhotonGasEOS
   USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
-    Opacity_CC_2D
+    Opacity_CC_2D, InitOpacity_CC_2D
 #ifdef WEAKLIB_CUBA
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
@@ -168,8 +168,9 @@ PROGRAM wlCompareAbEmApproximationsTable
   t_2D  = 0.0d0
   t_4D  = 0.0d0
   iCount = 0
+  CALL InitOpacity_CC_2D( nE_2D )   ! 2D quadrature nodes, computed once
 #ifdef WEAKLIB_OMP
-  !$OMP PARALLEL DO COLLAPSE(3) &
+  !$OMP PARALLEL DO COLLAPSE(3) SCHEDULE(DYNAMIC) &
   !$OMP PRIVATE(iYe_table, xD, xT, xYe, xMumu, xMue, xMun, xMup, &
   !$OMP xXn, xXp, xUn, xUp, xMn_eff, xMp_eff, xMul, xMl, l, k, j, t1, t2), &
   !$OMP REDUCTION(+:t_Tab, t_El, t_2D, t_4D, iCount)
@@ -238,7 +239,7 @@ PROGRAM wlCompareAbEmApproximationsTable
               DO j = 1, nApprox
                 CALL CPU_TIME(t1)
                 CALL Opacity_CC_2D(j-1, k, EnuA(l), OpaA_2D(l, iRho, iT, iYe, j, k), &
-                      xT*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp, nE_2D)
+                      xT*kmev, xMul, xMun, xMup, xMl, xMn_eff, xMp_eff, xUn, xUp)
                 CALL CPU_TIME(t2)
                 t_2D = t_2D + t2 - t1
               END DO

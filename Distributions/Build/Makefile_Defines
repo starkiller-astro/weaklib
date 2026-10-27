@@ -28,6 +28,14 @@ EOSMODE	?= 3D # Possible are 4D, 3D, COMPOSE. 3D is the "old" weaklib table
 
 DEFINES += $(MDEFS)$(PP)EOSMODE_$(EOSMODE)
 
+# Default 2D integration method of Opacity_CC_2D (OpacitySource/GeneralEmAb):
+# MOMENTUM (default), ENERGY (the "standard", GSI-like method) or TAIL.
+# Run 'make clobber' after changing it.
+EMAB2D_METHOD ?= MOMENTUM
+ifneq ($(EMAB2D_METHOD),MOMENTUM)
+   DEFINES += $(MDEFS)$(PP)WEAKLIB_EMAB2D_$(EMAB2D_METHOD)
+endif
+
 WL_GIT_HASH \
   := $(shell \
      git -C $(WEAKLIB_DIR) --no-pager describe --tags --always --dirty --exclude '*')

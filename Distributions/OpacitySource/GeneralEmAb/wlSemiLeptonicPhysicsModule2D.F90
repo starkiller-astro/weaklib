@@ -8,18 +8,23 @@
 !!! ReactionIndex=3: vb + p + e- -> n (opacity in 1/cm)
 !!! ReactionIndex=4: n -> vb + e- + p [emissivity in v/(s cm^3 MeV)]
 
-!!! nE defined in module: the No. of grids used in gaussian
-!!! quadrature for each dimention
-!!! seems nE needs be >~30 to reach an accuracy of 5%
-
-MODULE wlSemiLeptonicOpacityModule2D
+!=======================================================================
+!  wlSemiLeptonicPhysicsModule2D
+!
+!  Physics shared by all 2D integration methods of the semi-leptonic CC
+!  rates (Guo et al. 2020): constants and form-factor parameters, the
+!  angle-integrated amplitude (Calc_AmpCoeffs, Calc_Ampsq), kinematic
+!  windows and thermal cutoffs (Range_pn(_D), Threshold_Cut, Ebounds(_D),
+!  Q0_Window_Envelope, Collinear_Roots), Fermi-Dirac factors (FD) and the
+!  Gauss-Legendre rule (gauleg). No quadrature layout lives here: see
+!  IntegrationMethods/ and the front end wlSemiLeptonicOpacityModule2D.
+!=======================================================================
+MODULE wlSemiLeptonicPhysicsModule2D
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mpi, Vud, mn, mp, &
    massA, massV, gamma_p, gamma_n, hbarc, hbar
-  ! USE wlEosConstantsModule, ONLY: &
-  !  pi, hbarc, hbar, mn, mp
 
   IMPLICIT NONE
   PRIVATE
@@ -48,7 +53,7 @@ MODULE wlSemiLeptonicOpacityModule2D
   !      ga =1.2723d0,gv=1.d0, Mpi=139.57d0, Mnp=938.919d0, &
   !      Dnp=1.293d0, massA=1.0d3,massV=840.d0 , GfVud2 = (Gw_MeV*Vud)**2
   REAL(DP), PARAMETER :: F2wm0 = gamma_p - gamma_n - 1.0d0
-  REAL(DP), PARAMETER :: Tfac  = 100.0d0
+  REAL(DP), PARAMETER :: Tfac  = 30.0d0           ! thermal cutoff, relative to threshold (Threshold_Cut)
   REAL(DP), PARAMETER :: TfacMin = 30.0d0         ! min. cutoff above rest mass (dilute matter)
   REAL(DP), PARAMETER :: FD_MaxExponent = 700.0d0  ! EXP overflow guard in FD
   REAL(DP), PARAMETER :: gasq  = ga**2
@@ -93,244 +98,14 @@ MODULE wlSemiLeptonicOpacityModule2D
   REAL(DP), PARAMETER :: cm_to_km             = 1.0d-5
   REAL(DP), PARAMETER :: opacity_unit_factor  = MERGE(cm_to_km, 1.0d0, output_in_km_inverse)
 
-  !========================================================================
-! Routine to calculate the neutrino CC opacity via 2D integrals
-! Inputs:
-! (1) WhichCorrection=0,1,2,3 for LO, LO+weak magnetism(WM),
-! LO+WM+pseduoscalar(PS), LO+WM+PS+form factor dependencies
-! (2) ReactionIndex=ReactionIndex=1,2,3,4 for nu capture on n, nub capture on p, inverse
-! neutron decay, neutron decay emissivity
-! (3) Enu(NP): neutrino energy array in MeV with dimension NP
-! (4) xT: Temperature in MeV
-! (5) xMul, xml: relativistic chemical potentials & masses of
-! e^-(mu^-) in MeV
-! (6) xMun,xMup,xmn,xmp,xUn,xUp: relativistic chemical
-! potentials, masses, & potentials of neutron and proton in MeV
-! relativsitic disperstion relation for nucleons,
-! E2=SQRT(p^2+Mass2^2)+U2
-! Outputs:
-! (7) OpaA(NP): opacities in cm^-1 (output_in_km_inverse = .false.); for neutron decay, emissivities
-! in (s cm^3 MeV)^-1
-!     **** blocking factor of final state neutrinos in neutron decay
-!     is not considered ****
-!=============================================================
-  PUBLIC :: Opacity_CC_2D
-  PUBLIC :: Opacity_CC_2D_PrecomputedNodes
-  PUBLIC :: gauleg
-  ! Building blocks exported for the 2-phase GPU integration layer
-  ! (wlSemiLeptonicOpacityIntegrationModule2D)
   PUBLIC :: AmpCoeffsType, Calc_AmpCoeffs, Calc_Ampsq
-  PUBLIC :: Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD
+  PUBLIC :: Range_pn, Range_pn_D, Threshold_Cut
+  PUBLIC :: Ebounds, Ebounds_D, Q0_Window_Envelope, Collinear_Roots
+  PUBLIC :: FD, gauleg
+  PUBLIC :: nQuadMax, Tfac, TfacMin, Q0_FALLBACK_TFAC
   PUBLIC :: opacity_unit_factor
 
 CONTAINS
-
-SUBROUTINE Opacity_CC_2D(WhichCorrection, ReactionIndex, Enu, OpaA, xT, xMul, xMun, xMup, &
-     xml, xmn, xmp, xUn, xUp, nE)
-
-  ! Back-compatible entry point: computes the [0,1] Gauss-Legendre nodes
-  ! locally. In performance-critical (GPU / in-flight) code precompute the
-  ! nodes once with gauleg and call Opacity_CC_2D_PrecomputedNodes instead.
-  INTEGER , INTENT(IN)  :: ReactionIndex, WhichCorrection, nE
-  REAL(DP), INTENT(IN)  :: Enu,xT,xMul,xMun,xMup,xml,xmn,xmp,xUn,xUp
-  REAL(DP), INTENT(OUT) :: OpaA
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
-#endif
-
-  REAL(DP) :: xa(nQuadMax), wxa(nQuadMax)
-  INTEGER  :: nEuse
-
-  nEuse = MIN(nE, nQuadMax)
-  CALL gauleg(0.d0, 1.d0, xa, wxa, nEuse)
-  CALL Opacity_CC_2D_PrecomputedNodes(WhichCorrection, ReactionIndex, Enu, OpaA, xT, xMul, xMun, xMup, &
-       xml, xmn, xmp, xUn, xUp, nEuse, xa, wxa)
-
-END SUBROUTINE Opacity_CC_2D
-
-SUBROUTINE Opacity_CC_2D_PrecomputedNodes(WhichCorrection, ReactionIndex, Enu, OpaA, xT, xMul, xMun, xMup, &
-     xml, xmn, xmp, xUn, xUp, nE, xa, wxa)
-
-  ! Same physics as Opacity_CC_2D, but takes precomputed Gauss-Legendre
-  ! nodes/weights on [0,1] (from CALL gauleg(0.d0, 1.d0, xa, wxa, nE)).
-  INTEGER , INTENT(IN)  :: ReactionIndex, WhichCorrection, nE
-  REAL(DP), INTENT(IN)  :: Enu,xT,xMul,xMun,xMup,xml,xmn,xmp,xUn,xUp
-  REAL(DP), INTENT(IN)  :: xa(nE), wxa(nE)
-  REAL(DP), INTENT(OUT) :: OpaA
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
-#endif
-
-  REAL(DP) :: anti
-  INTEGER  :: IncludeCorrections(3)
-
-  SELECT CASE(WhichCorrection)
-  CASE (0)
-     IncludeCorrections = (/ 0, 0, 0 /)
-  CASE (1)
-     IncludeCorrections = (/ 1, 0, 0 /)
-  CASE (2)
-     IncludeCorrections = (/ 1, 1, 0 /)
-  CASE (3)
-     IncludeCorrections = (/ 1, 1, 1 /)
-  CASE DEFAULT
-     ! Invalid input: no I/O or STOP in device-callable code; return zero
-     OpaA = 0.0d0
-     RETURN
-  END SELECT
-
-  SELECT CASE(ReactionIndex)
-  CASE (1)
-    anti = 1.0d0
-    CALL Integral_2D(Enu, xT, xmn, xml, xmp, xUn, xUp, xMun, xMul, xMup, anti, 1, IncludeCorrections, nE, xa, wxa, OpaA)
-  CASE (2)
-    anti = -1.0d0
-    CALL Integral_2D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, -xMul, xMun, anti, 2, IncludeCorrections, nE, xa, wxa, OpaA)
-  CASE (3)
-    anti = -1.0d0
-    CALL Integral_2D_D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, xMul, xMun, anti, 3, IncludeCorrections, nE, xa, wxa, OpaA)
-  CASE (4)
-    anti = -1.0d0
-    CALL Integral_2D_D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, xMul, xMun, anti, 4, IncludeCorrections, nE, xa, wxa, OpaA)
-  CASE DEFAULT
-    OpaA = 0.0d0
-  END SELECT
-
-END SUBROUTINE Opacity_CC_2D_PrecomputedNodes
-
-! For a more efficient parallelization this whole thing can be probably taken out, and we make 4 different integrations, one per reaction
-SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti, ReactionIndex, IncludeCorrections, nE, xa, wxa, res)   ! captures
-
-  REAL(DP), INTENT(IN)  :: Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti
-  INTEGER , INTENT(IN)  :: ReactionIndex, IncludeCorrections(3), nE
-  REAL(DP), INTENT(IN)  :: xa(nE), wxa(nE)   ! Gauss-Legendre nodes/weights on [0,1]
-  REAL(DP), INTENT(OUT) :: res
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
-#endif
-
-  REAL(DP) :: P2,xq0_min,xq0_max,E3_min,E3_max,E2_min,E2_max
-  REAL(DP) :: wE2, wE3
-  INTEGER  :: i, j
-  REAL(DP) :: xamp, E2, E3, E4
-  REAL(DP) :: xf2,xb3,xb4   ! f2, 1-f3, 1-f4
-  REAL(DP) :: p2min, p2max
-  TYPE(AmpCoeffsType) :: Coeffs
-
-  res = 0.0d0
-  CALL Range_pn(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max)
-  IF( p2min > p2max ) RETURN
-  E2_min = SQRT(p2min**2 + Mass2**2) + U2
-  E2_max = SQRT(p2max**2 + Mass2**2) + U2
-
-  CALL Calc_AmpCoeffs( Mass2, Mass4, U2, U4, anti, IncludeCorrections, Coeffs )
-
-  ! Loop over incoming particle (i.e. particle 2)
-  DO i=1, nE
-    E2 = xa(i)*(E2_max - E2_min) + E2_min
-    wE2 = wxa(i)*(E2_max - E2_min)
-    P2 = SQRT( MAX( (E2 - U2)**2 - Mass2**2, 0.0d0 ) )
-    E2 = SQRT( P2**2 + Mass2**2 ) + U2   ! on-shell E2 consistent with P2
-    CALL Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
-    E3_min = Enu - xq0_max
-    E3_max = Enu - xq0_min
-    IF( E3_max - E3_min <= 0.0d0 ) CYCLE   ! empty kinematic window at this E2
-    xf2 = FD(E2, Mu2, T)
-  ! Loop over outgoing particle (i.e. particle 3)
-    DO j=1,nE
-      E3 = xa(j)*(E3_max - E3_min) + E3_min
-      wE3 = wxa(j)*(E3_max - E3_min)
-      E4 = Enu + E2 - E3
-      CALL Calc_ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
-      xb3 = FD(Mu3, E3, T)
-      xb4 = FD(Mu4, E4, T)
-      res = res + xf2*xb3*xb4*xamp*wE2*wE3/Enu**2
-    END DO
-  END DO
-
-  ! This is in 1/cm (hbarc in MeV cm)
-  res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
-  ! opacity_unit_factor = 1 unless output_in_km_inverse is set
-  res = res*opacity_unit_factor
-
-END SUBROUTINE Integral_2D
-
-! For a more efficient parallelization this whole thing can be probably taken out, and we make 4 different integrations, one per reaction
-SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti, ReactionIndex, IncludeCorrections, nE, xa, wxa, res)   ! decay/inverse decay
-
-  REAL(DP), INTENT(IN)  :: Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti
-  INTEGER , INTENT(IN)  :: ReactionIndex, IncludeCorrections(3), nE
-  REAL(DP), INTENT(IN)  :: xa(nE), wxa(nE)   ! Gauss-Legendre nodes/weights on [0,1]
-  REAL(DP), INTENT(OUT) :: res
-#if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
-#endif
-
-  REAL(DP) :: P2,xq0_min,xq0_max,E3_min,E3_max,E2_min,E2_max
-  REAL(DP) :: wE2, wE3
-  INTEGER :: i,j
-  REAL(DP) :: xamp
-  REAL(DP) :: E2, E3, E4
-  REAL(DP) :: xf2,xf3,xf4,xb2,xb3,xb4   ! f_k and 1-f_k
-  REAL(DP) :: p2min, p2max, p4max
-  TYPE(AmpCoeffsType) :: Coeffs
-
-  res = 0.0d0
-  CALL Range_pn_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIndex, p2min, p2max, p4max)
-  IF( p2min > p2max ) RETURN
-  E2_min = SQRT(p2min**2 + Mass2**2) + U2
-  E2_max = SQRT(p2max**2 + Mass2**2) + U2
-
-  CALL Calc_AmpCoeffs( Mass2, Mass4, U2, U4, anti, IncludeCorrections, Coeffs )
-
-  ! Loop over incoming particle (i.e. particle 2)
-  DO i=1, nE
-    E2 = xa(i)*(E2_max - E2_min) + E2_min
-    wE2 = wxa(i)*(E2_max - E2_min)
-    P2 = SQRT( MAX( (E2-U2)**2 - Mass2**2, 0.0d0 ) )
-    E2 = SQRT( P2**2 + Mass2**2 ) + U2   ! on-shell E2 consistent with P2
-    CALL Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, ReactionIndex, xq0_min, xq0_max )
-    E3_min = xq0_min - Enu
-    E3_max = xq0_max - Enu
-    IF( E3_max - E3_min <= 0.0d0 ) CYCLE   ! empty kinematic window at this E2
-    xf2 = FD(E2, Mu2, T)
-    xb2 = FD(Mu2, E2, T)
-  ! Loop over outgoing particle (i.e. particle 3)
-    DO j=1,nE
-      E3 = xa(j)*(E3_max - E3_min) + E3_min
-      wE3 = wxa(j)*(E3_max - E3_min)
-      E4 = Enu + E3 + E2
-      CALL Calc_ampsq(Enu, E2, -E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
-      IF(ReactionIndex.eq.3) THEN ! inverse decay
-        xf3 = FD(E3, Mu3, T)
-        xb4 = FD(Mu4, E4, T)
-        res = res + xf2*xf3*xb4*xamp*wE2*wE3/Enu**2
-      ELSE IF(ReactionIndex.eq.4) THEN ! n decay, *blocking of neutrinos is not added*
-        xb3 = FD(Mu3, E3, T)
-        xf4 = FD(E4, Mu4, T)
-        res = res + xb2*xb3*xf4*xamp*wE2*wE3/Enu**2
-      END IF
-    END DO
-  END DO
-
-  IF(ReactionIndex.eq.3) THEN
-  ! This is in 1/cm (hbarc in MeV cm)
-    res = res*(Gw_MeV*Vud)**2/16.0d0/(pi**5)/hbarc
-  ! opacity_unit_factor = 1 unless output_in_km_inverse is set
-    res = res*opacity_unit_factor
-  ELSE IF(ReactionIndex.eq.4) THEN
-    res = res*(Gw_MeV*Vud)**2/32.0d0/(pi**7)*Enu**2/hbarc**3/hbar
-  END IF
-
-END SUBROUTINE Integral_2D_D
 
 !=======================================================================
 !  Calc_AmpCoeffs: per-call amplitude coefficients (node-independent)
@@ -393,7 +168,7 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   REAL(DP) :: PaD1,PaD3,PaD5,PaD7,PaD9,PaDm1,PaDm3
   REAL(DP) :: PbD1,PbD3,PbD5,PbD7,PbDm1
   REAL(DP) :: PcD1,PcD3,PcD5,PcD7,PcD9,PcDm1
-  REAL(DP) :: E2f,E4f,E1,Qmass,dmf,dU2,E4
+  REAL(DP) :: E2f,E4f,E1,Qmass,dmf,dU2,E4,P2sq,P3sq,P4sq
   REAL(DP) :: Iam,Iap,Ibm,Ibp,Icm,Icp,Idp,Iem,Iep,Igp
   REAL(DP) :: gvf,f2sq
   REAL(DP) :: tm3sq,tbet0,raw_ampsq
@@ -422,14 +197,17 @@ SUBROUTINE Calc_Ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, 
   ! Off-shell particle (outside the kinematic window): no contribution.
   ! The radicands are tested before the SQRT so that no NaN is ever
   ! produced (FPE traps in debug builds, NaN tests removed by fast-math).
-  IF( E3**2 - Mass3**2 < 0.0d0 ) RETURN
-  IF( (E2 - U2)**2 - Mass2**2 < 0.0d0 ) RETURN
-  IF( (E4 - U4)**2 - Mass4**2 < 0.0d0 ) RETURN
+  ! The tested values are the ones passed to SQRT: with FMA contraction a
+  ! recomputed radicand can round differently from the tested one.
+  P3sq = E3**2 - Mass3**2
+  P2sq = E2f**2 - Mass2**2
+  P4sq = E4f**2 - Mass4**2
+  IF( P3sq < 0.0d0 .OR. P2sq < 0.0d0 .OR. P4sq < 0.0d0 ) RETURN
 
   P1 = E1
-  P3 = SQRT( E3**2 - Mass3**2 )
-  P2 = SQRT( (E2 - U2)**2 - Mass2**2 )
-  P4 = SQRT( (E4 - U4)**2 - Mass4**2 )
+  P3 = SQRT( P3sq )
+  P2 = SQRT( P2sq )
+  P4 = SQRT( P4sq )
 
   IF ((P1+P2)>(P3+P4)) THEN
      Pmax = P3+P4
@@ -765,7 +543,7 @@ END SUBROUTINE Calc_Ampsq
 SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_max )
 
   ! Allowed q0 = Enu - E3 range for captures at fixed E2 (Guo Eq. C1),
-  ! evaluated by the direct window-envelope engine (s3 = -1).
+  ! evaluated in closed form by Q0_Window_Envelope (s3 = -1).
   ! On an empty window a zero-width interval is returned (the E3
   ! integration in Integral_2D then skips this E2 node).
 
@@ -778,37 +556,11 @@ SUBROUTINE Ebounds( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, xq0_min, xq0_ma
   !$ACC ROUTINE SEQ
 #endif
 
-  REAL(DP) :: qRoots(4), tmp1, tmp2, xA, xB, xC, disc
-  INTEGER  :: nRoots
   LOGICAL  :: found
 
-  ! Window-closure roots, Eq. C11 (guarded; used as breakpoint candidates)
-  nRoots = 0
-  tmp1 = U4 - E2 - Enu
-  tmp2 = Enu**2 + Mass3**2 - Mass4**2 - P2**2
-  xC   = 4.d0*tmp1**2*(P2**2 + Mass4**2) - (tmp2 - tmp1**2)**2
-
-  xA = 4.d0*( tmp1**2 - (Enu-P2)**2 )
-  xB = 4.d0*( (tmp2 - tmp1**2)*Enu - (tmp2 + tmp1**2)*P2 )
-  disc = xB**2 - 4.d0*xA*xC
-  IF( disc >= 0.0d0 .AND. ABS(xA) > 0.0d0 ) THEN
-    qRoots(nRoots+1) = ABS( ( xB + SQRT(disc))/(2.d0*xA) )
-    qRoots(nRoots+2) = ABS( (-xB + SQRT(disc))/(2.d0*xA) )
-    nRoots = nRoots + 2
-  END IF
-
-  xA = 4.d0*( tmp1**2 - (Enu+P2)**2 )
-  xB = 4.d0*( -(tmp2 - tmp1**2)*Enu - (tmp2 + tmp1**2)*P2 )
-  disc = xB**2 - 4.d0*xA*xC
-  IF( disc >= 0.0d0 .AND. ABS(xA) > 0.0d0 ) THEN
-    qRoots(nRoots+1) = ABS( ( xB + SQRT(disc))/(2.d0*xA) )
-    qRoots(nRoots+2) = ABS( (-xB + SQRT(disc))/(2.d0*xA) )
-    nRoots = nRoots + 2
-  END IF
-
   ! Captures: q0 <= Enu - Mass3 always, so that is the (never-active) cap
-  CALL Q0_Window_Envelope( -1.0d0, Enu, P2, Mass3, Mass4, U4-E2, qRoots, nRoots, &
-                           Enu-Mass3, xq0_min, xq0_max, found )
+  CALL Q0_Window_Envelope( -1.0d0, Enu, P2, Mass3, Mass4, U4-E2, Enu-Mass3, &
+                           xq0_min, xq0_max, found )
   IF( .NOT. found ) THEN
     xq0_min = Enu - Mass3   ! zero-width window: E3 collapses to Mass3
     xq0_max = xq0_min
@@ -846,7 +598,10 @@ SUBROUTINE Range_pn( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max )
     Fmax = F0
   END IF
 
-  IF( Fmax <= Enu) RETURN
+  IF( Fmax <= Enu) THEN
+    CALL Threshold_Cut( p2min, Mass2, Tfac*T, p2max )
+    RETURN
+  END IF
   IF( Fmin >= Enu) THEN
     p2max = -1000.0d0
     RETURN
@@ -869,7 +624,34 @@ SUBROUTINE Range_pn( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max )
     IF(p20>0.d0) p2min=p20
   END IF
 
+  CALL Threshold_Cut( p2min, Mass2, Tfac*T, p2max )
+
 END SUBROUTINE Range_pn
+
+!=======================================================================
+!  Threshold_Cut: make the thermal cutoff relative to the kinematic
+!  threshold. pmax is raised (never lowered) so that the integration
+!  covers at least dE above the threshold energy SQRT(pmin**2+Mass**2).
+!  The mu-relative cutoff alone truncates rates whose threshold lies far
+!  above mu (e.g. muonic inverse decay / decay), where the whole
+!  integrand sits above mu - U + Tfac*T.
+!=======================================================================
+SUBROUTINE Threshold_Cut( pmin, Mass, dE, pmax )
+
+  REAL(DP), INTENT(IN)    :: pmin, Mass, dE
+  REAL(DP), INTENT(INOUT) :: pmax
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+  !$ACC ROUTINE SEQ
+#endif
+
+  REAL(DP) :: Ecut
+
+  Ecut = SQRT( pmin**2 + Mass**2 ) + dE
+  pmax = MAX( pmax, SQRT( Ecut**2 - Mass**2 ) )
+
+END SUBROUTINE Threshold_Cut
 
 SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, ReactionIndex, xq0_min, xq0_max )
 
@@ -884,51 +666,28 @@ SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, R
 #endif
 
   ! Allowed q0 = Enu + E3 range for inverse decay / decay at fixed E2
-  ! (Guo Eq. C16), evaluated by the direct window-envelope engine (s3 = +1).
+  ! (Guo Eq. C16), evaluated in closed form by Q0_Window_Envelope (s3 = +1).
   ! If the window never closes as |q| -> infinity (the paper's "no upper
   ! bound" case), q0 is capped thermally via q0_cap. On an empty window a
   ! zero-width interval is returned.
 
-  REAL(DP) :: qRoots(4), tmp1, tmp2, xA, xB, xC, disc
   REAL(DP) :: q0_cap
-  INTEGER  :: nRoots
   LOGICAL  :: found
 
   ! Thermal cap on q0 for the open-window case:
-  !  reaction 3: q0 = Enu + E3, absorbed lepton cut off by its occupation
+  !  reaction 3: q0 = Enu + E3, absorbed lepton cut off by its occupation.
+  !              Measured from MAX(Mu3, Mass3): with Mu3 < Mass3 (e.g. no
+  !              muons) a cap from Mu3 or 0 can fall below E3 = Mass3 and
+  !              truncate the window (breaks detailed balance with reaction 4).
   !  reaction 4: q0 = E4 - E2, emitting nucleon capped consistently with p4max
   IF( ReactionIndex == 3 ) THEN
-    q0_cap = Enu + MAX(Mu3, 0.0d0) + Q0_FALLBACK_TFAC*T
+    q0_cap = Enu + MAX(Mu3, Mass3) + Q0_FALLBACK_TFAC*T
   ELSE
     q0_cap = SQRT(p4max**2 + Mass4**2) + U4 - E2
   END IF
 
-  ! Window-closure roots, Eq. C25 (guarded; used as breakpoint candidates)
-  nRoots = 0
-  tmp1 = U4 - E2 - Enu
-  tmp2 = Enu**2 + Mass3**2 - Mass4**2 - P2**2
-  xC   = 4.d0*tmp1**2*(P2**2 + Mass4**2) - (tmp2 - tmp1**2)**2
-
-  xA = 4.d0*( tmp1**2 - (Enu+P2)**2 )
-  xB = 4.d0*( (tmp2 - tmp1**2)*Enu + (tmp2 + tmp1**2)*P2 )
-  disc = xB**2 - 4.d0*xA*xC
-  IF( disc >= 0.0d0 .AND. ABS(xA) > 0.0d0 ) THEN
-    qRoots(nRoots+1) = ABS( ( xB + SQRT(disc))/(2.d0*xA) )
-    qRoots(nRoots+2) = ABS( (-xB + SQRT(disc))/(2.d0*xA) )
-    nRoots = nRoots + 2
-  END IF
-
-  xA = 4.d0*( tmp1**2 - (Enu-P2)**2 )
-  xB = 4.d0*( -(tmp2 - tmp1**2)*Enu + (tmp2 + tmp1**2)*P2 )
-  disc = xB**2 - 4.d0*xA*xC
-  IF( disc >= 0.0d0 .AND. ABS(xA) > 0.0d0 ) THEN
-    qRoots(nRoots+1) = ABS( ( xB + SQRT(disc))/(2.d0*xA) )
-    qRoots(nRoots+2) = ABS( (-xB + SQRT(disc))/(2.d0*xA) )
-    nRoots = nRoots + 2
-  END IF
-
-  CALL Q0_Window_Envelope( +1.0d0, Enu, P2, Mass3, Mass4, U4-E2, qRoots, nRoots, &
-                           q0_cap, xq0_min, xq0_max, found )
+  CALL Q0_Window_Envelope( +1.0d0, Enu, P2, Mass3, Mass4, U4-E2, q0_cap, &
+                           xq0_min, xq0_max, found )
   IF( .NOT. found ) THEN
     xq0_min = Enu + Mass3   ! zero-width window: E3 collapses to Mass3
     xq0_max = xq0_min
@@ -937,30 +696,36 @@ SUBROUTINE Ebounds_D( E2, Enu, T, P2, Mass2, Mass3, Mass4, U2, U4, Mu3, p4max, R
 END SUBROUTINE Ebounds_D
 
 !=======================================================================
-!  Q0_Window_Envelope: allowed q0 range over momentum transfer |q|
+!  Q0_Window_Envelope: allowed q0 range over momentum transfer |q|,
+!  computed in closed form.
 !
-!  At fixed |q| the kinematically allowed q0 interval is
-!    [ WinLo(|q|), WinHi(|q|) ]              (Guo Eqs. C1 / C16)
-!  built from the lepton-side branches
-!    qL_{a,b}(|q|) = Enu + s3*SQRT( (Enu +/- |q|)^2 + Mass3^2 )
-!    (s3 = -1: capture, q0 = Enu - E3;  s3 = +1: decay, q0 = Enu + E3)
-!  and the nucleon-side branches
-!    qH_{a,b}(|q|) = SQRT( (P2 +/- |q|)^2 + Mass4^2 ) + U4 - E2 .
-!  The q0 bounds are the extrema of the envelope over all |q| with a
-!  nonempty window. Extrema can only occur at branch stationary points
-!  (|q| = Enu, |q| = P2), at branch crossings (kinks of the min/max
-!  envelopes), or at window opening/closure points. Closure points and
-!  crossings are refined by regula falsi, with the analytic closure roots
-!  (Eqs. C11/C25) supplied by the caller as cheap breakpoint candidates.
-!  If the window never closes (possible for decay kinematics), the
-!  caller-supplied thermal cap q0_cap bounds q0 from above.
+!  With y = E4 = q0 - U4mE2 and W = Enu - U4mE2 (so E3 = s3*(y - W);
+!  s3 = -1: capture, q0 = Enu - E3;  s3 = +1: decay, q0 = Enu + E3),
+!  the lepton and nucleon constraints at fixed |q| read
+!    p3 in [ |Enu - q|, Enu + q ]   and   p4 in [ |P2 - q|, P2 + q ].
+!  At fixed y both p3 and p4 are fixed, and some |q| satisfies both iff
+!  the lengths (Enu, P2, p3, p4) close a quadrilateral, i.e.
+!    p3 + p4 >= |Enu - P2|   and   |p3 - p4| <= Enu + P2.
+!  The allowed y set is therefore closed and its extrema can only sit at
+!    E4 = Mass4,  E3 = Mass3,  or a collinear boundary |p3 +/- p4| = P,
+!  P in { |Enu - P2|, Enu + P2 }. Each collinear boundary is a two-body
+!  configuration with E4 - s3*E3 = W and invariant s = W**2 - P**2,
+!  solved exactly. Any real collinear root with E3 > 0 is a genuine
+!  allowed configuration (|p3 +/- p4| = D or S implies the quadrilateral
+!  condition, and y**2 >= Mass4**2 follows from the quadratic), so the
+!  roots only need the sign test on E3 (squaring admits E3 < 0); allowed
+!  non-boundary roots lie inside the hull and do not move the extrema.
+!  The full momentum test is needed only for the at-rest candidates: on a
+!  collinear root next to p4 = 0 or p3 = 0 it would amplify the round-off
+!  in y through SQRT(y**2 - Mass**2) and reject the true bound.
+!  For decays the window stays open as y -> infinity
+!  (p3 - p4 -> -W) iff |W| < Enu + P2; q0 is then capped by the
+!  caller-supplied thermal cap q0_cap.
 !=======================================================================
-SUBROUTINE Q0_Window_Envelope( s3, Enu, P2, Mass3, Mass4, U4mE2, qRootsIn, nRootsIn, &
-                               q0_cap, xq0_min, xq0_max, found )
+SUBROUTINE Q0_Window_Envelope( s3, Enu, P2, Mass3, Mass4, U4mE2, q0_cap, &
+                               xq0_min, xq0_max, found )
 
   REAL(DP), INTENT(IN)  :: s3, Enu, P2, Mass3, Mass4, U4mE2, q0_cap
-  REAL(DP), INTENT(IN)  :: qRootsIn(4)
-  INTEGER , INTENT(IN)  :: nRootsIn
   REAL(DP), INTENT(OUT) :: xq0_min, xq0_max
   LOGICAL , INTENT(OUT) :: found
 #if defined(WEAKLIB_OMP_OL)
@@ -969,217 +734,122 @@ SUBROUTINE Q0_Window_Envelope( s3, Enu, P2, Mass3, Mass4, U4mE2, qRootsIn, nRoot
   !$ACC ROUTINE SEQ
 #endif
 
-  ! Sign changes are refined by Illinois (modified regula falsi) on the
-  ! real-valued gap functions, stopping at |qb-qa| <= RootRelTolQ*q_big;
-  ! nRootIterMax only caps pathological cases (60 = old bisection cost)
-  INTEGER , PARAMETER :: nCandMax = 8, nScanMax = 2*nCandMax + 2, nRootIterMax = 60
-  REAL(DP), PARAMETER :: RootRelTolQ = 1.0d-13
-  REAL(DP) :: qCand(nCandMax), qScan(nScanMax), gScan(3,nScanMax)
-  LOGICAL  :: allowedScan(nScanMax)
-  REAL(DP) :: q_big, q_tol, qa, qb, qm, q_eval, tmpq
-  INTEGER  :: i, j, k, nCand, nScan
+  REAL(DP) :: W, D, S, tol, y(2)
+  INTEGER  :: iP, ir, nRoot
 
-  q_big = P2 + Enu + MAX(0.0d0, -U4mE2) + ABS(q0_cap) + 10.0d0
-  q_tol = RootRelTolQ*q_big
+  W   = Enu - U4mE2
+  D   = ABS( Enu - P2 )
+  S   = Enu + P2
+  tol = 1.0d-12*( ABS(W) + S + Mass3 + Mass4 + 1.0d0 )
 
-  ! Candidate |q| breakpoints: branch stationary points and closure roots
-  nCand = 0
-  CALL AddCand( 0.0d0 )
-  CALL AddCand( Enu )
-  CALL AddCand( P2 )
-  DO i = 1, nRootsIn
-    CALL AddCand( qRootsIn(i) )
-  END DO
-
-  ! Sort candidates ascending (insertion sort, nCand <= 7)
-  DO i = 2, nCand
-    tmpq = qCand(i)
-    j = i - 1
-    DO WHILE( j >= 1 )
-      IF( qCand(j) <= tmpq ) EXIT
-      qCand(j+1) = qCand(j)
-      j = j - 1
-    END DO
-    qCand(j+1) = tmpq
-  END DO
-
-  ! Scan points: candidates, midpoints between neighbours, and the far probe
-  nScan = 0
-  DO i = 1, nCand
-    nScan = nScan + 1;  qScan(nScan) = qCand(i)
-    IF( i < nCand ) THEN
-      nScan = nScan + 1;  qScan(nScan) = 0.5d0*(qCand(i) + qCand(i+1))
-    END IF
-  END DO
-  nScan = nScan + 1;  qScan(nScan) = 0.5d0*(qCand(nCand) + q_big)
-  nScan = nScan + 1;  qScan(nScan) = q_big
-
-  ! Envelope extrema over allowed scan points
   found   = .FALSE.
   xq0_min =  HUGE(1.0d0)
   xq0_max = -HUGE(1.0d0)
-  DO i = 1, nScan
-    CALL Gaps( qScan(i), gScan(:,i) )
-    allowedScan(i) = ( gScan(1,i) >= 0.0d0 )
-    IF( allowedScan(i) ) THEN
-      found = .TRUE.
-      CALL UpdateEnvelope( qScan(i) )
-    END IF
-  END DO
 
-  ! Refine sign-change points of the gap functions and include them:
-  !   k = 1: window opening/closure (gap = WinHi - WinLo)
-  !   k = 2: lower-branch crossing  (qL_min - qH_min), kink of WinLo
-  !   k = 3: upper-branch crossing  (qL_max - qH_max), kink of WinHi
-  DO k = 1, 3
-    DO i = 1, nScan-1
-      IF( (gScan(k,i) >= 0.0d0) .NEQV. (gScan(k,i+1) >= 0.0d0) ) THEN
-        CALL FindSignChange( k, qScan(i), qScan(i+1), gScan(k,i), gScan(k,i+1), qa, qb )
-        IF( k == 1 ) THEN
-          ! take the endpoint on the allowed side of the boundary
-          IF( allowedScan(i) ) THEN
-            q_eval = qa
-          ELSE
-            q_eval = qb
-          END IF
-          found = .TRUE.
-          CALL UpdateEnvelope( q_eval )
-        ELSE
-          ! envelope kink: include only if inside the allowed set
-          qm = 0.5d0*(qa + qb)
-          IF( Gap(1, qm) >= 0.0d0 ) THEN
-            found = .TRUE.
-            CALL UpdateEnvelope( qm )
-          END IF
-        END IF
-      END IF
+  ! Candidates for the extrema of y: a particle at rest (full test) ...
+  IF( Allowed( Mass4 ) )          CALL Accept( Mass4 )
+  IF( Allowed( W + s3*Mass3 ) )   CALL Accept( W + s3*Mass3 )
+
+  ! ... or the collinear configurations (both roots, cancellation-free)
+  DO iP = 1, 2
+    CALL Collinear_Roots( W, MERGE( D, S, iP == 1 ), Mass3, Mass4, nRoot, y )
+    DO ir = 1, nRoot
+      CALL AcceptRoot( y(ir) )
     END DO
   END DO
 
   IF( .NOT. found ) RETURN
 
-  ! Window still open at the far probe -> unbounded above, apply thermal cap
-  IF( allowedScan(nScan) ) xq0_max = q0_cap
+  xq0_min = xq0_min + U4mE2
+  xq0_max = xq0_max + U4mE2
+
+  ! Window open as q0 -> infinity (decay only) -> apply thermal cap
+  IF( s3 > 0.0d0 .AND. ABS(W) < S ) xq0_max = q0_cap
   xq0_max = MIN( xq0_max, q0_cap )
   IF( xq0_max < xq0_min ) xq0_max = xq0_min   ! cap below window: zero width
 
 CONTAINS
 
-  SUBROUTINE AddCand( q )
-    REAL(DP), INTENT(IN) :: q
+  SUBROUTINE Accept( y )
+    REAL(DP), INTENT(IN) :: y
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
-    IF( q < 0.0d0 .OR. q > q_big ) RETURN
-    IF( nCand >= nCandMax ) RETURN
-    nCand = nCand + 1
-    qCand(nCand) = q
-  END SUBROUTINE AddCand
+    found   = .TRUE.
+    xq0_min = MIN( xq0_min, y )
+    xq0_max = MAX( xq0_max, y )
+  END SUBROUTINE Accept
 
-  PURE SUBROUTINE Branches( q, qLmin, qLmax, qHmin, qHmax )
-    REAL(DP), INTENT(IN)  :: q
-    REAL(DP), INTENT(OUT) :: qLmin, qLmax, qHmin, qHmax
+  SUBROUTINE AcceptRoot( y )
+    ! collinear root: genuine iff E4 > 0 and E3 = s3*(y - W) > 0
+    REAL(DP), INTENT(IN) :: y
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
-    REAL(DP) :: qLa, qLb
-    qLa   = Enu + s3*SQRT( (Enu + q)**2 + Mass3**2 )
-    qLb   = Enu + s3*SQRT( (Enu - q)**2 + Mass3**2 )
-    qLmin = MIN( qLa, qLb )
-    qLmax = MAX( qLa, qLb )
-    qHmin = SQRT( (P2 - q)**2 + Mass4**2 ) + U4mE2
-    qHmax = SQRT( (P2 + q)**2 + Mass4**2 ) + U4mE2
-  END SUBROUTINE Branches
+    IF( y > 0.0d0 .AND. s3*( y - W ) > 0.0d0 ) CALL Accept( y )
+  END SUBROUTINE AcceptRoot
 
-  SUBROUTINE Gaps( q, g )
-    REAL(DP), INTENT(IN)  :: q
-    REAL(DP), INTENT(OUT) :: g(3)
+  LOGICAL FUNCTION Allowed( y )
+    REAL(DP), INTENT(IN) :: y
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
     !$ACC ROUTINE SEQ
 #endif
-    REAL(DP) :: qLmin, qLmax, qHmin, qHmax
-    CALL Branches( q, qLmin, qLmax, qHmin, qHmax )
-    g(1) = MIN(qLmax,qHmax) - MAX(qLmin,qHmin)
-    g(2) = qLmin - qHmin
-    g(3) = qLmax - qHmax
-  END SUBROUTINE Gaps
-
-  FUNCTION Gap( kind, q ) RESULT( res )
-    INTEGER , INTENT(IN) :: kind
-    REAL(DP), INTENT(IN) :: q
-    REAL(DP) :: res
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-    REAL(DP) :: qLmin, qLmax, qHmin, qHmax
-    CALL Branches( q, qLmin, qLmax, qHmin, qHmax )
-    SELECT CASE( kind )
-    CASE(1);  res = MIN(qLmax,qHmax) - MAX(qLmin,qHmin)
-    CASE(2);  res = qLmin - qHmin
-    CASE DEFAULT;  res = qLmax - qHmax
-    END SELECT
-  END FUNCTION Gap
-
-  SUBROUTINE FindSignChange( kind, qa0, qb0, fa0, fb0, qa, qb )
-    ! Illinois regula falsi on Gap(kind,q) over [qa0,qb0], qa0 < qb0, with
-    ! (fa0 >= 0) .NEQV. (fb0 >= 0). Returns a bracket [qa,qb] of the sign
-    ! change, qa on the side of fa0 and qb on the side of fb0 (same
-    ! convention as the plain bisection it replaces).
-    INTEGER , INTENT(IN)  :: kind
-    REAL(DP), INTENT(IN)  :: qa0, qb0, fa0, fb0
-    REAL(DP), INTENT(OUT) :: qa, qb
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-    REAL(DP) :: fa, fb, qm, fm
-    INTEGER  :: it, side
-    LOGICAL  :: sgnA
-    qa = qa0;  qb = qb0
-    fa = fa0;  fb = fb0
-    sgnA = ( fa0 >= 0.0d0 )
-    side = 0
-    DO it = 1, nRootIterMax
-      IF( qb - qa <= q_tol ) EXIT
-      qm = ( qa*fb - qb*fa )/( fb - fa )
-      ! keep strictly inside the bracket (fa = 0 or round-off at the ends)
-      IF( .NOT. ( qm > qa .AND. qm < qb ) ) qm = 0.5d0*(qa + qb)
-      fm = Gap( kind, qm )
-      IF( (fm >= 0.0d0) .EQV. sgnA ) THEN
-        qa = qm;  fa = fm
-        IF( side == -1 ) fb = 0.5d0*fb   ! Illinois: unstick the qb end
-        side = -1
-      ELSE
-        qb = qm;  fb = fm
-        IF( side == +1 ) fa = 0.5d0*fa   ! Illinois: unstick the qa end
-        side = +1
-      END IF
-    END DO
-  END SUBROUTINE FindSignChange
-
-  SUBROUTINE UpdateEnvelope( q )
-    REAL(DP), INTENT(IN) :: q
-#if defined(WEAKLIB_OMP_OL)
-    !$OMP DECLARE TARGET
-#elif defined(WEAKLIB_OACC)
-    !$ACC ROUTINE SEQ
-#endif
-    REAL(DP) :: qLmin, qLmax, qHmin, qHmax
-    CALL Branches( q, qLmin, qLmax, qHmin, qHmax )
-    xq0_min = MIN( xq0_min, MAX(qLmin, qHmin) )
-    xq0_max = MAX( xq0_max, MIN(qLmax, qHmax) )
-  END SUBROUTINE UpdateEnvelope
+    REAL(DP) :: E3, p3, p4
+    E3 = s3*( y - W )
+    Allowed = ( E3 >= Mass3 - tol .AND. y >= Mass4 - tol )
+    IF( .NOT. Allowed ) RETURN
+    p3 = SQRT( MAX( E3**2 - Mass3**2, 0.0d0 ) )
+    p4 = SQRT( MAX( y**2  - Mass4**2, 0.0d0 ) )
+    Allowed = ( p3 + p4 >= D - tol .AND. ABS(p3 - p4) <= S + tol )
+  END FUNCTION Allowed
 
 END SUBROUTINE Q0_Window_Envelope
+
+!=======================================================================
+!  Collinear_Roots: two-body configurations with E4 - s3*E3 = W and
+!  |p3 +/- p4| = P (invariant s = W**2 - P**2), returned as y = E4 - U4.
+!  Both roots of the quadratic, cancellation-free. sInv and the Kallen
+!  function lam are factored so that lam = 0 exactly at the two-body
+!  threshold (no spurious lam < 0 from round-off). Squaring admits
+!  E3 < 0: callers apply their own sign test.
+!=======================================================================
+SUBROUTINE Collinear_Roots( W, P, Mass3, Mass4, nRoot, y )
+
+  REAL(DP), INTENT(IN)  :: W, P, Mass3, Mass4
+  INTEGER , INTENT(OUT) :: nRoot
+  REAL(DP), INTENT(OUT) :: y(2)
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+  !$ACC ROUTINE SEQ
+#endif
+
+  REAL(DP) :: sInv, a, lam, t, K
+
+  nRoot = 0
+  y     = 0.0d0
+  sInv = ( W - P )*( W + P )
+  a    = sInv + Mass4**2 - Mass3**2
+  lam  = ( sInv - (Mass4 + Mass3)**2 )*( sInv - (Mass4 - Mass3)**2 )
+  IF( lam < 0.0d0 ) RETURN
+  t = W*a + SIGN( P*SQRT(lam), W*a )
+  K = 0.25d0*( a**2 + 4.0d0*(P*Mass4)**2 )
+  IF( sInv /= 0.0d0 ) THEN
+    nRoot = nRoot + 1
+    y(nRoot) = 0.5d0*t/sInv
+  END IF
+  IF( t /= 0.0d0 ) THEN
+    nRoot = nRoot + 1
+    y(nRoot) = 2.0d0*K/t
+  END IF
+
+END SUBROUTINE Collinear_Roots
 
 SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIndex, p2min, p2max, p4max )
 
@@ -1193,7 +863,7 @@ SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIn
 #endif
 
   REAL(DP) :: tmp,mpt,Epr,Esq,Equ,p2a,p2b,p20
-  REAL(DP) :: F0, Fmax
+  REAL(DP) :: F0, Fmax, E4cut
 
   p2min = 0.0d0
   ! Thermal cutoffs as in Range_pn
@@ -1202,8 +872,10 @@ SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIn
   CASE (3)
     p2max = SQRT( MAX(Mu2 - U2 + Tfac*T, Mass2 + TfacMin*T)**2 - Mass2**2 )
   CASE (4)
-    p2min = SQRT( (max(Mass2,Mu2-Tfac*T-U2))**2 - Mass2**2 )
-    p2max = SQRT( (SQRT(p4max**2+Mass4**2)+U4-U2)**2-Mass2**2 )
+    ! MAX(...,0): with FMA contraction x**2 - Mass2**2 can round to -eps
+    ! when x = Mass2, and the SQRT would return NaN.
+    p2min = SQRT( MAX( (max(Mass2,Mu2-Tfac*T-U2))**2 - Mass2**2, 0.0d0 ) )
+    p2max = SQRT( MAX( (SQRT(p4max**2+Mass4**2)+U4-U2)**2-Mass2**2, 0.0d0 ) )
   CASE DEFAULT
     ! Invalid input: no I/O or STOP in device-callable code; empty range
     p2min = 0.0d0
@@ -1215,7 +887,9 @@ SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIn
   IF( mpt > Mass2) THEN
     tmp = Mass2/(mpt-Mass2)*Enu
   ELSE
-    tmp = p2max
+    ! F increases with p2 here: test the p2 -> infinity limit, since the
+    ! thermal p2max is extended past the threshold below
+    tmp = MAX( p2max, 1.0d6 )
   END IF
   Fmax = SQRT( (tmp+Enu)**2+mpt**2 )+U4-SQRT(tmp**2+Mass2**2)-U2
 
@@ -1225,23 +899,35 @@ SUBROUTINE Range_pn_D( Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu4, ReactionIn
   END IF
 
   F0 = SQRT(Enu**2 + mpt**2)+U4-Mass2-U2
-  IF( F0 >= Enu .and. U4 >= U2) RETURN
+  IF( .NOT. ( F0 >= Enu .and. U4 >= U2 ) ) THEN
+    Epr = Enu - U4 + U2
+    Esq = Enu**2 + mpt**2 - Mass2**2 - Epr**2
+    Equ = Esq**2 + 4.d0*( (Mass2*Enu)**2 - (Epr*Mass2)**2 )
+    IF(Equ>0.0d0.and. Enu**2 .ne. Epr**2) THEN
+      p2a = -( Enu*Esq - ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
+      p2b = -( Enu*Esq + ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
+      IF(Epr<0.d0 .and. p2b>0.d0) THEN
+        p2min=p2b
+      ELSE IF(Epr>=0.0d0 .and. p2a>0.d0) THEN
+        p2min=p2a
+      END IF
 
-  Epr = Enu - U4 + U2
-  Esq = Enu**2 + mpt**2 - Mass2**2 - Epr**2
-  Equ = Esq**2 + 4.d0*( (Mass2*Enu)**2 - (Epr*Mass2)**2 )
-  IF(Equ>0.0d0.and. Enu**2 .ne. Epr**2) THEN
-    p2a = -( Enu*Esq - ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
-    p2b = -( Enu*Esq + ABS(Epr)*SQRT(Equ) )*0.5d0/(Enu**2-Epr**2)
-    IF(Epr<0.d0 .and. p2b>0.d0) THEN
-      p2min=p2b
-    ELSE IF(Epr>=0.0d0 .and. p2a>0.d0) THEN
-      p2min=p2a
+    ELSE IF(Enu**2 .eq. Epr**2) THEN
+      p20 = (4.0d0*Epr**2*Mass2**2-Esq**2)/(4.0d0*Esq*Enu)
+      IF(p20>0.d0) p2min=p20
     END IF
+  END IF
 
-  ELSE IF(Enu**2 .eq. Epr**2) THEN
-    p20 = (4.0d0*Epr**2*Mass2**2-Esq**2)/(4.0d0*Esq*Enu)
-    IF(p20>0.d0) p2min=p20
+  ! Thermal cutoff relative to the kinematic threshold (see Threshold_Cut).
+  ! Reaction 4: E4 >= E2(p2min) + Enu + Mass3; cut on E4, and on E2 <= E4.
+  IF( ReactionIndex == 3 ) THEN
+    CALL Threshold_Cut( p2min, Mass2, Tfac*T, p2max )
+  ELSE
+    E4cut = SQRT( p2min**2 + Mass2**2 ) + U2 + Enu + Mass3 + Tfac*T
+    IF( E4cut - U4 > SQRT( p4max**2 + Mass4**2 ) ) THEN
+      p4max = SQRT( (E4cut - U4)**2 - Mass4**2 )
+      p2max = MAX( p2max, SQRT( (E4cut - U2)**2 - Mass2**2 ) )
+    END IF
   END IF
 
 END SUBROUTINE Range_pn_D
@@ -1319,4 +1005,4 @@ PURE ELEMENTAL FUNCTION FD(E, mu, T)
   FD = 1.0d0 / (EXP(MIN((E - mu)/T, FD_MaxExponent)) + 1.0d0)
 END FUNCTION
 
-END MODULE wlSemiLeptonicOpacityModule2D
+END MODULE wlSemiLeptonicPhysicsModule2D
