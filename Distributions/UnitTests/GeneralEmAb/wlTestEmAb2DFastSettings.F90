@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm2DFastSettings
+PROGRAM wlTestEmAb2DFastSettings
 
   !=========================================================================
   !  Cheapest quadrature setting of the semi-leptonic charged-current 2D
@@ -23,7 +23,7 @@ PROGRAM wlTestAbEm2DFastSettings
   !  run and scored against the reference like any setting; its max
   !  normalised error (<< 1 expected) measures the reference uncertainty.
   !
-  !  Samples (as in wlTestAbEm2DConvergence):
+  !  Samples (as in wlTestEmAb2DConvergence):
   !    - every PointStride-th row of ThermoConditions.dat
   !    - nEnu log-spaced neutrino energies in [EnuMin, EnuMax]
   !    - electrons (Mue, me) and muons (Mum, mmu)
@@ -50,7 +50,7 @@ PROGRAM wlTestAbEm2DFastSettings
   !  Normalised error = weighted error / tolerance. A setting PASSES if the
   !  max normalised error over all non-ignored samples (all reactions,
   !  both leptons, corrections 0-3) is <= 1.
-  !  For context the strict metric of wlTestAbEm2DConvergence is also
+  !  For context the strict metric of wlTestEmAb2DConvergence is also
   !  given: max plain relative error |v - ref|/|ref| on corrections 0-2,
   !  on its significance mask (ref > 0, >= SigFrac * max over energies at
   !  the same (point, lepton, reaction, correction), >= ChanFrac * max of
@@ -78,7 +78,7 @@ PROGRAM wlTestAbEm2DFastSettings
   !  All values are stored (8 bytes x samples x runs, ~180 MB for all
   !  points). Output: stdout and, if WriteSamples, one line per scored
   !  sample with the normalised error of every run in
-  !  AbEm2DFastSettings.dat (large).
+  !  EmAb2DFastSettings.dat (large).
   !=========================================================================
 
   USE wlKindModule, ONLY: dp
@@ -121,7 +121,7 @@ PROGRAM wlTestAbEm2DFastSettings
   REAL(DP), PARAMETER :: TolLow_S(nTolS) = (/ 3.0d-3, 1.0d-2, 3.0d-2 /)
   REAL(DP), PARAMETER :: nTS_S(nTSS) = (/ 5.0d0, 8.0d0, 12.0d0 /)
 
-  ! ---- strict (old) metric, as in wlTestAbEm2DConvergence
+  ! ---- strict (old) metric, as in wlTestEmAb2DConvergence
   REAL(DP), PARAMETER :: SigFrac  = 1.0d-6
   REAL(DP), PARAMETER :: ChanFrac = 1.0d-15
 
@@ -207,7 +207,7 @@ PROGRAM wlTestAbEm2DFastSettings
   nThreads = omp_get_max_threads()
 #endif
 
-  WRITE(*,'(A)') ' wlTestAbEm2DFastSettings: cheapest quadrature meeting a weighted accuracy metric'
+  WRITE(*,'(A)') ' wlTestEmAb2DFastSettings: cheapest quadrature meeting a weighted accuracy metric'
   WRITE(*,'(A)') '   A = Energy (nE2 x nE3 linear GL), B = Momentum (nE2 outer x nE3 inner per segment),' // &
                  ' C = Tail (nE)'
   WRITE(*,'(A,I6,A,I3,A,I3,A,F6.1,A,F6.1,A)') ' Thermo points:', nPoints, '  (stride', PointStride, &
@@ -416,7 +416,7 @@ CONTAINS
 
   SUBROUTINE SetSignificance
 
-    ! strict metric mask, as in wlTestAbEm2DConvergence
+    ! strict metric mask, as in wlTestEmAb2DConvergence
     REAL(DP) :: MaxE(nS/nEnu), MaxChan(nCorr, nReac, nLep), r
     INTEGER  :: j, b
 
@@ -723,7 +723,7 @@ CONTAINS
     INTEGER :: j, nn
     CHARACTER(LEN=40) :: Fmt
 
-    OPEN(UNIT=124, FILE='AbEm2DFastSettings.dat', STATUS='REPLACE', ACTION='WRITE')
+    OPEN(UNIT=124, FILE='EmAb2DFastSettings.dat', STATUS='REPLACE', ACTION='WRITE')
     WRITE(124,'(A)') '# scored samples only; normalised error vs reference ' // TRIM(RunLabel(iRef))
     WRITE(124,'(A)') '# units of ref: cm^-1 (reactions 1-3), (s cm^3 MeV)^-1 (reaction 4); kappa_tot cm^-1'
     WRITE(124,'(A,*(A11))') '# row lep reac corr Enu[MeV] T[MeV] E_split ref kappa_tot   norm.err for', &
@@ -736,8 +736,8 @@ CONTAINS
           ( NormErr( j, nn, TolLow, nT_Split ), nn = 1, nRun )
     END DO
     CLOSE(124)
-    WRITE(*,'(/,A)') ' Per-sample normalised errors written to AbEm2DFastSettings.dat'
+    WRITE(*,'(/,A)') ' Per-sample normalised errors written to EmAb2DFastSettings.dat'
 
   END SUBROUTINE WriteSampleFile
 
-END PROGRAM wlTestAbEm2DFastSettings
+END PROGRAM wlTestEmAb2DFastSettings

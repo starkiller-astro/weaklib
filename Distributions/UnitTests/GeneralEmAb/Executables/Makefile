@@ -11,7 +11,7 @@ USE_OACC   ?= FALSE
 USE_OMP    ?= TRUE
 USE_CUBA   ?= FALSE
 
-# 3D: old weaklib SFHo table (needed by wlTestAbEm2DVsTable)
+# 3D: old weaklib SFHo table (needed by wlTestEmAb2DVsTable)
 # COMPOSE: BaryonsPlusPhotonsPlusLeptonsEOS.h5 (compare targets)
 # Run 'make clobber' when switching EOSMODE or USE_CUBA.
 EOSMODE ?= 3D

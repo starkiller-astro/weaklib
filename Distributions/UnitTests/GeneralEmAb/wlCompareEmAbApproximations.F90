@@ -1,8 +1,8 @@
-PROGRAM wlCompareAbEmApproximations
+PROGRAM wlCompareEmAbApproximations
 
   ! Compares, along the ThermoConditions.dat points, the 2D CC kernels
   ! (Opacity_CC_2D, optionally the 4D CUBA kernels) with the elastic
-  ! (Bruenn-like) absorption opacities of wlCalculateAbEmOpacityModule and
+  ! (Bruenn-like) absorption opacities of wlCalculateEmAbOpacityModule and
   ! with the tabulated EmAb opacities. Thermodynamic quantities are
   ! recomputed from the EOS table at (T, Rho, Ye) of each point.
   !
@@ -32,7 +32,7 @@ PROGRAM wlCompareAbEmApproximations
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
 #endif
-  USE wlCalculateAbEmOpacityModule, ONLY: &
+  USE wlCalculateEmAbOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
     ElasticAbsorptionOpacityNue, &
     CalculateHorowitzWeakMagRecoil
@@ -462,6 +462,6 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 
 END SUBROUTINE ApplyEOS
 
-END PROGRAM wlCompareAbEmApproximations
+END PROGRAM wlCompareEmAbApproximations
 
 

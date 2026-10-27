@@ -90,7 +90,7 @@ Then point CUBA_DIR to the directory containing libcuba.a
 (e.g. export CUBA_DIR=$HOME/installed_packages/Cuba-4.2.2) and build with
 USE_CUBA=TRUE (e.g. 'make cuba USE_CUBA=TRUE' in UnitTests/GeneralEmAb/Executables).
 
-When you run the parallel 4D test (wlTestAbEm4DParallel), you have to also set 
+When you run the parallel 4D test (wlTestEmAb4DParallel), you have to also set 
 export CUBACORES=0
 export CUBACORESMAX=0
 to force CUBA to use only one thread. This speeds up the computation significantly,
@@ -110,7 +110,7 @@ do it explicitly. So in my routines I changed all of them
 - The threadprivate declaration in wlSemiLeptonicOpacityModule4D.F90 is guarded by
   '#if defined(USE_OMP)', but the build system defines WEAKLIB_OMP (not USE_OMP), so the
   module globals are currently NOT threadprivate and the OpenMP 4D loop is racy. This
-  may be part of the poor/negative scaling seen in wlTestAbEm4DParallel.
+  may be part of the poor/negative scaling seen in wlTestEmAb4DParallel.
 - Integration_D in wlSemiLeptonicOpacityModule4D.F90 divides the reaction-4 emissivity
   by an extra 1.0d5 (it is already in (s cm^3 MeV)^-1), so 4D emissivities are 1e-5 too
-  small compared to the 2D module and the GSI code (seen in wlTestAbEm4DVsGSI).
+  small compared to the 2D module and the GSI code (seen in wlTestEmAb4DVsGSI).

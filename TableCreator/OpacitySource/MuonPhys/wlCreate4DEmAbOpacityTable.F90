@@ -1,4 +1,4 @@
-PROGRAM wlCreate4DAbEmOpacityTable
+PROGRAM wlCreate4DEmAbOpacityTable
 
   USE wlKindModule, ONLY: dp  
   USE HDF5
@@ -13,7 +13,7 @@ PROGRAM wlCreate4DAbEmOpacityTable
   USE wlHelmIOModuleHDF
   USE wlSemiLeptonicOpacityModule2D, ONLY: &
   Opacity_CC_2D, InitOpacity_CC_2D, FinalizeOpacity_CC_2D
-  USE wlCalculateAbEmOpacityModule, ONLY: &
+  USE wlCalculateEmAbOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
     ElasticAbsorptionOpacityNue
   USE wlOpacityTableModule, ONLY: &
@@ -316,5 +316,5 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 END SUBROUTINE ApplyEOS
 
 
-END PROGRAM wlCreate4DAbEmOpacityTable
+END PROGRAM wlCreate4DEmAbOpacityTable
 

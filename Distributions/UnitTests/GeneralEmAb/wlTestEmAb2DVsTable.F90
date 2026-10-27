@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm2DVsTable
+PROGRAM wlTestEmAb2DVsTable
 
   !===========================================================================
   !  Compare the 2D semi-leptonic absorption opacity
@@ -444,8 +444,8 @@ PROGRAM wlTestAbEm2DVsTable
   !------------------------------------------------------
   !    output
   !------------------------------------------------------
-  OPEN( UNIT = 66, FILE = 'AbEm2D_Table.dat',   STATUS = 'REPLACE', ACTION = 'WRITE' )
-  OPEN( UNIT = 77, FILE = 'AbEm2D_General.dat', STATUS = 'REPLACE', ACTION = 'WRITE' )
+  OPEN( UNIT = 66, FILE = 'EmAb2D_Table.dat',   STATUS = 'REPLACE', ACTION = 'WRITE' )
+  OPEN( UNIT = 77, FILE = 'EmAb2D_General.dat', STATUS = 'REPLACE', ACTION = 'WRITE' )
   WRITE(66,'(A)') '# iE, E[MeV], rho[g/cc], T[MeV], Ye, kappa*_nue[1/cm], kappa*_nuebar[1/cm]  (table)'
   WRITE(77,'(A)') '# iE, E[MeV], rho[g/cc], T[MeV], Ye, kappa*_nue[1/cm], kappa*_nuebar[1/cm]  (2D, -1 = NaN)'
   DO i = 1, nPoints
@@ -468,7 +468,7 @@ PROGRAM wlTestAbEm2DVsTable
                 / ( ( Gw_MeV * Vud )**2 / ( hbarc * 1.0d-2 ) * ( gv**2 + 3.0d0 * ga**2 ) )
 
   WRITE(*,*)
-  WRITE(*,'(A)') ' ================= wlTestAbEm2DVsTable summary ================='
+  WRITE(*,'(A)') ' ================= wlTestEmAb2DVsTable summary ================='
   WRITE(*,'(A,L2,A,I2,A,I4)') ' UseExactTablePoints =', UseExactTablePoints, &
     '   WhichCorrection =', WhichCorrection, '   nE_quad =', nE_quad
   nThreads = 1
@@ -698,4 +698,4 @@ CONTAINS
     END IF
   END FUNCTION Median
 
-END PROGRAM wlTestAbEm2DVsTable
+END PROGRAM wlTestEmAb2DVsTable

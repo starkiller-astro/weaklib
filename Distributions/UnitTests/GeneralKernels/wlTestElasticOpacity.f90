@@ -12,7 +12,7 @@ PROGRAM wlTestElasticOpacity
   USE wlHelmIOModuleHDF
   USE wlEosConstantsModule, ONLY: &
     rmu, mp, me, mn, mmu, cm3fm3, kmev
-  USE wlCalculateAbEmOpacityModule, ONLY: &
+  USE wlCalculateEmAbOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
     ElasticAbsorptionOpacityNue, &
     CalculateHorowitzWeakMagRecoil

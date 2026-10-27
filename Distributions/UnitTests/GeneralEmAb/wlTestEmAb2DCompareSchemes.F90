@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm2DCompareSchemes
+PROGRAM wlTestEmAb2DCompareSchemes
 
   !=========================================================================
   !  Error vs cost of the three 2D integration methods of the
@@ -15,7 +15,7 @@ PROGRAM wlTestAbEm2DCompareSchemes
   !    C "Tail"      method iEmAb2D_Tail: no thermal cutoff, Gauss-Laguerre
   !                  tail
   !
-  !  Samples (as in wlTestAbEm2DConvergence):
+  !  Samples (as in wlTestEmAb2DConvergence):
   !    - every PointStride-th row of ThermoConditions.dat
   !    - nEnu log-spaced neutrino energies in [EnuMin, EnuMax]
   !    - electrons (Mue, me) and muons (Mum, mmu)
@@ -62,7 +62,7 @@ PROGRAM wlTestAbEm2DCompareSchemes
   !  relative errors are reported.
   !
   !  Output: summary on stdout and, if WriteSamples, one line per
-  !  significant sample in AbEm2DCompareSchemes.dat (large: ~60 MB for
+  !  significant sample in EmAb2DCompareSchemes.dat (large: ~60 MB for
   !  all points).
   !=========================================================================
 
@@ -176,7 +176,7 @@ PROGRAM wlTestAbEm2DCompareSchemes
   nThreads = omp_get_max_threads()
 #endif
 
-  WRITE(*,'(A)') ' wlTestAbEm2DCompareSchemes: error vs cost of the 2D quadrature schemes'
+  WRITE(*,'(A)') ' wlTestEmAb2DCompareSchemes: error vs cost of the 2D quadrature schemes'
   WRITE(*,'(A)') '   A = Energy (nE x nE linear GL), B = Momentum (default), C = Tail (no Tfac)'
   WRITE(*,'(A,I6,A,I3,A,I3,A,F6.1,A,F6.1,A)') ' Thermo points:', nPoints, '  (stride', PointStride, &
       ')   energies:', nEnu, ' in [', EnuMin, ',', EnuMax, '] MeV'
@@ -526,7 +526,7 @@ CONTAINS
     INTEGER :: j, nn
     CHARACTER(LEN=32) :: Fmt
 
-    OPEN(UNIT=124, FILE='AbEm2DCompareSchemes.dat', STATUS='REPLACE', ACTION='WRITE')
+    OPEN(UNIT=124, FILE='EmAb2DCompareSchemes.dat', STATUS='REPLACE', ACTION='WRITE')
     WRITE(124,'(A)') '# significant samples only; rel. error vs reference ' // TRIM(RunLabel(iRef))
     WRITE(124,'(A)') '# units of ref: cm^-1 (reactions 1-3), (s cm^3 MeV)^-1 (reaction 4)'
     WRITE(124,'(A,*(1X,A10))') '# row lep reac corr Enu[MeV] T[MeV] ref   err for runs:', &
@@ -538,7 +538,7 @@ CONTAINS
           EnuA(EnuOf(j)), Thermo(1,PointOf(j)), Val(j,iRef), ( RelErr( j, nn, iRef ), nn = 1, nRun )
     END DO
     CLOSE(124)
-    WRITE(*,'(/,A)') ' Per-sample errors written to AbEm2DCompareSchemes.dat'
+    WRITE(*,'(/,A)') ' Per-sample errors written to EmAb2DCompareSchemes.dat'
 
   END SUBROUTINE WriteSampleFile
 
@@ -586,4 +586,4 @@ CONTAINS
 
   END SUBROUTINE SiftDown
 
-END PROGRAM wlTestAbEm2DCompareSchemes
+END PROGRAM wlTestEmAb2DCompareSchemes

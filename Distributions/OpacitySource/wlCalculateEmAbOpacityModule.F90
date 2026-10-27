@@ -1,4 +1,4 @@
-MODULE wlCalculateAbEmOpacityModule
+MODULE wlCalculateEmAbOpacityModule
 
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
@@ -251,4 +251,4 @@ CONTAINS
 
   END SUBROUTINE CalculateNucleonFormFactors
 
-END MODULE wlCalculateAbEmOpacityModule
+END MODULE wlCalculateEmAbOpacityModule

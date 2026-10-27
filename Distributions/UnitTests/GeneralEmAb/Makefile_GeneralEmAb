@@ -30,85 +30,85 @@ CHIMERA_WM = \
 .DEFAULT_GOAL := all
 
 # Default: 2D kernels only, no CUBA needed
-all: wlTestAbEm2DVsGSI \
-     wlTestAbEm2DParallel \
-     wlTestAbEm2DConvergence \
-     wlTestAbEm2DCompareSchemes \
-     wlTestAbEm2DFastSettings \
-     wlTestAbEm2DVsTable
+all: wlTestEmAb2DVsGSI \
+     wlTestEmAb2DParallel \
+     wlTestEmAb2DConvergence \
+     wlTestEmAb2DCompareSchemes \
+     wlTestEmAb2DFastSettings \
+     wlTestEmAb2DVsTable
 
 # 4D (CUBA) kernels: make cuba USE_CUBA=TRUE
 cuba: check_cuba \
-      wlTestAbEm4DVsGSI \
-      wlTestAbEm4DParallel
+      wlTestEmAb4DVsGSI \
+      wlTestEmAb4DParallel
 
 # Comparison with elastic approximation / tables (needs EOS + opacity tables)
-compare: wlCompareAbEmApproximations \
-         wlCompareAbEmApproximationsTable
+compare: wlCompareEmAbApproximations \
+         wlCompareEmAbApproximationsTable
 
 check_cuba:
 ifneq ($(USE_CUBA),TRUE)
 	$(error The 'cuba' targets require USE_CUBA=TRUE (and CUBA_DIR set))
 endif
 
-wlTestAbEm2DVsGSI: \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestAbEm2DVsGSI.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm2DVsGSI_$(MACHINE) \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestAbEm2DVsGSI.o \
+wlTestEmAb2DVsGSI: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestEmAb2DVsGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb2DVsGSI_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o wlTestEmAb2DVsGSI.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm2DParallel: \
-	$(weaklib) wlTestAbEm2DParallel.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm2DParallel_$(MACHINE) \
-	$(weaklib) wlTestAbEm2DParallel.o \
+wlTestEmAb2DParallel: \
+	$(weaklib) wlTestEmAb2DParallel.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb2DParallel_$(MACHINE) \
+	$(weaklib) wlTestEmAb2DParallel.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm2DConvergence: \
-	$(weaklib) wlTestAbEm2DConvergence.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm2DConvergence_$(MACHINE) \
-	$(weaklib) wlTestAbEm2DConvergence.o \
+wlTestEmAb2DConvergence: \
+	$(weaklib) wlTestEmAb2DConvergence.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb2DConvergence_$(MACHINE) \
+	$(weaklib) wlTestEmAb2DConvergence.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm2DCompareSchemes: \
-	$(weaklib) wlTestAbEm2DCompareSchemes.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm2DCompareSchemes_$(MACHINE) \
-	$(weaklib) wlTestAbEm2DCompareSchemes.o \
+wlTestEmAb2DCompareSchemes: \
+	$(weaklib) wlTestEmAb2DCompareSchemes.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb2DCompareSchemes_$(MACHINE) \
+	$(weaklib) wlTestEmAb2DCompareSchemes.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm2DFastSettings: \
-	$(weaklib) wlTestAbEm2DFastSettings.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm2DFastSettings_$(MACHINE) \
-	$(weaklib) wlTestAbEm2DFastSettings.o \
+wlTestEmAb2DFastSettings: \
+	$(weaklib) wlTestEmAb2DFastSettings.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb2DFastSettings_$(MACHINE) \
+	$(weaklib) wlTestEmAb2DFastSettings.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm2DVsTable: \
-	$(weaklib) wlTestAbEm2DVsTable.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm2DVsTable_$(MACHINE) \
-	$(weaklib) wlTestAbEm2DVsTable.o \
+wlTestEmAb2DVsTable: \
+	$(weaklib) wlTestEmAb2DVsTable.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb2DVsTable_$(MACHINE) \
+	$(weaklib) wlTestEmAb2DVsTable.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm4DVsGSI: \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestAbEm4DVsGSI.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm4DVsGSI_$(MACHINE) \
-	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestAbEm4DVsGSI.o \
+wlTestEmAb4DVsGSI: \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestEmAb4DVsGSI.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb4DVsGSI_$(MACHINE) \
+	$(weaklib) Opacity_SemiLep_2D_GSI.o Opacity_SemiLep_4D_GSI.o wlTestEmAb4DVsGSI.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlTestAbEm4DParallel: \
-	$(weaklib) wlTestAbEm4DParallel.o
-	$(FLINKER) $(FLAGS) -o wlTestAbEm4DParallel_$(MACHINE) \
-	$(weaklib) wlTestAbEm4DParallel.o \
+wlTestEmAb4DParallel: \
+	$(weaklib) wlTestEmAb4DParallel.o
+	$(FLINKER) $(FLAGS) -o wlTestEmAb4DParallel_$(MACHINE) \
+	$(weaklib) wlTestEmAb4DParallel.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlCompareAbEmApproximations: \
-	$(weaklib) wlCompareAbEmApproximations.o
-	$(FLINKER) $(FLAGS) -o wlCompareAbEmApproximations_$(MACHINE) \
-	$(weaklib) wlCompareAbEmApproximations.o \
+wlCompareEmAbApproximations: \
+	$(weaklib) wlCompareEmAbApproximations.o
+	$(FLINKER) $(FLAGS) -o wlCompareEmAbApproximations_$(MACHINE) \
+	$(weaklib) wlCompareEmAbApproximations.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
-wlCompareAbEmApproximationsTable: \
-	$(weaklib) $(CHIMERA_WM) wlCompareAbEmApproximationsTable.o
-	$(FLINKER) $(FLAGS) -o wlCompareAbEmApproximationsTable_$(MACHINE) \
-	$(weaklib) $(CHIMERA_WM) wlCompareAbEmApproximationsTable.o \
+wlCompareEmAbApproximationsTable: \
+	$(weaklib) $(CHIMERA_WM) wlCompareEmAbApproximationsTable.o
+	$(FLINKER) $(FLAGS) -o wlCompareEmAbApproximationsTable_$(MACHINE) \
+	$(weaklib) $(CHIMERA_WM) wlCompareEmAbApproximationsTable.o \
 	$(LIBRARIES) $(CUBA_LIB)
 
 clean:
@@ -135,35 +135,35 @@ cc_weak_mag_weaklib.o: \
   physcnst_module.o \
   PRB_CNTL_MODULE.o
 
-wlTestAbEm2DVsGSI.o: \
+wlTestEmAb2DVsGSI.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o \
   wlSemiLeptonicOpacityIntegrationModule2D.o \
   Opacity_SemiLep_2D_GSI.o
 
-wlTestAbEm2DParallel.o: \
+wlTestEmAb2DParallel.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o \
   wlSemiLeptonicOpacityIntegrationModule2D.o
 
-wlTestAbEm2DConvergence.o: \
+wlTestEmAb2DConvergence.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o
 
-wlTestAbEm2DCompareSchemes.o: \
+wlTestEmAb2DCompareSchemes.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o
 
-wlTestAbEm2DFastSettings.o: \
+wlTestEmAb2DFastSettings.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o
 
-wlTestAbEm2DVsTable.o: \
+wlTestEmAb2DVsTable.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o \
@@ -175,7 +175,7 @@ wlTestAbEm2DVsTable.o: \
   wlIOModuleHDF.o \
   wlEquationOfStateTableModule.o
 
-wlTestAbEm4DVsGSI.o: \
+wlTestEmAb4DVsGSI.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule2D.o \
@@ -183,12 +183,12 @@ wlTestAbEm4DVsGSI.o: \
   Opacity_SemiLep_2D_GSI.o \
   Opacity_SemiLep_4D_GSI.o
 
-wlTestAbEm4DParallel.o: \
+wlTestEmAb4DParallel.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlSemiLeptonicOpacityModule4D.o
 
-wlCompareAbEmApproximations.o: \
+wlCompareEmAbApproximations.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlInterpolationModule.o \
@@ -199,12 +199,12 @@ wlCompareAbEmApproximations.o: \
   wlLeptonPhotonGasEOS.o \
   wlHelmIOModuleHDF.o \
   wlSemiLeptonicOpacityModule2D.o \
-  wlCalculateAbEmOpacityModule.o \
+  wlCalculateEmAbOpacityModule.o \
   wlOpacityTableModule.o \
   wlOpacityTableIOModuleHDF.o \
   wlOpacityFieldsModule.o
 
-wlCompareAbEmApproximationsTable.o: \
+wlCompareEmAbApproximationsTable.o: \
   wlKindModule.o \
   wlEosConstantsModule.o \
   wlInterpolationModule.o \
@@ -215,13 +215,13 @@ wlCompareAbEmApproximationsTable.o: \
   wlLeptonPhotonGasEOS.o \
   wlHelmIOModuleHDF.o \
   wlSemiLeptonicOpacityModule2D.o \
-  wlCalculateAbEmOpacityModule.o \
+  wlCalculateEmAbOpacityModule.o \
   wlOpacityTableModule.o \
   wlOpacityTableIOModuleHDF.o \
   wlOpacityFieldsModule.o \
   cc_weak_mag_weaklib.o
 
 ifeq ($(USE_CUBA),TRUE)
-wlCompareAbEmApproximations.o: wlSemiLeptonicOpacityModule4D.o
-wlCompareAbEmApproximationsTable.o: wlSemiLeptonicOpacityModule4D.o
+wlCompareEmAbApproximations.o: wlSemiLeptonicOpacityModule4D.o
+wlCompareEmAbApproximationsTable.o: wlSemiLeptonicOpacityModule4D.o
 endif

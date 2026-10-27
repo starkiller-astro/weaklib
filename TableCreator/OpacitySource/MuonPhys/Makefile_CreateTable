@@ -9,15 +9,15 @@ Weaklib_EOSTableCreator = \
 	$(WL_GENERAL_EMAB) \
   $(WL_GENERAL_SCAT_KERN)
 
-all: wlCreate4DAbEmOpacityTable
+all: wlCreate4DEmAbOpacityTable
  
-wlCreate4DAbEmOpacityTable: \
-	$(Weaklib_EOSTableCreator) wlCreate4DAbEmOpacityTable.o
-	$(FLINKER) $(FLAGS) -o wlCreate4DAbEmOpacityTable_$(MACHINE) \
-	$(Weaklib_EOSTableCreator) wlCreate4DAbEmOpacityTable.o \
+wlCreate4DEmAbOpacityTable: \
+	$(Weaklib_EOSTableCreator) wlCreate4DEmAbOpacityTable.o
+	$(FLINKER) $(FLAGS) -o wlCreate4DEmAbOpacityTable_$(MACHINE) \
+	$(Weaklib_EOSTableCreator) wlCreate4DEmAbOpacityTable.o \
 	$(LIBRARIES)
 
-wlCreate4DAbEmOpacityTable.o: \
+wlCreate4DEmAbOpacityTable.o: \
   wlKindModule.o \
 	wlEosConstantsModule.o \
 	wlInterpolationModule.o \
@@ -28,7 +28,7 @@ wlCreate4DAbEmOpacityTable.o: \
   wlLeptonPhotonGasEOS.o \
   wlHelmIOModuleHDF.o \
   wlSemiLeptonicOpacityModule2D.o \
-	wlCalculateAbEmOpacityModule.o \
+	wlCalculateEmAbOpacityModule.o \
 	wlOpacityTableModule.o \
 	wlOpacityTableIOModuleHDF.o \
 	wlOpacityFieldsModule.o

@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm4DParallel
+PROGRAM wlTestEmAb4DParallel
 
   USE omp_lib
   USE wlKindModule, ONLY: dp
@@ -133,4 +133,4 @@ PROGRAM wlTestAbEm4DParallel
   DEALLOCATE(OpaA_4D)
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
-END PROGRAM wlTestAbEm4DParallel
+END PROGRAM wlTestEmAb4DParallel

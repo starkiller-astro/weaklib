@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm2DParallel
+PROGRAM wlTestEmAb2DParallel
 
   ! Timing and consistency of the MOMENTUM integration method
   ! (OpacitySource/GeneralEmAb) in serial and with OpenMP: Opacity_CC_2D
@@ -270,5 +270,5 @@ PROGRAM wlTestAbEm2DParallel
   CALL FinalizeOpacity_CC_2D()
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
 
-END PROGRAM wlTestAbEm2DParallel
+END PROGRAM wlTestEmAb2DParallel
 

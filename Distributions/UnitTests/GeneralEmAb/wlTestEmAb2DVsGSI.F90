@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm2DVsGSI
+PROGRAM wlTestEmAb2DVsGSI
 
   !=========================================================================
   !  Accuracy test for the semi-leptonic charged-current 2D kernels
@@ -274,7 +274,7 @@ PROGRAM wlTestAbEm2DVsGSI
   END DO
 
   ! Per-sample output
-  OPEN(UNIT=200, FILE='AbEm2DVsGSI.dat', STATUS='REPLACE', ACTION='WRITE')
+  OPEN(UNIT=200, FILE='EmAb2DVsGSI.dat', STATUS='REPLACE', ACTION='WRITE')
   WRITE(200,'(A)') '# iPoint Reaction Correction Enu[MeV] T[MeV] W P I G DBratio(reac 4 only)'
   WRITE(200,'(A)') '# units: cm^-1 for reactions 1-3, (s cm^3 MeV)^-1 for reaction 4'
   DO k = 1, nReac
@@ -442,7 +442,7 @@ PROGRAM wlTestAbEm2DVsGSI
   WRITE(*,'(A,F10.3)')    '   P (stateless _Nodes kernel) :', t_P
   WRITE(*,'(A,F10.3)')    '   I (integration wrappers)    :', t_I
   WRITE(*,'(A,F10.3)')    '   G (GSI reference)           :', t_G
-  WRITE(*,'(/,A)')        ' Per-sample values written to AbEm2DVsGSI.dat'
+  WRITE(*,'(/,A)')        ' Per-sample values written to EmAb2DVsGSI.dat'
 
   DEALLOCATE(rWP, rWI, rWG, rWGs, rWAG, rDB)
   DEALLOCATE(Opa_W, Opa_P, Opa_I, Opa_G, DB)
@@ -504,4 +504,4 @@ CONTAINS
     END IF
   END FUNCTION MedianOf
 
-END PROGRAM wlTestAbEm2DVsGSI
+END PROGRAM wlTestEmAb2DVsGSI

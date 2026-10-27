@@ -1,6 +1,6 @@
-PROGRAM wlCompareAbEmApproximationsTable
+PROGRAM wlCompareEmAbApproximationsTable
 
-  ! Same comparison as wlCompareAbEmApproximations, but on a sub-grid of
+  ! Same comparison as wlCompareEmAbApproximations, but on a sub-grid of
   ! the EOS/opacity table (rho index > iRho_min, T index <= iT_max, three
   ! Ye values) at the opacity-table energies, for electron flavour only.
   ! Also compares the Horowitz weak-magnetism correction with the Chimera
@@ -29,7 +29,7 @@ PROGRAM wlCompareAbEmApproximationsTable
   USE wlSemiLeptonicOpacityModule4D, ONLY: &
     Opacity_CC_4D
 #endif
-  USE wlCalculateAbEmOpacityModule, ONLY: &
+  USE wlCalculateEmAbOpacityModule, ONLY: &
     ElasticAbsorptionOpacityNum, &
     ElasticAbsorptionOpacityNue, &
     CalculateHorowitzWeakMagRecoil
@@ -469,4 +469,4 @@ SUBROUTINE ApplyEOS(T, D, Ye, Ym, Mumu, Mue, Mun, Mup, Xn, Xp, Un, Up, Mn_eff, M
 
 END SUBROUTINE ApplyEOS
 
-END PROGRAM wlCompareAbEmApproximationsTable
+END PROGRAM wlCompareEmAbApproximationsTable

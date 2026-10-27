@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm2DConvergence
+PROGRAM wlTestEmAb2DConvergence
 
   !=========================================================================
   !  Convergence of the semi-leptonic charged-current 2D kernels
@@ -25,7 +25,7 @@ PROGRAM wlTestAbEm2DConvergence
   !
   !  This is self-convergence: errors common to all nE of the method (for
   !  ENERGY and MOMENTUM the thermal cutoff Tfac = 30, a floor of a few
-  !  1e-5 max) are not visible here; wlTestAbEm2DCompareSchemes compares
+  !  1e-5 max) are not visible here; wlTestEmAb2DCompareSchemes compares
   !  the methods against the Tfac-free TAIL reference.
   !
   !  Relative errors |v - ref|/|ref| are evaluated on "significant"
@@ -48,7 +48,7 @@ PROGRAM wlTestAbEm2DConvergence
   !  relative errors are reported.
   !
   !  Output: summary on stdout and, if WriteSamples, one line per
-  !  significant sample in AbEm2DConvergence.dat (indices, Enu, T, ref and
+  !  significant sample in EmAb2DConvergence.dat (indices, Enu, T, ref and
   !  the relative error for every nE in nE_List).
   !=========================================================================
 
@@ -161,7 +161,7 @@ PROGRAM wlTestAbEm2DConvergence
   nThreads = omp_get_max_threads()
 #endif
 
-  WRITE(*,'(A)') ' wlTestAbEm2DConvergence: relative error vs resolution nE'
+  WRITE(*,'(A)') ' wlTestEmAb2DConvergence: relative error vs resolution nE'
   WRITE(*,'(A,A,A,I2,A)') ' Integration method: ', TRIM(MethodName), &
       '   (default of Opacity_CC_2D in this build: method', iEmAb2D_Default, ')'
   WRITE(*,'(A,I6,A,I3,A,I3,A,F6.1,A,F6.1,A)') ' Thermo points:', nPoints, '  (stride', PointStride, &
@@ -493,7 +493,7 @@ CONTAINS
     INTEGER :: j, nn
     CHARACTER(LEN=32) :: Fmt
 
-    OPEN(UNIT=124, FILE='AbEm2DConvergence.dat', STATUS='REPLACE', ACTION='WRITE')
+    OPEN(UNIT=124, FILE='EmAb2DConvergence.dat', STATUS='REPLACE', ACTION='WRITE')
     WRITE(124,'(A)') '# significant samples only; rel. error vs benchmark nE = ' // TRIM(IntStr(nE_Ref))
     WRITE(124,'(A)') '# units of ref: cm^-1 (reactions 1-3), (s cm^3 MeV)^-1 (reaction 4)'
     WRITE(124,'(A,*(I11))') '# row lep reac corr Enu[MeV] T[MeV] ref   err(nE) for nE =', nE_List
@@ -504,7 +504,7 @@ CONTAINS
           EnuA(EnuOf(j)), Thermo(1,PointOf(j)), Ref(j), ( RelErr( j, nn ), nn = 1, nTest )
     END DO
     CLOSE(124)
-    WRITE(*,'(/,A)') ' Per-sample errors written to AbEm2DConvergence.dat'
+    WRITE(*,'(/,A)') ' Per-sample errors written to EmAb2DConvergence.dat'
 
   END SUBROUTINE WriteSampleFile
 
@@ -552,4 +552,4 @@ CONTAINS
 
   END SUBROUTINE SiftDown
 
-END PROGRAM wlTestAbEm2DConvergence
+END PROGRAM wlTestEmAb2DConvergence

@@ -1,4 +1,4 @@
-PROGRAM wlTestAbEm4DVsGSI
+PROGRAM wlTestEmAb4DVsGSI
 
   ! Compares the weaklib 2D (Opacity_CC_2D) and 4D CUBA (Opacity_CC_4D)
   ! kernels with the original GSI 2D/4D codes. Requires USE_CUBA=TRUE.
@@ -254,6 +254,6 @@ CONTAINS
                    ( a <= 0.0d0 .AND. b > 0.0d0 )
   END FUNCTION SignMismatch
 
-END PROGRAM wlTestAbEm4DVsGSI
+END PROGRAM wlTestEmAb4DVsGSI
 
 
