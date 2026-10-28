@@ -100,7 +100,7 @@ MODULE wlSemiLeptonicIntegration2D_Tail
   USE wlEosConstantsModule, ONLY: pi, Gw_MeV, Vud, hbarc, hbar
   USE wlSemiLeptonicPhysicsModule2D, ONLY: &
     AmpCoeffsType, Calc_AmpCoeffs, Calc_Ampsq, Range_pn, Range_pn_D, FD, &
-    Q0_Window_Envelope, nQuadMax, opacity_unit_factor
+    Q0_Window_Envelope, opacity_unit_factor
   USE wlSemiLeptonicIntegration2D_Momentum, ONLY: &
     E3_Segments, nSegMax
 

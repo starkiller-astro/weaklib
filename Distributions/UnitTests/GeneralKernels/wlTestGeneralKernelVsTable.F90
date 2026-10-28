@@ -107,6 +107,13 @@ PROGRAM wlTestGeneralKernelVsTable
 
   CALL MPI_INIT( ierr )
 
+#if !defined(EOSMODE_3D)
+  ! The opacity table is read with the 3D SFHo EOS (wl-EOS-SFHo-15-25-50.h5);
+  ! with another EOSMODE the read aborts with a plain STOP (exit code 0).
+  WRITE(*,*) 'ERROR: build with EOSMODE=3D (make clobber; make <target> EOSMODE=3D)'
+  ERROR STOP 1
+#endif
+
   ! Eos3DTableName      = "3DEquationOfState.h5"
   Eos3DTableName      = "wl-EOS-SFHo-15-25-50.h5"
   EosComposeTableName = "BaryonsPlusPhotonsPlusLeptonsEOS.h5"

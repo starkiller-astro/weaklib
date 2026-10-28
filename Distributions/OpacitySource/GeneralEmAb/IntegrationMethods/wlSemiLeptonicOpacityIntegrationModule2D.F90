@@ -18,7 +18,8 @@
 !             Maps physical inputs (Mul, Mun, Mup, ...) to the internal
 !             particle-2/3/4 convention, computes the p2 range
 !             (Range_pn / Range_pn_D) and its kink-free outer segments
-!             (P2_Segments, at most nSeg2Max), the per-call amplitude
+!             (P2_Segments: thresholds and the nucleon-2 Fermi edge, at
+!             most nSeg2Max), the per-call amplitude
 !             coefficients (Calc_AmpCoeffs) and the constant prefactor.
 !             The inner (p3) rule is the momentum rule precomputed by
 !             InitOpacity_CC_2D (x3M_CC2D, wlSemiLeptonicNodes2D), as in
@@ -28,17 +29,19 @@
 !             1..nE2_CC2D (nodes precomputed by InitOpacity_CC_2D). A row
 !             holds that node in
 !             every outer segment: E2, weight, f2 occupation, the E3
-!             window (Ebounds / Ebounds_D) and its kink-free inner
-!             segments (E3_Segments). The (outer, inner) segment pairs
-!             with a non-empty window are packed in summation order.
+!             window (Ebounds / Ebounds_D) and its kink- and edge-free
+!             inner segments (E3_Segments_Fermi). The (outer, inner)
+!             segment pairs with a non-empty window are packed in
+!             summation order.
 !    phase 2  CC2D_NodeKernel  : once per (row, node iE3),
-!             iE3 = 1..nE3Max, where this module's nE3Max =
-!             nSeg2Max*nSegMax*nE3Seg (packed segment pair (iE3-1)/nE3+1,
-!             inner node MOD(iE3-1,nE3)+1 with nE3 = CD%nE3 <= nE3Seg;
-!             nodes beyond the used pairs return 0, so the loop length
-!             is fixed and is the maximum for any inner rule). NOTE:
-!             this nE3Max is the row length and differs from the inner
-!             nE3Max of wlSemiLeptonicIntegration2D_Momentum.
+!             iE3 = 1..RD%nPair*CD%nE3 (packed segment pair
+!             (iE3-1)/nE3+1, inner node MOD(iE3-1,nE3)+1 with nE3 =
+!             CD%nE3 <= nE3Seg). Nodes beyond the used pairs return 0, so
+!             a fixed loop length nE3Max = nSeg2Max*nSegMaxF*nE3Seg (the
+!             upper bound for any row and inner rule) gives the same sum;
+!             it is long (336), so prefer the row's nPair*nE3. NOTE: this
+!             nE3Max differs from the inner nE3Max of
+!             wlSemiLeptonicIntegration2D_Momentum.
 !             Amplitude x occupations x weights; returns the raw
 !             integrand contribution. Accumulate over all nodes and
 !             finish with CC2D_ApplyPrefactor (constant factors + sign).
@@ -53,7 +56,7 @@
 !      DO iE2 = 1, nE2_CC2D      ! or: hoist RowSetup into its own kernel
 !        CALL CC2D_RowSetup(CD, iE2, RD)
 !        !$OMP SIMD REDUCTION(+:tot) PRIVATE(res)
-!        DO iE3 = 1, nE3Max
+!        DO iE3 = 1, RD%nPair*CD%nE3
 !          CALL CC2D_NodeKernel(CD, RD, iE3, res)
 !          tot = tot + res
 !        END DO
@@ -82,7 +85,7 @@ MODULE wlSemiLeptonicOpacityIntegrationModule2D
     Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD, gauleg, &
     opacity_unit_factor
   USE wlSemiLeptonicIntegration2D_Momentum, ONLY: &
-    E2_Node, E3_Segments, E3_Node, P2_Segments, nSegMax, nE3Seg, nSeg2Max, &
+    E2_Node, E3_Segments_Fermi, E3_Node, P2_Segments, nSegMaxF, nE3Seg, nSeg2Max, &
     xE3Seg, wE3Seg
   USE wlSemiLeptonicNodes2D, ONLY: &
     nE2_CC2D, x2_CC2D, w2_CC2D, nE3M_CC2D, x3M_CC2D, w3M_CC2D
@@ -92,7 +95,7 @@ MODULE wlSemiLeptonicOpacityIntegrationModule2D
 
   ! Packed (outer, inner) segment pairs per row, and the per-row length
   ! of the CC2D_NodeKernel loop
-  INTEGER, PARAMETER :: nPairMax = nSeg2Max*nSegMax
+  INTEGER, PARAMETER :: nPairMax = nSeg2Max*nSegMaxF
   INTEGER, PARAMETER :: nE3Max   = nPairMax*nE3Seg
 
   ! ---- phase-0 output: everything fixed for one (zone, Enu, reaction) call
@@ -119,8 +122,9 @@ MODULE wlSemiLeptonicOpacityIntegrationModule2D
     REAL(DP) :: f2(nSeg2Max) = 0.0d0, b2(nSeg2Max) = 0.0d0       ! b2 = 1 - f2
     REAL(DP) :: E3_min(nSeg2Max) = 0.0d0, E3_max(nSeg2Max) = 0.0d0
     INTEGER  :: nSeg(nSeg2Max) = 0                                ! E3 segments
-    REAL(DP) :: p3a(nSegMax,nSeg2Max) = 0.0d0                     ! in p3
-    REAL(DP) :: p3b(nSegMax,nSeg2Max) = 0.0d0
+    REAL(DP) :: p3a(nSegMaxF,nSeg2Max) = 0.0d0                    ! in p3
+    REAL(DP) :: p3b(nSegMaxF,nSeg2Max) = 0.0d0
+    INTEGER  :: iRest(nSegMaxF,nSeg2Max) = 0                      ! at-rest map flag
     INTEGER  :: nPair = 0                                         ! packed pairs:
     INTEGER  :: kPair(nPairMax) = 0, sPair(nPairMax) = 0          ! outer k, inner seg
     LOGICAL  :: HasWindow = .FALSE.
@@ -139,7 +143,7 @@ MODULE wlSemiLeptonicOpacityIntegrationModule2D
 
   PUBLIC :: gauleg     ! re-exported from the physics module
   PUBLIC :: nE2_CC2D   ! number of outer nodes (CC2D_RowSetup loop), set by InitOpacity_CC_2D
-  PUBLIC :: nE3Max   ! per-row loop length for CC2D_NodeKernel (see header)
+  PUBLIC :: nE3Max   ! upper bound of the per-row CC2D_NodeKernel loop (see header)
 
 CONTAINS
 
@@ -227,16 +231,16 @@ SUBROUTINE CC2D_PrepareCall( ReactionIndex, Enu, T, Mul, Mun, Mup, ml, massn, ma
   CD%p2b   = 0.0d0
   IF( CD%HasPhaseSpace ) &
     CALL P2_Segments( MERGE( -1.0d0, 1.0d0, ReactionIndex <= 2 ), Enu, CD%Mass2, CD%Mass3, &
-                      CD%Mass4, CD%U2, CD%U4, p2min, p2max, CD%nSeg2, CD%p2a, CD%p2b )
+                      CD%Mass4, CD%U2, CD%U4, CD%Mu2, p2min, p2max, CD%nSeg2, CD%p2a, CD%p2b )
 
 END SUBROUTINE CC2D_PrepareCall
 
 !-----------------------------------------------------------------------
 !  Optional, after CC2D_PrepareCall: replace the inner (p3) rule by
 !  x3/w3 (nE3 nodes on [0,1], applied in each kink-free inner segment),
-!  as in Opacity_CC_2D_Momentum_Nodes. nE3 outside [1,nE3Seg] keeps the
-!  tabulated nE3Seg-point default. The NodeKernel loop length nE3Max is
-!  unchanged (nodes beyond nPair*nE3 return 0).
+!  as in Opacity_CC_2D_Momentum_Nodes. nE3 outside [1,nE3Seg] is invalid
+!  input and gives zero (as Opacity_CC_2D_Momentum_Nodes): the call is
+!  marked as having no phase space.
 !-----------------------------------------------------------------------
 SUBROUTINE CC2D_SetInnerRule( CD, nE3, x3, w3 )
 
@@ -256,9 +260,7 @@ SUBROUTINE CC2D_SetInnerRule( CD, nE3, x3, w3 )
     CD%x3(1:nE3)  = x3(1:nE3)
     CD%w3(1:nE3)  = w3(1:nE3)
   ELSE
-    CD%nE3 = nE3Seg
-    CD%x3  = xE3Seg
-    CD%w3  = wE3Seg
+    CD%HasPhaseSpace = .FALSE.
   END IF
 
 END SUBROUTINE CC2D_SetInnerRule
@@ -319,6 +321,7 @@ SUBROUTINE CC2D_RowSetup( CD, iE2, RD )
   RD%nSeg      = 0
   RD%p3a       = 0.0d0
   RD%p3b       = 0.0d0
+  RD%iRest     = 0
   RD%nPair     = 0
   RD%kPair     = 0
   RD%sPair     = 0
@@ -345,9 +348,9 @@ SUBROUTINE CC2D_RowSetup( CD, iE2, RD )
     RD%b2(k) = FD( CD%Mu2, E2, CD%T )   ! 1 - f2 without cancellation
     IF( RD%E3_max(k) - RD%E3_min(k) <= 0.0d0 ) CYCLE
 
-    CALL E3_Segments( MERGE( -1.0d0, 1.0d0, CD%ReactionIndex <= 2 ), CD%Enu, E2, P2, &
-                      CD%Mass3, CD%Mass4, CD%U4, RD%E3_min(k), RD%E3_max(k), RD%nSeg(k), &
-                      RD%p3a(:,k), RD%p3b(:,k) )
+    CALL E3_Segments_Fermi( MERGE( -1.0d0, 1.0d0, CD%ReactionIndex <= 2 ), CD%Enu, E2, P2, &
+                            CD%Mass3, CD%Mass4, CD%U4, CD%Mu3, CD%Mu4, RD%E3_min(k), RD%E3_max(k), &
+                            RD%nSeg(k), RD%p3a(:,k), RD%p3b(:,k), RD%iRest(:,k) )
 
     ! Pack the (outer, inner) segment pairs in the summation order of
     ! Integral_2D / Integral_2D_D
@@ -364,11 +367,11 @@ SUBROUTINE CC2D_RowSetup( CD, iE2, RD )
 END SUBROUTINE CC2D_RowSetup
 
 !-----------------------------------------------------------------------
-!  Phase 2: per-node kernel, row node iE3 = 1..nE3Max (this module's
-!  nE3Max: packed segment pair x nE3Seg; node iE3 is decoded with the
-!  inner rule size CD%nE3 <= nE3Seg); returns the raw integrand
-!  contribution (0 for nodes beyond the used pairs). Sum over all nodes
-!  in order, then apply CC2D_ApplyPrefactor.
+!  Phase 2: per-node kernel, row node iE3 = 1..RD%nPair*CD%nE3 (packed
+!  segment pair, decoded with the inner rule size CD%nE3 <= nE3Seg; any
+!  iE3 up to nE3Max is valid and returns 0 beyond the used pairs);
+!  returns the raw integrand contribution. Sum over all nodes in order,
+!  then apply CC2D_ApplyPrefactor.
 !-----------------------------------------------------------------------
 SUBROUTINE CC2D_NodeKernel( CD, RD, iE3, res )
 
@@ -392,7 +395,8 @@ SUBROUTINE CC2D_NodeKernel( CD, RD, iE3, res )
 
   ! Outer segment k; node of its inner segment sPair (E3_Node indexing)
   k = RD%kPair(iPair)
-  CALL E3_Node( RD%p3a(:,k), RD%p3b(:,k), ( RD%sPair(iPair) - 1 )*CD%nE3 + MOD( iE3 - 1, CD%nE3 ) + 1, &
+  CALL E3_Node( RD%p3a(:,k), RD%p3b(:,k), RD%iRest(:,k), &
+                ( RD%sPair(iPair) - 1 )*CD%nE3 + MOD( iE3 - 1, CD%nE3 ) + 1, &
                 CD%nE3, CD%x3, CD%w3, CD%Mass3, E3, wE3 )
   E2 = RD%E2(k)
 
@@ -516,7 +520,7 @@ SUBROUTINE CC2D_Reference( ReactionIndex, Enu, T, Mul, Mun, Mup, ml, massn, mass
   DO iE2 = 1, nE2_CC2D
     CALL CC2D_RowSetup( CD, iE2, RD )
     IF( .NOT. RD%HasWindow ) CYCLE
-    DO iE3 = 1, nE3Max
+    DO iE3 = 1, RD%nPair*CD%nE3
       CALL CC2D_NodeKernel( CD, RD, iE3, res )
       tot = tot + res
     END DO

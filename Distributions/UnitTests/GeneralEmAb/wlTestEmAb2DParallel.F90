@@ -6,6 +6,11 @@ PROGRAM wlTestEmAb2DParallel
   ! wrappers and the collapsed two-phase loop of
   ! wlSemiLeptonicOpacityIntegrationModule2D (the GPU driver of that
   ! method). All of them read the quadrature rules computed once by Init.
+  ! For electrons and muons it checks that the OpenMP, wrapper and
+  ! collapsed results agree with the serial Opacity_CC_2D (relative
+  ! difference |a-b|/max(|a|,|b|) above 1d-8 is reported; the serial,
+  ! OpenMP and wrapper results are expected to be bit-identical, the
+  ! collapsed sum only to round-off since it sums in another order).
 
   USE omp_lib
   USE wlKindModule, ONLY: dp
@@ -29,8 +34,10 @@ PROGRAM wlTestEmAb2DParallel
 
   REAL(DP) :: EnuA(NP)
   REAL(DP) :: xTem, cheml, chemn, chemp, xUn, xUp, massl, xMassn, xMassp
-  INTEGER :: i, j, k, l, nThermoPoints, iE2, iE3
-  LOGICAL, PARAMETER :: DoMuons = .true.
+  INTEGER :: i, j, k, l, nThermoPoints, iE2, iE3, iLep
+  INTEGER :: nBadPar, nBadWrap, nBadColl, nExactPar, nExactWrap
+  REAL(DP), PARAMETER :: RelTol = 1.0d-8
+  CHARACTER(LEN=8) :: LepName
 
   REAL(DP), allocatable :: OpaA_2D(:,:,:,:), OpaA_2D_parallel(:,:,:,:)
   REAL(DP), allocatable :: OpaA_2D_wrapped(:,:,:,:), OpaA_2D_collapsed(:,:,:,:)
@@ -74,18 +81,22 @@ PROGRAM wlTestEmAb2DParallel
   END DO
   CLOSE(123)
 
-  IF (DoMuons) THEN
+  ! Quadrature rules of the momentum method, computed once
+  CALL InitOpacity_CC_2D( nE_2D, iEmAb2D_Momentum )
+
+  DO iLep = 1, 2
+
+  IF (iLep == 2) THEN
     Mul(:) = Mum(:)
     massl = massm
+    LepName = 'muons'
   ELSE
     Mul(:) = Mue(:)
     massl = masse
+    LepName = 'electrons'
   END IF
 
   OpaA_2D = 0.d0
-
-  ! Quadrature rules of the momentum method, computed once
-  CALL InitOpacity_CC_2D( nE_2D, iEmAb2D_Momentum )
 
   CALL SYSTEM_CLOCK(count_start, count_rate=count_rate)
   DO j = 1, nApprox
@@ -224,7 +235,8 @@ PROGRAM wlTestEmAb2DParallel
 
   t_tot = REAL(count_end - count_start) / REAL(count_rate)
 
-   WRITE(*,'(/,A,f10.3)') 'Total wall‑clock time :', t_tot
+   WRITE(*,'(/,2A)')      ' Leptons           : ', TRIM(LepName)
+   WRITE(*,'(A,f10.3)')   'Total wall‑clock time :', t_tot
    WRITE(*,'(A,f10.3)')   ' Serial 2D         :', t_2D_serial
    WRITE(*,'(A,f10.3)')   ' PARALLEL 2D       :', t_2D
    WRITE(*,'(A,f10.3)')   ' PARALLEL 2D wrap  :', t_2D_wrapped
@@ -232,31 +244,35 @@ PROGRAM wlTestEmAb2DParallel
    WRITE(*,'(A,i10)')     ' Threads           :', omp_get_max_threads()
    WRITE(*,'(A,f10.3)')   ' Ratio 2D          :', t_2D_serial/t_2D
 
+  nBadPar = 0; nBadWrap = 0; nBadColl = 0; nExactPar = 0; nExactWrap = 0
   DO j = 1, nApprox
   DO i = 1, nThermoPoints
   DO l = 1, NP
   DO k = 1, nOp
 
-    IF (OpaA_2D(l, i, j, k) .ne. OpaA_2D_wrapped(l, i, j, k)) THEN
-      IF ( ABS(OpaA_2D(l, i, j, k) - OpaA_2D_wrapped(l, i, j, k)) &
-          / OpaA_2D(l, i, j, k) > 1.0d-8 ) THEN
-        WRITE(*,*) l,i,j,'Wrapped wrong'
-        WRITE(*,*) OpaA_2D(l, i, j, k), OpaA_2D_wrapped(l, i, j, k), &
-                  OpaA_2D_wrapped(l, i, j, k) / OpaA_2D(l, i, j, k)
-      ENDIF
+    IF (OpaA_2D(l, i, j, k) == OpaA_2D_parallel(l, i, j, k)) nExactPar = nExactPar + 1
+    IF (OpaA_2D(l, i, j, k) == OpaA_2D_wrapped(l, i, j, k))  nExactWrap = nExactWrap + 1
+    IF (RelDiff(OpaA_2D(l, i, j, k), OpaA_2D_parallel(l, i, j, k)) > RelTol) THEN
+      nBadPar = nBadPar + 1
+      WRITE(*,*) l,i,j,k,'Parallel wrong', OpaA_2D(l, i, j, k), OpaA_2D_parallel(l, i, j, k)
     ENDIF
-    IF (OpaA_2D(l, i, j, k) .ne. OpaA_2D_collapsed(l, i, j, k)) THEN
-      IF ( ABS(OpaA_2D(l, i, j, k) - OpaA_2D_collapsed(l, i, j, k)) &
-          / OpaA_2D(l, i, j, k) > 1.0d-8 ) THEN
-        WRITE(*,*) l,i,j,'Collapsed wrong'
-        WRITE(*,*) OpaA_2D(l, i, j, k), OpaA_2D_collapsed(l, i, j, k), &
-                  OpaA_2D_collapsed(l, i, j, k) / OpaA_2D(l, i, j, k)
-      ENDIF
+    IF (RelDiff(OpaA_2D(l, i, j, k), OpaA_2D_wrapped(l, i, j, k)) > RelTol) THEN
+      nBadWrap = nBadWrap + 1
+      WRITE(*,*) l,i,j,k,'Wrapped wrong', OpaA_2D(l, i, j, k), OpaA_2D_wrapped(l, i, j, k)
+    ENDIF
+    IF (RelDiff(OpaA_2D(l, i, j, k), OpaA_2D_collapsed(l, i, j, k)) > RelTol) THEN
+      nBadColl = nBadColl + 1
+      WRITE(*,*) l,i,j,k,'Collapsed wrong', OpaA_2D(l, i, j, k), OpaA_2D_collapsed(l, i, j, k)
     ENDIF
   ENDDO
   ENDDO
   ENDDO
   ENDDO
+  WRITE(*,'(A,I9)')      ' Samples           :', NP*nThermoPoints*nApprox*nOp
+  WRITE(*,'(A,3I9)')     ' Mismatches > tol  (parallel, wrapped, collapsed):', nBadPar, nBadWrap, nBadColl
+  WRITE(*,'(A,2I9)')     ' Bit-identical     (parallel, wrapped)           :', nExactPar, nExactWrap
+
+  END DO   ! iLep
 
   !-------------------------------------------------------------
   ! Persist results
@@ -269,6 +285,18 @@ PROGRAM wlTestEmAb2DParallel
   DEALLOCATE(Store2DIntegral)
   CALL FinalizeOpacity_CC_2D()
   DEALLOCATE(T, Rho, Ye, Ym, Mue, Mum, Mul, Mun, Mup, Un, Up, EffMassn, EffMassp)
+
+CONTAINS
+
+  ! |a-b|/max(|a|,|b|), 0 if both are 0
+  REAL(DP) FUNCTION RelDiff( a, b )
+    REAL(DP), INTENT(IN) :: a, b
+    IF( MAX( ABS(a), ABS(b) ) > 0.0d0 ) THEN
+      RelDiff = ABS( a - b )/MAX( ABS(a), ABS(b) )
+    ELSE
+      RelDiff = 0.0d0
+    END IF
+  END FUNCTION RelDiff
 
 END PROGRAM wlTestEmAb2DParallel
 

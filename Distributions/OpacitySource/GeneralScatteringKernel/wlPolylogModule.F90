@@ -17,8 +17,9 @@ MODULE wlPolylogModule
 
   ! Order of the Bernoulli expansion of S_2 and S_3 in powers of y = S_1(x).
   ! For |y| <= ln(2) (always the case with the z <= 0 / z > 0 split below),
-  ! N_POLY = 18 gives a max. relative error of ~4e-16 for F_0, F_1, F_2 over
-  ! z in [-50,50] (checked against mpmath); N_POLY = 8 gave ~7.5e-10.
+  ! N_POLY = 18 makes the series error ~4e-16 (checked against mpmath); the
+  ! total error of F_0, F_1, F_2 is ~1e-12 near |z| ~ 9, limited by
+  ! -LOG(1-x) in calc_S1 for |x| > 1e-4. N_POLY = 8 gave ~7.5e-10.
   INTEGER, PARAMETER :: N_POLY = 18
 
   ! a_j = B_j/(j+1)! and c_j = C_3(j)/(j+1)! (Eqs. 8.9 - 8.12 of the thesis,

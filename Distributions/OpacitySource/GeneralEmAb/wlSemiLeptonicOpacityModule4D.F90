@@ -2,9 +2,9 @@
 !!! Authors: Codes wirtten by Gang Guo
 !!! neutrino CC opacity is given by 4D integrals using CUBA library
 !!! processes to be considered in this routine
-!!! opt=1: v + n -> e- + p  (oapcity in 1/km)
-!!! opt=2: vb + p -> e+ + n (opacity in 1/km)
-!!! opt=3: vb + p + e- -> n (opacity in 1/km)
+!!! opt=1: v + n -> e- + p  (opacity in 1/cm; hbarc in MeV cm)
+!!! opt=2: vb + p -> e+ + n (opacity in 1/cm)
+!!! opt=3: vb + p + e- -> n (opacity in 1/cm)
 !!! opt=4: n -> vb + e- + p [emissivity in v/(s cm^3 MeV)]
 
 !!! globle modules for cuba high dimension integrals
@@ -116,7 +116,7 @@ MODULE wlSemiLeptonicOpacityModule4D
 ! relativsitic disperstion relation for nucleons,
 ! En=SQRT(p^2+neutron_mass^2)+Un
 ! Outputs:
-! (7) OpaA(NP): opacities in km^-1; for neutron decay, emissivities
+! (7) OpaA(NP): opacities in cm^-1; for neutron decay, emissivities
 ! in (s cm^3 MeV)^-1
 !     **** blocking factor of final state neutrinos in neutron decay
 !     is not considered ****

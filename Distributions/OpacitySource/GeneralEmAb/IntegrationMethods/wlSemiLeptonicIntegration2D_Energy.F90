@@ -29,7 +29,7 @@ MODULE wlSemiLeptonicIntegration2D_Energy
   USE wlSemiLeptonicPhysicsModule2D, ONLY: &
    AmpCoeffsType, Calc_AmpCoeffs, Calc_Ampsq, &
    Range_pn, Range_pn_D, Ebounds, Ebounds_D, FD, &
-   nQuadMax, opacity_unit_factor
+   opacity_unit_factor
 
   IMPLICIT NONE
   PRIVATE

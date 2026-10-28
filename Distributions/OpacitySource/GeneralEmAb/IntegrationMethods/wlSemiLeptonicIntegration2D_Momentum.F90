@@ -3,28 +3,35 @@
 !
 !  Momentum integration of the semi-leptonic CC 2D rates: outer integral
 !  in the nucleon momentum p2, split at the two-body thresholds of the
-!  lepton window (P2_Segments); inner integral in the lepton momentum p3,
-!  split at the kinks of the angle-integrated |M|^2 (E3_Segments). Both
-!  variable changes remove SQRT endpoints of the integrand in energy, so
+!  lepton window and at the nucleon-2 Fermi edge (P2_Segments); inner
+!  integral in the lepton momentum p3, split at the kinks of the
+!  angle-integrated |M|^2 and at the lepton and nucleon-4 Fermi edges
+!  (E3_Segments_Fermi), with a quadratic map where nucleon 4 is at rest.
+!  Both variable changes remove SQRT endpoints of the integrand in
+!  energy, and the Fermi-edge splits keep it smooth for T << mu, so
 !  Gauss-Legendre converges much faster than in the energy method.
 !  Physics: wlSemiLeptonicPhysicsModule2D. Thermal cutoff: Tfac.
 !
 !!! nE: the single resolution parameter. It is the No. of Gauss-Legendre
-!!! nodes per segment of the outer (nucleon momentum p2) integral; the p2
-!!! range is split at the two-body thresholds of the E3 window
+!!! nodes per segment of the outer (nucleon momentum p2) integral
 !!! (P2_Segments, at most nSeg2Max segments, nE nodes each). The inner
-!!! (lepton) integral is split at the kinks of the angle-integrated |M|^2
-!!! and uses Inner_Count(nE) = MAX(nE3Min, MIN(nE3Seg, nE/4)) nodes per
-!!! segment (in p3), see Inner_Rule. Opacity_CC_2D_Momentum_Nodes takes both rules
-!!! explicitly (inner: 1..nE3Seg nodes).
-!!! Accuracy (corrections 0-2, ThermoConditions.dat, 1-300 MeV, muons;
-!!! error relative to the species' total opacity, species with total
-!!! opacity < 1e-10 cm^-1 ignored), against a Tfac-free reference:
-!!!   nE = 20: <~0.7% below E = max(mu_nu,0) + 8T,  nE = 24: <~0.7%,
-!!!   nE = 32: <~0.03%,  nE = 40: <~0.01%,  nE >= 48: <~0.005%
-!!! (strict pointwise max. rel. error at nE >= 48: ~5e-5, the Tfac floor).
-!!! nE < 20 is not recommended. Correction 3 is limited to a few % above
-!!! ~170 MeV by the discontinuous form-factor term, independently of nE.
+!!! (lepton) integral uses Inner_Rule(nE) = MAX(nE3Min, MIN(nE3Seg, nE/2))
+!!! nodes per segment (in p3). Opacity_CC_2D_Momentum_Nodes takes both
+!!! rules explicitly (inner: 1..nE3Seg nodes).
+!!! Accuracy: max. pointwise rel. error, corrections 0-2, e and mu,
+!!! reactions 1-4, 1-300 MeV, samples with kappa >= 1e-10 cm^-1 (for the
+!!! emissivity: kappa of inverse decay >= 1e-10 cm^-1), against TAIL nE=24
+!!! (ThermoConditions.dat) and ENERGY 768x768 (the same states with T
+!!! scaled by 0.5, 0.25, 0.1, T >= 1 MeV):
+!!!                  nE = 12    16       20       24       32
+!!!   ThermoCond.         4.5e-3  4.3e-4   1.0e-4   5.0e-5   5.0e-5
+!!!   low T, reac 1-3     2.7e-2  4.2e-3   1.3e-3   6.0e-4   5.9e-4
+!!!   low T, reac 4       1.0e-1  5.6e-2   2.5e-2   4.2e-3   1.2e-3
+!!! (the low-T emissivity errors are at E ~ 1 MeV, T < 2 MeV). nE = 16 is
+!!! the fast choice, nE = 24 the accurate one. The ~5e-5 floor is the
+!!! inner rule (nE3Seg = 12 nodes), not Tfac (Tfac = 150 gives the same).
+!!! Correction 3 is limited to a few % above ~150 MeV by the
+!!! discontinuous form-factor term, independently of nE.
 !=======================================================================
 MODULE wlSemiLeptonicIntegration2D_Momentum
 
@@ -38,19 +45,29 @@ MODULE wlSemiLeptonicIntegration2D_Momentum
   IMPLICIT NONE
   PRIVATE
 
+  ! Fermi-edge splits. The integral is split at the Fermi edge of every
+  ! occupation factor, so that no segment contains a sharp edge when
+  ! T << mu: outer integral at E2 = Mu2 (P2_Segments), inner integral at
+  ! E3 = Mu3 and E4 = Mu4 (E3_Segments_Fermi). Extra splits at
+  ! mu +/- 3T were tested: more accurate at fixed nodes, but ~1.8x the
+  ! cost per node and less accurate at equal cost down to ~3e-4.
+
   ! Inner (lepton) quadrature. At fixed E2 the E3 window is split at the
-  ! kinks of the angle-integrated |M|^2 (E3_Segments: at most 4 kinks, so
-  ! at most nSegMax segments) and each segment is integrated in p3 with a
+  ! kinks of the angle-integrated |M|^2 (at most 4 kinks; E3_Segments,
+  ! at most nSegMax segments, also used by the Tail method) and, for this
+  ! method, at the lepton and final-nucleon Fermi edges (E3_Segments_Fermi,
+  ! at most nSegMaxF segments). Each segment is integrated in p3 with a
   ! Gauss-Legendre rule on [0,1] of at most nE3Seg nodes, passed down to
   ! Integral_2D(_D) / E3_Node as (nE3, x3, w3): Opacity_CC_2D passes
   ! Inner_Rule(nE), precomputed once by InitOpacity_CC_2D, and
   ! Opacity_CC_2D_Momentum_Nodes accepts any rule with 1 <= nE3 <= nE3Seg
-  ! nodes. Loops over the inner nodes have the fixed length nE3Max; nodes
-  ! of unused segments contribute nothing.
-  INTEGER, PARAMETER :: nE3Seg  = 12
-  INTEGER, PARAMETER :: nE3Min  = 6    ! fewest inner nodes used by Inner_Rule
-  INTEGER, PARAMETER :: nSegMax = 5
-  INTEGER, PARAMETER :: nE3Max  = nSegMax*nE3Seg
+  ! nodes. Loops over the inner nodes run over the nSeg*nE3 used nodes;
+  ! nE3Max is their upper bound.
+  INTEGER, PARAMETER :: nE3Seg   = 12
+  INTEGER, PARAMETER :: nE3Min   = 8    ! fewest inner nodes used by Inner_Rule
+  INTEGER, PARAMETER :: nSegMax  = 5
+  INTEGER, PARAMETER :: nSegMaxF = nSegMax + 2
+  INTEGER, PARAMETER :: nE3Max   = nSegMaxF*nE3Seg
   REAL(DP), PARAMETER :: tGL12(6) = (/ &
     0.1252334085114689154724414d0, 0.3678314989981801937526915d0, &
     0.5873179542866174472967024d0, 0.7699026741943046870368938d0, &
@@ -65,30 +82,34 @@ MODULE wlSemiLeptonicIntegration2D_Momentum
     0.5d0*wGL12(6:1:-1), 0.5d0*wGL12(1:6) /)
 
   ! Outer (p2) quadrature. [p2min, p2max] is split at the interior
-  ! two-body thresholds of the E3 window (P2_Segments: at most nKinkMax
-  ! points, so at most nSeg2Max segments) and each segment gets the nE
-  ! caller nodes. Over the thermo/energy grid of the unit tests at most 2
-  ! interior points occur; further points (never seen) would be dropped,
-  ! which only costs accuracy.
+  ! two-body thresholds of the E3 window (at most nKinkMax points) and at
+  ! the nucleon-2 Fermi edge, so at most nSeg2Max segments
+  ! (P2_Segments), and each segment gets the nE caller nodes. Over the
+  ! thermo/energy grid of the unit tests at most 2 interior thresholds
+  ! occur; further ones (never seen) would be dropped, which only costs
+  ! accuracy.
   INTEGER, PARAMETER :: nKinkMax = 2
-  INTEGER, PARAMETER :: nSeg2Max = nKinkMax + 1
+  INTEGER, PARAMETER :: nSeg2Max = nKinkMax + 2
 
   PUBLIC :: Opacity_CC_2D_Momentum_Nodes
   PUBLIC :: Inner_Rule
   ! Building blocks for the two-phase driver and the Tail method
-  PUBLIC :: E2_Node, E3_Segments, E3_Node, P2_Segments
+  PUBLIC :: E2_Node, E3_Segments, E3_Segments_Fermi, E3_Node, P2_Segments
   PUBLIC :: nKinkMax, nSeg2Max
-  PUBLIC :: nE3Seg, nE3Min, nSegMax, nE3Max, xE3Seg, wE3Seg
+  PUBLIC :: nE3Seg, nE3Min, nSegMax, nSegMaxF, nE3Max, xE3Seg, wE3Seg
 
 CONTAINS
 
 !=======================================================================
 !  Inner_Rule: inner (p3) Gauss-Legendre rule on [0,1] that goes with
-!  the outer resolution nE: nE3 = MAX(nE3Min, MIN(nE3Seg, nE/4)) nodes
-!  per kink-free segment (the tabulated xE3Seg/wE3Seg for nE3 = nE3Seg,
-!  gauleg otherwise). The mapping was calibrated on muonic reactions:
-!  fewer than 6 inner nodes fail at any nE, and the inner and outer
-!  errors stay balanced along nE3 ~ nE/4.
+!  the outer resolution nE: nE3 = MAX(nE3Min, MIN(nE3Seg, nE/2)) nodes
+!  per inner segment (the tabulated xE3Seg/wE3Seg for nE3 = nE3Seg,
+!  gauleg otherwise). Calibrated on ThermoConditions.dat against TAIL24:
+!  the inner error alone (corrections 0-2, max) is 1.4e-4 at nE3 = 8,
+!  6.5e-5 at 10 and 3.4e-5 at 12, which balances the outer error at
+!  nE = 16, 20, 24. nE3Min = 8 also keeps the muonic inverse decay /
+!  decay (wide E3 windows in hot dense matter, f3 ~ exp over ~45 T) at
+!  ~1e-3; with 6 nodes they reach 1.7e-2 at any nE.
 !=======================================================================
 SUBROUTINE Inner_Rule( nE, nE3, x3, w3 )
 
@@ -101,7 +122,7 @@ SUBROUTINE Inner_Rule( nE, nE3, x3, w3 )
   !$ACC ROUTINE SEQ
 #endif
 
-  nE3 = MAX( nE3Min, MIN( nE3Seg, nE/4 ) )
+  nE3 = MAX( nE3Min, MIN( nE3Seg, nE/2 ) )
   IF( nE3 == nE3Seg ) THEN
     x3 = xE3Seg
     w3 = wE3Seg
@@ -119,11 +140,11 @@ SUBROUTINE Opacity_CC_2D_Momentum_Nodes(WhichCorrection, ReactionIndex, Enu, Opa
   ! Momentum method with explicit quadrature rules on [0,1] (e.g. from
   ! gauleg) for both integrals:
   !   x2/w2 (nE2): outer p2 rule, applied in each outer segment
-  !   x3/w3 (nE3): inner p3 rule, applied in each kink-free inner
-  !                segment, 1 <= nE3 <= nE3Seg (= 12)
-  ! nE3 outside [1,nE3Seg] falls back to the tabulated nE3Seg-point rule
-  ! (xE3Seg/wE3Seg). Opacity_CC_2D passes the rules precomputed by
-  ! InitOpacity_CC_2D: gauleg(nE) outer, Inner_Rule(nE) inner.
+  !   x3/w3 (nE3): inner p3 rule, applied in each inner segment,
+  !                1 <= nE3 <= nE3Seg (= 12)
+  ! nE3 outside [1,nE3Seg] is invalid input and returns zero.
+  ! Opacity_CC_2D passes the rules precomputed by InitOpacity_CC_2D:
+  ! gauleg(nE) outer, Inner_Rule(nE) inner.
   INTEGER , INTENT(IN)  :: ReactionIndex, WhichCorrection, nE2, nE3
   REAL(DP), INTENT(IN)  :: Enu,xT,xMul,xMun,xMup,xml,xmn,xmp,xUn,xUp
   REAL(DP), INTENT(IN)  :: x2(nE2), w2(nE2), x3(nE3), w3(nE3)
@@ -135,8 +156,13 @@ SUBROUTINE Opacity_CC_2D_Momentum_Nodes(WhichCorrection, ReactionIndex, Enu, Opa
 #endif
 
   REAL(DP) :: anti
-  INTEGER  :: IncludeCorrections(3), nE3use
-  REAL(DP) :: x3use(nE3Seg), w3use(nE3Seg)
+  INTEGER  :: IncludeCorrections(3)
+
+  ! Invalid inner rule: no I/O or STOP in device-callable code; return zero
+  IF( nE3 < 1 .OR. nE3 > nE3Seg ) THEN
+    OpaA = 0.0d0
+    RETURN
+  END IF
 
   SELECT CASE(WhichCorrection)
   CASE (0)
@@ -153,33 +179,23 @@ SUBROUTINE Opacity_CC_2D_Momentum_Nodes(WhichCorrection, ReactionIndex, Enu, Opa
      RETURN
   END SELECT
 
-  IF( nE3 >= 1 .AND. nE3 <= nE3Seg ) THEN
-    nE3use = nE3
-    x3use(1:nE3) = x3(1:nE3)
-    w3use(1:nE3) = w3(1:nE3)
-  ELSE
-    nE3use = nE3Seg
-    x3use  = xE3Seg
-    w3use  = wE3Seg
-  END IF
-
   SELECT CASE(ReactionIndex)
   CASE (1)
     anti = 1.0d0
     CALL Integral_2D(Enu, xT, xmn, xml, xmp, xUn, xUp, xMun, xMul, xMup, anti, 1, IncludeCorrections, &
-                     nE2, x2, w2, nE3use, x3use, w3use, OpaA)
+                     nE2, x2, w2, nE3, x3, w3, OpaA)
   CASE (2)
     anti = -1.0d0
     CALL Integral_2D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, -xMul, xMun, anti, 2, IncludeCorrections, &
-                     nE2, x2, w2, nE3use, x3use, w3use, OpaA)
+                     nE2, x2, w2, nE3, x3, w3, OpaA)
   CASE (3)
     anti = -1.0d0
     CALL Integral_2D_D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, xMul, xMun, anti, 3, IncludeCorrections, &
-                       nE2, x2, w2, nE3use, x3use, w3use, OpaA)
+                       nE2, x2, w2, nE3, x3, w3, OpaA)
   CASE (4)
     anti = -1.0d0
     CALL Integral_2D_D(Enu, xT, xmp, xml, xmn, xUp, xUn, xMup, xMul, xMun, anti, 4, IncludeCorrections, &
-                       nE2, x2, w2, nE3use, x3use, w3use, OpaA)
+                       nE2, x2, w2, nE3, x3, w3, OpaA)
   CASE DEFAULT
     OpaA = 0.0d0
   END SELECT
@@ -207,7 +223,8 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
   REAL(DP) :: xamp, E2, E3, E4
   REAL(DP) :: xf2,xb3,xb4   ! f2, 1-f3, 1-f4
   REAL(DP) :: p2min, p2max
-  REAL(DP) :: p3a(nSegMax), p3b(nSegMax)
+  REAL(DP) :: p3a(nSegMaxF), p3b(nSegMaxF)
+  INTEGER  :: iRest(nSegMaxF)
   REAL(DP) :: p2a(nSeg2Max), p2b(nSeg2Max)
   INTEGER  :: k, nSeg2
   TYPE(AmpCoeffsType) :: Coeffs
@@ -217,7 +234,7 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
   IF( p2min > p2max ) RETURN
 
   CALL Calc_AmpCoeffs( Mass2, Mass4, U2, U4, anti, IncludeCorrections, Coeffs )
-  CALL P2_Segments( -1.0d0, Enu, Mass2, Mass3, Mass4, U2, U4, p2min, p2max, nSeg2, p2a, p2b )
+  CALL P2_Segments( -1.0d0, Enu, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max, nSeg2, p2a, p2b )
 
   ! Loop over incoming particle (i.e. particle 2), integrated in p2:
   ! node i of each kink-free segment k (this order is reproduced by
@@ -230,10 +247,11 @@ SUBROUTINE Integral_2D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, anti,
     E3_max = Enu - xq0_min
     IF( E3_max - E3_min <= 0.0d0 ) CYCLE   ! empty kinematic window at this E2
     xf2 = FD(E2, Mu2, T)
-    CALL E3_Segments( -1.0d0, Enu, E2, P2, Mass3, Mass4, U4, E3_min, E3_max, nSeg, p3a, p3b )
-  ! Loop over outgoing particle (i.e. particle 3): kink-free segments in p3
+    CALL E3_Segments_Fermi( -1.0d0, Enu, E2, P2, Mass3, Mass4, U4, Mu3, Mu4, E3_min, E3_max, &
+                            nSeg, p3a, p3b, iRest )
+  ! Loop over outgoing particle (i.e. particle 3): kink- and edge-free segments in p3
     DO j=1, nSeg*nE3
-      CALL E3_Node( p3a, p3b, j, nE3, x3, w3, Mass3, E3, wE3 )
+      CALL E3_Node( p3a, p3b, iRest, j, nE3, x3, w3, Mass3, E3, wE3 )
       E4 = Enu + E2 - E3
       CALL Calc_ampsq( Enu, E2, E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
       xb3 = FD(Mu3, E3, T)
@@ -272,7 +290,8 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   REAL(DP) :: E2, E3, E4
   REAL(DP) :: xf2,xf3,xf4,xb2,xb3,xb4   ! f_k and 1-f_k
   REAL(DP) :: p2min, p2max, p4max
-  REAL(DP) :: p3a(nSegMax), p3b(nSegMax)
+  REAL(DP) :: p3a(nSegMaxF), p3b(nSegMaxF)
+  INTEGER  :: iRest(nSegMaxF)
   REAL(DP) :: p2a(nSeg2Max), p2b(nSeg2Max)
   INTEGER  :: k, nSeg2
   TYPE(AmpCoeffsType) :: Coeffs
@@ -282,7 +301,7 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
   IF( p2min > p2max ) RETURN
 
   CALL Calc_AmpCoeffs( Mass2, Mass4, U2, U4, anti, IncludeCorrections, Coeffs )
-  CALL P2_Segments( +1.0d0, Enu, Mass2, Mass3, Mass4, U2, U4, p2min, p2max, nSeg2, p2a, p2b )
+  CALL P2_Segments( +1.0d0, Enu, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max, nSeg2, p2a, p2b )
 
   ! Loop over incoming particle (i.e. particle 2), integrated in p2:
   ! node i of each kink-free segment k (this order is reproduced by
@@ -296,10 +315,11 @@ SUBROUTINE Integral_2D_D(Enu, T, Mass2, Mass3, Mass4, U2, U4, Mu2, Mu3, Mu4, ant
     IF( E3_max - E3_min <= 0.0d0 ) CYCLE   ! empty kinematic window at this E2
     xf2 = FD(E2, Mu2, T)
     xb2 = FD(Mu2, E2, T)
-    CALL E3_Segments( +1.0d0, Enu, E2, P2, Mass3, Mass4, U4, E3_min, E3_max, nSeg, p3a, p3b )
-  ! Loop over outgoing particle (i.e. particle 3): kink-free segments in p3
+    CALL E3_Segments_Fermi( +1.0d0, Enu, E2, P2, Mass3, Mass4, U4, Mu3, Mu4, E3_min, E3_max, &
+                            nSeg, p3a, p3b, iRest )
+  ! Loop over outgoing particle (i.e. particle 3): kink- and edge-free segments in p3
     DO j=1, nSeg*nE3
-      CALL E3_Node( p3a, p3b, j, nE3, x3, w3, Mass3, E3, wE3 )
+      CALL E3_Node( p3a, p3b, iRest, j, nE3, x3, w3, Mass3, E3, wE3 )
       E4 = Enu + E3 + E2
       CALL Calc_ampsq(Enu, E2, -E3, Mass2, Mass3, Mass4, U2, U4, ReactionIndex, IncludeCorrections, Coeffs, xamp)
       IF(ReactionIndex.eq.3) THEN ! inverse decay
@@ -371,13 +391,16 @@ END SUBROUTINE E2_Node
 !    <=>  2*a*E2f = g + 2*b*Enu*P2,   g = mu**2 - a**2 - Mass2**2 + Enu**2,
 !  a quadratic in P2 after squaring; the roots are returned
 !  cancellation-free and the squared-in ones (a*(g+2*b*Enu*P2) <= 0)
-!  rejected. Other regime changes (at-rest candidates, P2 = Enu, the
-!  thermal q0 caps) were tested and gain less than their cost.
+!  rejected. The window is also split at the Fermi edge of nucleon 2,
+!  E2 = Mu2 (in degenerate matter the sharp f2 edge otherwise limits the
+!  outer convergence). Other regime changes
+!  (at-rest candidates, P2 = Enu, the thermal q0 caps) were tested and
+!  gain less than their cost.
 !  Returns nSeg2 >= 1 segments [p2a, p2b] that tile [p2min, p2max].
 !=======================================================================
-SUBROUTINE P2_Segments( s3, Enu, Mass2, Mass3, Mass4, U2, U4, p2min, p2max, nSeg2, p2a, p2b )
+SUBROUTINE P2_Segments( s3, Enu, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max, nSeg2, p2a, p2b )
 
-  REAL(DP), INTENT(IN)  :: s3, Enu, Mass2, Mass3, Mass4, U2, U4, p2min, p2max
+  REAL(DP), INTENT(IN)  :: s3, Enu, Mass2, Mass3, Mass4, U2, U4, Mu2, p2min, p2max
   INTEGER , INTENT(OUT) :: nSeg2
   REAL(DP), INTENT(OUT) :: p2a(nSeg2Max), p2b(nSeg2Max)
 #if defined(WEAKLIB_OMP_OL)
@@ -386,7 +409,7 @@ SUBROUTINE P2_Segments( s3, Enu, Mass2, Mass3, Mass4, U2, U4, p2min, p2max, nSeg
   !$ACC ROUTINE SEQ
 #endif
 
-  REAL(DP) :: a, g, qa, qb, qc, disc, q, r(2), b, eps, tmp, bp(nKinkMax+2)
+  REAL(DP) :: a, g, qa, qb, qc, disc, q, r(2), b, eps, tmp, e, bp(nSeg2Max+1)
   INTEGER  :: ib, ir, nb, i, j
 
   a   = Enu + U2 - U4
@@ -416,6 +439,15 @@ SUBROUTINE P2_Segments( s3, Enu, Mass2, Mass3, Mass4, U2, U4, p2min, p2max, nSeg
       END IF
     END DO
   END DO
+  ! Fermi edge of nucleon 2 (kinetic + rest energy E2 - U2 = Mu2 - U2)
+  e = Mu2 - U2
+  IF( e > Mass2 ) THEN
+    tmp = SQRT( ( e - Mass2 )*( e + Mass2 ) )
+    IF( tmp > p2min + eps .AND. tmp < p2max - eps ) THEN
+      nb = nb + 1
+      bp(nb) = tmp
+    END IF
+  END IF
   nb = nb + 1
   bp(nb) = p2max
   DO i = 3, nb - 1      ! insertion sort of the interior points
@@ -508,14 +540,104 @@ SUBROUTINE E3_Segments( s3, Enu, E2, P2, Mass3, Mass4, U4, E3_min, E3_max, nSeg,
 END SUBROUTINE E3_Segments
 
 !=======================================================================
-!  E3_Node: inner node j (1..nSeg*nE3) of the segments built by
-!  E3_Segments, for the inner rule x3/w3 (nE3 nodes on [0,1]; the
-!  default is nE3Seg, xE3Seg, wE3Seg): segment (j-1)/nE3+1, node
-!  MOD(j-1,nE3)+1 in p3 (dE3 = p3/E3 dp3).
+!  E3_Segments_Fermi: as E3_Segments (kinks of the angle-integrated
+!  |M|^2), plus splits at the Fermi edges of the lepton, E3 = Mu3, and
+!  of nucleon 4, E4 = Mu4 (E4 = Enu + E2 - E3 for captures, s3 = -1;
+!  Enu + E2 + E3 for decays, s3 = +1).
+!  Also flags the segment ends where nucleon 4 is at rest (P4 = 0, i.e.
+!  E4 = Mass4 + U4 <=> E3 = s3*(Mass4 - W)): there the integrand goes
+!  like SQRT(distance to the end), and E3_Node uses a quadratic map.
+!  iRest = 0: no map, 1: P4 = 0 at the lower end, 2: at the upper end.
+!  Returns nSeg segments as p3 intervals [p3a, p3b].
 !=======================================================================
-SUBROUTINE E3_Node( p3a, p3b, j, nE3, x3, w3, Mass3, E3, wE3 )
+SUBROUTINE E3_Segments_Fermi( s3, Enu, E2, P2, Mass3, Mass4, U4, Mu3, Mu4, E3_min, E3_max, &
+                              nSeg, p3a, p3b, iRest )
 
-  REAL(DP), INTENT(IN)  :: p3a(nSegMax), p3b(nSegMax), Mass3
+  REAL(DP), INTENT(IN)  :: s3, Enu, E2, P2, Mass3, Mass4, U4, Mu3, Mu4, E3_min, E3_max
+  INTEGER , INTENT(OUT) :: nSeg
+  REAL(DP), INTENT(OUT) :: p3a(nSegMaxF), p3b(nSegMaxF)
+  INTEGER , INTENT(OUT) :: iRest(nSegMaxF)
+#if defined(WEAKLIB_OMP_OL)
+  !$OMP DECLARE TARGET
+#elif defined(WEAKLIB_OACC)
+  !$ACC ROUTINE SEQ
+#endif
+
+  REAL(DP) :: W, eps, tmp, E3rest, tolRest, y(2), bp(nSegMaxF+1)
+  INTEGER  :: iP, ir, nRoot, nb, i, j
+  LOGICAL  :: RestA, RestB
+
+  W   = Enu - ( U4 - E2 )
+  eps = 1.0d-9*( E3_max - E3_min )
+
+  ! Breakpoints: window edges plus interior kinks and Fermi edges, sorted
+  nb = 1
+  bp(1) = E3_min
+  DO iP = 1, 2
+    CALL Collinear_Roots( W, MERGE( ABS(Enu-P2), Enu+P2, iP == 1 ), Mass3, Mass4, nRoot, y )
+    DO ir = 1, nRoot
+      IF( y(ir) < Mass4 ) CYCLE
+      tmp = s3*( y(ir) - W )
+      IF( tmp > E3_min + eps .AND. tmp < E3_max - eps ) THEN
+        nb = nb + 1
+        bp(nb) = tmp
+      END IF
+    END DO
+  END DO
+  tmp = Mu3                                  ! lepton edge
+  IF( tmp > E3_min + eps .AND. tmp < E3_max - eps ) THEN
+    nb = nb + 1
+    bp(nb) = tmp
+  END IF
+  tmp = -s3*( Enu + E2 - Mu4 )               ! nucleon-4 edge
+  IF( tmp > E3_min + eps .AND. tmp < E3_max - eps ) THEN
+    nb = nb + 1
+    bp(nb) = tmp
+  END IF
+  nb = nb + 1
+  bp(nb) = E3_max
+  DO i = 3, nb - 1      ! insertion sort of the interior points
+    tmp = bp(i)
+    j   = i - 1
+    DO WHILE( j >= 2 )
+      IF( bp(j) <= tmp ) EXIT
+      bp(j+1) = bp(j)
+      j = j - 1
+    END DO
+    bp(j+1) = tmp
+  END DO
+
+  E3rest  = s3*( Mass4 - W )
+  tolRest = 1.0d-7*( ABS(E3rest) + 1.0d0 )
+  nSeg  = 0
+  p3a   = 0.0d0
+  p3b   = 0.0d0
+  iRest = 0
+  DO i = 1, nb - 1
+    IF( bp(i+1) - bp(i) <= 1.0d-12*( ABS(E3_min) + ABS(E3_max) + 1.0d0 ) ) CYCLE
+    nSeg = nSeg + 1
+    p3a(nSeg) = SQRT( MAX( bp(i  )**2 - Mass3**2, 0.0d0 ) )
+    p3b(nSeg) = SQRT( MAX( bp(i+1)**2 - Mass3**2, 0.0d0 ) )
+    RestA = ABS( bp(i  ) - E3rest ) <= tolRest
+    RestB = ABS( bp(i+1) - E3rest ) <= tolRest
+    IF( RestA .AND. .NOT. RestB ) iRest(nSeg) = 1
+    IF( RestB .AND. .NOT. RestA ) iRest(nSeg) = 2
+  END DO
+
+END SUBROUTINE E3_Segments_Fermi
+
+!=======================================================================
+!  E3_Node: inner node j (1..nSeg*nE3) of the segments built by
+!  E3_Segments_Fermi, for the inner rule x3/w3 (nE3 nodes on [0,1]; the
+!  default is nE3Seg, xE3Seg, wE3Seg): segment (j-1)/nE3+1, node
+!  MOD(j-1,nE3)+1 in p3 (dE3 = p3/E3 dp3). On segments with an at-rest
+!  end (iRest = 1, 2) the node t is mapped to t**2 (1 - (1-t)**2), which
+!  removes the SQRT endpoint of the integrand there.
+!=======================================================================
+SUBROUTINE E3_Node( p3a, p3b, iRest, j, nE3, x3, w3, Mass3, E3, wE3 )
+
+  REAL(DP), INTENT(IN)  :: p3a(nSegMaxF), p3b(nSegMaxF), Mass3
+  INTEGER , INTENT(IN)  :: iRest(nSegMaxF)
   INTEGER , INTENT(IN)  :: j, nE3
   REAL(DP), INTENT(IN)  :: x3(nE3), w3(nE3)
   REAL(DP), INTENT(OUT) :: E3, wE3
@@ -525,14 +647,23 @@ SUBROUTINE E3_Node( p3a, p3b, j, nE3, x3, w3, Mass3, E3, wE3 )
   !$ACC ROUTINE SEQ
 #endif
 
-  REAL(DP) :: P3
+  REAL(DP) :: P3, t, jac
   INTEGER  :: iSeg, iNode
 
   iSeg  = ( j - 1 )/nE3 + 1
   iNode = MOD( j - 1, nE3 ) + 1
-  P3  = p3a(iSeg) + x3(iNode)*( p3b(iSeg) - p3a(iSeg) )
+  t   = x3(iNode)
+  jac = 1.0d0
+  IF( iRest(iSeg) == 1 ) THEN
+    jac = 2.0d0*t
+    t   = t**2
+  ELSE IF( iRest(iSeg) == 2 ) THEN
+    jac = 2.0d0*( 1.0d0 - t )
+    t   = 1.0d0 - ( 1.0d0 - t )**2
+  END IF
+  P3  = p3a(iSeg) + t*( p3b(iSeg) - p3a(iSeg) )
   E3  = SQRT( P3**2 + Mass3**2 )
-  wE3 = w3(iNode)*( p3b(iSeg) - p3a(iSeg) )*P3/E3
+  wE3 = w3(iNode)*jac*( p3b(iSeg) - p3a(iSeg) )*P3/E3
 
 END SUBROUTINE E3_Node
 

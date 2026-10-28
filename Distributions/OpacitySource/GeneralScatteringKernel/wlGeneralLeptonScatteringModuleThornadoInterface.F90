@@ -498,11 +498,8 @@ CONTAINS
     ENDDO
 
     ALLOCATE( ChosenToTrueCaseMap(nDistinctCases) )
-    ! This is needed because in principle you might be needing Cases
-    ! 3,4,5 for example (not sure if this specific combination can actually happend since
-    ! user does not have complete freedom in choosing reactions, but can only
-    ! choose iProcessMin and iProcessMas, cannot choose chunks by skipping reactions
-    ! in between for example). But this part will work regardless
+    ! Needed because the selected processes (a contiguous block, an explicit
+    ! list or a set of groups) may use any subset of the distinct cases.
     DO iCase=1, nDistinctCases
       ChosenToTrueCaseMap(iCase) = unique_cases(iCase)
     ENDDO
@@ -1335,8 +1332,8 @@ CONTAINS
 
     REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
     INTEGER , INTENT(IN)  :: iE1, iE3, iTh
-    ! Indexed compactly by idx = iProcess - iProcessMin + 1, matching Phout
-    ! and CalculateAllRoutIntegrated. Identical to iProcess when iProcessMin = 1.
+    ! Indexed by selection row, matching Phout and CalculateAllRoutIntegrated:
+    ! use ProcessRowIndex(iProcess) to find the row of an absolute process index.
     REAL(DP), INTENT(OUT) :: Rout(nProcessSel)
 
     ! Temporary arrays to hold the distinct R components for this theta

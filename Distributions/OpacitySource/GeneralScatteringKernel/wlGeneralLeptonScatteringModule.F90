@@ -189,6 +189,9 @@ MODULE wlGeneralLeptonScatteringModule
   REAL(DP), PARAMETER :: xi_tol         = 1.0d-8  ! threshold for the xi -> 0 branch
   REAL(DP), PARAMETER :: tfac           = 100.0d0
   REAL(DP), PARAMETER :: MaxExponent    = 100.0d0
+  ! Detailed-balance factors are only capped against EXP overflow: capping
+  ! them at MaxExponent would make Phin/Rin too small by e^(x-100).
+  REAL(DP), PARAMETER :: DetBal_MaxExponent = 700.0d0
   INTEGER, PARAMETER  :: nE3_default    = 32   ! GL points for E3 integral in opacity
   INTEGER, PARAMETER  :: nTheta_default = 16   ! GL points for costheta in opacity
   INTEGER, PARAMETER  :: nPhi_default   = 16   ! GL points for costheta in opacity
@@ -296,15 +299,7 @@ CONTAINS
     !------------------------------------------------------------
     IF (TRIM(nu_in) /= TRIM(nu_out) .OR. TRIM(l_in) /= TRIM(l_out)) THEN
       WRITE(*,*) 'ProcessIndexFromReactionString: non-elastic reaction not mapped: ', TRIM(reac)
-      STOP
-    END IF
-
-    !------------------------------------------------------------
-    ! Then: elastic-only map (1..24)
-    !------------------------------------------------------------
-    IF (TRIM(nu_in) /= TRIM(nu_out) .OR. TRIM(l_in) /= TRIM(l_out)) THEN
-      WRITE(*,*) 'ProcessIndexFromReactionString: non-elastic reaction not mapped: ', TRIM(reac)
-      WRITE(*,*) 'Supported non-elastic 2->2: Guo (a)-(d). Process 29 is 3->1 (not parsed here).'
+      WRITE(*,*) 'Supported non-elastic 2->2: Guo (a)-(d) (25-32); inverse muon decay is 33/34.'
       STOP
     END IF
 
@@ -628,15 +623,14 @@ CONTAINS
   !    xMu_l4      -- l4 relativistic chemical potential [MeV]
   !    m2        -- l2 mass [MeV]
   !    m4        -- l4 mass [MeV]
-  !    ProcessIndex -- 1: particle channel (nu_l2 + l2 -> nu_l4 + l4)
-  !                     2: antiparticle channel (nu_bar_l2 + l2bar -> nu_bar_l4 + l4bar)
-  !                        implemented by negating both chemical potentials
+  !    ProcessIndex -- process index (see ProcessIndexFromReactionString); anti-lepton
+  !                    channels use the negated chemical potentials; 33/34 inverse muon decay
   !
   !  Outputs:
   !    Notice that for some reason Guo 2020 swaps the definitions of R_out and R_in 
   !    compared to Fischer 2020 and Bollig's thesis, so we DO NOT follow Guo's convention here:
-  !    Rout  -- R_out(E1, E3, costheta) [MeV^-4]
-  !    Rin   -- R_in (E1, E3, costheta) [MeV^-4]
+  !    Rout  -- R_out(E1, E3, costheta) [MeV^-2]
+  !    Rin   -- R_in (E1, E3, costheta) [MeV^-2]
   !
   !================================================================================
   SUBROUTINE CalculatePhoutPhin( E1, E3, xT, xMu_l2, xMu_l4, m2, m4, &
@@ -684,10 +678,10 @@ CONTAINS
     Delta_mu = xMu_l2 - xMu_l4
     IF ( ProcessIndex == 33 .OR. ProcessIndex == 34 ) THEN
       ! IMD: Phout is the absorption kernel R_A, Phin the emission kernel R_D (Guo Eq. 21)
-      exponent = MIN( -(E1 + E3 + Delta_mu) / xT, MaxExponent )
+      exponent = MIN( -(E1 + E3 + Delta_mu) / xT, DetBal_MaxExponent )
     ELSE
       ! --- Phin from detailed balance (Guo Eq. 13)
-      exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )
+      exponent = MIN( (E3 - E1 - Delta_mu) / xT, DetBal_MaxExponent )
     END IF
     Phin = Phout * EXP(exponent)
 
@@ -709,11 +703,11 @@ CONTAINS
     IF ( ProcessIndex == 33 .OR. ProcessIndex == 34 ) THEN
       ! --- IMD 3->1: R_A (Guo Eqs. 15-17), Rin = R_D (Guo Eq. 21)
       CALL InverseMuonDecayRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
-      exponent = MIN( -(E1 + E3 + Delta_mu) / xT, MaxExponent )
+      exponent = MIN( -(E1 + E3 + Delta_mu) / xT, DetBal_MaxExponent )
     ELSE
       ! --- compute R_out with f2*(1-f4) factors ---
       CALL GeneralScatteringRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
-      exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )   ! Guo Eq. 13
+      exponent = MIN( (E3 - E1 - Delta_mu) / xT, DetBal_MaxExponent )   ! Guo Eq. 13
     END IF
 
     Rin = Rout * EXP(exponent)   ! Guo Eq. 13
@@ -733,7 +727,7 @@ CONTAINS
     INTEGER  :: iE3, iTheta
     REAL(DP) :: E3_min, E3_max, E3_range
     REAL(DP) :: E3, wE3, cos_theta, wcos_theta
-    REAL(DP) :: Rout, bin_opacity, f_nu3
+    REAL(DP) :: Rout, f_nu3
     REAL(DP), ALLOCATABLE :: xa_E3(:), wa_E3(:)
     REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
     REAL(DP) :: conv_fac, lam1, lam2, lam3
@@ -1009,6 +1003,13 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
+    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+      WRITE(*,*) 'Error: GeneralAngleAveragedOutgoingScattering_Simple does not handle ', &
+                 'inverse muon decay (ProcessIndex 33/34): use GeneralScatteringOpacity ', &
+                 'or InverseMuonDecayOpacity.'
+      STOP
+    END IF
+
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
     ! --- E3 integration limits ---
@@ -1085,6 +1086,12 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
+    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+      WRITE(*,*) 'Error: GeneralAngleAveragedOutgoingScattering_Moments does not handle ', &
+                 'inverse muon decay (ProcessIndex 33/34): use CalculatePhoutPhin.'
+      STOP
+    END IF
+
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
     ! --- E3 integration limits ---
@@ -1137,13 +1144,15 @@ CONTAINS
       ! Store results
       ! Opacity_array(1, iE3) = E3
       ! Opacity_array(2, iE3) = wE3
-      ! Opacity_array(3:2+nMoments, iE3) = Phi_out(0:nMoments-1) with phase space and blocking
+      ! Opacity_array(3:2+nMoments, iE3) = Phi_out(0:nMoments-1) with conv_fac and blocking
       
       Opacity_array(1, iE3) = E3
       Opacity_array(2, iE3) = wE3
       
       DO l = 0, nMoments-1
-        ! Include phase space E3^2, conversion factor, and final state blocking
+        ! Unnormalised moments (int R_out P_l dmu, no (l+1/2)) times conv_fac (incl. the
+        ! 2pi azimuthal factor) and final-state blocking. E3^2*wE3 is NOT included:
+        ! the caller applies it using Opacity_array(1:2,:) = (E3, wE3).
         Opacity_array(3+l, iE3) = Phi_out(l) * conv_fac * (1.0d0 - f_nu3)
       END DO
       
@@ -1285,13 +1294,17 @@ CONTAINS
     Rout = 0.0d0
     mu  = costheta
 
+    ! Inverse decay l2 + nu1 + nu3 -> l4 needs m4 > m2 (k0 below is singular
+    ! for m4 = m2): no phase space otherwise
+    IF (m4 <= m2) RETURN
+
     k0 = (m4 + m2) / (m4 - m2)
 
     ! --- Q = (m4^2 - m2^2)/2 (Guo Eq. 5, generalized) ---
     Q = 0.5d0 * (m4**2 - m2**2)   ! Guo Eq. 5
 
     ! --- Delta (Guo Eq. 17) ---
-    DeltaA = SQRT(MAX(E1**2 + 2.0d0*E1*E3*mu + E3**2, 0.0d0))   ! Guo Eq. 4
+    DeltaA = SQRT(MAX(E1**2 + 2.0d0*E1*E3*mu + E3**2, 0.0d0))   ! Guo Eq. 17
     IF (DeltaA < 1.0d-10) RETURN   ! pathological collinear case
 
     ! --- k (Guo Eq. 5): diverges at forward scattering mu=1 ---
@@ -1307,10 +1320,10 @@ CONTAINS
     ENDIF
 
     ! --- E_minus (Guo Eq. 17): lower and upper kinematic bound on l2 energy ---
-    disc = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - mu)) ! Guo Eq. 4
+    disc = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / (E1 * E3 * (1.0d0 - mu)) ! Guo Eq. 17
     IF (disc < 0.0d0) RETURN
-    E_minus = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) )   ! Guo Eq. 4
-    E_plus  = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) + DeltaA*SQRT(disc) )   ! Guo Eq. 4
+    E_minus = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) )   ! Guo Eq. 17
+    E_plus  = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) + DeltaA*SQRT(disc) )   ! Guo Eq. 17
     E_minus = MAX(E_minus, m2)
     E_plus  = MAX(E_plus, m2)
     IF (E_minus >= E_plus) THEN
@@ -1370,10 +1383,8 @@ CONTAINS
   !    eta4'   = (xMu_l4 - delta) / T             (shifted l4 degeneracy)
   !    F_s(eta, y) = integral_y^inf x^s / (exp(x-eta)+1) dx    (Guo Eqs. 8-10)
   !
-  !  On-shell guard: the l4 particle must satisfy E4 = E2 + delta >= m4.
-  !  This is enforced by raising the lower limit:
-  !    y_eff = max(y, (m4 - delta)/T)  when delta < m4
-  !  so that E2 >= m4 - delta is guaranteed.
+  !  No separate on-shell guard on l4 is needed: the kinematic E_minus already
+  !  implies E4 = E2 + delta >= m4.
   !
   !  Degenerate case xi -> 0 (chemical equilibrium):
   !    lim_{xi->0} [F_s(eta2,y) - F_s(eta4',y)] / (1-exp(-xi))
@@ -1386,7 +1397,6 @@ CONTAINS
   !    xT        -- temperature [MeV]
   !    xMu_l2      -- l2 chemical potential [MeV]
   !    xMu_l4      -- l4 chemical potential [MeV]
-  !    m4        -- l4 mass [MeV] (for on-shell guard)
   !
   !  Outputs:
   !    I0, I1, I2 -- integrals [MeV^1, MeV^2, MeV^3]

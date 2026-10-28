@@ -100,11 +100,12 @@ PROGRAM wlTestFig56Guo
   process_string_Fig5(4) = 'nu_bar_e + e- -> nu_bar_mu + mu-'
 
   process_string_Fig6(1) = 'nu_bar_e + p -> e+ + n'
-  process_string_Fig6(2) = 'nu_bar_e + e- -> nu_bar_e + e-'
-  process_string_Fig6(2) = 'nu_bar_mu + e- -> nu_bar_mu + e-' ! I think they messed up BIG in Guo...
+  ! Guo labels this curve 'nu_bar_e + e- -> nu_bar_e + e-'; we compare it with nu_bar_mu e-
+  ! (suspected mislabel in Guo's Fig. 6)
+  process_string_Fig6(2) = 'nu_bar_mu + e- -> nu_bar_mu + e-'
   process_string_Fig6(3) = 'nu_bar_e + e- + p -> n'
   process_string_Fig6(4) = 'nu_bar_e + e- -> nu_bar_mu + mu-'
-  process_string_Fig6(5) = 'nu_bar_e + e- + nu_mu -> mu-'
+  ! Inverse muon decay (Guo: 'nu_bar_e + e- + nu_mu -> mu-'), written with nu_mu first
   process_string_Fig6(5) = 'nu_mu + e- + nu_bar_e -> mu-'
 
   !--- Write Headers ---

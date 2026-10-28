@@ -10,6 +10,9 @@ USE_OMP_OL ?= FALSE
 USE_OACC   ?= FALSE
 USE_OMP    ?= TRUE
 
-EOSMODE = COMPOSE
+# COMPOSE: wlTestElasticOpacity (reads BaryonsPlusPhotonsPlusLeptonsEOS.h5).
+# wlTestGeneralKernelVsTable(_Interface) need EOSMODE=3D (SFHo EOS):
+#   make clobber; make wlTestGeneralKernelVsTable EOSMODE=3D
+EOSMODE ?= COMPOSE
 
 include ../Makefile_GeneralKernelsTest

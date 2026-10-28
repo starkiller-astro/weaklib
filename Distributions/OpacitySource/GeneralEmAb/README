@@ -32,11 +32,13 @@ to within their quadrature errors)
       the lepton energy E3, nE x nE nodes, i.e. the layout of the original
       GSI routines (Ngrids = 50 there).
   MOMENTUM (default): integration in the nucleon momentum p2 and lepton
-      momentum p3, with both domains split at their kinks/thresholds.
-      nE outer nodes per segment, MAX(6,MIN(12,nE/4)) inner nodes per
-      segment. Fastest at a given accuracy; recommended (muons: nE = 32,
-      better than the GSI code at Ngrids = 50 everywhere and ~3x faster;
-      nE = 24 for speed, ~5x faster).
+      momentum p3, with both domains split at their kinks/thresholds and
+      at the Fermi edges of all three fermions (robust for T << mu).
+      nE outer nodes per segment, MAX(8,MIN(12,nE/2)) inner nodes per
+      segment. Fastest at a given accuracy; recommended nE = 24 (max error
+      5e-5 on ThermoConditions.dat, <~4e-3 down to T = 1 MeV, ~2x faster
+      than the GSI code at Ngrids = 50), nE = 16 for speed (4e-4, ~4.5x
+      faster; at T < 2 MeV up to ~4e-3, emissivity at E ~ 1 MeV ~5%).
   TAIL: kink/Fermi-split segments with a Gauss-Laguerre tail instead of the
       thermal cutoff Tfac; most accurate (reference for the tests), ~3-5x
       the cost of MOMENTUM at equal nE.

@@ -24,7 +24,7 @@ MODULE wlSemiLeptonicPhysicsModule2D
   USE wlKindModule, ONLY: dp
   USE wlEosConstantsModule, ONLY: &
    pi, Gw_MeV, ga, gv, mpi, Vud, mn, mp, &
-   massA, massV, gamma_p, gamma_n, hbarc, hbar
+   massA, massV, gamma_p, gamma_n
 
   IMPLICIT NONE
   PRIVATE
@@ -91,9 +91,11 @@ MODULE wlSemiLeptonicPhysicsModule2D
     REAL(DP) :: cplA2, cplB2, cplC2, cplD2
   END TYPE AmpCoeffsType
 
-  ! Hidden output-unit control for opacity channels
-  ! Default preserves current behavior: km^-1.
-  ! Set .false. to return cm^-1 without changing public API.
+  ! Hidden output-unit control for opacity channels.
+  ! Output is in cm^-1 (hbarc in MeV cm); output_in_km_inverse = .false.
+  ! makes opacity_unit_factor exactly 1. NOTE: the km switch is unused and
+  ! would be wrong if enabled (1/cm -> 1/km needs a factor 1e5, cm_to_km is
+  ! a length conversion), and only the Energy scheme applies it.
   LOGICAL,  PARAMETER :: output_in_km_inverse = .false.
   REAL(DP), PARAMETER :: cm_to_km             = 1.0d-5
   REAL(DP), PARAMETER :: opacity_unit_factor  = MERGE(cm_to_km, 1.0d0, output_in_km_inverse)

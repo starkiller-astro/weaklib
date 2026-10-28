@@ -99,7 +99,6 @@ CONTAINS
 
     ! For absorptivity of neutrinos we have: 
     ! 1 is neutrino, 2 is neutron, 3 is lepton, 4 is proton
-    ! Notice that 
     REAL(DP), INTENT(IN)  :: T, E1
     REAL(DP), INTENT(IN)  :: Mu2, M2, M2_eff, U2, n2
     REAL(DP), INTENT(IN)  :: Mu3, M3
@@ -150,6 +149,10 @@ CONTAINS
     REAL(DP) :: r, u
     IF (ABS(x) < 1.0d-5) THEN
       r = x*(1.0d0 + x*(0.5d0 + x/6.0d0))
+    ELSE IF (x < -40.0d0) THEN
+      r = -1.0d0                    ! EXP(x) < 4e-18: below round-off (and EXP underflows for x < -745)
+    ELSE IF (x > 40.0d0) THEN
+      r = EXP(x)                    ! EXP(x) - 1 = EXP(x) to round-off (Kahan form gives Inf/Inf)
     ELSE
       u = EXP(x)                    ! Kahan: (u-1)*x/LOG(u) keeps full precision
       r = (u - 1.0d0)*x/LOG(u)
@@ -166,7 +169,6 @@ CONTAINS
     ! LOCAL
     REAL(DP) :: small_E, cv, ca, F2
     REAL(DP) :: temp_wm1, temp_wm2, temp_wm3
-    INTEGER  :: iE
 
     ! Now for absorption of neutrinos on neutrons
     small_E = E/mn

@@ -102,7 +102,7 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
                                              Phi1Out_General_numt,   &
                                              Phi1Out_General_numtbar
 
-  INTEGER , PARAMETER :: nL = 1
+  INTEGER , PARAMETER :: nL = 2   ! l = 0 and l = 1 moments are compared below
   ! INTEGER , PARAMETER :: iProcessMin = iProcessMin_Default
   ! INTEGER , PARAMETER :: iProcessMax = iProcessMax_Default
   INTEGER , PARAMETER :: iProcessMin = 1
@@ -120,6 +120,13 @@ PROGRAM wlTestGeneralKernelVsTable_Interface
   INTEGER    :: iProcess_nueep, iProcess_nuebep, iProcess_numep, iProcess_numbep
 
   CALL MPI_INIT( ierr )
+
+#if !defined(EOSMODE_3D)
+  ! The opacity table is read with the 3D SFHo EOS (wl-EOS-SFHo-15-25-50.h5);
+  ! with another EOSMODE the read aborts with a plain STOP (exit code 0).
+  WRITE(*,*) 'ERROR: build with EOSMODE=3D (make clobber; make <target> EOSMODE=3D)'
+  ERROR STOP 1
+#endif
 
   ! Eos3DTableName      = "3DEquationOfState.h5"
   Eos3DTableName      = "wl-EOS-SFHo-15-25-50.h5"

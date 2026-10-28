@@ -22,7 +22,7 @@
 !    iEmAb2D_Energy   = 1  ENERGY, the "standard" GSI-like method
 !                          (outer and inner rule: gauleg(nE))
 !    iEmAb2D_Momentum = 2  MOMENTUM (default): outer gauleg(nE), inner
-!                          Inner_Rule(nE) = MAX(6,MIN(12,nE/4)) nodes
+!                          Inner_Rule(nE) = MAX(8,MIN(12,nE/2)) nodes
 !    iEmAb2D_Tail     = 3  TAIL: gauleg(nE) for all pieces
 !  The default of Method_Option, iEmAb2D_Default, is MOMENTUM unless the
 !  library is built with EMAB2D_METHOD=ENERGY|TAIL (-DWEAKLIB_EMAB2D_*).
@@ -152,11 +152,16 @@ SUBROUTINE FinalizeOpacity_CC_2D()
   nE_CC2D  = 0
   nE2_CC2D = 0
   nE3_CC2D = 0
+  nE3M_CC2D = 0
+  x3M_CC2D  = 0.0d0
+  w3M_CC2D  = 0.0d0
 
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP TARGET UPDATE TO( Initialized_CC2D, nE_CC2D, nE2_CC2D, nE3_CC2D )
+  !$OMP TARGET UPDATE TO( Initialized_CC2D, nE_CC2D, nE2_CC2D, nE3_CC2D, &
+  !$OMP                   nE3M_CC2D, x3M_CC2D, w3M_CC2D )
 #elif defined(WEAKLIB_OACC)
-  !$ACC UPDATE DEVICE( Initialized_CC2D, nE_CC2D, nE2_CC2D, nE3_CC2D )
+  !$ACC UPDATE DEVICE( Initialized_CC2D, nE_CC2D, nE2_CC2D, nE3_CC2D, &
+  !$ACC                nE3M_CC2D, x3M_CC2D, w3M_CC2D )
 #endif
 
 END SUBROUTINE FinalizeOpacity_CC_2D

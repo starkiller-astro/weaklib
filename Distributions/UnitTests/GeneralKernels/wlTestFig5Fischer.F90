@@ -21,11 +21,11 @@ PROGRAM wlTestFig5Fischer
   ! Condition (a)
   REAL(DP), PARAMETER :: T_a     = 10.0d0      ! MeV
   REAL(DP), PARAMETER :: MuE_a   = 108.1d0     ! MeV
-  REAL(DP), PARAMETER :: MuMu_a  = 51.3d0      ! MeV
+  REAL(DP), PARAMETER :: MuMu_a  = 51.7d0      ! MeV
   ! Condition (b)
   REAL(DP), PARAMETER :: T_b     = 25.0d0      ! MeV
   REAL(DP), PARAMETER :: MuE_b   = 147.4d0     ! MeV
-  REAL(DP), PARAMETER :: MuMu_b  = 131.8d0     ! MeV
+  REAL(DP), PARAMETER :: MuMu_b  = 132.8d0     ! MeV
 
   ! Set final state neutrino chemical potential to 0 (free final state approximation)
   REAL(DP), PARAMETER :: MuNu_Final = 0.0d0
