@@ -135,8 +135,8 @@ CONTAINS
     ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
 
     IF (IncludeIMD) THEN
-      ! Only one flavor combination (e- in, mu- out) and no C3 slot (lam3 = 0
-      ! for both IMD processes), hence the small last dimension.
+      ! The two charge-conjugate baths share their kinematic coefficients.
+      ! The last dimension contains the two neutrino-energy orderings.
       ALLOCATE( A_IMD(nE1, nE3, nThetaScattering, 2) )
       ALLOCATE( B_IMD(nE1, nE3, nThetaScattering, 2) )
       ALLOCATE( C_IMD(nE1, nE3, nThetaScattering, 2) )
@@ -644,10 +644,9 @@ CONTAINS
 
       IF (iTrueCase == i_IMD_m .OR. iTrueCase == i_IMD_p) THEN
 
-        ! IMD uses its own coefficient tables (built at (E1,-E3) / (E3,-E1)
-        ! with the DeltaA^5 normalization). R1 is process 33 (nu_bar_e has
-        ! energy E1); R2 is the E1 <-> E3 swap, i.e. process 34. R3 never
-        ! contributes because lam3 = 0 for both IMD processes.
+        ! Both charges use the ordering (electron-flavor E1, muon-flavor E3)
+        ! and the R2 contraction. Their chemical-potential signs select
+        ! the e-/mu- or e+/mu+ bath; they are not energy-transposed reactions.
         R1(iTrueCase) = A_IMD(iE1, iE3, iTh, 1)*I2(iCase) &
                       + B_IMD(iE1, iE3, iTh, 1)*I1(iCase) &
                       + C_IMD(iE1, iE3, iTh, 1)*I0(iCase)
@@ -801,8 +800,8 @@ CONTAINS
         IF (E_minus >= E_plus) CYCLE
 
         ! I_s = I_s(E_minus) - I_s(E_plus), both evaluated at (E1, -E3) (Guo Eq. 18).
-        ! Note these are E1 <-> E3 symmetric, which is why one distinct case
-        ! serves both process 33 and process 34.
+        ! The interval is symmetric in E1 and E3. The two charge-conjugate
+        ! baths have separate chemical potentials and share this kinematics.
         CALL Compute_Is_Integrals( E1, -E3, E_minus, T, xMu_l2, xMu_l4, I0m, I1m, I2m )
         CALL Compute_Is_Integrals( E1, -E3, E_plus , T, xMu_l2, xMu_l4, I0p, I1p, I2p )
 

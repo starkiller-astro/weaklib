@@ -229,7 +229,7 @@ CONTAINS
     s = NormalizeSpaces(ADJUSTL(TRIM(reac)))
 
     !------------------------------------------------------------
-    ! Special 3->1 IMD channels (Table I, 5a & 5b)
+    ! The two charge-conjugate 3->1 IMD reactions.
     !------------------------------------------------------------
     IF ( s == 'nu_bar_e + e- + nu_mu -> mu-' ) THEN
       ProcessIndex = 33
@@ -569,16 +569,16 @@ CONTAINS
       lam2 = lam2_LFC
       lam3 = lam3_LFC
 
-    ! IMD: Inverse Muon Decay (IMD) (Table I, 5a & 5b)
-    CASE(33)  ! inverse muon decay (3->1)
-      lam1 = lam1_LFE ! LFE and IMD have the same lambdas
-      lam2 = lam2_LFE ! LFE and IMD have the same lambdas
-      lam3 = lam3_LFE ! LFE and IMD have the same lambdas
+    ! IMD and its charge conjugate, with the electron-flavor leg at E1.
+    CASE(33)  ! nu_bar_e(E1) + e- + nu_mu(E3) -> mu-
+      lam1 = lam1_LFC
+      lam2 = lam2_LFC
+      lam3 = lam3_LFC
 
-    CASE(34)  ! inverse muon decay (3->1)
-      lam1 = lam1_LFC ! Same as above but now you switched places for neutrinos
-      lam2 = lam2_LFC ! Same as above but now you switched places for neutrinos
-      lam3 = lam3_LFC ! Same as above but now you switched places for neutrinos
+    CASE(34)  ! nu_e(E1) + e+ + nu_bar_mu(E3) -> mu+
+      lam1 = lam1_LFC
+      lam2 = lam2_LFC
+      lam3 = lam3_LFC
 
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
@@ -667,14 +667,21 @@ CONTAINS
       END DO
 
     ENDDO
-    ! factors of 1/2 and 3/2 to match Bruenn
-    Phout(1) = Phout(1) * conv_fac * 0.5d0
-    Phout(2) = Phout(2) * conv_fac * 1.5d0
+    DO iL = 1, nL
+      Phout(iL) = Phout(iL) * conv_fac * (REAL(iL,DP)-0.5d0)
+    END DO
 
     ! --- Phin from detailed balance
-    Delta_mu = xMu_l2 - xMu_l4
-    exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )
-    Phin = Phout * EXP(exponent)
+    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+      exponent = (xMu_l4 - xMu_l2 - E1 - E3) / xT
+      DO iL = 1, nL
+        Phin(iL) = ScaleIMDReverseKernel(Phout(iL), exponent)
+      END DO
+    ELSE
+      Delta_mu = xMu_l2 - xMu_l4
+      exponent = MIN( (E3 - E1 - Delta_mu) / xT, MaxExponent )
+      Phin = Phout * EXP(exponent)
+    END IF
 
   END SUBROUTINE CalculatePhoutPhin
 
@@ -690,6 +697,16 @@ CONTAINS
 
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
+    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+      ! Inputs are the chemical potentials of the actual charged species:
+      ! (mu_e,mu_mu) for 33 and (-mu_e,-mu_mu) for 34.
+      CALL InverseMuonDecayRout &
+        ( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
+      exponent = (xMu_l4 - xMu_l2 - E1 - E3) / xT
+      Rin = ScaleIMDReverseKernel(Rout, exponent)
+      RETURN
+    END IF
+
     ! --- compute R_out with f2*(1-f4) factors ---
     CALL GeneralScatteringRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
 
@@ -700,6 +717,23 @@ CONTAINS
     Rin = Rout * EXP(exponent)   ! Guo Eq. 13
 
   END SUBROUTINE GeneralScatteringKernel
+
+  PURE ELEMENTAL FUNCTION ScaleIMDReverseKernel( Scale, Exponent ) RESULT(Value)
+    REAL(DP), INTENT(IN) :: Scale, Exponent
+    REAL(DP) :: Value, LogValue
+
+    Value = 0.0d0
+    IF (Scale == 0.0d0) RETURN
+    LogValue = LOG(ABS(Scale)) + Exponent
+    IF (LogValue < LOG(TINY(1.0d0))) RETURN
+    IF (LogValue > LOG(HUGE(1.0d0))) THEN
+      Value = SIGN(HUGE(1.0d0),Scale)
+    ELSE IF (Exponent >= LOG(TINY(1.0d0)) .AND. Exponent < LOG(HUGE(1.0d0))) THEN
+      Value = Scale * EXP(Exponent)
+    ELSE
+      Value = SIGN(EXP(LogValue),Scale)
+    END IF
+  END FUNCTION ScaleIMDReverseKernel
 
   SUBROUTINE InverseMuonDecayOpacity( E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4, &
                                       ProcessIndex, Opacity, nE3, nTheta )
@@ -719,15 +753,15 @@ CONTAINS
     REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
     REAL(DP) :: conv_fac, lam1, lam2, lam3
 
-    IF (ProcessIndex /= 33) THEN
-      WRITE(*,*) 'Error: InverseMuonDecayOpacity only valid for ProcessIndex=33 (nu_bar_e + e- + nu_mu -> mu-).'
+    IF (ProcessIndex /= 33 .AND. ProcessIndex /= 34) THEN
+      WRITE(*,*) 'Error: InverseMuonDecayOpacity requires ProcessIndex=33 or 34.'
       STOP
     END IF
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
     ! --- E3 integration limits ---
     E3_min = 0.0d0
-    E3_max = E1 + ABS(xMu_l2) + tfac*xT
+    E3_max = MAX(0.0d0,xMu_nu3) + tfac*xT
     E3_range = E3_max - E3_min
 
     ! --- Allocations & Quadrature ---
@@ -739,7 +773,7 @@ CONTAINS
 
     Opacity = 0.0d0
 
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
+    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc )
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -764,6 +798,9 @@ CONTAINS
   SUBROUTINE InverseMuonDecayEmissivity( E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4, &
                     ProcessIndex, Emissivity, nE3, nTheta, IsFinalStateFree_in )
 
+    ! Per-occupation emission coefficient j(E1) [cm^-1], before blocking
+    ! of neutrino 1. Multiply by c and its spectral phase-space density
+    ! to obtain number emissivity. Chemical potentials are charge-specific.
     ! --- Dummy Arguments ---
     REAL(DP), INTENT(IN)  :: E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4
     INTEGER , INTENT(IN)  :: ProcessIndex
@@ -775,7 +812,7 @@ CONTAINS
     INTEGER  :: iE3, iTheta
     REAL(DP) :: E3_min, E3_max, E3_range
     REAL(DP) :: E3, wE3, cos_theta, wcos_theta
-    REAL(DP) :: Rout, vacancy_nu3
+    REAL(DP) :: Rout, Rin, vacancy_nu3, exponent
     REAL(DP), ALLOCATABLE :: xa_E3(:), wa_E3(:)
     REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
     REAL(DP) :: conv_fac, lam1, lam2, lam3
@@ -784,15 +821,15 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
-    IF (ProcessIndex /= 33) THEN
-      WRITE(*,*) 'Error: InverseMuonDecayEmissivity only valid for ProcessIndex=33 (nu_bar_e + e- + nu_mu -> mu-).'
+    IF (ProcessIndex /= 33 .AND. ProcessIndex /= 34) THEN
+      WRITE(*,*) 'Error: InverseMuonDecayEmissivity requires ProcessIndex=33 or 34.'
       STOP
     END IF
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
     ! --- E3 integration limits ---
     E3_min = 0.0d0
-    E3_max = E1 + ABS(xMu_l2) + tfac*xT
+    E3_max = MAX(m4,xMu_l4) + tfac*xT
     E3_range = E3_max - E3_min
 
     ! --- Allocations & Quadrature ---
@@ -804,7 +841,7 @@ CONTAINS
 
     Emissivity = 0.0d0
 
-    conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
+    conv_fac = 2.0d0*pi / ( (2.0d0 * pi)**3 * hbarc )
 
     ! --- Integration Loops ---
     DO iE3 = 1, nE3
@@ -815,13 +852,16 @@ CONTAINS
       ELSE
         vacancy_nu3 = FD(-E3, -xMu_nu3, xT)
       ENDIF
+      exponent = (xMu_l4 - xMu_l2 - E1 - E3) / xT
       ! Replaced the triple loop with a single loop over relative angle mu
       DO iTheta = 1, nTheta
         cos_theta  = xa_cos_theta(iTheta)
         wcos_theta = wa_cos_theta(iTheta)
 
-        CALL InverseMuonDecayRout( E1, E3, cos_theta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
-        Emissivity = Emissivity + Rout * wcos_theta * E3**2 * wE3 * conv_fac * vacancy_nu3
+        CALL InverseMuonDecayRout &
+          ( E1, E3, cos_theta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
+        Rin = ScaleIMDReverseKernel(Rout, exponent)
+        Emissivity = Emissivity + Rin * wcos_theta * E3**2 * wE3 * conv_fac * vacancy_nu3
       END DO
     ENDDO
 
@@ -851,7 +891,7 @@ CONTAINS
     DoFullIntegration = .FALSE.
     IF (PRESENT(DoFullIntegration_in)) DoFullIntegration = DoFullIntegration_in
 
-    IF (ProcessIndex == 33) THEN
+    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
       CALL InverseMuonDecayOpacity( E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4, &
                                    ProcessIndex, Opacity_tot, nE3, nTheta )
       RETURN
