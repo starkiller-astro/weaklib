@@ -63,13 +63,20 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
 
   REAL(DP), PARAMETER :: conv_fac = 1.0d0 / ( (2.0d0 * pi)**3 * hbarc )
 
-#ifdef WEAKLIB_OACC
-  !$ACC DECLARE CREATE( iProcessMin, iProcessMax, nE2_Lepton, &
-  !$ACC   A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD, &
-  !$ACC   nThetaScattering, xa_cos_theta, wa_cos_theta, &
-  !$ACC   xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag, &
-  !$ACC   nDistinctCases, MassPairDistinct, iDistinctMap, &
-  !$ACC   ChosenToTrueCaseMap, lam1, lam2, lam3 )
+#if defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET( iProcessMin, iProcessMax, nE2_Lepton, &
+    !$OMP   A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD, &
+    !$OMP   nThetaScattering, xa_cos_theta, wa_cos_theta, &
+    !$OMP   xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag, &
+    !$OMP   nDistinctCases, MassPairDistinct, iDistinctMap, &
+    !$OMP   ChosenToTrueCaseMap, lam1, lam2, lam3 )
+#elif defined(WEAKLIB_OACC)
+    !$ACC DECLARE CREATE( iProcessMin, iProcessMax, nE2_Lepton, &
+    !$ACC   A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD, &
+    !$ACC   nThetaScattering, xa_cos_theta, wa_cos_theta, &
+    !$ACC   xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag, &
+    !$ACC   nDistinctCases, MassPairDistinct, iDistinctMap, &
+    !$ACC   ChosenToTrueCaseMap, lam1, lam2, lam3 )
 #endif
 
   PUBLIC :: InitGeneralScatteringKernels
@@ -304,18 +311,18 @@ CONTAINS
     !$OMP   xa_cos_theta, wa_cos_theta, xa_GLeg_ref, wa_GLeg_ref, &
     !$OMP   xa_GLag, wa_GLag, MassPairDistinct, iDistinctMap, &
     !$OMP   ChosenToTrueCaseMap, lam1, lam2, lam3, &
-    !$OMP   iProcessMin, iProcessMax, nThetaScattering, nDistinctCases )
+    !$OMP   iProcessMin, iProcessMax, nE2_Lepton, nThetaScattering, nDistinctCases )
     IF( IncludeIMD )THEN
-      !$OMP TARGET ENTER DATA MAP( to: A_IMD, B_IMD, C_IMD )
+    !$OMP TARGET ENTER DATA MAP( to: A_IMD, B_IMD, C_IMD )
     END IF
 #elif defined(WEAKLIB_OACC)
     !$ACC UPDATE DEVICE( A_Scat, B_Scat, C_Scat, &
     !$ACC   xa_cos_theta, wa_cos_theta, xa_GLeg_ref, wa_GLeg_ref, &
     !$ACC   xa_GLag, wa_GLag, MassPairDistinct, iDistinctMap, &
     !$ACC   ChosenToTrueCaseMap, lam1, lam2, lam3, &
-    !$ACC   iProcessMin, iProcessMax, nThetaScattering, nDistinctCases )
+    !$ACC   iProcessMin, iProcessMax, nE2_Lepton, nThetaScattering, nDistinctCases )
     IF( IncludeIMD )THEN
-      !$ACC UPDATE DEVICE( A_IMD, B_IMD, C_IMD )
+    !$ACC UPDATE DEVICE( A_IMD, B_IMD, C_IMD )
     END IF
 #endif
 
@@ -328,9 +335,9 @@ CONTAINS
     !$OMP   xa_cos_theta, wa_cos_theta, xa_GLeg_ref, wa_GLeg_ref, &
     !$OMP   xa_GLag, wa_GLag, MassPairDistinct, iDistinctMap, &
     !$OMP   ChosenToTrueCaseMap, lam1, lam2, lam3, &
-    !$OMP   iProcessMin, iProcessMax, nThetaScattering, nDistinctCases )
+    !$OMP   iProcessMin, iProcessMax, nE2_Lepton, nThetaScattering, nDistinctCases )
     IF( ALLOCATED(A_IMD) )THEN
-      !$OMP TARGET EXIT DATA MAP( delete: A_IMD, B_IMD, C_IMD )
+    !$OMP TARGET EXIT DATA MAP( delete: A_IMD, B_IMD, C_IMD )
     END IF
 #endif
 

@@ -9,7 +9,10 @@ MODULE wlFukushimaFermiDiracIntegralsModule
 
 CONTAINS
 
-PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
+  PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
+    USE wlKindModule, ONLY: DP
+    IMPLICIT NONE
+
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -21,11 +24,6 @@ PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
     !
     ! Reference: Fukushima, T. (2014, App. Math. Comp.)
     !=============================================================================
-
-    ! Assuming you are using your project's kind module.
-    ! If not, use: USE iso_fortran_env, ONLY: DP => real64
-    USE wlKindModule, ONLY: DP
-    IMPLICIT NONE
 
     REAL(DP), INTENT(IN) :: y
     REAL(DP)             :: fd
@@ -100,7 +98,7 @@ PURE ELEMENTAL FUNCTION F0z_Fukushima(y) RESULT(fd)
       fd = fd + y
     END IF
 
-END FUNCTION F0z_Fukushima
+  END FUNCTION F0z_Fukushima
 
   PURE ELEMENTAL FUNCTION F1z_Fukushima(y) RESULT(fd)
 #if defined(WEAKLIB_OMP_OL)

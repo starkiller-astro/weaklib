@@ -49,14 +49,26 @@
 !!! nTheta: GL points for costheta integral in GeneralScatteringOpacity (default 8)
 !================================================================================
 
+#ifndef WEAKLIB_FD_INTEGRALS_METHOD
+#define WEAKLIB_FD_INTEGRALS_METHOD 3
+#endif
+#if WEAKLIB_FD_INTEGRALS_METHOD < 1 || WEAKLIB_FD_INTEGRALS_METHOD > 3
+#error "WEAKLIB_FD_INTEGRALS_METHOD must be 1, 2 or 3"
+#endif
+#if (defined(WEAKLIB_OMP_OL) || defined(WEAKLIB_OACC)) && WEAKLIB_FD_INTEGRALS_METHOD != 3
+#error "Accelerator lepton kernels require Fukushima Fermi integrals (method 3)"
+#endif
+
 MODULE wlGeneralLeptonScatteringModule
 
   USE wlKindModule,         ONLY: dp
   USE wlEosConstantsModule, ONLY: &
     pi, Gw_MeV, hbarc, sin2W, me, cvel
+#if WEAKLIB_FD_INTEGRALS_METHOD == 2
   USE wlPolylogModule, ONLY: &
     Fermi_Dirac_Integrals, &
     Init_Polylogarithms
+#endif
   USE wlFukushimaFermiDiracIntegralsModule, ONLY: &
     F0z_Fukushima, &
     F1z_Fukushima, &
@@ -67,16 +79,15 @@ MODULE wlGeneralLeptonScatteringModule
   IMPLICIT NONE
   PRIVATE
 
-  ! 1 is direct GL quadarture integration (slowest by far)
+  ! Compile-time selection: unselected implementations are not device code.
+  ! 1 is direct GL quadrature integration (CPU reference)
   ! 2 is polylogarithm-based evaluation (Bollig 2018, Chapter V, Section 8)
   ! 3 is Fukushima (2015) rational approximation formulae (fastest)
-  INTEGER, PARAMETER  :: CompleteFDIntegralsEvaluationMethod = 3
+#if WEAKLIB_FD_INTEGRALS_METHOD == 1
   ! Method 1: If you want to integrate directly only call gauleg once
   LOGICAL                :: GauLegInitialized = .FALSE.
   INTEGER , PARAMETER    :: nGL_FI = 64
   REAL(DP), DIMENSION(:) :: xa_FI(nGL_FI), wa_FI(nGL_FI)
-#ifdef WEAKLIB_OACC
-  !$ACC DECLARE COPYIN( GauLegInitialized ) CREATE( xa_FI, wa_FI )
 #endif
 
   !====================================================================
@@ -226,7 +237,7 @@ CONTAINS
     INTEGER :: pArrow, ios
 
     ProcessIndex = -1
-    s = NormalizeSpaces(ADJUSTL(TRIM(reac)))
+    ALLOCATE( s, SOURCE=NormalizeSpaces(ADJUSTL(TRIM(reac))) )
 
     !------------------------------------------------------------
     ! The two charge-conjugate 3->1 IMD reactions.
@@ -245,8 +256,8 @@ CONTAINS
       STOP
     END IF
 
-    lhs = TRIM(s(1:pArrow-1))
-    rhs = TRIM(s(pArrow+4:LEN(s)))
+    ALLOCATE( lhs, SOURCE=TRIM(s(1:pArrow-1)) )
+    ALLOCATE( rhs, SOURCE=TRIM(s(pArrow+4:LEN(s))) )
 
     CALL ParseSide(lhs, nu_in, l_in, ios)
     IF (ios /= 0) THEN
@@ -367,7 +378,7 @@ CONTAINS
       nu  = ''
       lep = ''
 
-      t = NormalizeSpaces(ADJUSTL(TRIM(side)))
+      ALLOCATE( t, SOURCE=NormalizeSpaces(ADJUSTL(TRIM(side))) )
       pPlus = INDEX(t, ' + ')
       IF (pPlus <= 0) THEN
         ios = 1
@@ -417,9 +428,9 @@ CONTAINS
       END DO
 
       IF (j == 0) THEN
-        out = ''
+        ALLOCATE( out, SOURCE='' )
       ELSE
-        out = TRIM(tmp(1:j))
+        ALLOCATE( out, SOURCE=TRIM(tmp(1:j)) )
       END IF
     END FUNCTION NormalizeSpaces
 
@@ -1456,8 +1467,7 @@ CONTAINS
     ! --- Lower Integration Limit (y = E_- / T) ---
     y = E_minus / T
 
-    SELECT CASE (CompleteFDIntegralsEvaluationMethod)
-    CASE (1)
+#if WEAKLIB_FD_INTEGRALS_METHOD == 1
       IF (.NOT. GauLegInitialized) THEN
         CALL gauleg(-1.0d0, 1.0d0, xa_FI, wa_FI, nGL_FI)
         GauLegInitialized = .TRUE.
@@ -1472,14 +1482,14 @@ CONTAINS
       F1_etap = Num_Fn( 1, eta_prime - y, xa_FI, wa_FI, nGL_FI)
       F2_etap = Num_Fn( 2, eta_prime - y, xa_FI, wa_FI, nGL_FI)
 
-    CASE (2)
+#elif WEAKLIB_FD_INTEGRALS_METHOD == 2
 
       CALL Init_Polylogarithms()
       ! --- Evaluate F_s(eta, y) and F_s(eta_prime, y) using polylog-based functions ---
       CALL Fermi_Dirac_Integrals( eta       - y, F0_eta , F1_eta , F2_eta )
       CALL Fermi_Dirac_Integrals( eta_prime - y, F0_etap, F1_etap, F2_etap )
 
-    CASE (3)
+#elif WEAKLIB_FD_INTEGRALS_METHOD == 3
 
       ! --- Evaluate F_s(eta, y) and F_s(eta_prime, y) using Fukushima (2015) routines ---
       F0_eta = F0z_Fukushima( eta - y )
@@ -1490,7 +1500,7 @@ CONTAINS
       F1_etap = F1z_Fukushima( eta_prime - y )
       F2_etap = F2z_Fukushima( eta_prime - y )
 
-    END SELECT
+#endif
 
     IF (ABS(xi) <= xi_tol) THEN
       ! Write each integral as
