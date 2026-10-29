@@ -1,4 +1,9 @@
+wlSemiLeptonicPhysicsModule2D.o: \
+  wlKindModule.o \
+  wlEosConstantsModule.o
+
 wlSemiLeptonicOpacityModule2D.o: \
+  wlSemiLeptonicPhysicsModule2D.o \
   wlKindModule.o \
   wlEosConstantsModule.o
 

@@ -110,9 +110,9 @@ SUBROUTINE CC2D_PrepareCall( ReactionIndex, Enu, T, Mul, Mun, Mup, ml, massn, ma
   INTEGER , INTENT(IN)  :: IncludeCorrections(3)
   TYPE(CC2D_CallData), INTENT(OUT) :: CD
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   REAL(DP) :: p2min, p2max, anti
@@ -177,10 +177,12 @@ SUBROUTINE CC2D_ApplyPrefactor( CD, tot )
   TYPE(CC2D_CallData), INTENT(IN)    :: CD
   REAL(DP)           , INTENT(INOUT) :: tot
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
+
+  IF( tot < 0.0_DP ) RETURN
 
   SELECT CASE(CD%ReactionIndex)
   CASE (1, 2, 3)
@@ -203,9 +205,9 @@ SUBROUTINE CC2D_RowSetup( CD, NodeE2, WeightE2, RD )
   REAL(DP)           , INTENT(IN)  :: NodeE2, WeightE2
   TYPE(CC2D_RowData) , INTENT(OUT) :: RD
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   REAL(DP) :: E2, P2, xq0_min, xq0_max
@@ -241,21 +243,23 @@ END SUBROUTINE CC2D_RowSetup
 !  Phase 2: per-(E2,E3)-node kernel; returns the raw integrand
 !  contribution. Sum over all nodes, then multiply by CD%Prefactor.
 !-----------------------------------------------------------------------
-SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res )
+SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res, Error_Option )
 
   TYPE(CC2D_CallData), INTENT(IN)  :: CD
   TYPE(CC2D_RowData) , INTENT(IN)  :: RD
   REAL(DP)           , INTENT(IN)  :: NodeE3, WeightE3
   REAL(DP)           , INTENT(OUT) :: res
+  INTEGER, INTENT(OUT), OPTIONAL :: Error_Option
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   REAL(DP) :: E3, wE3, E4, xamp, xf3, xf4, xb3, xb4
 
   res = 0.0d0
+  IF( PRESENT(Error_Option) ) Error_Option = 0
   IF( .NOT. RD%HasWindow ) RETURN
 
   E3  = NodeE3*(RD%E3_max - RD%E3_min) + RD%E3_min
@@ -269,6 +273,12 @@ SUBROUTINE CC2D_NodeKernel( CD, RD, NodeE3, WeightE3, res )
     E4 = CD%Enu + E3 + RD%E2
     CALL Calc_Ampsq( CD%Enu, RD%E2, -E3, CD%Mass2, CD%Mass3, CD%Mass4, CD%U2, CD%U4, &
                      CD%ReactionIndex, CD%IncludeCorrections, CD%Coeffs, xamp )
+  END IF
+
+  IF( xamp < 0.0_DP )THEN
+    res = -1.0_DP
+    IF( PRESENT(Error_Option) ) Error_Option = 1
+    RETURN
   END IF
 
   CALL FDPair( E3, CD%Mu3, CD%T, xf3, xb3 )
@@ -296,9 +306,9 @@ SUBROUTINE NuAbsorptionOnNeutrons( Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, 
   REAL(DP), INTENT(IN)  :: NodesE2(nE), WeightsE2(nE), NodesE3(nE), WeightsE3(nE)
   REAL(DP), INTENT(OUT) :: tot
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   CALL CC2D_Reference( 1, Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, Up, &
@@ -314,9 +324,9 @@ SUBROUTINE NuBarAbsorptionOnProtons( Enu, T, Mul, Mun, Mup, ml, massn, massp, Un
   REAL(DP), INTENT(IN)  :: NodesE2(nE), WeightsE2(nE), NodesE3(nE), WeightsE3(nE)
   REAL(DP), INTENT(OUT) :: tot
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   CALL CC2D_Reference( 2, Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, Up, &
@@ -332,9 +342,9 @@ SUBROUTINE InverseNeutronDecay( Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, Up,
   REAL(DP), INTENT(IN)  :: NodesE2(nE), WeightsE2(nE), NodesE3(nE), WeightsE3(nE)
   REAL(DP), INTENT(OUT) :: tot
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   CALL CC2D_Reference( 3, Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, Up, &
@@ -350,9 +360,9 @@ SUBROUTINE NeutronEmissivity( Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, Up, &
   REAL(DP), INTENT(IN)  :: NodesE2(nE), WeightsE2(nE), NodesE3(nE), WeightsE3(nE)
   REAL(DP), INTENT(OUT) :: tot
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   CALL CC2D_Reference( 4, Enu, T, Mul, Mun, Mup, ml, massn, massp, Un, Up, &
@@ -369,9 +379,9 @@ SUBROUTINE CC2D_Reference( ReactionIndex, Enu, T, Mul, Mun, Mup, ml, massn, mass
   REAL(DP), INTENT(IN)  :: NodesE2(nE), WeightsE2(nE), NodesE3(nE), WeightsE3(nE)
   REAL(DP), INTENT(OUT) :: tot
 #if defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET
+    !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 #endif
 
   TYPE(CC2D_CallData) :: CD
@@ -389,6 +399,10 @@ SUBROUTINE CC2D_Reference( ReactionIndex, Enu, T, Mul, Mun, Mup, ml, massn, mass
     IF( .NOT. RD%HasWindow ) CYCLE
     DO iE3 = 1, nE
       CALL CC2D_NodeKernel( CD, RD, NodesE3(iE3), WeightsE3(iE3), res )
+      IF( res < 0.0_DP )THEN
+        tot = -1.0_DP
+        RETURN
+      END IF
       tot = tot + res
     END DO
   END DO
