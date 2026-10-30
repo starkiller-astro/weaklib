@@ -4,6 +4,7 @@ WL_EOSSOURCE_SPLIT  = \
   wlHelmIOModuleHDF.o \
   wlHelmholtzEOS.o \
   wlLeptonPhotonGasEOS.o \
+  wlEOSComponentsThermodynamicsModule.o \
   wlSoundSpeedModule.o \
   wlEosTemperatureCombinedInversionModule.o \
   wlEosTemperatureSeparateInversionModule.o \

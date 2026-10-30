@@ -1,14 +1,14 @@
 MODULE wlSoundSpeedModule
 
   USE wlKindModule, ONLY: dp
+  USE wlEOSComponentsThermodynamicsModule, ONLY: ComputeTotalEPS_CS
   USE wlEosConstantsModule, ONLY: &
     kmev, rmu, kmev_inv, ergmev, cvel, cm3fm3, me, mmu
   USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType
   USE wlLeptonPhotonGasEOS, ONLY: &
     PhotonGasType, LeptonGasType, &
-    PhotonGasEOS , LeptonGasEOS , &
-    GetPhotonLeptonGasEOS
+    PhotonGasEOS , LeptonGasEOS
   USE wlInterpolationUtilitiesModule, ONLY: &
     LinearInterpDeriv_Array_Point, &
     GetIndexAndDelta_Lin, GetIndexAndDelta_Log
@@ -68,16 +68,9 @@ CONTAINS
 
     REAL(DP) :: dD, dT, dYp
     REAL(DP) :: aD, aT, aYp
-    REAL(DP) :: Yp, Ye_over_Yp, Ym_over_Yp, h
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube, P_cube, E_cube, S_cube
-    REAL(DP) :: P_LeptPhot(2,2,2), E_LeptPhot(2,2,2), S_LeptPhot(2,2,2)
-    REAL(DP) :: Ptot_T   (2,2,2), Etot_T(2,2,2)   , Stot_T(2,2,2)
+    REAL(DP) :: Yp, h, LocalOffset
 
-    REAL(DP) :: dPdD, dPdT, dEdD, dEdT, dSdD, dSdT
-    INTEGER  :: iD, iT, iYp, iL_D, iL_T, iL_Yp
-    REAL(DP) :: eos_table(3,3,3,3), cs2_temp(3,3,3), gamma_temp(3,3,3)
-
-    REAL(DP) :: LocalOffset
+    INTEGER  :: iD, iT, iYp
 
     TYPE(LeptonGasType) :: ElectronGasState
     TYPE(LeptonGasType) :: MuonGasState
@@ -199,97 +192,9 @@ CONTAINS
 
     ELSE
 
-      Ye_over_Yp = Ye/Yp
-      Ym_over_Yp = Ym/Yp
-
-      CALL GetIndexAndDelta_Log( D,  D_T,  iD,  dD  )
-      CALL GetIndexAndDelta_Log( T,  T_T,  iT,  dT  )
-      CALL GetIndexAndDelta_Lin( Yp, Yp_T, iYp, dYp )
-
-      aD = 1.0_dp / ( D * LOG10( D_T(iD+1) / D_T(iD) ) )
-      aT = 1.0_dp / ( T * LOG10( T_T(iT+1) / T_T(iT) ) )
-      aYp = ln10 / ( Yp_T(iYp+1) - Yp_T(iYp) )
-
-      DO iL_T=1,2
-        DO iL_D=1,2
-          DO iL_Yp=1,2
-
-            D_cube  = D_T(iD+iL_D-1)
-            T_cube  = T_T(iT+iL_T-1)
-            Ye_cube = Yp_T(iYp+iL_Yp-1) * Ye_over_Yp
-            Ym_cube = Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_cube, E_cube, S_cube)
-
-            P_LeptPhot(iL_D,iL_T,iL_Yp) = P_cube
-            E_LeptPhot(iL_D,iL_T,iL_Yp) = E_cube
-            S_LeptPhot(iL_D,iL_T,iL_Yp) = S_cube
-
-          END DO
-        END DO
-      END DO
-
-      Ptot_T = LOG10(P_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + P_LeptPhot)
-      CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_P, Ptot_T, Ptot, &
-          dPdD, dPdT )
-
-      Etot_T = LOG10(10.00**E_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + E_LeptPhot )
-      CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_E, Etot_T, Etot, &
-          dEdD, dEdT )
-
-      Stot_T = LOG10(10.00**S_T(iD:iD+1,iT:iT+1,iYp:iYp+1) + S_LeptPhot )
-      CALL LinearInterpDeriv_Array_Point &
-          ( 1, 1, 1, dD, dT, dYp, aD, aT, aYp, OS_S, Stot_T, Stot, &
-          dSdD, dSdT )
-
-      Gamma = (D*dPdD + T*dPdT**2.0_DP / &
-          (D*dEdT) ) / Ptot
-
-      ! ! Another way of doing it
-      ! Gamma = D/Ptot * ( dPdD - (dSdD*dPdT/dSdT) )
-
-      ! relativistic definition with enthalpy
-      h = (1.0_dp + Etot/cvel**2 + Ptot/D/cvel**2)
-      Cs = SQRT(Gamma * Ptot / (D*h))
-      Cs = SQRT(Gamma * Ptot / (D))
-
-      RETURN
-      ! Below is how stellarcollapse does it...
-
-      ! -----
-      DO iL_T=-1,1
-        DO iL_D=-1,1
-          DO iL_Yp=-1,1
-
-            D_cube  = D_T(iD+iL_D-1)
-            T_cube  = T_T(iT+iL_T-1)
-            Ye_cube = Yp_T(iYp+iL_Yp-1) * Ye_over_Yp
-            Ym_cube = Yp_T(iYp+iL_Yp-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_cube, E_cube, S_cube)
-
-            eos_table(iL_D+2,iL_T+2,iL_Yp+2,1) = &
-              LOG10(P_T(iD+iL_D,iT+iL_T,iYp+iL_Yp) + P_cube)
-            eos_table(iL_D+2,iL_T+2,iL_Yp+2,2) = &
-              LOG10(10.00**S_T(iD+iL_D,iT+iL_T,iYp+iL_Yp) + S_cube)
-            eos_table(iL_D+2,iL_T+2,iL_Yp+2,3) = &
-              LOG10(10.00**E_T(iD+iL_D,iT+iL_T,iYp+iL_Yp) + E_cube)
-          END DO
-        END DO
-      END DO
-
-      call derivatives_production(2, 3, 3, 3, &
-          LOG10(D_T(iD-1:iD+1)), LOG10(T_T(iT-1:iT+1)), Yp_T(iYp-1:iYp+1), &
-          eos_table, OS_E, cs2_temp, gamma_temp)
-      Cs = SQRT(cs2_temp(2,2,2))
-      ! WRITE(*,*) gamma_temp(2,2,2), Gamma
-      Gamma = gamma_temp(2,2,2)
+      CALL ComputeTotalEPS_CS &
+             ( D, T, Ye, Ym, D_T, T_T, Yp_T, E_T, P_T, S_T, OS_E, OS_P, OS_S, &
+               HelmTableElectrons, HelmTableMuons, Etot, Ptot, Stot, Gamma, Cs )
 
     ENDIF
 

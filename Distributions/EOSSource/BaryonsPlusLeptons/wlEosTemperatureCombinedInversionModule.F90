@@ -9,8 +9,8 @@ MODULE wlEosTemperatureCombinedInversionModule
     Index1D_Log
   USE wlLeptonEOSTableModule, ONLY: &
     HelmTableType
-  USE wlLeptonPhotonGasEOS, ONLY: &
-    GetPhotonLeptonGasEOS
+  USE wlEOSComponentsThermodynamicsModule, ONLY: &
+    EvaluatePhotonLeptonEOSPlane, StoreCombinedEOSPlanes, CombinedEOSPlaneCacheType
 
   IMPLICIT NONE
   PRIVATE
@@ -42,7 +42,8 @@ CONTAINS
 
 
   SUBROUTINE InvertTemperatureWith_DEYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -59,7 +60,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    INTEGER  :: iD, iT, iYp, iL_D, iL_Y
+    INTEGER  :: iD, iT, iYp
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
     INTEGER  :: i_a, i_b, i_c, i
@@ -70,12 +71,12 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube
 
     ! Electron and Muon quantities
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
+    REAL(dp) :: Plane_a(2,2,3), Plane_b(2,2,3), Plane_c(2,2,3), Plane_i(2,2,3)
 
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
@@ -87,6 +88,7 @@ CONTAINS
 
     T = 0.0_dp
     Error = 0
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
 
     LogD = LOG10( D )
 
@@ -113,22 +115,10 @@ CONTAINS
     Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + E_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,1)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -140,22 +130,10 @@ CONTAINS
     T_b = Ts(i_b)
     Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + E_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,1)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -165,6 +143,9 @@ CONTAINS
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
       RETURN
     END IF
 
@@ -175,22 +156,10 @@ CONTAINS
     Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + E_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,1)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -203,22 +172,10 @@ CONTAINS
     Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + E_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,1)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -235,22 +192,10 @@ CONTAINS
         Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
 
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_c
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + E_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_c, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_c )
+        Xs_c = Xs_c+Plane_c(:,:,1)
         Xs_c = LOG10(Xs_c+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -263,10 +208,12 @@ CONTAINS
           T_b = T_c
           X_b = X_c
           f_b = f_c
+          Plane_b = Plane_c
         ELSE
           i_a = i_c
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           f_a = f_c
         END IF
 
@@ -281,27 +228,16 @@ CONTAINS
       i_c = MIN( MAX( 1, iT ), SizeTs - 1 )
       T_c = T_a
       X_c = X_a
+      Plane_c = Plane_a
       DO i = 2, SizeTs - 1
 
         T_i  = Ts(i)
         Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_i
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + E_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_i, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_i )
+        Xs_i = Xs_i+Plane_i(:,:,1)
         Xs_i = LOG10(Xs_i+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -317,12 +253,15 @@ CONTAINS
           i_a = i - 1
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           i_b = i
           T_b = T_i
           X_b = X_i
+          Plane_b = Plane_i
         ELSE
           T_c = T_i
           X_c = X_i
+          Plane_c = Plane_i
         END IF
 
       END DO
@@ -337,12 +276,16 @@ CONTAINS
       T = 0.0_dp
     ELSE
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DEYpYl_Guess
 
   SUBROUTINE InvertTemperatureWith_DEYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -358,7 +301,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    INTEGER  :: iD, iT, iYp, iL_D, iL_Y
+    INTEGER  :: iD, iT, iYp
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
     INTEGER  :: i_a, i_b, i_c, i
@@ -369,12 +312,12 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube
 
     ! Electron and Muon quantities
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
+    REAL(dp) :: Plane_a(2,2,3), Plane_b(2,2,3), Plane_c(2,2,3), Plane_i(2,2,3)
 
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
@@ -386,6 +329,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------
     Error = 0
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
 
     LogD = LOG10( D )
 
@@ -409,22 +353,10 @@ CONTAINS
     Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + E_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,1)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -436,22 +368,10 @@ CONTAINS
     T_b = Ts(i_b)
     Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + E_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,1)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -467,22 +387,10 @@ CONTAINS
         T_c = Ts(i_c)
         Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_c
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + E_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_c, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_c )
+        Xs_c = Xs_c+Plane_c(:,:,1)
         Xs_c = LOG10(Xs_c+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -495,10 +403,12 @@ CONTAINS
           T_b = T_c
           X_b = X_c
           f_b = f_c
+          Plane_b = Plane_c
         ELSE
           i_a = i_c
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           f_a = f_c
         END IF
 
@@ -512,22 +422,10 @@ CONTAINS
         T_i = Ts(i)
         Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_i
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + E_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_i, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_i )
+        Xs_i = Xs_i+Plane_i(:,:,1)
         Xs_i = LOG10(Xs_i+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -540,11 +438,13 @@ CONTAINS
           i_a = i
           T_a = T_i
           X_a = X_i
+          Plane_a = Plane_i
           EXIT
         ELSE
           i_b = i
           T_b = T_i
           X_b = X_i
+          Plane_b = Plane_i
         END IF
 
       END DO
@@ -560,12 +460,16 @@ CONTAINS
       T = 0.0_dp
     ELSE
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DEYpYl_NoGuess
 
   SUBROUTINE InvertTemperatureWith_DPYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -582,7 +486,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    INTEGER  :: iD, iT, iYp, iL_D, iL_Y
+    INTEGER  :: iD, iT, iYp
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
     INTEGER  :: i_a, i_b, i_c, i
@@ -593,12 +497,12 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube
 
     ! Electron and Muon quantities
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
+    REAL(dp) :: Plane_a(2,2,3), Plane_b(2,2,3), Plane_c(2,2,3), Plane_i(2,2,3)
 
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
@@ -610,6 +514,7 @@ CONTAINS
 
     T = 0.0_dp
     Error = 0
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
 
     LogD = LOG10( D )
 
@@ -636,22 +541,10 @@ CONTAINS
     Xs_a = Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + P_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,2)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -664,22 +557,10 @@ CONTAINS
     Xs_b = Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + P_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,2)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -689,6 +570,9 @@ CONTAINS
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
       RETURN
     END IF
 
@@ -699,22 +583,10 @@ CONTAINS
     Xs_a = Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + P_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,2)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -727,22 +599,10 @@ CONTAINS
     Xs_b = Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + P_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,2)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -759,22 +619,10 @@ CONTAINS
         Xs_c = Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
 
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_c
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + P_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_c, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_c )
+        Xs_c = Xs_c+Plane_c(:,:,2)
         Xs_c = LOG10(Xs_c+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -787,10 +635,12 @@ CONTAINS
           T_b = T_c
           X_b = X_c
           f_b = f_c
+          Plane_b = Plane_c
         ELSE
           i_a = i_c
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           f_a = f_c
         END IF
 
@@ -805,27 +655,16 @@ CONTAINS
       i_c = MIN( MAX( 1, iT ), SizeTs - 1 )
       T_c = T_a
       X_c = X_a
+      Plane_c = Plane_a
       DO i = 2, SizeTs - 1
 
         T_i  = Ts(i)
         Xs_i = Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_i
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + P_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_i, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_i )
+        Xs_i = Xs_i+Plane_i(:,:,2)
         Xs_i = LOG10(Xs_i+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -841,12 +680,15 @@ CONTAINS
           i_a = i - 1
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           i_b = i
           T_b = T_i
           X_b = X_i
+          Plane_b = Plane_i
         ELSE
           T_c = T_i
           X_c = X_i
+          Plane_c = Plane_i
         END IF
 
       END DO
@@ -861,12 +703,16 @@ CONTAINS
       T = 0.0_dp
     ELSE
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DPYpYl_Guess
 
   SUBROUTINE InvertTemperatureWith_DPYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -882,7 +728,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    INTEGER  :: iD, iT, iYp, iL_D, iL_Y
+    INTEGER  :: iD, iT, iYp
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
     INTEGER  :: i_a, i_b, i_c, i
@@ -893,12 +739,12 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube
 
     ! Electron and Muon quantities
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
+    REAL(dp) :: Plane_a(2,2,3), Plane_b(2,2,3), Plane_c(2,2,3), Plane_i(2,2,3)
 
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
@@ -910,6 +756,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------
     Error = 0
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
 
     LogD = LOG10( D )
 
@@ -933,22 +780,10 @@ CONTAINS
     Xs_a = Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + P_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,2)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -960,22 +795,10 @@ CONTAINS
     T_b  = Ts(i_b)
     Xs_b = Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + P_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,2)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -991,22 +814,10 @@ CONTAINS
         T_c  = Ts(i_c)
         Xs_c = Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_c
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + P_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_c, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_c )
+        Xs_c = Xs_c+Plane_c(:,:,2)
         Xs_c = LOG10(Xs_c+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -1019,10 +830,12 @@ CONTAINS
           T_b = T_c
           X_b = X_c
           f_b = f_c
+          Plane_b = Plane_c
         ELSE
           i_a = i_c
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           f_a = f_c
         END IF
 
@@ -1036,22 +849,10 @@ CONTAINS
         T_i  = Ts(i)
         Xs_i = Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_i
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + P_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_i, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_i )
+        Xs_i = Xs_i+Plane_i(:,:,2)
         Xs_i = LOG10(Xs_i+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -1064,11 +865,13 @@ CONTAINS
           i_a = i
           T_a = T_i
           X_a = X_i
+          Plane_a = Plane_i
           EXIT
         ELSE
           i_b = i
           T_b = T_i
           X_b = X_i
+          Plane_b = Plane_i
         END IF
 
       END DO
@@ -1084,12 +887,16 @@ CONTAINS
       T = 0.0_dp
     ELSE
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DPYpYl_NoGuess
 
   SUBROUTINE InvertTemperatureWith_DSYpYl_Guess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -1106,7 +913,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    INTEGER  :: iD, iT, iYp, iL_D, iL_Y
+    INTEGER  :: iD, iT, iYp
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
     INTEGER  :: i_a, i_b, i_c, i
@@ -1117,12 +924,12 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube
 
     ! Electron and Muon quantities
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
+    REAL(dp) :: Plane_a(2,2,3), Plane_b(2,2,3), Plane_c(2,2,3), Plane_i(2,2,3)
 
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
@@ -1134,6 +941,7 @@ CONTAINS
 
     T = 0.0_dp
     Error = 0
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
 
     LogD = LOG10( D )
 
@@ -1160,22 +968,10 @@ CONTAINS
     Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + S_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,3)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -1187,22 +983,10 @@ CONTAINS
     T_b = Ts(i_b)
     Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + S_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,3)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -1212,6 +996,9 @@ CONTAINS
 
     IF ( f_a * f_b <= 0.0_dp ) THEN
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
       RETURN
     END IF
 
@@ -1222,22 +1009,10 @@ CONTAINS
     Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + S_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,3)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -1250,22 +1025,10 @@ CONTAINS
     Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + S_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,3)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -1282,22 +1045,10 @@ CONTAINS
         Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
 
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_c
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + S_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_c, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_c )
+        Xs_c = Xs_c+Plane_c(:,:,3)
         Xs_c = LOG10(Xs_c+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -1310,10 +1061,12 @@ CONTAINS
           T_b = T_c
           X_b = X_c
           f_b = f_c
+          Plane_b = Plane_c
         ELSE
           i_a = i_c
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           f_a = f_c
         END IF
 
@@ -1328,27 +1081,16 @@ CONTAINS
       i_c = MIN( MAX( 1, iT ), SizeTs - 1 )
       T_c = T_a
       X_c = X_a
+      Plane_c = Plane_a
       DO i = 2, SizeTs - 1
 
         T_i  = Ts(i)
         Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_i
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + S_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_i, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_i )
+        Xs_i = Xs_i+Plane_i(:,:,3)
         Xs_i = LOG10(Xs_i+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -1364,12 +1106,15 @@ CONTAINS
           i_a = i - 1
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           i_b = i
           T_b = T_i
           X_b = X_i
+          Plane_b = Plane_i
         ELSE
           T_c = T_i
           X_c = X_i
+          Plane_c = Plane_i
         END IF
 
       END DO
@@ -1384,12 +1129,16 @@ CONTAINS
       T = 0.0_dp
     ELSE
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DSYpYl_Guess
 
   SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess &
-    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, X, Ye, Ym, Ds, Ts, Yps, Xs, OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -1405,7 +1154,7 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
 
     REAL(dp) :: Yp
-    INTEGER  :: iD, iT, iYp, iL_D, iL_Y
+    INTEGER  :: iD, iT, iYp
     INTEGER  :: SizeDs, SizeTs, SizeYps
     INTEGER  :: d_c, d_i
     INTEGER  :: i_a, i_b, i_c, i
@@ -1416,12 +1165,12 @@ CONTAINS
     REAL(dp) :: LogDs_i(2), Yps_i(2)
     REAL(dp) :: Xs_a(2,2), Xs_b(2,2), Xs_c(2,2), Xs_i(2,2)
 
-    REAL(dp) :: P_LeptPhot, E_LeptPhot, S_LeptPhot
-    REAL(DP) :: D_cube, T_cube, Ye_cube, Ym_cube
 
     ! Electron and Muon quantities
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
+    REAL(dp) :: Plane_a(2,2,3), Plane_b(2,2,3), Plane_c(2,2,3), Plane_i(2,2,3)
 
     ! Make sure that Yp = Ye + Ym also at the table level
     REAL(dp) :: Ye_over_Yp, Ym_over_Yp
@@ -1433,6 +1182,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------
     Error = 0
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
 
     LogD = LOG10( D )
 
@@ -1456,22 +1206,10 @@ CONTAINS
     Xs_a = 10.0_dp**Xs(iD:iD+1,i_a,iYp:iYp+1) - OS
 
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_a
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_a(iL_D,iL_Y) = Xs_a(iL_D,iL_Y) + S_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_a, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_a )
+    Xs_a = Xs_a+Plane_a(:,:,3)
     Xs_a = LOG10(Xs_a+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -1483,22 +1221,10 @@ CONTAINS
     T_b = Ts(i_b)
     Xs_b = 10.0_dp**Xs(iD:iD+1,i_b,iYp:iYp+1) - OS
     ! Calculate electron and muon contribution
-    DO iL_D=1,2
-      DO iL_Y=1,2
-
-        D_cube  = Ds (iD +iL_D-1)
-        T_cube  = T_b
-        Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-        Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-        CALL GetPhotonLeptonGasEOS( &
-          D_cube, T_cube, Ye_cube, Ym_cube, &
-          HelmTableElectrons, HelmTableMuons, &
-          P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-        Xs_b(iL_D,iL_Y) = Xs_b(iL_D,iL_Y) + S_LeptPhot
-
-      END DO
-    END DO
+    CALL EvaluatePhotonLeptonEOSPlane &
+           ( Ds(iD:iD+1), T_b, Yps(iYp:iYp+1)*Ye_over_Yp, &
+             Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_b )
+    Xs_b = Xs_b+Plane_b(:,:,3)
     Xs_b = LOG10(Xs_b+OS)
 
     CALL LogInterpolateSingleVariable &
@@ -1514,22 +1240,10 @@ CONTAINS
         T_c = Ts(i_c)
         Xs_c = 10.0_dp**Xs(iD:iD+1,i_c,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_c
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_c(iL_D,iL_Y) = Xs_c(iL_D,iL_Y) + S_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_c, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_c )
+        Xs_c = Xs_c+Plane_c(:,:,3)
         Xs_c = LOG10(Xs_c+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -1542,10 +1256,12 @@ CONTAINS
           T_b = T_c
           X_b = X_c
           f_b = f_c
+          Plane_b = Plane_c
         ELSE
           i_a = i_c
           T_a = T_c
           X_a = X_c
+          Plane_a = Plane_c
           f_a = f_c
         END IF
 
@@ -1559,22 +1275,10 @@ CONTAINS
         T_i = Ts(i)
         Xs_i = 10.0_dp**Xs(iD:iD+1,i,iYp:iYp+1) - OS
         ! Calculate electron and muon contribution
-        DO iL_D=1,2
-          DO iL_Y=1,2
-
-            D_cube  = Ds (iD +iL_D-1)
-            T_cube  = T_i
-            Ye_cube = Yps(iYp+iL_Y-1) * Ye_over_Yp
-            Ym_cube = Yps(iYp+iL_Y-1) * Ym_over_Yp
-            CALL GetPhotonLeptonGasEOS( &
-              D_cube, T_cube, Ye_cube, Ym_cube, &
-              HelmTableElectrons, HelmTableMuons, &
-              P_LeptPhot, E_LeptPhot, S_LeptPhot)
-
-            Xs_i(iL_D,iL_Y) = Xs_i(iL_D,iL_Y) + S_LeptPhot
-
-          END DO
-        END DO
+        CALL EvaluatePhotonLeptonEOSPlane &
+               ( Ds(iD:iD+1), T_i, Yps(iYp:iYp+1)*Ye_over_Yp, &
+                 Yps(iYp:iYp+1)*Ym_over_Yp, HelmTableElectrons, HelmTableMuons, Plane_i )
+        Xs_i = Xs_i+Plane_i(:,:,3)
         Xs_i = LOG10(Xs_i+OS)
 
         CALL LogInterpolateSingleVariable &
@@ -1587,11 +1291,13 @@ CONTAINS
           i_a = i
           T_a = T_i
           X_a = X_i
+          Plane_a = Plane_i
           EXIT
         ELSE
           i_b = i
           T_b = T_i
           X_b = X_i
+          Plane_b = Plane_i
         END IF
 
       END DO
@@ -1607,6 +1313,9 @@ CONTAINS
       T = 0.0_dp
     ELSE
       T = InverseLogInterp( T_a, T_b, X_a, X_b, X, OS )
+      IF( PRESENT(PlaneCache_Option) ) &
+        CALL StoreCombinedEOSPlanes &
+               ( D, Ye, Ym, Ds, Ts, Yps, iD, i_a, i_b, iYp, Plane_a, Plane_b, PlaneCache_Option )
     END IF
 
   END SUBROUTINE InvertTemperatureWith_DSYpYl_NoGuess

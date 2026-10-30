@@ -1,5 +1,6 @@
 MODULE wlEOSComponentsCombinedInversionModule
 
+  USE wlEOSComponentsThermodynamicsModule, ONLY: CombinedEOSPlaneCacheType
   USE wlKindModule, ONLY: &
     dp
   USE wlEosTemperatureCombinedInversionModule, ONLY: &
@@ -271,7 +272,8 @@ CONTAINS
   END SUBROUTINE DescribeEOSComponentsInversionError
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error &
-   ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+   ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -287,19 +289,23 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_Guess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_Error
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError &
-    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -314,22 +320,26 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     INTEGER  :: Error
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_Guess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error &
-    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -344,20 +354,24 @@ CONTAINS
     INTEGER,  INTENT(out)   :: Error
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_NoGuess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError &
-    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, HelmTableElectrons, HelmTableMuons )
+    ( D, E, Ye, Ym, Ds, Ts, Yps, Es, OS, T, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -371,21 +385,25 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     INTEGER  :: Error
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, E, Ye, Ym, MinE, MaxE )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DEYpYl_NoGuess &
              ( D, E, Ye, Ym, Ds, Ts, Yps, Es, &
-               OS, T, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DEYpYl_Single_NoGuess_NoError
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_Error &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -401,20 +419,24 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_Guess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_NoError &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -429,22 +451,26 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     INTEGER  :: Error
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_Guess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_Error &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -459,20 +485,24 @@ CONTAINS
     INTEGER,  INTENT(out)   :: Error
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_NoGuess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError &
-    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, HelmTableElectrons, HelmTableMuons )
+    ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, OS, T, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -486,21 +516,25 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     INTEGER  :: Error
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, P, Ye, Ym, MinP, MaxP )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DPYpYl_NoGuess &
              ( D, P, Ye, Ym, Ds, Ts, Yps, Ps, &
-               OS, T, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DPYpYl_Single_NoGuess_NoError
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_Error &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -516,20 +550,24 @@ CONTAINS
     INTEGER,  INTENT(out) :: Error
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_Guess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_NoError &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, T_Guess, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -544,22 +582,26 @@ CONTAINS
     REAL(dp), INTENT(in)  :: T_Guess
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     INTEGER  :: Error
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_Guess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, T_Guess, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_Guess_NoError
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, Error, HelmTableElectrons, HelmTableMuons )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -574,20 +616,24 @@ CONTAINS
     INTEGER,  INTENT(out)   :: Error
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_NoGuess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_Error
 
 
   SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError &
-    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, HelmTableElectrons, HelmTableMuons )
+    ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, OS, T, HelmTableElectrons, HelmTableMuons, &
+      PlaneCache_Option )
 #if defined(WEAKLIB_OMP_OL)
     !$OMP DECLARE TARGET
 #elif defined(WEAKLIB_OACC)
@@ -601,15 +647,18 @@ CONTAINS
     REAL(dp), INTENT(out)   :: T
     TYPE(HelmTableType), INTENT(IN) :: HelmTableElectrons
     TYPE(HelmTableType), INTENT(IN) :: HelmTableMuons
+    TYPE(CombinedEOSPlaneCacheType), INTENT(out), OPTIONAL :: PlaneCache_Option
 
     INTEGER  :: Error
 
     T = 0.0_dp
+    IF( PRESENT(PlaneCache_Option) ) PlaneCache_Option%Valid = .FALSE.
     Error = CheckInputError( D, S, Ye, Ym, MinS, MaxS )
     IF ( Error == 0 ) THEN
       CALL InvertTemperatureWith_DSYpYl_NoGuess &
              ( D, S, Ye, Ym, Ds, Ts, Yps, Ss, &
-               OS, T, Error, HelmTableElectrons, HelmTableMuons )
+               OS, T, Error, HelmTableElectrons, HelmTableMuons, &
+               PlaneCache_Option )
     END IF
 
   END SUBROUTINE ComputeTemperatureWith_DSYpYl_Single_NoGuess_NoError
