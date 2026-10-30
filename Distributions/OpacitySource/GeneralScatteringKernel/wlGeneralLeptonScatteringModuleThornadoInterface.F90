@@ -89,13 +89,14 @@ CONTAINS
 
   SUBROUTINE InitGeneralScatteringKernels(E1_array, E3_array, nE1, nE3, nTheta, &
                                           iProcessMin_Option, iProcessMax_Option, &
-                                          E2_max_Option, nE2_Option)
+                                          E2_max_Option, nE2_Option, Verbose_Option)
 
     REAL(DP), INTENT(IN)           :: E1_array(nE1), E3_array(nE3)
     INTEGER , INTENT(IN)           :: nE1, nE3, nTheta
     INTEGER , INTENT(IN), OPTIONAL :: iProcessMin_Option, iProcessMax_Option
     REAL(DP), INTENT(IN), OPTIONAL :: E2_max_Option
     INTEGER , INTENT(IN), OPTIONAL :: nE2_Option
+    LOGICAL, INTENT(IN), OPTIONAL :: Verbose_Option
 
     REAL(DP) :: E1, E2, E3, costh, Delta, Delta5, E2_max
     INTEGER  :: iE1, iE2, iE3, iTh, iProcess, iCase
@@ -304,7 +305,10 @@ CONTAINS
       ChosenToTrueCaseMap(iCase) = unique_cases(iCase)
     ENDDO
 
-    WRITE(*,*) 'Working with', nDistinctCases, 'Distinct Scattering Cases'
+    IF( PRESENT(Verbose_Option) )THEN
+      IF( Verbose_Option ) &
+        WRITE(*,*) 'Working with', nDistinctCases, 'Distinct Scattering Cases'
+    END IF
 
 #if defined(WEAKLIB_OMP_OL)
     !$OMP TARGET ENTER DATA MAP( to: A_Scat, B_Scat, C_Scat, &
