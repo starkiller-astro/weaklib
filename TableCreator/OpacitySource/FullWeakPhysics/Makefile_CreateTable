@@ -48,5 +48,5 @@ clean:
 	rm -f *.o *.mod *.ld
 
 clobber: clean
-	rm wlCreateOpacityTable_$(MACHINE)
-	rm wlReadOpacityTableTest_$(MACHINE)
+	rm -f wlCreateOpacityTable_$(MACHINE)
+	rm -f wlReadOpacityTableTest_$(MACHINE)
