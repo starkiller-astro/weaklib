@@ -22,6 +22,7 @@ $(WEAKLIB_DIR)/TableCreator/Old/EOSInterface: \
 Weaklib_TableCreator = \
   $(WL_LIBRARY) \
   $(WL_EOSSOURCE) \
+  $(WL_EOSSOURCE_SPLIT) \
   $(WL_OPACITYSOURCE) \
   $(SHAREDMODULES) \
   $(OPACITYFULLWEAK) \
