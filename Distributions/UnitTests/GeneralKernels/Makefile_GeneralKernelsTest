@@ -16,7 +16,9 @@ all: wlTestElasticOpacity \
      wlTestNLSOnRealTrajectory \
      wlTestGeneralKernelTwoReactions \
      wlTestGeneralKernelNMS_Point \
-     wlTestGeneralKernelVsTable_Interface
+     wlTestGeneralKernelVsTable_Interface \
+     wlTestInverseAntiMuonDecay \
+     wlTestInverseReactionSymmetry
 
 wlTestElasticOpacity: \
 	$(weaklib) wlTestElasticOpacity.o
@@ -70,6 +72,18 @@ wlTestGeneralKernelNMS_Point: \
 	$(weaklib) wlTestGeneralKernelNMS_Point.o
 	$(FLINKER) $(FLAGS) -o wlTestGeneralKernelNMS_Point_$(MACHINE) \
 	$(weaklib) wlTestGeneralKernelNMS_Point.o \
+	$(LIBRARIES)
+
+wlTestInverseAntiMuonDecay: \
+	$(weaklib) wlTestInverseAntiMuonDecay.o
+	$(FLINKER) $(FLAGS) -o wlTestInverseAntiMuonDecay_$(MACHINE) \
+	$(weaklib) wlTestInverseAntiMuonDecay.o \
+	$(LIBRARIES)
+
+wlTestInverseReactionSymmetry: \
+	$(weaklib) wlTestInverseReactionSymmetry.o
+	$(FLINKER) $(FLAGS) -o wlTestInverseReactionSymmetry_$(MACHINE) \
+	$(weaklib) wlTestInverseReactionSymmetry.o \
 	$(LIBRARIES)
 
 wlTestGeneralKernelVsTable_Interface: \

@@ -205,6 +205,8 @@ MODULE wlGeneralLeptonScatteringModule
   PUBLIC :: InverseMuonDecayEmissivity
   PUBLIC :: GeneralAngleAveragedOutgoingScattering_Moments
   PUBLIC :: SelectLambdaFromProcessIndex
+  PUBLIC :: IsInverseDecayProcess
+  PUBLIC :: DetBal_MaxExponent
   PUBLIC :: Compute_Is_Integrals
   PUBLIC :: Compute_Is_Integrals_FD   ! device-callable, pre-reduced arguments
   PUBLIC :: f_gamma
@@ -232,13 +234,20 @@ CONTAINS
     s = NormalizeSpaces(ADJUSTL(TRIM(reac)))
 
     !------------------------------------------------------------
-    ! Special 3->1 IMD channels (Table I, 5a & 5b)
+    ! Special 3->1 IMD channels (Table I, 5a & 5b) and their CP
+    ! conjugates, inverse ANTI-muon decay (35, 36)
     !------------------------------------------------------------
     IF ( s == 'nu_bar_e + e- + nu_mu -> mu-' ) THEN
       ProcessIndex = 33
       RETURN
     ELSE IF ( s == 'nu_mu + e- + nu_bar_e -> mu-' ) THEN
       ProcessIndex = 34
+      RETURN
+    ELSE IF ( s == 'nu_e + e+ + nu_bar_mu -> mu+' ) THEN
+      ProcessIndex = 35
+      RETURN
+    ELSE IF ( s == 'nu_bar_mu + e+ + nu_e -> mu+' ) THEN
+      ProcessIndex = 36
       RETURN
     END IF
 
@@ -299,7 +308,7 @@ CONTAINS
     !------------------------------------------------------------
     IF (TRIM(nu_in) /= TRIM(nu_out) .OR. TRIM(l_in) /= TRIM(l_out)) THEN
       WRITE(*,*) 'ProcessIndexFromReactionString: non-elastic reaction not mapped: ', TRIM(reac)
-      WRITE(*,*) 'Supported non-elastic 2->2: Guo (a)-(d) (25-32); inverse muon decay is 33/34.'
+      WRITE(*,*) 'Supported non-elastic 2->2: Guo (a)-(d) (25-32); inverse (anti)muon decay is 33..36.'
       STOP
     END IF
 
@@ -483,6 +492,10 @@ CONTAINS
     CASE (33); s = 'nu_bar_e   + e- + nu_mu -> mu-  '       ! inverse muon decay (3->1)
     CASE (34); s = 'nu_mu      + e- + nu_bar_e -> mu-  '    ! inverse muon decay (3->1)
 
+    ! --- Inverse ANTI-muon decay: CP conjugates of 33 and 34 ---
+    CASE (35); s = 'nu_e       + e+ + nu_bar_mu -> mu+  '   ! CP of 33
+    CASE (36); s = 'nu_bar_mu  + e+ + nu_e -> mu+  '        ! CP of 34
+
     CASE DEFAULT
       WRITE(*,*) 'ReactionStringFromProcessIndex: unsupported ProcessIndex = ', ProcessIndex
       STOP
@@ -584,12 +597,33 @@ CONTAINS
       lam2 = lam2_LFE
       lam3 = lam3_LFE
 
+    ! Inverse ANTI-muon decay. mu+ decay is the CP conjugate of mu- decay:
+    !   mu- : |M|^2 ~ (p_mu.p_nubar_e)(p_e.p_nu_mu)
+    !   mu+ : |M|^2 ~ (p_mu.p_nu_e)(p_e.p_nubar_mu)
+    ! so for the same (nu1, nu3) roles the matrix element is unchanged and
+    ! only the chemical potentials of particles 2 and 4 flip sign.
+    CASE(35)  ! nu_e + e+ + nu_bar_mu -> mu+, CP of 33
+      lam1 = lam1_LFC
+      lam2 = lam2_LFC
+      lam3 = lam3_LFC
+
+    CASE(36)  ! nu_bar_mu + e+ + nu_e -> mu+, CP of 34
+      lam1 = lam1_LFE
+      lam2 = lam2_LFE
+      lam3 = lam3_LFE
+
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
       STOP
     END SELECT
 
   END SUBROUTINE SelectLambdaFromProcessIndex
+
+  !--- 3->1 inverse decay channels: 33/34 (mu-) and their CP conjugates 35/36 (mu+)
+  PURE LOGICAL FUNCTION IsInverseDecayProcess( ProcessIndex )
+    INTEGER, INTENT(IN) :: ProcessIndex
+    IsInverseDecayProcess = ( ProcessIndex >= 33 .AND. ProcessIndex <= 36 )
+  END FUNCTION IsInverseDecayProcess
 
   !================================================================================
   !
@@ -624,7 +658,7 @@ CONTAINS
   !    m2        -- l2 mass [MeV]
   !    m4        -- l4 mass [MeV]
   !    ProcessIndex -- process index (see ProcessIndexFromReactionString); anti-lepton
-  !                    channels use the negated chemical potentials; 33/34 inverse muon decay
+  !                    channels use the negated chemical potentials; 33..36 inverse (anti)muon decay
   !
   !  Outputs:
   !    Notice that for some reason Guo 2020 swaps the definitions of R_out and R_in 
@@ -676,7 +710,7 @@ CONTAINS
     END DO
 
     Delta_mu = xMu_l2 - xMu_l4
-    IF ( ProcessIndex == 33 .OR. ProcessIndex == 34 ) THEN
+    IF ( IsInverseDecayProcess(ProcessIndex) ) THEN
       ! IMD: Phout is the absorption kernel R_A, Phin the emission kernel R_D (Guo Eq. 21)
       exponent = MIN( -(E1 + E3 + Delta_mu) / xT, DetBal_MaxExponent )
     ELSE
@@ -700,7 +734,7 @@ CONTAINS
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
 
     Delta_mu = xMu_l2 - xMu_l4
-    IF ( ProcessIndex == 33 .OR. ProcessIndex == 34 ) THEN
+    IF ( IsInverseDecayProcess(ProcessIndex) ) THEN
       ! --- IMD 3->1: R_A (Guo Eqs. 15-17), Rin = R_D (Guo Eq. 21)
       CALL InverseMuonDecayRout( E1, E3, costheta, xT, xMu_l2, xMu_l4, m2, m4, lam1, lam2, lam3, Rout )
       exponent = MIN( -(E1 + E3 + Delta_mu) / xT, DetBal_MaxExponent )
@@ -732,8 +766,8 @@ CONTAINS
     REAL(DP), ALLOCATABLE :: xa_cos_theta(:), wa_cos_theta(:)
     REAL(DP) :: conv_fac, lam1, lam2, lam3
 
-    IF (ProcessIndex /= 33 .AND. ProcessIndex /= 34) THEN
-      WRITE(*,*) 'Error: InverseMuonDecayOpacity only valid for ProcessIndex=33 or 34 (inverse muon decay).'
+    IF ( .NOT. IsInverseDecayProcess(ProcessIndex) ) THEN
+      WRITE(*,*) 'Error: InverseMuonDecayOpacity only valid for ProcessIndex=33..36 (inverse (anti)muon decay).'
       STOP
     END IF
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
@@ -797,8 +831,8 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
-    IF (ProcessIndex /= 33 .AND. ProcessIndex /= 34) THEN
-      WRITE(*,*) 'Error: InverseMuonDecayEmissivity only valid for ProcessIndex=33 or 34 (inverse muon decay).'
+    IF ( .NOT. IsInverseDecayProcess(ProcessIndex) ) THEN
+      WRITE(*,*) 'Error: InverseMuonDecayEmissivity only valid for ProcessIndex=33..36 (inverse (anti)muon decay).'
       STOP
     END IF
     CALL SelectLambdaFromProcessIndex(ProcessIndex, lam1, lam2, lam3)
@@ -865,7 +899,7 @@ CONTAINS
     DoFullIntegration = .FALSE.
     IF (PRESENT(DoFullIntegration_in)) DoFullIntegration = DoFullIntegration_in
 
-    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+    IF ( IsInverseDecayProcess(ProcessIndex) ) THEN
       CALL InverseMuonDecayOpacity( E1, xT, xMu_l2, xMu_l4, xMu_nu3, m2, m4, &
                                    ProcessIndex, Opacity_tot, nE3, nTheta )
       RETURN
@@ -1003,9 +1037,9 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
-    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+    IF ( IsInverseDecayProcess(ProcessIndex) ) THEN
       WRITE(*,*) 'Error: GeneralAngleAveragedOutgoingScattering_Simple does not handle ', &
-                 'inverse muon decay (ProcessIndex 33/34): use GeneralScatteringOpacity ', &
+                 'inverse (anti)muon decay (ProcessIndex 33..36): use GeneralScatteringOpacity ', &
                  'or InverseMuonDecayOpacity.'
       STOP
     END IF
@@ -1086,9 +1120,9 @@ CONTAINS
     IsFinalStateFree = .FALSE.
     IF (PRESENT(IsFinalStateFree_in)) IsFinalStateFree = IsFinalStateFree_in
 
-    IF (ProcessIndex == 33 .OR. ProcessIndex == 34) THEN
+    IF ( IsInverseDecayProcess(ProcessIndex) ) THEN
       WRITE(*,*) 'Error: GeneralAngleAveragedOutgoingScattering_Moments does not handle ', &
-                 'inverse muon decay (ProcessIndex 33/34): use CalculatePhoutPhin.'
+                 'inverse (anti)muon decay (ProcessIndex 33..36): use CalculatePhoutPhin.'
       STOP
     END IF
 

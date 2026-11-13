@@ -5,6 +5,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
     pi, Gw_MeV, hbarc, sin2W, me, mmu, cvel
   USE wlGeneralLeptonScatteringModule, ONLY: &
     SelectLambdaFromProcessIndex, &
+    DetBal_MaxExponent,           &
     Compute_Is_Integrals, FD,     &
     Compute_Is_Integrals_FD,      &
     f_gamma, xi_tol,              &
@@ -16,14 +17,14 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   PRIVATE
 
   INTEGER , PARAMETER, PUBLIC :: iProcessMin_Default = 1
-  INTEGER , PARAMETER, PUBLIC :: iProcessMax_Default = 34
+  INTEGER , PARAMETER, PUBLIC :: iProcessMax_Default = 36
   INTEGER , PARAMETER, PUBLIC :: nProcessTotal       = iProcessMax_Default
 
   ! ==========================================================================
   ! Process selection.
   !
   ! The selection is an explicit ORDERED LIST, not a range: any subset of the
-  ! 34 processes can be requested, in any combination. ProcessList defines the
+  ! 36 processes can be requested, in any combination. ProcessList defines the
   ! row order of Phout / Rout, so the caller controls the output layout.
   !
   ! iProcessMin / iProcessMax are kept only as the min/max of the list, for
@@ -40,11 +41,11 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER, PUBLIC :: iGroup_NMS    = 2   ! 13..24 NC on mu-, mu+
   INTEGER , PARAMETER, PUBLIC :: iGroup_LFE    = 3   ! 25..28 lepton flavour exchange
   INTEGER , PARAMETER, PUBLIC :: iGroup_LFC    = 4   ! 29..32 lepton flavour conversion
-  INTEGER , PARAMETER, PUBLIC :: iGroup_IMD    = 5   ! 33..34 inverse muon decay
+  INTEGER , PARAMETER, PUBLIC :: iGroup_IMD    = 5   ! 33..36 inverse muon (33,34) and anti-muon (35,36) decay
   INTEGER , PARAMETER, PUBLIC :: nGroupTotal   = 5
 
   INTEGER , DIMENSION(nGroupTotal), PARAMETER :: GroupFirst = (/  1, 13, 25, 29, 33 /)
-  INTEGER , DIMENSION(nGroupTotal), PARAMETER :: GroupLast  = (/ 12, 24, 28, 32, 34 /)
+  INTEGER , DIMENSION(nGroupTotal), PARAMETER :: GroupLast  = (/ 12, 24, 28, 32, 36 /)
   REAL(DP), PARAMETER         :: ElectronMass        = me
   REAL(DP), PARAMETER         :: MuonMass            = mmu
   REAL(DP), PARAMETER         :: E2_max_Default      = 100.0d0
@@ -126,7 +127,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: iABC_el = 1
   INTEGER , PARAMETER      :: iABC_mu = 2
 
-  INTEGER , PARAMETER      :: nDistinctCasesMax = 9
+  INTEGER , PARAMETER      :: nDistinctCasesMax = 10
   INTEGER                  :: nDistinctCases
   REAL(DP), DIMENSION(nDistinctCasesMax,2) :: MassPairDistinct
   INTEGER , PARAMETER      :: i_em_em = 1 ! particle 2 is e-  and particle 4 is e-
@@ -138,6 +139,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: i_ep_mp = 7 ! particle 2 is e+  and particle 4 is mu+
   INTEGER , PARAMETER      :: i_mp_ep = 8 ! particle 2 is mu+ and particle 4 is e+
   INTEGER , PARAMETER      :: i_IMD   = 9 ! IMD: particle 2 is e-, particle 4 is mu- (applies to 33 and 34)
+  INTEGER , PARAMETER      :: i_IMDbar = 10 ! inverse anti-muon decay: particle 2 is e+, particle 4 is mu+ (35 and 36)
 
   INTEGER , DIMENSION(8), PARAMETER :: &
     iABC_m2 = (/ iABC_el, iABC_el, iABC_mu, iABC_mu, &
@@ -192,6 +194,7 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   PUBLIC :: CalculateAllRout
   PUBLIC :: CalculateAllPhout
   PUBLIC :: CalculateAllPhout_3D
+  PUBLIC :: DetailedBalanceFactor
   PUBLIC :: CalculateAllRoutIntegrated
   PUBLIC :: ProcessRowIndex
   PUBLIC :: ProcessesInGroup
@@ -467,6 +470,9 @@ CONTAINS
     MassPairDistinct(i_IMD,1) = ElectronMass
     MassPairDistinct(i_IMD,2) = MuonMass
 
+    MassPairDistinct(i_IMDbar,1) = ElectronMass
+    MassPairDistinct(i_IMDbar,2) = MuonMass
+
     ! =======================================================================
     ! Resolve the distinct-case list FIRST. The per-case coefficient and
     ! kinematic tables below are dimensioned by nDistinctCases, so this block
@@ -544,9 +550,12 @@ CONTAINS
     DO iCase = 1, nDistinctCases
       iTrueCase = ChosenToTrueCaseMap(iCase)
 
-      IsIMD_Case   (iCase) = ( iTrueCase == i_IMD )
-      TwoSided_Case(iCase) = ( iTrueCase == i_IMD )
-      IF ( iTrueCase == i_IMD ) THEN
+      ! Inverse muon and anti-muon decay share masses, A/B/C_IMD tables and
+      ! kinematics (same mass-pair slot below); only the chemical-potential
+      ! signs differ.
+      IsIMD_Case   (iCase) = ( iTrueCase == i_IMD .OR. iTrueCase == i_IMDbar )
+      TwoSided_Case(iCase) = IsIMD_Case(iCase)
+      IF ( IsIMD_Case(iCase) ) THEN
         E3Sign_Case(iCase) = -1.0d0
         iIdx2(iCase) = 1          ! unused for IMD, kept in range
         iIdx4(iCase) = 1
@@ -606,6 +615,9 @@ CONTAINS
       CASE (i_IMD)     ! (e-, mu-)
         iChemSpecies2(iCase) = 1; ChemSign2(iCase) = +1.0d0
         iChemSpecies4(iCase) = 2; ChemSign4(iCase) = +1.0d0
+      CASE (i_IMDbar)  ! (e+, mu+)
+        iChemSpecies2(iCase) = 1; ChemSign2(iCase) = -1.0d0
+        iChemSpecies4(iCase) = 2; ChemSign4(iCase) = -1.0d0
       CASE DEFAULT
         WRITE(*,*) 'InitGeneralScatteringKernels: unhandled distinct case ', iTrueCase
         STOP
@@ -695,9 +707,9 @@ CONTAINS
           C_Scat(iE1, iE3, iTh, :, :, :) = C_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
 
           ! ---------------- IMD coefficients --------------------------------
-          ! The "1" set enters with lam1, i.e. it is the one used by process 34
-          ! (lam1_LFE /= 0); the "2" set (E1 <-> E3 swap) enters with lam2 and is
-          ! used by process 33 (lam2_LFC /= 0). Particle 2 is the electron in
+          ! The "1" set enters with lam1, i.e. it is the one used by processes
+          ! 34/36 (lam1_LFE /= 0); the "2" set (E1 <-> E3 swap) enters with lam2
+          ! and is used by 33/35 (lam2_LFC /= 0). Particle 2 is the (anti)electron in
           ! BOTH orientations. C(3) is never needed since lam3 is always zero.
           A_IMD(iE1, iE3, iTh, 1) = A1_f(  E1, -E3, costh )        / (16.0d0 * pi * DeltaA5)
           A_IMD(iE1, iE3, iTh, 2) = A1_f(  E3, -E1, costh )        / (16.0d0 * pi * DeltaA5)
@@ -935,6 +947,9 @@ CONTAINS
 
     CASE(33); iDistinct = i_IMD
     CASE(34); iDistinct = i_IMD ! Same as 33 but need to switch nue_bar and nu_mu
+
+    ! 35) nu_e + e+ + nu_bar_mu -> mu+ ; 36) nu_bar_mu + e+ + nu_e -> mu+
+    CASE(35, 36); iDistinct = i_IMDbar
 
     CASE DEFAULT
       WRITE(*,*) 'Error: Unrecognized ProcessIndex: ', ProcessIndex
@@ -1328,6 +1343,60 @@ CONTAINS
 
   END SUBROUTINE CalculateAllPhout_3D
 
+  !================================================================================
+  !
+  !  DetailedBalanceFactor
+  !
+  !  Phin = Phout * DetailedBalanceFactor( iRow, ... ) for row iRow of Phout.
+  !
+  !    scattering rows (Guo Eq. 13):  exp( (E3 - E1 - Dmu) / T )
+  !      Phin is the kernel for nu(E3) + l4 -> nu(E1) + l2.
+  !    inverse (anti)muon decay rows (Guo Eq. 21):  exp( -(E1 + E3 + Dmu) / T )
+  !      Phout is the absorption kernel R_A (nu1(E1) + l2 + nu3(E3) -> l4),
+  !      Phin the decay kernel R_D (l4 -> l2 + nu1(E1) + nu3(E3)), i.e. the
+  !      emissivity kernel.
+  !
+  !  with Dmu = mu_l2 - mu_l4, using the signed (anti)lepton chemical potentials
+  !  of that row. The relation is exact, not an approximation: the two kernels
+  !  share matrix element and phase space and differ only by f4(1-f2) vs
+  !  f2(1-f4), whose ratio is exactly this exponential for Fermi-Dirac leptons
+  !  at common T. Using it (rather than integrating R_D separately) also
+  !  guarantees the discrete collision term vanishes in equilibrium.
+  !
+  !  Device-callable; uses only device-declared module data.
+  !
+  !================================================================================
+  FUNCTION DetailedBalanceFactor( iRow, E1, E3, T, Mu_e, Mu_mu ) RESULT( fac )
+#if   defined(WEAKLIB_OACC)
+    !$ACC ROUTINE SEQ
+#elif defined(WEAKLIB_OMP_OL)
+    !$OMP DECLARE TARGET
+#endif
+
+    INTEGER , INTENT(IN) :: iRow
+    REAL(DP), INTENT(IN) :: E1, E3, T, Mu_e, Mu_mu
+    REAL(DP) :: fac
+
+    REAL(DP) :: MuSel(2), Delta_mu, x
+    INTEGER  :: iCase
+
+    MuSel(1) = Mu_e
+    MuSel(2) = Mu_mu
+
+    iCase    = iRowToCase(iRow)
+    Delta_mu = ChemSign2(iCase) * MuSel( iChemSpecies2(iCase) ) &
+             - ChemSign4(iCase) * MuSel( iChemSpecies4(iCase) )
+
+    IF ( IsIMD_Case(iCase) ) THEN
+      x = -( E1 + E3 + Delta_mu ) / T
+    ELSE
+      x =  ( E3 - E1 - Delta_mu ) / T
+    ENDIF
+
+    fac = EXP( MIN( x, DetBal_MaxExponent ) )
+
+  END FUNCTION DetailedBalanceFactor
+
   SUBROUTINE CalculateAllRout( E1, E3, costh, T, Mu_e, Mu_mu, iE1, iE3, iTh, Rout )
 
     REAL(DP), INTENT(IN)  :: E1, E3, costh, T, Mu_e, Mu_mu
@@ -1498,6 +1567,9 @@ CONTAINS
 
     ChemPotPair(i_IMD,1) = Mu_e
     ChemPotPair(i_IMD,2) = Mu_mu
+
+    ChemPotPair(i_IMDbar,1) = -Mu_e
+    ChemPotPair(i_IMDbar,2) = -Mu_mu
 
   END SUBROUTINE SetChemPotDistinctCases
 
