@@ -63,25 +63,45 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   INTEGER , PARAMETER      :: nL_Max = 2
 
   ! ==========================================================================
-  ! Coefficient tables, in the ORIGINAL shared layout -- which is already
-  ! close to minimal and is deliberately NOT expanded per case:
-  !   A  does not depend on the case at all (only on E1,E3,costh)
-  !   B  depends only on Q, i.e. on the flavour pair
-  !   C  depends only on (Q,m2) and (m2,m4), i.e. on the flavour pair
-  ! Replicating them across all 9 cases streams 90 doubles per
-  ! (iE1,iE3,iTh) triple instead of 22. This kernel runs at roughly
-  ! 4 flop/byte -- below the ~10 flop/byte balance point of a server GPU --
-  ! so it is bandwidth-bound, and the extra traffic costs more than the
-  ! (Index2,Index4) integer gather it would have saved. Measured: expanding
-  ! them made the CPU path 1.39x SLOWER at nE=32/nTheta=32.
+  ! Angular quadrature and coefficient tables, PER MASS PAIR.
+  !
+  ! The cos(theta) integral is NOT done with one Gauss-Legendre rule on
+  ! [-1,1]. At low T / high E the 2->2 integrand is a narrow forward peak at
+  ! 1-mu ~ 1e-4..1e-3 that a 12-24 point rule on [-1,1] never samples, and
+  ! IMD has a hard kinematic edge (k = k0, where disc = 0) inside [-1,1].
+  ! Both are T-INDEPENDENT, so the rule is built at Init, separately for every
+  ! (iE1, iE3, mass pair):
+  !
+  !   x = 1 - mu on [xLo, xHi]
+  !     xHi = 2                                      (2->2)
+  !         = min(2, Q / (k0 E1 E3))                 (IMD: threshold edge)
+  !     xLo = max(xFloor, x where E_minus(x) = EmCap)
+  !           (E_minus grows like 1/x or 1/sqrt(x) as x -> 0 off the
+  !            diagonal; above EmCap the I_s integrals are ~exp(-(EmCap-mu)/T))
+  !   Gauss-Legendre in s(x) = alpha*ln(x) + beta*x on [s(xLo), s(xHi)]:
+  !     Q = 0 scattering (NES, NMS) : pure log      (alpha=1, beta=0)
+  !     Q /= 0 scattering (LFE, LFC): linear in mu  (alpha=0, beta=1)
+  !     IMD                         : log-linear    (alpha=1, beta=1/XcIMD)
+  !   (choices from wlTestAngularQuadrature-style comparisons against a
+  !    converged log-panel reference).
+  !
+  ! Because the nodes depend on the mass pair, A, B, C and the weights are
+  ! stored per mass pair. Per case this streams the same 7 coefficients as the
+  ! old shared (A_Scat, B_Scat(jFl2,jFl4), C_Scat(jFl2,jFl4)) layout, plus the
+  ! weight, so the bandwidth per (iE1,iE3,iTh,case) is unchanged up to that.
+  ! Slots: A(1:2), B(1:2) and C(1:2) multiply lam1 / lam2 (R1 / R2); C(3)
+  ! multiplies lam3 (R3) and is zero for IMD. 1/(16 pi Delta^5) is built in.
   ! ==========================================================================
-  REAL(DP), ALLOCATABLE    :: A_Scat(:, :, :, :)
-  REAL(DP), ALLOCATABLE    :: B_Scat(:, :, :, :, :, :)
-  REAL(DP), ALLOCATABLE    :: C_Scat(:, :, :, :, :, :)
+  REAL(DP), ALLOCATABLE    :: A_MP  (:, :, :, :, :)   ! (nE1,nE3,nTheta,2,nMassPair)
+  REAL(DP), ALLOCATABLE    :: B_MP  (:, :, :, :, :)   ! (nE1,nE3,nTheta,2,nMassPair)
+  REAL(DP), ALLOCATABLE    :: C_MP  (:, :, :, :, :)   ! (nE1,nE3,nTheta,3,nMassPair)
+  ! P_{l}(mu_i) * w_i (Jacobian of the x -> s map included)
+  REAL(DP), ALLOCATABLE    :: PlW_MP(:, :, :, :, :)   ! (nE1,nE3,nTheta,nL_Max,nMassPair)
 
-  REAL(DP), ALLOCATABLE    :: A_IMD(:, :, :, :)
-  REAL(DP), ALLOCATABLE    :: B_IMD(:, :, :, :)
-  REAL(DP), ALLOCATABLE    :: C_IMD(:, :, :, :)
+  REAL(DP), PARAMETER      :: XFloor_Scat = 1.0d-10   ! smallest 1-mu, 2->2 (diagonal E1=E3)
+  REAL(DP), PARAMETER      :: XFloor_IMD  = 1.0d-7    ! smallest 1-mu, IMD (x*R ~ x there)
+  REAL(DP), PARAMETER      :: EmCap       = 3.0d3     ! [MeV] lepton-2 energy beyond which I_s ~ 0
+  REAL(DP), PARAMETER      :: XcIMD       = 0.1d0     ! log -> linear crossover of the IMD map
 
   ! ==========================================================================
   ! Tabulated kinematics. E_minus, E_plus and the phase-space masks depend
@@ -97,13 +117,13 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   ! ==========================================================================
   INTEGER , PARAMETER      :: nMassPairMax = 5
   INTEGER                  :: nMassPair
-  REAL(DP), ALLOCATABLE    :: Eminus_MP(:, :, :, :)   ! (nE1,nE3,nTheta,nMassPair)
+  REAL(DP), ALLOCATABLE    :: Eminus_MP(:, :, :, :)   ! (nE1,nE3,nTheta,nMassPair), at that pair's nodes
   REAL(DP), ALLOCATABLE    :: Eplus_MP (:, :, :, :)   ! ditto; IMD slot only
   LOGICAL , ALLOCATABLE    :: Active_MP(:, :, :, :)   ! .FALSE. = no phase space
 
   ! --- Per-case constants, all resolved at Init ---
   INTEGER , ALLOCATABLE    :: iMassPair_Case(:)  ! case -> mass-pair slot
-  LOGICAL , ALLOCATABLE    :: IsIMD_Case(:)      ! read the *_IMD tables instead
+  LOGICAL , ALLOCATABLE    :: IsIMD_Case(:)      ! inverse (anti)muon decay case
   LOGICAL , ALLOCATABLE    :: TwoSided_Case(:)   ! IMD: I_s(E-) - I_s(E+)
   REAL(DP), ALLOCATABLE    :: E3Sign_Case(:)     ! +1 scattering, -1 IMD (enters eta')
   INTEGER , ALLOCATABLE    :: iIdx2(:), iIdx4(:) ! flattened iABC_m2/iABC_m4
@@ -112,15 +132,10 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   REAL(DP), ALLOCATABLE    :: ChemSign2(:)       ! +1 for l-, -1 for l+
   REAL(DP), ALLOCATABLE    :: ChemSign4(:)
 
-  ! --- P_{l}(costh_i) * w_i, precomputed. Was a recurrence evaluated in the
-  ! --- innermost loop on every call despite depending only on (iTh,iL).
-  REAL(DP), ALLOCATABLE    :: PlWeight(:, :)     ! (nTheta, nL_Max)
-
   ! IMD threshold (Guo Eq. 16): kernel vanishes for k < k0
   REAL(DP), PARAMETER      :: k0_IMD = (MuonMass + ElectronMass) / (MuonMass - ElectronMass)
 
-  INTEGER                  :: nThetaScattering
-  REAL(DP), ALLOCATABLE    :: xa_cos_theta(:), wa_cos_theta(:)
+  INTEGER                  :: nThetaScattering   ! nodes per (iE1,iE3,mass pair)
   REAL(DP), ALLOCATABLE    :: xa_GLeg_ref(:), wa_GLeg_ref(:)
   REAL(DP), ALLOCATABLE    :: xa_GLag(:), wa_GLag(:)
 
@@ -164,19 +179,19 @@ MODULE wlGeneralLeptonScatteringModuleThornadoInterface
   ! --- it. The scalars are listed too: an undeclared module scalar reads as
   ! --- garbage/0 on device.
 #if   defined(WEAKLIB_OMP_OL)
-  !$OMP DECLARE TARGET( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,          &
+  !$OMP DECLARE TARGET( A_MP, B_MP, C_MP, PlW_MP,                            &
   !$OMP                 Eminus_MP, Eplus_MP, Active_MP,                       &
   !$OMP                 iMassPair_Case, IsIMD_Case, TwoSided_Case,            &
-  !$OMP                 E3Sign_Case, iIdx2, iIdx4, PlWeight,                  &
+  !$OMP                 E3Sign_Case, iIdx2, iIdx4,                            &
   !$OMP                 lam1, lam2, lam3, iRowToCase,                         &
   !$OMP                 iChemSpecies2, iChemSpecies4,                         &
   !$OMP                 ChemSign2, ChemSign4, E1_Grid, E3_Grid,               &
   !$OMP                 nThetaScattering, nDistinctCases, nProcessSel )
 #elif defined(WEAKLIB_OACC)
-  !$ACC DECLARE CREATE( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,          &
+  !$ACC DECLARE CREATE( A_MP, B_MP, C_MP, PlW_MP,                            &
   !$ACC                 Eminus_MP, Eplus_MP, Active_MP,                       &
   !$ACC                 iMassPair_Case, IsIMD_Case, TwoSided_Case,            &
-  !$ACC                 E3Sign_Case, iIdx2, iIdx4, PlWeight,                  &
+  !$ACC                 E3Sign_Case, iIdx2, iIdx4,                            &
   !$ACC                 lam1, lam2, lam3, iRowToCase,                         &
   !$ACC                 iChemSpecies2, iChemSpecies4,                         &
   !$ACC                 ChemSign2, ChemSign4, E1_Grid, E3_Grid,               &
@@ -297,12 +312,13 @@ CONTAINS
     REAL(DP), INTENT(IN), OPTIONAL :: E2_max_Option
     INTEGER , INTENT(IN), OPTIONAL :: nE2_Option
 
-    REAL(DP) :: E1, E3, costh, Delta, Delta5, DeltaA, DeltaA5, E2_max
+    REAL(DP) :: E1, E3, costh, Delta, DeltaA, E2_max
     REAL(DP) :: Q, m2, m4, k_val, disc, Em, Ep, OneMinusMu, EEOneMinusMu
+    REAL(DP) :: xLo, xHi, xFloor, x, wx, sAlpha, sBeta, Den
+    REAL(DP), ALLOCATABLE :: sNode(:), sWght(:)
     INTEGER  :: iE1, iE3, iTh, iProcess, iCase, iTrueCase, iL
     LOGICAL  :: IsActive
 
-    REAL(DP) :: Q_mu_e, Q_e_mu
 
     INTEGER, DIMENSION(nDistinctCasesMax) :: unique_cases
     INTEGER :: idx, current_val
@@ -434,13 +450,6 @@ CONTAINS
     ALLOCATE( lam1(nProcessSel) )
     ALLOCATE( lam2(nProcessSel) )
     ALLOCATE( lam3(nProcessSel) )
-
-    ! Take care of angular quadrature
-    ALLOCATE( xa_cos_theta(nThetaScattering), wa_cos_theta(nThetaScattering) )
-    CALL gauleg( -1.0d0, 1.0d0, xa_cos_theta, wa_cos_theta, nThetaScattering )
-
-    Q_mu_e = 0.5d0 * (MuonMass**2 - ElectronMass**2)
-    Q_e_mu = - Q_mu_e
 
     ! --- Mass pairs per distinct case (m2 = particle 2, m4 = particle 4) ---
     MassPairDistinct(i_em_em,1) = ElectronMass
@@ -625,118 +634,89 @@ CONTAINS
     ENDDO
 
     ! =======================================================================
-    ! Legendre weights: P_{iL-1}(costh_iTh) * w_iTh.
+    ! Angular nodes, weights, coefficient and kinematic tables, built per
+    ! (iE1, iE3, mass pair) on [xLo, xHi] in x = 1 - mu (see the module
+    ! header). Nothing here depends on T or the chemical potentials.
     ! =======================================================================
-    ALLOCATE( PlWeight(nThetaScattering, nL_Max) )
-    DO iL = 1, nL_Max
-      DO iTh = 1, nThetaScattering
-        PlWeight(iTh,iL) = LegendrePolynomial(iL-1, xa_cos_theta(iTh)) &
-                           * wa_cos_theta(iTh)
-      ENDDO
-    ENDDO
-
-    ! =======================================================================
-    ! Coefficient tables (shared layout) and kinematic tables (per mass pair).
-    ! =======================================================================
-    ALLOCATE( A_Scat(nE1, nE3, nThetaScattering, 2) )
-    ALLOCATE( B_Scat(nE1, nE3, nThetaScattering, 2, 2, 2) )
-    ALLOCATE( C_Scat(nE1, nE3, nThetaScattering, 2, 2, 3) )
-    ALLOCATE( A_IMD (nE1, nE3, nThetaScattering, 2) )
-    ALLOCATE( B_IMD (nE1, nE3, nThetaScattering, 2) )
-    ALLOCATE( C_IMD (nE1, nE3, nThetaScattering, 2) )
+    ALLOCATE( A_MP  (nE1, nE3, nThetaScattering, 2,      nMassPair) )
+    ALLOCATE( B_MP  (nE1, nE3, nThetaScattering, 2,      nMassPair) )
+    ALLOCATE( C_MP  (nE1, nE3, nThetaScattering, 3,      nMassPair) )
+    ALLOCATE( PlW_MP(nE1, nE3, nThetaScattering, nL_Max, nMassPair) )
 
     ALLOCATE( Eminus_MP(nE1, nE3, nThetaScattering, nMassPair) )
     ALLOCATE( Eplus_MP (nE1, nE3, nThetaScattering, nMassPair) )
     ALLOCATE( Active_MP(nE1, nE3, nThetaScattering, nMassPair) )
 
-    A_Scat = 0.0d0 ; B_Scat = 0.0d0 ; C_Scat = 0.0d0
-    A_IMD  = 0.0d0 ; B_IMD  = 0.0d0 ; C_IMD  = 0.0d0
+    A_MP = 0.0d0 ; B_MP = 0.0d0 ; C_MP = 0.0d0 ; PlW_MP = 0.0d0
     Eminus_MP = 0.0d0 ; Eplus_MP = 0.0d0 ; Active_MP = .FALSE.
 
-    DO iE1=1,nE1
-      DO iE3=1,nE3
-        DO iTh=1,nThetaScattering
+    ALLOCATE( sNode(nThetaScattering), sWght(nThetaScattering) )
 
-          E1    = E1_Grid(iE1)
-          E3    = E3_Grid(iE3)
-          costh = xa_cos_theta(iTh)
+    DO idx = 1, nMassPair
 
-          OneMinusMu   = 1.0d0 - costh
-          EEOneMinusMu = E1 * E3 * OneMinusMu
+      m2 = MPm2(idx)
+      m4 = MPm4(idx)
+      Q  = 0.5d0 * (m4**2 - m2**2)                                      ! Guo Eq. 5
 
-          Delta   = SQRT(MAX(E1**2 - 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 4
-          Delta5  = Delta**5
-          DeltaA  = SQRT(MAX(E1**2 + 2.0d0*E1*E3*costh + E3**2, 0.0d0))   ! Guo Eq. 17
-          DeltaA5 = DeltaA**5
+      ! --- map s(x) = sAlpha*ln(x) + sBeta*x for this mass pair
+      IF ( MPisIMD(idx) ) THEN
+        sAlpha = 1.0d0 ; sBeta = 1.0d0 / XcIMD ; xFloor = XFloor_IMD
+      ELSE IF ( m2 == m4 ) THEN
+        sAlpha = 1.0d0 ; sBeta = 0.0d0         ; xFloor = XFloor_Scat
+      ELSE
+        sAlpha = 0.0d0 ; sBeta = 1.0d0         ; xFloor = XFloor_Scat
+      ENDIF
 
-          ! ---------------- scattering coefficients (shared) ----------------
-          A_Scat(iE1, iE3, iTh, 1) = A1_f(  E1,  E3, costh )
-          A_Scat(iE1, iE3, iTh, 2) = A1_f( -E3, -E1, costh )
+      DO iE3 = 1, nE3
+        DO iE1 = 1, nE1
 
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
+          E1 = E1_Grid(iE1)
+          E3 = E3_Grid(iE3)
 
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = B1_f(  E1,  E3, costh, Q_mu_e )
-          B_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = B1_f( -E3, -E1, costh, Q_mu_e )
+          ! --- angular range with phase space
+          xHi = 2.0d0
+          IF ( MPisIMD(idx) ) xHi = MIN( 2.0d0, Q / ( k0_IMD * E1 * E3 ) )  ! Guo Eq. 16
+          IF ( xHi <= xFloor ) CYCLE                    ! no phase space: all inactive
 
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = B1_f(  E1,  E3, costh, Q_e_mu )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = B1_f( -E3, -E1, costh, Q_e_mu )
+          ! xLo is made symmetric under E1 <-> E3 and m2 <-> m4 (xHi, the map
+          ! and xFloor already are). The (iE1,iE3) node set of this pair is
+          ! then IDENTICAL to the (iE3,iE1) set of the same pair and of the
+          ! mass-swapped pair, so the pointwise relations
+          !   Phout_p(E1,E3) = Phout_p(E3,E1) * DB          (NES, NMS)
+          !   Phout_r(E1,E3) = Phout_f(E3,E1) * DB          (LFE/LFC pairs)
+          !   Phout_b(E1,E3) = Phout_a(E3,E1)               (IMD pairs)
+          ! hold to round-off in the DISCRETE kernels (wlTestKernelHalving),
+          ! when E1_Grid = E3_Grid as in thornado.
+          xLo = AngularLowerLimit( E1, E3, m2, m4, MPisIMD(idx), xFloor, xHi )
+          xLo = MIN( xLo, AngularLowerLimit( E3, E1, m2, m4, MPisIMD(idx), xFloor, xHi ) )
+          IF ( .NOT. MPisIMD(idx) ) THEN
+            xLo = MIN( xLo, AngularLowerLimit( E1, E3, m4, m2, .FALSE., xFloor, xHi ) )
+            xLo = MIN( xLo, AngularLowerLimit( E3, E1, m4, m2, .FALSE., xFloor, xHi ) )
+          ENDIF
+          IF ( xLo >= xHi ) CYCLE
 
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = B1_f(  E1,  E3, costh, 0.0d0 )
-          B_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = B1_f( -E3, -E1, costh, 0.0d0 )
+          CALL gauleg( MapS( xLo, sAlpha, sBeta ), MapS( xHi, sAlpha, sBeta ), &
+                       sNode, sWght, nThetaScattering )
 
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 1) = C1_f(  E1,  E3, costh, 0.0d0, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 2) = C1_f( -E3, -E1, costh, 0.0d0, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_el, 3) = C3_f(  E1,  E3, costh, ElectronMass, ElectronMass )
+          DO iTh = 1, nThetaScattering
 
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 1) = C1_f(  E1,  E3, costh, Q_mu_e, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 2) = C1_f( -E3, -E1, costh, Q_mu_e, ElectronMass )
-          C_Scat(iE1, iE3, iTh, iABC_el, iABC_mu, 3) = C3_f(  E1,  E3, costh, ElectronMass, MuonMass )
+            x     = MapSInverse( sNode(iTh), sAlpha, sBeta )
+            x     = MIN( MAX( x, xLo ), xHi )
+            wx    = sWght(iTh) / ( sAlpha / x + sBeta )   ! dx = ds / (ds/dx)
+            costh = 1.0d0 - x
 
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 1) = C1_f(  E1,  E3, costh, Q_e_mu, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 2) = C1_f( -E3, -E1, costh, Q_e_mu, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_el, 3) = C3_f(  E1,  E3, costh, MuonMass, ElectronMass )
-
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 1) = C1_f(  E1,  E3, costh, 0.0d0, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 2) = C1_f( -E3, -E1, costh, 0.0d0, MuonMass )
-          C_Scat(iE1, iE3, iTh, iABC_mu, iABC_mu, 3) = C3_f(  E1,  E3, costh, MuonMass, MuonMass )
-
-          ! Build 1/(16*pi*Delta^5) into A, B, C while we are here
-          A_Scat(iE1, iE3, iTh, :      ) = A_Scat(iE1, iE3, iTh, :      ) / (16.0d0 * pi * Delta5)
-          B_Scat(iE1, iE3, iTh, :, :, :) = B_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
-          C_Scat(iE1, iE3, iTh, :, :, :) = C_Scat(iE1, iE3, iTh, :, :, :) / (16.0d0 * pi * Delta5)
-
-          ! ---------------- IMD coefficients --------------------------------
-          ! The "1" set enters with lam1, i.e. it is the one used by processes
-          ! 34/36 (lam1_LFE /= 0); the "2" set (E1 <-> E3 swap) enters with lam2
-          ! and is used by 33/35 (lam2_LFC /= 0). Particle 2 is the (anti)electron in
-          ! BOTH orientations. C(3) is never needed since lam3 is always zero.
-          A_IMD(iE1, iE3, iTh, 1) = A1_f(  E1, -E3, costh )        / (16.0d0 * pi * DeltaA5)
-          A_IMD(iE1, iE3, iTh, 2) = A1_f(  E3, -E1, costh )        / (16.0d0 * pi * DeltaA5)
-
-          B_IMD(iE1, iE3, iTh, 1) = B1_f(  E1, -E3, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
-          B_IMD(iE1, iE3, iTh, 2) = B1_f(  E3, -E1, costh, Q_mu_e ) / (16.0d0 * pi * DeltaA5)
-
-          C_IMD(iE1, iE3, iTh, 1) = C1_f(  E1, -E3, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
-          C_IMD(iE1, iE3, iTh, 2) = C1_f(  E3, -E1, costh, Q_mu_e, ElectronMass ) / (16.0d0 * pi * DeltaA5)
-
-          ! ---------------- kinematics, per deduplicated mass pair ----------
-          DO idx = 1, nMassPair
-            m2 = MPm2(idx)
-            m4 = MPm4(idx)
-            Q  = 0.5d0 * (m4**2 - m2**2)                                  ! Guo Eq. 5
+            OneMinusMu   = x
+            EEOneMinusMu = E1 * E3 * OneMinusMu
+            k_val        = Q / EEOneMinusMu                                  ! Guo Eq. 5
 
             IF ( MPisIMD(idx) ) THEN
 
-              ! --- IMD (Guo Eqs. 16-17): k diverges at mu -> 1 (and DeltaA -> 0
-              ! is the collinear case); guard before dividing, as in the scattering branch
-              IsActive = ( DeltaA >= 1.0d-10 ) .AND. ( OneMinusMu >= 1.0d-10 )
-              IF ( IsActive ) THEN
-                k_val    = Q / EEOneMinusMu                                   ! Guo Eq. 5
-                disc     = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / EEOneMinusMu   ! Guo Eq. 17
-                IsActive = ( k_val >= k0_IMD ) .AND. ( disc >= 0.0d0 )         ! Guo Eq. 16
-              ENDIF
-
+              ! --- IMD (Guo Eqs. 16-17). DeltaA from x, not mu, to keep
+              ! --- precision when x is tiny.
+              DeltaA   = SQRT( MAX( (E1 + E3)**2 - 2.0d0 * EEOneMinusMu, 0.0d0 ) ) ! Guo Eq. 17
+              disc     = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / EEOneMinusMu   ! Guo Eq. 17
+              IsActive = ( DeltaA >= 1.0d-10 ) .AND. ( k_val >= k0_IMD ) &
+                         .AND. ( disc >= 0.0d0 )                             ! Guo Eq. 16
               IF ( IsActive ) THEN
                 Em = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - DeltaA*SQRT(disc) ) ! Guo Eq. 17
                 Ep = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) + DeltaA*SQRT(disc) ) ! Guo Eq. 17
@@ -747,38 +727,54 @@ CONTAINS
                 Eplus_MP (iE1,iE3,iTh,idx) = Ep
               ENDIF
 
+              IF ( IsActive ) THEN
+                ! The "1" set enters with lam1 (processes 34/36), the "2" set
+                ! (E1 <-> E3 swap) with lam2 (33/35). lam3 is always zero.
+                Den = 16.0d0 * pi * DeltaA**5
+                A_MP(iE1,iE3,iTh,1,idx) = A1_f( E1, -E3, costh )        / Den
+                A_MP(iE1,iE3,iTh,2,idx) = A1_f( E3, -E1, costh )        / Den
+                B_MP(iE1,iE3,iTh,1,idx) = B1_f( E1, -E3, costh, Q )     / Den
+                B_MP(iE1,iE3,iTh,2,idx) = B1_f( E3, -E1, costh, Q )     / Den
+                C_MP(iE1,iE3,iTh,1,idx) = C1_f( E1, -E3, costh, Q, m2 ) / Den
+                C_MP(iE1,iE3,iTh,2,idx) = C1_f( E3, -E1, costh, Q, m2 ) / Den
+              ENDIF
+
             ELSE
 
-              ! --- 2 -> 2 scattering (Guo Eq. 4) ---
-              ! NOTE: disc = (1+k)^2 + 2*m2^2/(E1*E3*(1-mu)) is a square plus a
-              ! strictly positive term, so it can never be negative here. The
-              ! old "IF (disc < 0) CYCLE" guard was unreachable and is dropped.
-              ! The two live guards are the collinear (Delta -> 0) and forward
-              ! (mu -> 1) degeneracies. They are evaluated PER MASS PAIR here:
-              ! previously they were RETURNs inside the case loop, which also
-              ! discarded the IMD case (always last in the list) even though
-              ! IMD has its own DeltaA-based kinematics and is well defined
-              ! there. Latent rather than active: Gauss-Legendre nodes never
-              ! come within 1.0d-10 of mu = 1.
-              IsActive = ( Delta >= 1.0d-10 ) .AND. ( OneMinusMu >= 1.0d-10 )
-
+              ! --- 2 -> 2 scattering (Guo Eq. 4). disc is a square plus a
+              ! --- positive term, so it can never be negative.
+              Delta    = SQRT( (E1 - E3)**2 + 2.0d0 * EEOneMinusMu )           ! Guo Eq. 4
+              IsActive = ( Delta >= 1.0d-10 )
               IF ( IsActive ) THEN
-                k_val = Q / EEOneMinusMu                                        ! Guo Eq. 5
-                disc  = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / EEOneMinusMu       ! Guo Eq. 4
-                Em    = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) )! Guo Eq. 4
-                Em    = MAX(Em, m2)                                             ! floor at m2
-                Eminus_MP(iE1,iE3,iTh,idx) = Em
+                disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / EEOneMinusMu      ! Guo Eq. 4
+                Em   = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + Delta*SQRT(disc) ) ! Guo Eq. 4
+                Eminus_MP(iE1,iE3,iTh,idx) = MAX(Em, m2)                      ! floor at m2
+
+                Den = 16.0d0 * pi * Delta**5
+                A_MP(iE1,iE3,iTh,1,idx) = A1_f(  E1,  E3, costh )         / Den
+                A_MP(iE1,iE3,iTh,2,idx) = A1_f( -E3, -E1, costh )         / Den
+                B_MP(iE1,iE3,iTh,1,idx) = B1_f(  E1,  E3, costh, Q )      / Den
+                B_MP(iE1,iE3,iTh,2,idx) = B1_f( -E3, -E1, costh, Q )      / Den
+                C_MP(iE1,iE3,iTh,1,idx) = C1_f(  E1,  E3, costh, Q, m2 )  / Den
+                C_MP(iE1,iE3,iTh,2,idx) = C1_f( -E3, -E1, costh, Q, m2 )  / Den
+                C_MP(iE1,iE3,iTh,3,idx) = C3_f(  E1,  E3, costh, m2, m4 ) / Den
               ENDIF
 
             ENDIF
 
             Active_MP(iE1,iE3,iTh,idx) = IsActive
 
+            DO iL = 1, nL_Max
+              PlW_MP(iE1,iE3,iTh,iL,idx) = LegendrePolynomial(iL-1, costh) * wx
+            ENDDO
+
           ENDDO
 
         ENDDO
       ENDDO
     ENDDO
+
+    DEALLOCATE( sNode, sWght )
 
     ! --- Preallocate collinear grids (generated ONCE, reused every call) ---
     ALLOCATE( xa_GLeg_ref(nE2_Lepton), wa_GLeg_ref(nE2_Lepton) )
@@ -800,20 +796,19 @@ CONTAINS
     ! NOTHING. UPDATE DEVICE is what actually moves the data.
     ! =======================================================================
 #if   defined(WEAKLIB_OACC)
-    !$ACC UPDATE DEVICE( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,          &
+    !$ACC UPDATE DEVICE( A_MP, B_MP, C_MP, PlW_MP,                            &
     !$ACC                Eminus_MP, Eplus_MP, Active_MP,                       &
     !$ACC                iMassPair_Case, IsIMD_Case, TwoSided_Case,            &
-    !$ACC                E3Sign_Case, iIdx2, iIdx4, PlWeight,                  &
+    !$ACC                E3Sign_Case, iIdx2, iIdx4,                            &
     !$ACC                lam1, lam2, lam3, iRowToCase,                         &
     !$ACC                iChemSpecies2, iChemSpecies4,                         &
     !$ACC                ChemSign2, ChemSign4, E1_Grid, E3_Grid,               &
     !$ACC                nThetaScattering, nDistinctCases, nProcessSel )
 #elif defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET ENTER DATA MAP( always, to: A_Scat, B_Scat, C_Scat,           &
-    !$OMP                         A_IMD, B_IMD, C_IMD,                         &
+    !$OMP TARGET ENTER DATA MAP( always, to: A_MP, B_MP, C_MP, PlW_MP,         &
     !$OMP                         Eminus_MP, Eplus_MP, Active_MP,              &
     !$OMP                         iMassPair_Case, IsIMD_Case, TwoSided_Case,   &
-    !$OMP                         E3Sign_Case, iIdx2, iIdx4, PlWeight,         &
+    !$OMP                         E3Sign_Case, iIdx2, iIdx4,                   &
     !$OMP                         lam1, lam2, lam3, iRowToCase,                &
     !$OMP                         iChemSpecies2, iChemSpecies4,                &
     !$OMP                         ChemSign2, ChemSign4, E1_Grid, E3_Grid )
@@ -824,29 +819,121 @@ CONTAINS
 
   END SUBROUTINE InitGeneralScatteringKernels
 
+  !================================================================================
+  !  Angular-quadrature helpers (Init only, host only).
+  !
+  !  The map s(x) = alpha*ln(x) + beta*x, x = 1 - mu, is strictly increasing for
+  !  alpha, beta >= 0 (not both zero).
+  !================================================================================
+  PURE FUNCTION MapS( x, alpha, beta ) RESULT( sv )
+    REAL(DP), INTENT(IN) :: x, alpha, beta
+    REAL(DP) :: sv
+    sv = beta * x
+    IF ( alpha > 0.0d0 ) sv = sv + alpha * LOG( x )
+  END FUNCTION MapS
+
+  ! Inverse of MapS. For the log-linear case, Newton on t = ln(x):
+  ! f(t) = alpha*t + beta*e^t - s is increasing and convex, so Newton started
+  ! to the right of the root (t0 = s/alpha >= root) converges monotonically.
+  PURE FUNCTION MapSInverse( sv, alpha, beta ) RESULT( x )
+    REAL(DP), INTENT(IN) :: sv, alpha, beta
+    REAL(DP) :: x, t, dt
+    INTEGER  :: it
+    IF ( alpha <= 0.0d0 ) THEN
+      x = sv / beta
+    ELSE IF ( beta <= 0.0d0 ) THEN
+      x = EXP( sv / alpha )
+    ELSE
+      t = sv / alpha
+      DO it = 1, 200
+        dt = ( alpha * t + beta * EXP(t) - sv ) / ( alpha + beta * EXP(t) )
+        t  = t - dt
+        IF ( ABS(dt) <= 1.0d-15 * MAX( 1.0d0, ABS(t) ) ) EXIT
+      ENDDO
+      x = EXP( t )
+    ENDIF
+  END FUNCTION MapSInverse
+
+  ! Kinematic lower bound E_minus on the lepton-2 energy at x = 1 - mu
+  ! (Guo Eq. 4 for 2->2, Eq. 17 for IMD), floored at m2. HUGE where an IMD
+  ! configuration has no phase space.
+  PURE FUNCTION KinematicEminus( E1, E3, x, m2, m4, IsIMD ) RESULT( Em )
+    REAL(DP), INTENT(IN) :: E1, E3, x, m2, m4
+    LOGICAL , INTENT(IN) :: IsIMD
+    REAL(DP) :: Em, Q, EEx, k_val, disc, D
+    Q     = 0.5d0 * ( m4**2 - m2**2 )
+    EEx   = E1 * E3 * x
+    k_val = Q / EEx
+    IF ( IsIMD ) THEN
+      D    = SQRT( MAX( (E1 + E3)**2 - 2.0d0 * EEx, 0.0d0 ) )
+      disc = (1.0d0 - k_val)**2 - 2.0d0 * m2**2 / EEx
+      IF ( k_val < k0_IMD .OR. disc < 0.0d0 ) THEN
+        Em = HUGE( 1.0d0 )
+        RETURN
+      ENDIF
+      Em = 0.5d0 * ( (E3 + E1)*(k_val - 1.0d0) - D*SQRT(disc) )
+    ELSE
+      D    = SQRT( (E1 - E3)**2 + 2.0d0 * EEx )
+      disc = (1.0d0 + k_val)**2 + 2.0d0 * m2**2 / EEx
+      Em   = 0.5d0 * ( (E3 - E1)*(1.0d0 + k_val) + D*SQRT(disc) )
+    ENDIF
+    Em = MAX( Em, m2 )
+  END FUNCTION KinematicEminus
+
+  ! Smallest x in [xFloor, xHi] at which E_minus(x) <= EmCap. Below it the
+  ! I_s integrals start above EmCap and are negligible for any T, mu of
+  ! interest. E_minus decreases with x in the small-x region (it grows like
+  ! 1/x for Q /= 0 and like 1/sqrt(x) off the diagonal for Q = 0), so the
+  ! crossing is found by bisection in ln(x). Returns xFloor if E_minus(xFloor)
+  ! is already below the cap, and xHi if there is no admissible x at all.
+  PURE FUNCTION AngularLowerLimit( E1, E3, m2, m4, IsIMD, xFloor, xHi ) RESULT( xLo )
+    REAL(DP), INTENT(IN) :: E1, E3, m2, m4, xFloor, xHi
+    LOGICAL , INTENT(IN) :: IsIMD
+    REAL(DP) :: xLo, a, b, c
+    INTEGER  :: it
+    IF ( KinematicEminus( E1, E3, xFloor, m2, m4, IsIMD ) <= EmCap ) THEN
+      xLo = xFloor
+      RETURN
+    ENDIF
+    IF ( KinematicEminus( E1, E3, xHi, m2, m4, IsIMD ) > EmCap ) THEN
+      xLo = xHi
+      RETURN
+    ENDIF
+    a = LOG( xFloor )   ! E_minus > EmCap
+    b = LOG( xHi )      ! E_minus <= EmCap
+    DO it = 1, 100
+      c = 0.5d0 * ( a + b )
+      IF ( KinematicEminus( E1, E3, EXP(c), m2, m4, IsIMD ) > EmCap ) THEN
+        a = c
+      ELSE
+        b = c
+      ENDIF
+      IF ( b - a < 1.0d-12 ) EXIT
+    ENDDO
+    xLo = EXP( a )
+  END FUNCTION AngularLowerLimit
+
   SUBROUTINE FinalizeGeneralScatteringKernels()
 
     ! Release the device copies BEFORE the host arrays go away.
     ! OACC needs nothing here: DEALLOCATE of a DECLARE CREATE'd array frees
     ! the device copy as well.
 #if defined(WEAKLIB_OMP_OL)
-    !$OMP TARGET EXIT DATA MAP( delete: A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,  &
+    !$OMP TARGET EXIT DATA MAP( delete: A_MP, B_MP, C_MP, PlW_MP,              &
     !$OMP                         Eminus_MP, Eplus_MP, Active_MP,              &
     !$OMP                         iMassPair_Case, IsIMD_Case, TwoSided_Case,   &
-    !$OMP                         E3Sign_Case, iIdx2, iIdx4, PlWeight,         &
+    !$OMP                         E3Sign_Case, iIdx2, iIdx4,                   &
     !$OMP                         lam1, lam2, lam3, iRowToCase,                &
     !$OMP                         iChemSpecies2, iChemSpecies4,                &
     !$OMP                         ChemSign2, ChemSign4, E1_Grid, E3_Grid )
 #endif
 
     DEALLOCATE( lam1, lam2, lam3 )
-    DEALLOCATE( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD )
+    DEALLOCATE( A_MP, B_MP, C_MP, PlW_MP )
     DEALLOCATE( Eminus_MP, Eplus_MP, Active_MP )
     DEALLOCATE( iMassPair_Case, IsIMD_Case, TwoSided_Case, E3Sign_Case )
     DEALLOCATE( iIdx2, iIdx4 )
     DEALLOCATE( iChemSpecies2, iChemSpecies4, ChemSign2, ChemSign4 )
-    DEALLOCATE( PlWeight )
-    DEALLOCATE( xa_cos_theta, wa_cos_theta )
     DEALLOCATE( E1_Grid, E3_Grid )
     DEALLOCATE( xa_GLeg_ref, wa_GLeg_ref, xa_GLag, wa_GLag )
     DEALLOCATE( ChosenToTrueCaseMap )
@@ -969,7 +1056,7 @@ CONTAINS
   !      (e.g. (nProcessTotal, nL_Max)), or it becomes a per-thread heap
   !      allocation on the device;
   !    - make iE1 the fastest-varying loop index so the table reads
-  !      (A_Scat(iE1,...), Eminus_MP(iE1,...)) coalesce;
+  !      (A_MP(iE1,...), Eminus_MP(iE1,...)) coalesce;
   !    - nL > nL_Max is only checked on the host; on device nL is clamped.
   !  For bulk work prefer CalculateAllPhout_3D: same arithmetic (results are
   !  bit-identical), but one tuned kernel with coalesced Phout stores.
@@ -990,7 +1077,7 @@ CONTAINS
     REAL(DP) :: E3eff, xMu_l2, xMu_l4, xi, y, fac
     REAL(DP) :: I0, I1, I2, I0p, I1p, I2p, R1, R2, R3
     REAL(DP) :: MuSel(2)
-    INTEGER  :: iTh, iL, idx, iCase, iMP, jFl2, jFl4, nLeff
+    INTEGER  :: iTh, iL, idx, iCase, iMP, nLeff
 
     ! Integrated components for the distinct cases ONLY. Extents are PARAMETERs,
     ! never the nL dummy: a runtime-extent automatic array becomes a per-thread
@@ -1071,32 +1158,21 @@ CONTAINS
           I2 = I2 - I2p
         ENDIF
 
-        ! Guo Eq. 3; the 1/(16*pi*Delta^5) normalization is baked into A/B/C.
-        IF ( IsIMD_Case(iCase) ) THEN
-          R1 = A_IMD(iE1,iE3,iTh,1)*I2 &
-             + B_IMD(iE1,iE3,iTh,1)*I1 &
-             + C_IMD(iE1,iE3,iTh,1)*I0
-          R2 = A_IMD(iE1,iE3,iTh,2)*I2 &
-             + B_IMD(iE1,iE3,iTh,2)*I1 &
-             + C_IMD(iE1,iE3,iTh,2)*I0
-          R3 = 0.0d0
-        ELSE
-          jFl2 = iIdx2(iCase)
-          jFl4 = iIdx4(iCase)
-          R1 = A_Scat(iE1,iE3,iTh,1)*I2 &
-             + B_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I1 &
-             + C_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I0
-          R2 = A_Scat(iE1,iE3,iTh,2)*I2 &
-             + B_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I1 &
-             + C_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I0
-          R3 = C_Scat(iE1,iE3,iTh,jFl2,jFl4,3)*I0
-        ENDIF
+        ! Guo Eq. 3; the 1/(16*pi*Delta^5) normalization is baked into A/B/C
+        ! (C(3) is zero for IMD).
+        R1 = A_MP(iE1,iE3,iTh,1,iMP)*I2 &
+           + B_MP(iE1,iE3,iTh,1,iMP)*I1 &
+           + C_MP(iE1,iE3,iTh,1,iMP)*I0
+        R2 = A_MP(iE1,iE3,iTh,2,iMP)*I2 &
+           + B_MP(iE1,iE3,iTh,2,iMP)*I1 &
+           + C_MP(iE1,iE3,iTh,2,iMP)*I0
+        R3 = C_MP(iE1,iE3,iTh,3,iMP)*I0
 
-        ! P_{iL-1}(costh) * w(iTh), tabulated at Init
+        ! P_{iL-1}(mu) * w, tabulated at Init for this pair's nodes
         DO iL = 1, nLeff
-          Int_R1(iCase,iL) = Int_R1(iCase,iL) + R1 * PlWeight(iTh,iL)
-          Int_R2(iCase,iL) = Int_R2(iCase,iL) + R2 * PlWeight(iTh,iL)
-          Int_R3(iCase,iL) = Int_R3(iCase,iL) + R3 * PlWeight(iTh,iL)
+          Int_R1(iCase,iL) = Int_R1(iCase,iL) + R1 * PlW_MP(iE1,iE3,iTh,iL,iMP)
+          Int_R2(iCase,iL) = Int_R2(iCase,iL) + R2 * PlW_MP(iE1,iE3,iTh,iL,iMP)
+          Int_R3(iCase,iL) = Int_R3(iCase,iL) + R3 * PlW_MP(iE1,iE3,iTh,iL,iMP)
         ENDDO
 
       ENDDO
@@ -1155,7 +1231,7 @@ CONTAINS
     REAL(DP) :: E1, E3, E3eff, xMu_l2, xMu_l4, xi, y, fac
     REAL(DP) :: I0, I1, I2, I0p, I1p, I2p, R1, R2, R3
     REAL(DP) :: MuSel(2)
-    INTEGER  :: iX, iE1, iE3, iTh, iL, iCase, idx, iMP, jFl2, jFl4
+    INTEGER  :: iX, iE1, iE3, iTh, iL, iCase, idx, iMP
     INTEGER  :: nTh, nCase
 
     ! --- Thread-private accumulators. Every extent is a PARAMETER: a
@@ -1195,10 +1271,10 @@ CONTAINS
 
 #if   defined(WEAKLIB_OACC)
     !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(3)                                &
-    !$ACC PRESENT( A_Scat, B_Scat, C_Scat, A_IMD, B_IMD, C_IMD,                &
+    !$ACC PRESENT( A_MP, B_MP, C_MP, PlW_MP,                                  &
     !$ACC          Eminus_MP, Eplus_MP, Active_MP, iMassPair_Case,             &
     !$ACC          IsIMD_Case, TwoSided_Case, E3Sign_Case, iIdx2, iIdx4,       &
-    !$ACC          PlWeight, lam1, lam2, lam3, iRowToCase, iChemSpecies2,      &
+    !$ACC          lam1, lam2, lam3, iRowToCase, iChemSpecies2,                &
     !$ACC          iChemSpecies4, ChemSign2, ChemSign4, E1_Grid, E3_Grid,      &
     !$ACC          T, Mu_e, Mu_mu, Phout )                                     &
     !$ACC PRIVATE( Int_R1, Int_R2, Int_R3, eta_c, etap_c, fg_c, degen_c, MuSel )
@@ -1207,7 +1283,7 @@ CONTAINS
     !$OMP PRIVATE( Int_R1, Int_R2, Int_R3, eta_c, etap_c, fg_c, degen_c, MuSel,&
     !$OMP          E1, E3, E3eff, xMu_l2, xMu_l4, xi, y, fac,                  &
     !$OMP          I0, I1, I2, I0p, I1p, I2p, R1, R2, R3, iTh, iL, iCase, idx, &
-    !$OMP          iMP, jFl2, jFl4 )
+    !$OMP          iMP )
 #endif
     DO iX  = 1, nX
     DO iE3 = 1, nE3
@@ -1275,36 +1351,23 @@ CONTAINS
             I2 = I2 - I2p
           ENDIF
 
-          ! Guo Eq. 3; the 1/(16*pi*Delta^5) normalization is baked into A/B/C.
-          ! The IMD branch is uniform across threads (same case list for
-          ! every point), so it costs no divergence.
-          IF ( IsIMD_Case(iCase) ) THEN
-            R1 = A_IMD(iE1,iE3,iTh,1)*I2 &
-               + B_IMD(iE1,iE3,iTh,1)*I1 &
-               + C_IMD(iE1,iE3,iTh,1)*I0
-            R2 = A_IMD(iE1,iE3,iTh,2)*I2 &
-               + B_IMD(iE1,iE3,iTh,2)*I1 &
-               + C_IMD(iE1,iE3,iTh,2)*I0
-            R3 = 0.0d0
-          ELSE
-            jFl2 = iIdx2(iCase)
-            jFl4 = iIdx4(iCase)
-            R1 = A_Scat(iE1,iE3,iTh,1)*I2 &
-               + B_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I1 &
-               + C_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I0
-            R2 = A_Scat(iE1,iE3,iTh,2)*I2 &
-               + B_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I1 &
-               + C_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I0
-            R3 = C_Scat(iE1,iE3,iTh,jFl2,jFl4,3)*I0
-          ENDIF
+          ! Guo Eq. 3; the 1/(16*pi*Delta^5) normalization is baked into A/B/C
+          ! (C(3) is zero for IMD), so there is no IMD branch.
+          R1 = A_MP(iE1,iE3,iTh,1,iMP)*I2 &
+             + B_MP(iE1,iE3,iTh,1,iMP)*I1 &
+             + C_MP(iE1,iE3,iTh,1,iMP)*I0
+          R2 = A_MP(iE1,iE3,iTh,2,iMP)*I2 &
+             + B_MP(iE1,iE3,iTh,2,iMP)*I1 &
+             + C_MP(iE1,iE3,iTh,2,iMP)*I0
+          R3 = C_MP(iE1,iE3,iTh,3,iMP)*I0
 
 #if defined(WEAKLIB_OACC)
           !$ACC LOOP SEQ
 #endif
           DO iL = 1, nL
-            Int_R1(iCase,iL) = Int_R1(iCase,iL) + R1 * PlWeight(iTh,iL)
-            Int_R2(iCase,iL) = Int_R2(iCase,iL) + R2 * PlWeight(iTh,iL)
-            Int_R3(iCase,iL) = Int_R3(iCase,iL) + R3 * PlWeight(iTh,iL)
+            Int_R1(iCase,iL) = Int_R1(iCase,iL) + R1 * PlW_MP(iE1,iE3,iTh,iL,iMP)
+            Int_R2(iCase,iL) = Int_R2(iCase,iL) + R2 * PlW_MP(iE1,iE3,iTh,iL,iMP)
+            Int_R3(iCase,iL) = Int_R3(iCase,iL) + R3 * PlW_MP(iE1,iE3,iTh,iL,iMP)
           ENDDO
 
         ENDDO
@@ -1412,8 +1475,10 @@ CONTAINS
     INTEGER  :: idx, iCase
 
     ! 1. Get the raw distinct R components for this specific angle/energy.
-    ! costh is no longer needed: the angle enters only through the iTh-indexed
-    ! tables. It stays in this routine's own signature for interface stability.
+    ! costh is NOT used: the angle enters only through the iTh-indexed tables,
+    ! and node iTh sits at a different cos(theta) for every (iE1,iE3,mass pair)
+    ! (see the module header). costh stays in the signature for interface
+    ! stability only.
     CALL CalculateAllR1R2R3( E1, E3, T, Mu_e, Mu_mu, &
                              iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
@@ -1445,6 +1510,7 @@ CONTAINS
     REAL(DP) :: R2_th(nDistinctCasesMax)
     REAL(DP) :: R3_th(nDistinctCasesMax)
     INTEGER  :: idx, iTh, iCase
+    REAL(DP) :: w
 
     ! Arrays to hold the integrated components for the distinct cases ONLY
     REAL(DP) :: Int_R1(nDistinctCasesMax)
@@ -1460,10 +1526,12 @@ CONTAINS
                                iE1, iE3, iTh, R1_th, R2_th, R3_th )
 
         ! Only integrate the unique cases we actually need
+        ! Weight of this case's mass-pair node (P_0 = 1)
         DO iCase = 1, nDistinctCases
-          Int_R1(iCase) = Int_R1(iCase) + R1_th(iCase) * wa_cos_theta(iTh)
-          Int_R2(iCase) = Int_R2(iCase) + R2_th(iCase) * wa_cos_theta(iTh)
-          Int_R3(iCase) = Int_R3(iCase) + R3_th(iCase) * wa_cos_theta(iTh)
+          w = PlW_MP(iE1,iE3,iTh,1,iMassPair_Case(iCase))
+          Int_R1(iCase) = Int_R1(iCase) + R1_th(iCase) * w
+          Int_R2(iCase) = Int_R2(iCase) + R2_th(iCase) * w
+          Int_R3(iCase) = Int_R3(iCase) + R3_th(iCase) * w
         END DO
 
     ENDDO
@@ -1500,7 +1568,7 @@ CONTAINS
     REAL(DP), INTENT(OUT) :: R3(nDistinctCasesMax)
 
     REAL(DP) :: I0(nDistinctCasesMax), I1(nDistinctCasesMax), I2(nDistinctCasesMax)
-    INTEGER  :: iCase, jFl2, jFl4
+    INTEGER  :: iCase, iMP
 
     ! Ensure unused cases are safely zeroed out
     R1 = 0.0d0; R2 = 0.0d0; R3 = 0.0d0
@@ -1508,30 +1576,19 @@ CONTAINS
     CALL CalculateDistinctI0I1I2( E1, E3, T, Mu_e, Mu_mu, iE1, iE3, iTh, I0, I1, I2 )
 
     ! Guo Eq. 3. The 1/(16*pi*Delta^5) normalization is built into A/B/C at Init,
-    ! and the IMD case carries its own DeltaA^5 version in the same slots -- so
-    ! there is no branch and no mass-pair indirection left here. Indexing scalars
+    ! and the IMD pair carries its own DeltaA^5 version in the same slots -- so
+    ! there is no branch here. Indexing scalars
     ! rather than passing A(:)/B(:)/C(:) array sections also avoids a dummy
     ! temporary per call, which matters once this runs on a device.
     DO iCase = 1, nDistinctCases
-      IF ( IsIMD_Case(iCase) ) THEN
-        R1(iCase) = A_IMD(iE1,iE3,iTh,1)*I2(iCase) &
-                  + B_IMD(iE1,iE3,iTh,1)*I1(iCase) &
-                  + C_IMD(iE1,iE3,iTh,1)*I0(iCase)
-        R2(iCase) = A_IMD(iE1,iE3,iTh,2)*I2(iCase) &
-                  + B_IMD(iE1,iE3,iTh,2)*I1(iCase) &
-                  + C_IMD(iE1,iE3,iTh,2)*I0(iCase)
-        R3(iCase) = 0.0d0
-      ELSE
-        jFl2 = iIdx2(iCase)
-        jFl4 = iIdx4(iCase)
-        R1(iCase) = A_Scat(iE1,iE3,iTh,1)*I2(iCase) &
-                  + B_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I1(iCase) &
-                  + C_Scat(iE1,iE3,iTh,jFl2,jFl4,1)*I0(iCase)
-        R2(iCase) = A_Scat(iE1,iE3,iTh,2)*I2(iCase) &
-                  + B_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I1(iCase) &
-                  + C_Scat(iE1,iE3,iTh,jFl2,jFl4,2)*I0(iCase)
-        R3(iCase) = C_Scat(iE1,iE3,iTh,jFl2,jFl4,3)*I0(iCase)
-      ENDIF
+      iMP = iMassPair_Case(iCase)
+      R1(iCase) = A_MP(iE1,iE3,iTh,1,iMP)*I2(iCase) &
+                + B_MP(iE1,iE3,iTh,1,iMP)*I1(iCase) &
+                + C_MP(iE1,iE3,iTh,1,iMP)*I0(iCase)
+      R2(iCase) = A_MP(iE1,iE3,iTh,2,iMP)*I2(iCase) &
+                + B_MP(iE1,iE3,iTh,2,iMP)*I1(iCase) &
+                + C_MP(iE1,iE3,iTh,2,iMP)*I0(iCase)
+      R3(iCase) = C_MP(iE1,iE3,iTh,3,iMP)*I0(iCase)
     ENDDO
 
   END SUBROUTINE CalculateAllR1R2R3
